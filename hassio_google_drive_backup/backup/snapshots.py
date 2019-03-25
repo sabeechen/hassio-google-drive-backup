@@ -1,7 +1,7 @@
 import datetime
 
 from datetime import datetime
-from .helpers import parseDateTime
+from helpers import parseDateTime
 
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"
@@ -30,7 +30,7 @@ class DriveSnapshot(object):
         return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE])
 
     def __str__(self):
-        return "<Drive: {0} Name: {1} Id: >".format(self.slug(), self.name(), self.id())
+        return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id())
 
     def __format__(self, format_spec):
         return self.__str__()

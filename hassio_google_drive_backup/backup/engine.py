@@ -11,17 +11,17 @@ from datetime import timedelta
 from datetime import datetime
 from pprint import pprint
 from oauth2client.client import HttpAccessTokenRefreshError
-from .snapshots import Snapshot
-from .snapshots import DriveSnapshot
-from .snapshots import HASnapshot
-from .helpers import nowutc
-from .helpers import makeDict
-from .helpers import count
-from .helpers import take
-from .helpers import formatException
-from .drive import Drive
-from .hassio import Hassio
-from .watcher import Watcher
+from snapshots import Snapshot
+from snapshots import DriveSnapshot
+from snapshots import HASnapshot
+from helpers import nowutc
+from helpers import makeDict
+from helpers import count
+from helpers import take
+from helpers import formatException
+from drive import Drive
+from hassio import Hassio
+from watcher import Watcher
 
 BAD_TOKEN_ERROR_MESSAGE = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
 
@@ -123,7 +123,6 @@ class Engine(object):
 
     def run(self):
         while True:
-            backup_stale = ""
             # refresh every once in a while regardless
             needsRefresh = nowutc() > self.last_refresh + relativedelta(seconds = self.config.secondsBetweenRefreshes())
 
@@ -238,8 +237,8 @@ class Engine(object):
             print("Trigger new backup")
             self.snapshots.append(self.hassio.newSnapshot())
 
-        if self.sim_error:
-            raise self.sim_error
+        if not self.sim_error is None:
+            raise Exception(self.sim_error)
 
         # Get the snapshots that should be backed up, which is at most 4 of the oldest 
         # snapshots in home assistant which aren't in Drive.

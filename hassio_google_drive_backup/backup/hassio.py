@@ -10,10 +10,10 @@ from datetime import datetime
 from pprint import pprint
 from time import sleep
 from oauth2client.client import HttpAccessTokenRefreshError
-from .snapshots import HASnapshot
-from .snapshots import Snapshot
-from .helpers import nowutc
-from .helpers import formatException
+from snapshots import HASnapshot
+from snapshots import Snapshot
+from helpers import nowutc
+from helpers import formatException
 
 # Secodns to wait after starting a snapshot before we consider it successful.
 SNAPSHOT_FASTFAIL_SECOND = 10
@@ -32,7 +32,7 @@ class Hassio(object):
         self.config = config
         self.wrapper = {'snapshot': None}
         self.snapshot_thread = threading.Thread(target = self._getSnapshot)
-        self.snapshot_thread.daemon = True;
+        self.snapshot_thread.daemon = True
         self.pending_snapshot = None
         self.pending_snapshot_error = None
         self.lock = threading.Lock()
@@ -48,7 +48,7 @@ class Hassio(object):
                                 now_local.day, 
                                 now_local.hour,
                                 now_local.minute,
-                                now_local.second);
+                                now_local.second)
             snapshot_url = "{0}snapshots/new/full".format(self.config.hassioBaseUrl())
             self.pending_snapshot = Snapshot(None)
             self.pending_snapshot.setPending(backup_name, now_utc)
@@ -80,7 +80,7 @@ class Hassio(object):
         try:
             self.lock.acquire()
             if not self.pending_snapshot_error is None:
-                raise self.pending_snapshot_error
+                raise self.pending_snapshot_error # pylint: disable-msg=E0702
             elif not self.pending_snapshot is None:
                 return self.pending_snapshot
             else:

@@ -1,6 +1,6 @@
 import os, sys
 
-from .helpers import formatException
+from helpers import formatException
 
 
 class Watcher(object):
@@ -14,7 +14,7 @@ class Watcher(object):
 			if self.last_list is None:
 				self.last_list = os.listdir(self.config.backupDirectory())
 				self.last_list.sort()
-			return False
+				return False
 			dirs = os.listdir(self.config.backupDirectory())
 			dirs.sort()
 			if dirs == self.last_list:

@@ -42,17 +42,17 @@ from cherrypy import _cperror
 from io import BytesIO, SEEK_SET, SEEK_END
 from pprint import pprint
 from oauth2client.client import HttpAccessTokenRefreshError
-from .snapshots import DriveSnapshot
-from .snapshots import Snapshot
-from .snapshots import PROP_KEY_DATE
-from .snapshots import PROP_KEY_SLUG
-from .snapshots import PROP_KEY_NAME
-from .helpers import nowutc
-from .helpers import makeDict
-from .helpers import count
-from .helpers import take
-from .hassio import HEADERS
-from .responsestream import ResponseStream
+from snapshots import DriveSnapshot
+from snapshots import Snapshot
+from snapshots import PROP_KEY_DATE
+from snapshots import PROP_KEY_SLUG
+from snapshots import PROP_KEY_NAME
+from helpers import nowutc
+from helpers import makeDict
+from helpers import count
+from helpers import take
+from hassio import HEADERS
+from responsestream import ResponseStream
 # Defines the retry strategy for calls made to Drive
 # max # of time to retry and call to Drive
 DRIVE_MAX_RETRIES = 5
@@ -141,7 +141,7 @@ class Drive(object):
         print("Deleting: {}".format(snapshot))
         self._retryDriveServiceCall(self._drive().files().delete(fileId = snapshot.driveitem.id()))
         print("Deleted snapshot backup from drive '{}'".format(snapshot.name()))
-        snapshot.driveitem = None;
+        snapshot.driveitem = None
 
 
     def readSnapshots(self, parent_id):
@@ -162,7 +162,6 @@ class Drive(object):
 
     def _retryDriveServiceCall(self, request, func = None):
         attempts = 0
-        last_error = None
         backoff = DRIVE_RETRY_INITIAL_SECONDS
         while True:
             try:
@@ -181,7 +180,7 @@ class Drive(object):
                 if e.resp.status != 403 and int(e.resp.status/5) != 5:
                     print("Drive returned non-retryable error code: {0}".format(e.resp.status))
                     raise e
-                print("Drive returned error code: {0}:{1}, we'll retry in {2} seconds".format(e.resp.status, backoff))
+                print("Drive returned error code: {0}:, we'll retry in {1} seconds".format(e.resp.status, backoff))
                 sleep(backoff)
                 backoff *= DRIVE_EXPONENTIAL_BACKOFF
 

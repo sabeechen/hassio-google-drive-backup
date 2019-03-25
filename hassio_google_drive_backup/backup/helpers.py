@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 Some helper functions because I find python's API's intolerable
 """
 def parseDateTime(text) :
-    return parse(text, tzinfos=tzutc);
+    return parse(text, tzinfos=tzutc)
 
 def nowutc():
     return datetime.now(tzutc())
@@ -23,14 +23,14 @@ def makeDict(iterable, func):
     return ret
 
 def count(iterable, func):
-    ret = 0;
+    ret = 0
     for item in iterable:
         if func(item):
             ret = ret + 1
     return ret
 
 def take(iterable, count):
-    sent = 0;
+    sent = 0
     for item in iterable:
         if sent < count:
             sent = sent + 1

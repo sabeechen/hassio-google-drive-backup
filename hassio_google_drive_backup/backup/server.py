@@ -16,6 +16,7 @@ import urllib
 import oauth2client
 import traceback
 import httplib2
+import apiclient
 
 from urllib.parse import quote
 from urllib.parse import unquote
@@ -41,13 +42,13 @@ from cherrypy.lib import auth_basic
 from io import BytesIO, SEEK_SET, SEEK_END
 from pprint import pprint
 from oauth2client.client import HttpAccessTokenRefreshError
-from .snapshots import Snapshot
-from .snapshots import DriveSnapshot
-from .snapshots import HASnapshot
-from .engine import Engine
-from .helpers import nowutc
-from .helpers import formatTimeSince
-from .helpers import formatException
+from snapshots import Snapshot
+from snapshots import DriveSnapshot
+from snapshots import HASnapshot
+from engine import Engine
+from helpers import nowutc
+from helpers import formatTimeSince
+from helpers import formatException
 
 # Used to Google's oauth verification
 SCOPE = 'https://www.googleapis.com/auth/drive.file'
@@ -112,7 +113,7 @@ class Server(object):
                     'inHA': snapshot.isInHA(),
                     'isPending': snapshot.isPending()
                 })
-        status['drive_snapshots'] = self.engine.driveSnapshotCount();
+        status['drive_snapshots'] = self.engine.driveSnapshotCount()
         status['ha_snapshots'] = self.engine.haSnapshotCount()
         if last_backup:
             status['last_snapshot'] = formatTimeSince(last_backup)
@@ -237,6 +238,6 @@ class Server(object):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def backupnow(self):
-        self.engine.doBackupWorkflow();
+        self.engine.doBackupWorkflow()
         return self.getstatus()
 

@@ -1,0 +1,11 @@
+ {
+ 	"max_snapshots_in_hassio": 10,
+    "max_snapshots_in_google_drive": 2,
+    "days_between_backups": 1,
+    "hours_before_backup": 1,
+    "verbose" : true,
+    "use_ssl": false,
+    "hassio_base_url": "http://192.168.1.177:5000/",
+    "ha_base_url": "http://192.168.1.177:5000/homeassistant/api/",
+    "snapshot_stale_minutes" : 0.5
+}

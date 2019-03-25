@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>Hassio Google Drive Backup</title>
+
+  <!-- CSS  -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link rel="icon" 
+      type="image/png" 
+      href="/images/favicon.png">
+
+  <script src="js/jquery.js"></script>
+</head>
+<body>
+   <nav class="grey darken-3" role="navigation">
+    <div class="nav-wrapper container">
+      <a id="logo-container" href="/" class="brand-logo"><img src="/images/logo.png" width=40 height=40/>Hassio Google Drive Backup
+      </a>
+    </div>
+  </nav>
+  <div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      <h1 class="header center orange-text">Get Started</h1>
+      <div class="row center">
+        <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;.  On your first backup it will create a new folder at the root of your <a href="https://drive.google.com/drive/my-drive">My Drive</a> where future backups will be stored.  Once its created, you can move the folder wherever you want</h5>
+      </div>
+      <div class="row center">
+        <a href="http://materializecss.com/getting-started.html" id="authenticate-button" class="btn-large waves-effect waves-light orange">Authenticate with Google Drive</a>
+      </div>
+      <div class="row center">
+        <h6 class="header col s12 light">*Note: this will <i>only</i> have access to the files and folders it creates.  The Add-on can't see any of the other files you've added to Google Drive.</h6>
+        <h6 class="header col s12 light">*Note: this will send the authorization for your Google Drive account through an public domain (philosophyofpen.com/hassiodrivebackup), where you will be redirected back to this page.  Your credentials aren't stored there, it isn't necessary again once you're authenticated, and it only serves as a public address for Google's authentication platform to redirect to aftet you've logged in.  This redirect requires your browser to ahve cookies enabled.</h6>
+      </div>
+      <br><br>
+
+      <h1 class="header center orange-text">OR...</h1>
+      <div class="row center">
+        <h5 class="header col s12 light">If you dont' have cookies enabled, ran into problems using the method above, or just don't like the idea or your credentials going somewhere else in the cloud, put on your tinfoil hat and use the link below instead.  You'll still be asked to log into your Google account, but instead Google will provide you a code that you bring back here.</h5>
+      </div>
+      <div class="row center">
+        <a href="/manualauth"  target="_blank" class="btn-large waves-effect waves-light orange">Get code from Google</a>
+      </div>
+      <div class="row">
+        <form class="col s10" action="/manualauth" method="get">
+          <div class="row">
+            <div class="input-field col s12">
+              <i class="material-icons prefix">vpn_key</i>
+              <input id="code" name="code" type="text" class="validate">
+              <label for="code">Code from Google</label>
+            </div>
+          </div>
+        </form>
+
+        <div class="col s2">
+              <a target="_blank" class="btn-large waves-effect waves-light orange" id="manualauthbutton" onClick="submitCode()">Submit</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="container">
+    <div class="section">
+
+      <div class="row">
+      </div>
+
+    </div>
+    <br><br>
+  </div>
+
+  <footer class="page-footer grey darken-3">
+    <div class="container">
+      <div class="row">
+        <div class="col l3 s12">
+          <h5 class="white-text">Connect</h5>
+          <ul>
+            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a></li>
+            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue Tracker</a></li>
+            <li><a class="white-text" href="https://materializecss.com">Materialize</a></li>
+          </ul>
+        </div>
+        <div class="col l6 s12">
+          <h5 class="white-text">Who did this?</h5>
+          <p class="grey-text text-lighten-4">I'm an individual who works on projects like this in my spare time.  If you like it and would like to support me, I don't want your money but you can star my projects on <a href="https://github.com/sabeechen">Github</a></p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+
+  <!--  Scripts-->
+  <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script src="js/materialize.js"></script>
+  <script src="js/init.js"></script>
+  <script type="text/javascript">
+    document.getElementById("authenticate-button").href = 
+      "/authenticatewithdrive?redirecthost=" + encodeURIComponent(location.protocol + "//" + location.hostname + ":" + location.port + "/token");
+
+    function submitCode() {
+      var code = $("#code").val();
+        if (code && code.length > 0) {
+          window.location.href = "/manualauth?code=" + code;
+        }
+    }
+  </script>
+  </body>
+</html>

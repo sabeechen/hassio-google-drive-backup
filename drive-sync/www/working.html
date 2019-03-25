@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>Hassio Google Drive Backup</title>
+
+  <!-- CSS  -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link rel="icon" 
+      type="image/png" 
+      href="/images/favicon.png">
+  <script src="js/jquery.js"></script>
+</head>
+<body>
+  <!-- Modal Structure -->
+  <div id="deletemodal" class="modal">
+    <div class="modal-content">
+      <h4>Are you sure?</h4>
+      <p id="delete_text"></p>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_drive">Delete in Google Drive</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_ha">Delete in Hass.io</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_both">Delete Everywhere</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_cancel">Cancel</a>
+    </div>
+  </div>
+  <div class='error' style='display:none' id="toast">You shouldn't see this</div>
+  <nav class="grey darken-3" role="navigation">
+    <div class="nav-wrapper container">
+    	<a id="logo-container" href="/" class="brand-logo"><img src="/images/logo.png" width=40 height=40/>Hassio Google Drive Backup
+    			
+    	</a>
+    </div>
+  </nav>
+  <div class="container">
+    <div class="section">
+      <div class="row" id="error_card" style='display:none'>
+        <div class="col s12 m9">
+          <div class="card red darken-4">
+            <div class="card-content white-text">
+              <span class="card-title">Error while backing up</span>
+              <p>The add-on got the error below while trying to back up.  Some transient errors are expected (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your snapshots won't get backed up and the information you see on this page may be stale.</p>
+              <br/>
+              <p id="error_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
+            <div class="card-action white-text">
+                <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
+            </div>
+              <div class="card-action white-text">
+                <a id="error_github_link" href="#" target="_blank">File this issue on Github</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" id="error_details_card" style='display:none'>
+        <div class="col s12 m9">
+          <div class="card red darken-4">
+            <div class="card-content white-text">
+              <span class="card-title">Error details</span>
+              <p id="error_details_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
+              <div class="card-action white-text">
+                  <a target="_blank" onClick="$('#error_details_card').fadeOut(500)">Close</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+	  </div>
+      <div class="row">
+        <div class="col s12 m2">
+          <div class="icon-block">
+            <h2 class="center"><i class="material-icons">info</i></h2>
+            <h5 class="center">Info</h5>
+            <div>
+            	<h6>Snapshots in Hass.io</h6>
+            	<h5 class="right" id="ha_snapshots">
+        	Loading...</h5>
+            </div>
+            <br/>
+            <br/>
+            <div>
+            	<h6>Snapshots in Google Drive</h6>
+            	<h5 class="right" id="drive_snapshots">
+        	Loading...</h5>
+            </div>
+            <br/>
+            <br/>
+            <div>
+            	<h6>Most recent snapshot</h6>
+            	<h5 class="right" id="last_snapshot">
+        	Loading...</h5>
+            </div>
+            <br/>
+          </div>
+        </div>
+
+        <div class="col s12 m6">
+          <div class="icon-block">
+            <h2 class="center"><i class="material-icons">cloud_upload</i></h2>
+            <h5 class="center">Snapshots and Backups</h5>
+            <div id="snapshots">
+        	Loading...
+            <div class="divider"></div>
+            </div>
+            <div class="divider"></div>
+            <ul>
+            	<li><b>Backed Up</b> means the snapshot has been backed up to Google Drive</li>
+            	<li><b>Drive Only</b> means the snapshot has been backed up to Google Drive, but Home Assistant doesn't have a copy locally.  This is normal if you've configured the Add-on to store more backups in Google Drive vs Home Assistant.</li>
+            	<li><b>Waiting...</b> means the snapshot has been created and is waiting to be backed up to Google Drive.</li>
+            	<li><b>Pending</b> means the snapshot is still being created.  Its common for a snapshot to be hundreds of megabytes take up to an hour to be created, usually because of a very large sensor history database. See configuring purge_keep_days in your <a href="https://www.home-assistant.io/components/recorder/">recorder configuration</a> if you'd like to slim down the database size.</li>
+            	<li><b>Uploading XX%</b> means the snapshot is being uploaded.  You should see it in Google Drive soon.</li>
+          	</ul>
+          </div>
+        </div>
+
+        <div class="col s12 m4">
+          <div class="icon-block">
+            <h2 class="center"><i class="material-icons">flash_on</i></h2>
+            <h5 class="center">Actions</h5><br/>
+            <a class="waves-effect waves-light btn" id="newsnapshotlink" ><i class="material-icons left">add</i>Create new Snapshot</a>
+            <br/>
+            <p class="light">Triggers a new snapshot in Hass.io.  Once done it will be uploaded like any other snapshot.  There is no way to see the progress of a snapshot being created until its complete.</p>
+            <a class="waves-effect waves-light btn" id="newsnapshotlink" onClick="triggerSync()" ><i class="material-icons left">autorenew</i>Sync Now</a>
+            <p class="light">The add-on will check periodically for new snapshots in Hass.io and Google Drive, but clicking this button will force it to check now</p>
+            <a class="waves-effect waves-light btn" id="drive_button" target="_blank"><i class="material-icons left">cloud</i>Open Snapshots</a>
+            <p class="light">Takes you to your snapshot folder in <a href="https://drive.google.com">Google Drive</a>.  The Add-on automatically creates this folder and its where new snapshots will be stored in the future.  If desired, you can move the folder to a different area in My Drive.</p>
+            <a class="waves-effect waves-light btn" href="/reauthenticate"><i class="material-icons left">autorenew</i>Reauthorize Google Drive</a>
+            <p class="light">Go here to authorize this Add-on with Google Drive again.  This may be necessary if your Google account settings change or you explicitly deauthorized the addon in your Google account <a href="https://myaccount.google.com/security">security settings</a>.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <br><br>
+  </div>
+
+  <footer class="page-footer grey darken-3">
+    <div class="container">
+      <div class="row">
+      	<div class="col l3 s12">
+          <h5 class="white-text">Connect</h5>
+          <ul>
+            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a></li>
+            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue Tracker</a></li>
+            <li><a class="white-text" href="https://materializecss.com">Materialize</a></li>
+          </ul>
+        </div>
+        <div class="col l6 s12">
+          <h5 class="white-text">Who did this?</h5>
+          <p class="grey-text text-lighten-4">I'm an individual who works on projects like this in my spare time.  If you like it and would like to support me, I don't want your money but you can star my projects on <a href="https://github.com/sabeechen">Github</a></p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!--  Scripts-->
+  <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script src="js/materialize.js"></script>
+  <script src="js/init.js"></script>
+  <script type="text/javascript">
+    function triggerBackup() {
+      var jqxhr = $.get("backupnow", 
+            function(data) {
+              refreshstats();
+            }, "json")
+    }
+
+    function triggerSync() {
+      toast("Syncing now...")
+       var jqxhr = $.get("backupnow", 
+            function(data) {
+              refreshstats();
+              toast("Done")
+            }, "json")
+    }
+
+  	function toast (text) {
+    		M.toast({html: text});
+  	}
+
+    // Triggers showing a modal confirmation dialog to delete a snapshot
+  	function confirmDeleteSnapshot(slug, inDrive, inHA) {
+      $("#delete_drive").attr("onClick", "deleteSnapshot('"+slug+"',"+inDrive+",false)");
+      $("#delete_ha").attr("onClick", "deleteSnapshot('"+slug+"',false,"+inHA+")");
+      $("#delete_both").attr("onClick", "deleteSnapshot('"+slug+"',"+inDrive+","+inHA+")");
+  		if (inDrive && inHA) {
+  			$("#delete_text").text("Are you sure you want to delete this snapshot?  It isn't backed up, so it will be gone forever.");
+  			$("#delete_drive").show();
+  			$("#delete_ha").show();
+  			$("#delete_both").show();
+  		} else if (inDrive && !inHA) {
+  			$("#delete_text").text("Are you sure you want to delete this snapshot form Google Drive?  It isn't stored in Home Assistant, so it will be gone forever.");
+  			$("#delete_drive").show();
+  			$("#delete_ha").hide();
+  			$("#delete_both").hide();
+  		} else if (!inDrive && inHA) {
+  			$("#delete_text").text("Are you sure you want to delete this snapshot?  It isn't backed up, so it will be gone forever.");
+  			$("#delete_drive").hide();
+  			$("#delete_ha").show();
+  			$("#delete_both").hide();
+  		}
+    }
+
+    function deleteSnapshot(slug, drive, ha) {
+      //console.log("Delete: " + slug + " Drive: " + drive + " HA: " + ha)
+      message = "Deleting snapshot from ";
+      if (drive && ha) {
+        message += "Hass.io and Google Drive"
+      } else if (drive) {
+        message += "Google Drive"
+      } else if (ha) {
+        message += "Hass.io"
+      } else {
+        message += "<i>...nowhere?</i>"
+      }
+      toast(message);
+      // Send the delete request
+      var deleteRequest = $.get( "deleteSnapshot?slug="+slug+"&drive="+drive+"&ha="+ha+"", 
+          function(data) {
+            if (data.hasOwnProperty("error_details")) {
+              errorToast(data)
+            } else {
+              toast(data.message);
+            }
+            refreshstats();
+          }, "json")
+        .fail(
+          function(e) {
+            errorToast(e)
+          }
+        )
+    }
+
+    function htmlEntities(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace("'", "&#39;");
+  }
+
+    function errorToast(error) {
+      message = "";
+      details = "";
+      if (error.hasOwnProperty("message") && error.hasOwnProperty("error_details")) {
+        // Its an error messag form the server
+        message = error.message;
+        details = error.error_details;
+      } else if (error.hasOwnProperty("status") && error.hasOwnProperty("statusText") && error.hasOwnProperty("responseText")) {
+        // Its an HTTP error, so format appropriately
+        message = "Got unexpected HTTP error " + error.status + ": " + error.statusText;
+        details = error.responseText;
+      } else if (error.hasOwnProperty("error")) {
+        message = error.error
+        details = JSON.stringify(error, undefined, 2)
+      } else if (error.hasOwnProperty("message")) {
+        message = error.message
+        details = JSON.stringify(error, undefined, 2)
+      } else {
+        message = "Got an unexpected error"
+        details = JSON.stringify(error, undefined, 2)
+      }
+
+      button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+      $('#error_details_paragraph').text(details);
+      console.log(error)
+      toast(message + button_text);
+    }
+    // Refreshes the display with stats from the server.
+    function refreshstats() {
+  		var jqxhr = $.get( "getstatus", function(data) {
+  		  $('#ha_snapshots').empty().append(data.ha_snapshots);
+  		  $('#drive_snapshots').empty().append(data.drive_snapshots);
+  		  $('#last_snapshot').empty().append(data.last_snapshot);
+  		  $('#drive_button').attr("href","https://drive.google.com/drive/u/0/folders/" + data.folder_id);
+  		  snapshot_div = $('#snapshots')
+  		  snapshot_div.html("")
+  		  var count = 0;
+  		  for (var key in data.snapshots) {
+  		    if (data.snapshots.hasOwnProperty(key)) {
+  		    	count++;
+  		    	snapshot = data.snapshots[key];
+  		    	inDrive = snapshot.inDrive;
+  		    	inHA = snapshot.inHA;
+  		    	button = `<button data-target="deletemodal" class="btn modal-trigger" onClick="confirmDeleteSnapshot('` + snapshot.slug + `', `+inDrive+`, `+inHA+`);return false;">Delete</button>`
+  		    	if (!inDrive && !inHA) {
+  		    		button = ""
+  		    	}
+  		        //console.log(key+': '+ JSON.stringify(snapshot));
+  		        snapshot_div.append(`
+  		        	<div class=\"row\">
+              	<div class=\"col s1\"><i class=\"large material-icons\" style=\"font-size: 30px\">archive</i></div>
+              	<div class=\"col s8\">` + snapshot['name'] + `<br/>Size: ` + snapshot['size']+  `</div>
+              	<div class=\"col s3\"><b>` + snapshot['status']+  `</b><br/>
+              	`+button+`</div>
+          	</div>
+              <div class=\"divider\"></div>`);
+  		    }
+  		  }
+
+  		  if (count ==0) {
+  		  	snapshot_div.html("You don't have any snapshots in Google Drive or Home Assistant :(</br> Use the button to the right to create your first one and start backing up.")
+  		  }
+
+  		  if (data.last_error != ""){
+  		  	$('#error_paragraph').text(data.last_error);
+  		  	desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and includign that here.  :\n\n" + data.last_error;
+  		  	parts = data.last_error.split('\n');
+  		  	var title = "Unknown"
+  		  	for (var i = parts.length-1; i >=0; i--) {
+  		  		if (parts[i].trim() != "") {
+  			  		title = parts[i].trim();
+  			  		break;
+  			  	}
+  		  	}
+  		  	$('#error_github_link').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title="+encodeURIComponent(title)+"&assignee=sabeechen&body=" + encodeURIComponent(desc));
+  		  	$('#error_github_search').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + title.replace("\"", "\\\"") + "\""));
+  		  	$('#error_card').fadeIn(400);
+  		  } else {
+  		  	$('#error_card').css("display", "none");
+  		  }
+  		}, "json")
+  		  
+  		  .fail(function(e) {
+  		    console.log("Status update failed: ")
+  		    console.log(e)
+  		  })
+  	}	
+  
+  	$('#newsnapshotlink').click(
+      function(){
+  		  toast("Requesting snapshot...");
+
+    		// request the snapshot
+    		var jqxhr = $.get( "triggerbackup", 
+            function(data) {
+        			console.log(data);
+        			if (!data.hasOwnProperty("name")) {
+        				errorToast(data)
+        			} else {
+        				toast("Requested new backup '" + data.name + "'");
+                refreshstats();
+                triggerBackup();
+              }
+              
+      		  }, "json")
+          .fail(
+            function(e) {
+		          errorToast(e)
+		        }
+          )
+  		 
+  		  return false; 
+      }
+    );
+
+
+    // Runs on document load
+  	$(document).ready(function(){
+      // Needed to make modal dialogs work.
+	    $('.modal').modal();
+
+      // Every 5 seconds, refresh the metrics form the server.
+      window.setInterval(refreshstats, 5000);
+      refreshstats();
+	  });
+  </script>
+  </body>
+</html>

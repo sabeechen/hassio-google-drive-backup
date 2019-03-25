@@ -36,5 +36,6 @@
   },
   "ports": {
     "1627/tcp": 1627
-  }
+  },
+  "image": "sabeechen/hassio-google-drive-backup-{arch}",
 }

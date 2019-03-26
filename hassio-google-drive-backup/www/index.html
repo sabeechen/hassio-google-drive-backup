@@ -29,37 +29,46 @@
       <div class="row center">
         <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;.  On your first backup it will create a new folder at the root of your <a href="https://drive.google.com/drive/my-drive">My Drive</a> where future backups will be stored.  Once its created, you can move the folder wherever you want</h5>
       </div>
+      <div>
+         
+      </div>
       <div class="row center">
-        <a href="http://materializecss.com/getting-started.html" id="authenticate-button" class="btn-large waves-effect waves-light orange">Authenticate with Google Drive</a>
+        <div class="col s5" >
+          <h4 class="orange-text text-darken-4">Option 1</h4>
+            Login through an <a href="http://philosophyofpen.com/hassiodrivebackup">external domain</a> configured to authenticate this add-on.  You'll be routed back to this page after you're finished and you're finished and your credentials only get stored locally.
+        </br/>
+          <a href="http://materializecss.com/getting-started.html" id="authenticate-button" class="btn-large waves-effect waves-light orange">Authenticate with Google Drive</a>
+        </div>
+        <div class="col s1">
+          or...
+        </div>
+        <div class="col s5">
+          
+            <h4 class="orange-text text-darken-4">Option 2</h4>
+            If that doean't work or you just want to keep things as local as possible, login with Google to get an authentication code, then bring it back here to let the add-on access your drive.
+            <div class="row center">
+                <a href="/manualauth"  target="_blank" class="btn-large waves-effect waves-light orange">Get code from Google</a>
+            </div>
+            <div class="row">
+                <form class="col s10" action="/manualauth" method="get">
+                  <div class="row">
+                    <div class="input-field col s12">
+                      <i class="material-icons prefix">vpn_key</i>
+                      <input id="code" name="code" type="text" class="validate">
+                      <label for="code">Code from Google</label>
+                    </div>
+                  </div>
+                </form>
+                <div class="col s2">
+                      <a target="_blank" class="btn-large waves-effect waves-light orange" id="manualauthbutton" onClick="submitCode()">Submit</a>
+                </div>
+              </div>
+        </div>
       </div>
       <div class="row center">
         <h6 class="header col s12 light">*Note: this will <i>only</i> have access to the files and folders it creates.  The Add-on can't see any of the other files you've added to Google Drive.</h6>
-        <h6 class="header col s12 light">*Note: this will send the authorization for your Google Drive account through an public domain (philosophyofpen.com/hassiodrivebackup), where you will be redirected back to this page.  Your credentials aren't stored there, it isn't necessary again once you're authenticated, and it only serves as a public address for Google's authentication platform to redirect to aftet you've logged in.  This redirect requires your browser to ahve cookies enabled.</h6>
       </div>
       <br><br>
-
-      <h1 class="header center orange-text">OR...</h1>
-      <div class="row center">
-        <h5 class="header col s12 light">If you dont' have cookies enabled, ran into problems using the method above, or just don't like the idea or your credentials going somewhere else in the cloud, put on your tinfoil hat and use the link below instead.  You'll still be asked to log into your Google account, but instead Google will provide you a code that you bring back here.</h5>
-      </div>
-      <div class="row center">
-        <a href="/manualauth"  target="_blank" class="btn-large waves-effect waves-light orange">Get code from Google</a>
-      </div>
-      <div class="row">
-        <form class="col s10" action="/manualauth" method="get">
-          <div class="row">
-            <div class="input-field col s12">
-              <i class="material-icons prefix">vpn_key</i>
-              <input id="code" name="code" type="text" class="validate">
-              <label for="code">Code from Google</label>
-            </div>
-          </div>
-        </form>
-
-        <div class="col s2">
-              <a target="_blank" class="btn-large waves-effect waves-light orange" id="manualauthbutton" onClick="submitCode()">Submit</a>
-        </div>
-      </div>
     </div>
   </div>
 

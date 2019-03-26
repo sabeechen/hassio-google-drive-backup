@@ -107,13 +107,19 @@
             <div class="divider"></div>
             </div>
             <div class="divider"></div>
-            <ul>
-            	<li><b>Backed Up</b> means the snapshot has been backed up to Google Drive</li>
-            	<li><b>Drive Only</b> means the snapshot has been backed up to Google Drive, but Home Assistant doesn't have a copy locally.  This is normal if you've configured the Add-on to store more backups in Google Drive vs Home Assistant.</li>
-            	<li><b>Waiting...</b> means the snapshot has been created and is waiting to be backed up to Google Drive.</li>
-            	<li><b>Pending</b> means the snapshot is still being created.  Its common for a snapshot to be hundreds of megabytes take up to an hour to be created, usually because of a very large sensor history database. See configuring purge_keep_days in your <a href="https://www.home-assistant.io/components/recorder/">recorder configuration</a> if you'd like to slim down the database size.</li>
-            	<li><b>Uploading XX%</b> means the snapshot is being uploaded.  You should see it in Google Drive soon.</li>
-          	</ul>
+            <p><b>Backed Up</b> means the snapshot has been backed up to Google Drive
+            <p>
+              <b>Drive Only</b> means the snapshot has been backed up to Google Drive, but Home Assistant doesn't have a copy locally.  This is normal if you've configured the Add-on to store more backups in Google Drive vs Home Assistant.
+            </p>
+            <p>
+              <b>Waiting...</b> means the snapshot has been created and is waiting to be backed up to Google Drive.
+            </p>
+            <p>
+              <b>Pending</b> means the snapshot is still being created.  Its common for a snapshot to be hundreds of megabytes take up to an hour to be created, usually because of a very large sensor history database. See configuring purge_keep_days in your <a href="https://www.home-assistant.io/components/recorder/">recorder configuration</a> if you'd like to slim down the database size.
+            </p>
+            <p>
+              <b>Uploading XX%</b> means the snapshot is being uploaded.  You should see it in Google Drive soon.
+          	</p>
           </div>
         </div>
 
@@ -286,7 +292,6 @@
   		    	if (!inDrive && !inHA) {
   		    		button = ""
   		    	}
-  		        //console.log(key+': '+ JSON.stringify(snapshot));
   		        snapshot_div.append(`
   		        	<div class=\"row\">
               	<div class=\"col s1\"><i class=\"large material-icons\" style=\"font-size: 30px\">archive</i></div>
@@ -299,12 +304,12 @@
   		  }
 
   		  if (count ==0) {
-  		  	snapshot_div.html("You don't have any snapshots in Google Drive or Home Assistant :(</br> Use the button to the right to create your first one and start backing up.")
+  		  	snapshot_div.html("<div class='row'><div class='col s1'></div><div class='col s2 valign-wrapper center' style=\"font-size: 90px\"><i class='red-text text-darken-4 large material-icons'>block</i></div><div class='col s7 center valign-wrapper'><p>You don't have any snapshots in Google Drive or Home Assistant.  Use the button to the right to create a snapshot and start backing up.</p><div><div>")
   		  }
 
   		  if (data.last_error != ""){
   		  	$('#error_paragraph').text(data.last_error);
-  		  	desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and includign that here.  :\n\n" + data.last_error;
+  		  	desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and including that here.  :\n\n" + data.last_error;
   		  	parts = data.last_error.split('\n');
   		  	var title = "Unknown"
   		  	for (var i = parts.length-1; i >=0; i--) {
@@ -318,7 +323,8 @@
   		  	$('#error_card').fadeIn(400);
   		  } else {
   		  	$('#error_card').css("display", "none");
-  		  }
+        }
+        $('.tooltipped').tooltip({"exitDelay": 1000});
   		}, "json")
   		  
   		  .fail(function(e) {
@@ -363,6 +369,8 @@
       // Every 5 seconds, refresh the metrics form the server.
       window.setInterval(refreshstats, 5000);
       refreshstats();
+
+      $('.tooltipped').tooltip();
 	  });
   </script>
   </body>

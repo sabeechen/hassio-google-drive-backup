@@ -34,12 +34,19 @@ The add-on is insatlled like any other.
      
      Other less common config options are explained [below](#configuration-options).
      > Be aware that once you start the Add-on, it will start cleaning up old snapshots immediately.  If you have 5 snapshots and you start the add-on with **max_snapshots_in_hassio**=4 then the oldest one will get deleted.
-5.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of users this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).  While you're there turn on auto-update, this is still a project under development.
+5.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  While you're there turn on auto-update, this is still a project under development.  For the majority of users this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).  
+6.   Log in to the webpage with your Hoem assistant username and password.
 6.   Follow the instruction on-screen to link the Add-on with your Google Drive account.  Two method of doing this are provided, since authenticating with Google's servers can be tempermental while this Add-on is still under development.
 7.   You should be taken redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.
 
 ## Configuration Options
-All the stuff in the json.
+I addition to the options described in the instructions above:
+*   **verbose** (default: false): If true, enable additional debug logging.  Useful if you start seeing errors and need to file a bug with me.
+*   **certfile** (default: /ssl/certfile.pem): The path to your ssl keyfile
+*   **keyfile** (default: /ssl/keyfile.pem): the path to your ssl certfile
+*   **require_login** (default: true): When true, requires your home assistant username and password to access the backpup status page.  Turning this off isn't recommended.
+*   **snapshot_stale_minutes** (default: 180):  How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention.  Setting this too low can cause you to be notified of transient errors, ie the internet being down briefly.
+*  **hours_before_snapshot** (default: 1):  How logn the add-on shoudl wait after startup before scheduling a new snapshot, if one is scheduled.  Prevents the add-on from scheduling a snapshot if one was created recently and the add-on was restarted. 
 
 ## FAQ
 ### How will I know this will be there when I need it?

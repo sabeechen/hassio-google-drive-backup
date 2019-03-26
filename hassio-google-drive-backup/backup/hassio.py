@@ -10,10 +10,10 @@ from datetime import datetime
 from pprint import pprint
 from time import sleep
 from oauth2client.client import HttpAccessTokenRefreshError
-from snapshots import HASnapshot
-from snapshots import Snapshot
-from helpers import nowutc
-from helpers import formatException
+from .snapshots import HASnapshot
+from .snapshots import Snapshot
+from .helpers import nowutc
+from .helpers import formatException
 
 # Secodns to wait after starting a snapshot before we consider it successful.
 SNAPSHOT_FASTFAIL_SECOND = 10

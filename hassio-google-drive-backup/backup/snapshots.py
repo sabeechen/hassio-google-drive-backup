@@ -1,7 +1,7 @@
 import datetime
 
 from datetime import datetime
-from helpers import parseDateTime
+from .helpers import parseDateTime
 
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"

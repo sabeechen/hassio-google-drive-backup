@@ -37,13 +37,13 @@ from cherrypy.lib import auth_basic
 from io import BytesIO, SEEK_SET, SEEK_END
 from pprint import pprint
 from oauth2client.client import HttpAccessTokenRefreshError
-from snapshots import Snapshot
-from snapshots import DriveSnapshot
-from snapshots import HASnapshot
-from engine import Engine
-from helpers import nowutc
-from helpers import formatTimeSince
-from helpers import formatException
+from .snapshots import Snapshot
+from .snapshots import DriveSnapshot
+from .snapshots import HASnapshot
+from .engine import Engine
+from .helpers import nowutc
+from .helpers import formatTimeSince
+from .helpers import formatException
 
 # Used to Google's oauth verification
 SCOPE = 'https://www.googleapis.com/auth/drive.file'
@@ -209,7 +209,7 @@ class Server(object):
                 'server.socket_port': self.config.port(),
                 'server.socket_host': '0.0.0.0',
             },
-            '/': {
+            self.config.pathSeparator(): {
                 'tools.staticdir.on': True,
                 'tools.staticdir.dir': os.getcwd() + self.config.pathSeparator() + self.root
             }
@@ -219,7 +219,7 @@ class Server(object):
             #conf['global']['log.access_file'] = ''
 
         if self.config.requireLogin():
-            conf["/"].update({
+            conf[self.config.pathSeparator()].update({
                 'tools.auth_basic.on': True,
                 'tools.auth_basic.realm': 'localhost',
                 'tools.auth_basic.checkpassword': self.auth,
@@ -228,7 +228,7 @@ class Server(object):
         if self.config.useSsl():
             cherrypy.server.ssl_certificate = self.config.certFile()
             cherrypy.server.ssl_private_key = self.config.keyFile()
-        cherrypy.quickstart(self, '/', conf)
+        cherrypy.quickstart(self, self.config.pathSeparator(), conf)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

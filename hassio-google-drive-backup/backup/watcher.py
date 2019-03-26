@@ -1,6 +1,6 @@
 import os, sys
 
-from helpers import formatException
+from .helpers import formatException
 
 
 class Watcher(object):

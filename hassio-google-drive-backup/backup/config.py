@@ -3,40 +3,44 @@ import pprint
 import json
 
 HASSIO_OPTIONS_FILE = '/data/options.json'
-DEV_OPTIONS = "test/dev.json"
 
 DEFAULTS = {
-    'max_snapshots_in_hassio': 4,
-    'max_snapshots_in_google_drive': 4,
-    'hassio_base_url': "http://hassio/",
-    'ha_base_url': "http://hassio/homeassistant/api/",
-    'path_separator': "/",
-    'port': 1627,
-    'days_between_snapshots': 1,
+    "max_snapshots_in_hassio": 4,
+    "max_snapshots_in_google_drive": 4,
+    "hassio_base_url": "http://hassio/",
+    "ha_base_url": "http://hassio/homeassistant/api/",
+    "path_separator": "/",
+    "port": 1627,
+    "days_between_snapshots": 1,
 
     # how many hours after startup the server will wait before starting a new snapshot automatically
-    'hours_before_snapshot': 1,
-    'folder_file_path': "/data/folder.dat",
-    'credentials_file_path': "/data/credentials.dat",
-    'seconds_between_refreshes': 60 * 60, # once per hour, refresh everythin regardless
-    'seconds_between_directory_checks': 10,
-    'verbose': False,
-    'use_ssl': False,
+    "hours_before_snapshot": 1,
+    "folder_file_path": "/data/folder.dat",
+    "credentials_file_path": "/data/credentials.dat",
+    "seconds_between_refreshes": 60 * 60, # once per hour, refresh everythin regardless
+    "seconds_between_directory_checks": 10,
+    "verbose": False,
+    "use_ssl": False,
     "certfile": "/ssl/fullchain.pem",
     "keyfile": "/ssl/privkey.pem",
     "require_login": False,
-    'backup_directory': "/backup",
-    'snapshot_stale_minutes' : 60 * 2,
-    'ha_bearer' : ""
+    "backup_directory": "/backup",
+    "snapshot_stale_minutes" : 60 * 2,
+    "ha_bearer" : ""
 }
 
 class Config(object):
 
-    def __init__(self):
+    def __init__(self, file_paths):
         self.config = DEFAULTS
-        for config_file in [HASSIO_OPTIONS_FILE, DEV_OPTIONS]:
+        for config_file in [HASSIO_OPTIONS_FILE, ""]:
             if os.path.isfile(config_file):
                 with open(config_file) as file_handle:
+                    self.config.update(json.load(file_handle))
+        for config_file in file_paths:
+            if os.path.isfile(config_file):
+                with open(config_file) as file_handle:
+                    print("Loading config from " + config_file)
                     self.config.update(json.load(file_handle))
         print("Loaded config:")
         pprint.pprint(self.config)

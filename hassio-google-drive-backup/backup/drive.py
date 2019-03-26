@@ -86,7 +86,7 @@ class Drive(object):
 
     def _drive(self):
         if self.creds is None:
-            return
+            raise Exception("Drive isn't enabled, this is a bug")
         if self.creds.access_token_expired:
             self.creds.refresh(httplib2.Http())
             self.cred_storage.put(self.creds)

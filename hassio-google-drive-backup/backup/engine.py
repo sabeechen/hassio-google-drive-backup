@@ -58,9 +58,11 @@ class Engine(object):
         self.sim_error = None
         self.next_error_rety = nowutc()
         self.next_error_backoff = ERROR_BACKOFF_MIN_SECS
+        self.one_shot = False
 
     def saveCreds(self, creds):
         self.drive.saveCreds(creds)
+        self.one_shot = True
 
     def simulateError(self, error):
         self.sim_error = error
@@ -132,6 +134,10 @@ class Engine(object):
             # Refresh every 20 seconds if there was an error
             needsRefresh = needsRefresh or (nowutc() > self.last_refresh + relativedelta(seconds = 20) and not self.last_error is None)
             
+            if self.one_shot:
+                self.one_shot = False
+                needsRefresh = True
+
             if needsRefresh:
                 self.doBackupWorkflow()
 
@@ -251,12 +257,16 @@ class Engine(object):
             snapshot.setWillBackup(snapshot in should_backup)
 
         for to_backup in should_backup:
-            print("Uploading {}".format(to_backup))
-            self.drive.saveSnapshot(to_backup, self.hassio.downloadUrl(to_backup), self.folder_id)
+            if self.drive.enabled():
+                snapshot.setWillBackup(True)
+                print("Uploading {}".format(to_backup))
+                self.drive.saveSnapshot(to_backup, self.hassio.downloadUrl(to_backup), self.folder_id)
 
-            # purge backups again, since adding one might have put us over the limit 
-            self._purgeDriveBackups()
-            print("Upload complete")
+                # purge backups again, since adding one might have put us over the limit 
+                self._purgeDriveBackups()
+                print("Upload complete")
+            else:
+                snapshot.setWillBackup(False)
 
         self.hassio.updateSnapshotsSensor("backed_up", self.snapshots)
         self.hassio.updateSnapshotStaleSensor(False)

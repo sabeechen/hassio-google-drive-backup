@@ -30,13 +30,13 @@ The add-on is insatlled like any other.
      *   **max_snapshots_in_hassio**: is the number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.  
      *   **max_snapshots_in_google_drive**: is the number of snapshots the add-on will keep in Google Drive before old ones are deleted.
      *   **days_between_snapshots**: How often a new snapshot should be scheduled, eg "1" for daily and "7" for weekly.
-     *   **use_ssl**: determines if the add-on's webpage should onyl expose its interface over ssl.  If you use the [Duck DNS Add-on](https://www.home-assistant.io/addons/duckdns/) with the default settings then setting this to true should just work, if not [see below](#configuration-options).
+     *   **use_ssl**: determines if the add-on's webpage should only expose its interface over ssl.  If you use the [Duck DNS Add-on](https://www.home-assistant.io/addons/duckdns/) with the default settings then `"use_ssl": true`setting this to true should just work, if not [see below](#configuration-options).
      
      Other less common config options are explained [below](#configuration-options).
      > Be aware that once you start the Add-on, it will start cleaning up old snapshots immediately.  If you have 5 snapshots and you start the add-on with **max_snapshots_in_hassio**=4 then the oldest one will get deleted.
-5.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of users this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).  While you're there turn on ait-update, this is still a project under development.
-6.   Follow the instruction on-screen to link the Add-on with your Google Drive account.  Two method of doign this are provided, since authenticating with Google's servers can be tempermental while this Add-on is still under development.
-7.   You should be taken back redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive.
+5.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of users this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).  While you're there turn on auto-update, this is still a project under development.
+6.   Follow the instruction on-screen to link the Add-on with your Google Drive account.  Two method of doing this are provided, since authenticating with Google's servers can be tempermental while this Add-on is still under development.
+7.   You should be taken redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.
 
 ## Configuration Options
 All the stuff in the json.
@@ -70,7 +70,7 @@ The add-on creates a few sensors that show the status of snapshots that you coul
         status page for details.
       title: Stale Snapshots!`
 #### Mobile Notifications
-If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.home-assistant.io/docs/ecosystem/ios/), [other notifications]](https://www.home-assistant.io/components/notify/) set up, this automation would let you know if things go stale:
+If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.home-assistant.io/docs/ecosystem/ios/), [other notifications](https://www.home-assistant.io/components/notify/) set up, this automation would let you know if things go stale:
 
 
     - alias: Snapshots went stale
@@ -99,9 +99,9 @@ Then it won't try to upload anything to Google Drive.
 The add-on prevents itself from making any new **automatic** snapshots for an hour after its first starts up.  This is to prevent it from requesting a snapshot while Hass.io is already be making one.  You can still ask it to make one manuall by pressing the "New Snapshot" button on the status web UI, or you can just be patient for crying out loud.
 
 ### What do I do if I've found an error?
-If the add-on runs into toruble and can't back up, you should see a big red box with the text of the error on the status webpage.  This should include a link to pre-populate a new issue in github, which I'd encourage you to do.  Additioanlly you can set the add-on config option `"verbose" : true` to get additional information from the add-on's logs to help me with debugging.
+If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage.  This should include a link to pre-populate a new issue in github, which I'd encourage you to do.  Additioanlly you can set the add-on config option `"verbose" : true` to get information from the add-on's logs to help me with debugging.
 
-### Will this fill up my Google Drive?  Why re my snapshots so big?
+### Will this fill up my Google Drive?  Why are my snapshots so big?
 You'll need tot take care to ensure you don't configure this to blow up your Google Drive.  You might want to consider:
 *   If your snapshots are HUGE, its probably because Home Assistant by defaults keeps 10 days of sensor history.  Consider setting `purge_keep_days: N` in your [recorder confiuration](https://www.home-assistant.io/components/recorder/) to trim it down to something more manageable, like 1 day of history.
 *   If you use the Google Drive Desktop sync client, you'll porbably want to tell it not to sync this folder (its available in the options).

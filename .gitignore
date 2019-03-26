@@ -1,1 +1,4 @@
 *.pyc
+*.dat
+*.id
+.pytest_cache/*

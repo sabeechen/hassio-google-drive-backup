@@ -1,0 +1,51 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Sync Server Locally",
+            "type": "shell",
+            "command": "python run.py ../dev/data/options.json",
+            "options": {
+                "cwd": "${workspaceFolder}/hassio-google-drive-backup"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Mock Hass.io Server",
+            "type": "shell",
+            "command": "python mock_hassio.py",
+            "options": {
+                "cwd": "${workspaceFolder}/dev"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run local Docker Instance",
+            "type": "shell",
+            "command": "${workspaceFolder}/run_local_docker.bat",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Stop Local Docker Instance",
+            "type": "shell",
+            "command": "docker kill $(docker ps -q --filter \"label=run-from-vscode=1\")",
+            "problemMatcher": []
+        },
+        {
+            "label": "Publish a new version to Docker Hub",
+            "type": "shell",
+            "command": "${workspaceFolder}/deploy.bat",
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+        }
+
+
+    ]
+}

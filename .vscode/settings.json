@@ -1,0 +1,9 @@
+{
+    "python.unitTest.pyTestArgs": [
+        "dev"
+    ],
+    "python.unitTest.unittestEnabled": false,
+    "python.unitTest.nosetestsEnabled": false,
+    "python.unitTest.pyTestEnabled": true,
+    "python.pythonPath": "C:\\Users\\home\\AppData\\Local\\Programs\\Python\\Python37\\python.exe"
+}

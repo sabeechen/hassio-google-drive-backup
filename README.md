@@ -18,7 +18,7 @@ Particularly, most of the existing solutions for back I've found for Hass.io:
 I made this to avoid these complications.  Install the add-on, click the button that authenticates with Google Drive, and you're backed up from then on.   If you don't have a Google account already, its pretty easy to [create one](https://www.google.com/intl/en/drive/) and Google gives you 15GB of free storage (at the time of writing), which should be enough for as many backups as you want. 
 
 ## Installation
-The add-on is insatlled like any other.
+The add-on is installed like any other.
 1.   Go to you Hass.io "Add-on" and add this repository: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
   
      ![Add Repo Screenshot](images/add_ss.png)

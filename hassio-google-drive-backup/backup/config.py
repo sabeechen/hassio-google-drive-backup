@@ -11,7 +11,7 @@ DEFAULTS = {
     "ha_base_url": "http://hassio/homeassistant/api/",
     "path_separator": "/",
     "port": 1627,
-    "days_between_snapshots": 1,
+    "days_between_snapshots": 3,
 
     # how many hours after startup the server will wait before starting a new snapshot automatically
     "hours_before_snapshot": 1,

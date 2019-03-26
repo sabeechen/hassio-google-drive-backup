@@ -16,7 +16,7 @@
   "options": {
     "max_snapshots_in_hassio": 4,
     "max_snapshots_in_google_drive": 4,
-    "days_between_snapshots": 1,
+    "days_between_snapshots": 3,
     "use_ssl": false
   },
   "schema": {

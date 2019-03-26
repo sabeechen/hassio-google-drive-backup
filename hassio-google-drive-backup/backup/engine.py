@@ -272,5 +272,6 @@ class Engine(object):
         self.hassio.updateSnapshotStaleSensor(False)
         if self.notified:
             self.hassio.dismissNotification()
+            self.notified = False
 
 

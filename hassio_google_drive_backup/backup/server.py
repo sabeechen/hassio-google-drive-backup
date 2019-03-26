@@ -28,13 +28,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google_auth_oauthlib.flow import _RedirectWSGIApp
 from google_auth_oauthlib.flow import _WSGIRequestHandler
 from google.auth.transport.requests import Request
-from apiclient.http import MediaFileUpload
-from apiclient.http import MediaIoBaseUpload
-from apiclient.errors import HttpError
 from pprint import pprint
 from time import sleep
-from googleapiclient.errors import HttpError
-from googleapiclient.discovery import build
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.file import Storage
 from cherrypy import _cperror

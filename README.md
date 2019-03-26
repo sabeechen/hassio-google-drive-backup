@@ -4,7 +4,7 @@
 A complete and easy to configure solution for backing up your snapshots to Google Drive
 * Automatically creates new snapshots on a configurable schedule.
 * Uploads any snapshots it finds to Google Drive.
-* Automatically cleans up old snapshots in Home Assistant and Google drive so you don't run otu of space.
+* Automatically cleans up old snapshots in Home Assistant and Google drive so you don't run out of space.
 * Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
 
 This is for you if you want to quickly set up a backup strategy without having to do much work.
@@ -25,7 +25,7 @@ The add-on is insatlled like any other.
 2.   Scroll down the page to find the new repository, and click the new add-on named "Hass.io Google Drive Backup"
 
      ![Repo Screenshot](images/repo_ss.png)
-3.   Click "Install" and give it a few minutes to finish donwloading.
+3.   Click "Install" and give it a few minutes to finish downloading.
 4.   Take note of the default configuration options.  For most people the default settings are sufficient:
      *   **max_snapshots_in_hassio**: is the number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.  
      *   **max_snapshots_in_google_drive**: is the number of snapshots the add-on will keep in Google Drive before old ones are deleted.

@@ -16,6 +16,8 @@ class Watcher(object):
 				self.last_list.sort()
 				return False
 			dirs = os.listdir(self.config.backupDirectory())
+			if self.config.verbose():
+				print("Backup directory: {}".format(dirs))
 			dirs.sort()
 			if dirs == self.last_list:
 				return False

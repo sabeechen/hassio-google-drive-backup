@@ -19,7 +19,7 @@ I made this to avoid these complications.  Install the add-on, click the button 
 
 ## Installation
 The add-on is installed like any other.
-1.   Go to you Hass.io "Add-on" and add this repository: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
+1.   Go to you Hass.io > "Add-on" page in Home Assistant and add this repository: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
   
      ![Add Repo Screenshot](images/add_ss.png)
 2.   Scroll down the page to find the new repository, and click the new add-on named "Hass.io Google Drive Backup"

@@ -1,0 +1,42 @@
+{
+  "name": "Hass.io Google Drive Backup",
+  "version": "0.42",
+  "slug": "hassio_google_drive_backup",
+  "description": "Automatically back up Hass.io snapshots to Google Drive",
+  "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
+  "startup": "before",
+  "boot": "auto",
+  "url": "https://github.com/sabeechen/hassio-google-drive-backup",
+  "homeassistant_api": true,
+  "hassio_api": true,
+  "hassio_role": "manager",
+  "auth_api": true,
+  "webui": "[PROTO:use_ssl]://[HOST]:[PORT:1627]/",
+  "map": ["ssl", "backup"],
+  "options": {
+    "max_snapshots_in_hassio": 4,
+    "max_snapshots_in_google_drive": 4,
+    "days_between_snapshots": 1,
+    "use_ssl": true
+  },
+  "schema": {
+    "max_snapshots_in_hassio": "int(0,)",
+    "max_snapshots_in_google_drive": "int(0,)",
+    "hassio_base_url": "url?",
+    "path_separator": "str?",
+    "days_between_snapshots": "float(0,)?",
+    "hours_before_snapshot": "float(0,)?",
+
+    "seconds_between_refreshes": "float(0,)?",
+    "verbose": "bool?",
+    "use_ssl": "bool?",
+    "certfile": "str?",
+    "keyfile": "str?",
+    "require_login": "bool?",
+    "snapshot_stale_minutes": "float(0,)?"
+  },
+  "ports": {
+    "1627/tcp": 1627
+  },
+  "image": "sabeechen/hassio-google-drive-backup-{arch}"
+}

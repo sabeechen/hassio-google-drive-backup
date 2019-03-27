@@ -25,7 +25,7 @@ DEFAULTS = {
     "keyfile": "/ssl/privkey.pem",
     "require_login": False,
     "backup_directory": "/backup",
-    "snapshot_stale_minutes" : 60 * 2,
+    "snapshot_stale_minutes" : 60 * 3,
     "ha_bearer" : ""
 }
 

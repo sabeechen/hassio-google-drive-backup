@@ -10,7 +10,11 @@
             "options": {
                 "cwd": "${workspaceFolder}/hassio-google-drive-backup"
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "Run Mock Hass.io Server",
@@ -43,9 +47,7 @@
             "problemMatcher": [],
             "options": {
                 "cwd": "${workspaceFolder}"
-            },
+            }
         }
-
-
     ]
 }

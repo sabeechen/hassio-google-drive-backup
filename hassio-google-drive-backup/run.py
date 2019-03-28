@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import threading
 import backup
 import sys

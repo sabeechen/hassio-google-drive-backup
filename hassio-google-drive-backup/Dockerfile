@@ -6,4 +6,5 @@ WORKDIR /app
 COPY . /app
 RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
 EXPOSE 1627
-CMD ["python3", "run.py"]
+RUN ["chmod", "+x", "run.py"]
+ENTRYPOINT /app/run.py

@@ -97,6 +97,9 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
 
 You could automate anything off of this binary sensor.  The add-on also exposes a sensor `snapshot_backup.state` that exposes the details of each snapshot.  I'm working on a custom lovelace component to expose that information.
 
+### Can I permanently save a snapshot so it doesn't get cleaned up?
+The Add-on will only ever look at snapshots in the folder in Google Drive it created.  If you move the snapshots anywhere else in Google Drive, they will be ignored.  Just don't move them back in accidentally since they'll get "cleaned up" like any old snapshot after a while :)
+
 ### I already have something that backs up my snapshots.  Can I just use this to trigger new ones?
 Yes, though I'll point out that Google Gives you a lot of free storage, 15GB at the time of this writing, and their infrastructure is a lot more resiliant than any of your hard drives.  If you set the configuration option:
 `"max_snapshots_in_google_drive": 0`

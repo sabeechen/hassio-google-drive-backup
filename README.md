@@ -97,6 +97,17 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
 
 You could automate anything off of this binary sensor.  The add-on also exposes a sensor `snapshot_backup.state` that exposes the details of each snapshot.  I'm working on a custom lovelace component to expose that information.
 
+### Can I put a link to the web UI in home assistant?
+You can use [panel_iframe](https://www.home-assistant.io/components/panel_iframe/) to add a link to the Web UI from Home Assistant's side panel.  Try adding snippet below to your configuration.yaml file.
+```yaml
+panel_iframe:
+  backup:
+    title: 'Snapshots'
+    icon: mdi:cloud-upload
+    url: 'http://hassio.local:1627'
+```
+You might need to change the `url:` if you use ssl or access Home Assistant through a different hostname. 
+
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
 * Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance.  This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive.  Your password is never seen by me or the add-on.

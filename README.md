@@ -34,10 +34,10 @@ The add-on is installed like any other.
      
      Other less common config options are explained [below](#configuration-options).
      > Be aware that once you start the Add-on, it will start cleaning up old snapshots immediately.  If you have 5 snapshots and you start the add-on with **max_snapshots_in_hassio**=4 then the oldest one will get deleted.
-5.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  While you're there turn on auto-update, this is still a project under development.  For the majority of users this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).  
-6.   Log in to the webpage with your Hoem assistant username and password.
-6.   Follow the instruction on-screen to link the Add-on with your Google Drive account.  Two method of doing this are provided, since authenticating with Google's servers can be tempermental while this Add-on is still under development.
-7.   You should be taken redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.
+5.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of users this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).
+6.   Log in to the webpage with your Home Assistant username and password.
+6.   Follow the instruction on-screen to link the Add-on with your Google Drive account.  Two methods of doing this are provided, since authenticating with Google's servers can be tempermental while this Add-on is still under development.
+7.   You should be redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.  You're done!
 
 ## Configuration Options
 I addition to the options described in the instructions above:

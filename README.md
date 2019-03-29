@@ -97,6 +97,15 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
 
 You could automate anything off of this binary sensor.  The add-on also exposes a sensor `snapshot_backup.state` that exposes the details of each snapshot.  I'm working on a custom lovelace component to expose that information.
 
+### Does this store any personal information?
+On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
+* Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance.  This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive.  Your password is never seen by me or the add-on.
+* The add-on has access to the files in Google Drive it created, which is the 'Hass.io Snapshots' folder and any snapshots it uploads.  See the https://www.googleapis.com/auth/drive.file scope in the [Drive REST API v3 Documentation](https://developers.google.com/drive/api/v3/about-auth) for details, this is the only scope the add-on requests for your account.
+* Google stores a history of information about the number of requests, number of errors, and latency of requests made by this Add-on and makes a graph of that visible to me.  This is needed because Google only gives me a certain quota for requests shared between all users of the add-on, so I need to be aware if someone is abusing it.
+* The Add-on is distributed as a Docker container hosted on Docker Hub, which his how almost all add-ons work.  Docker keeps track of how many people have requested an image and makes that information publicly visible.
+
+This invariably means that I have a very limited ability to see how many people are using the add-on or if it is functioning well.  If you do like it, feel free to shoot me an email at [sabeechen@gmail.com](mailto:sabeechen@gmail.com) or star this repo on GitHub, it really helps keep me motivated.  If you run into problems or think a new feature would be nice, file an issue on GitHub.
+
 ### Can I permanently save a snapshot so it doesn't get cleaned up?
 The Add-on will only ever look at snapshots in the folder in Google Drive it created.  If you move the snapshots anywhere else in Google Drive, they will be ignored.  Just don't move them back in accidentally since they'll get "cleaned up" like any old snapshot after a while :)
 

@@ -55,7 +55,7 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 
   ![Notification](images/notification_error.png)
 
-* A [binary_sensor](#configuration-options) you can use to trigger additional actions.
+* A [binary_sensor](#lovelace-card) you can use to trigger additional actions.
   
    ![Binary Sensor](images/binary_sensor.png)
 

@@ -116,8 +116,8 @@ class Drive(object):
                     'mimeType': THUMBNAIL_MIME_TYPE
                 }
             },
-            'createdTime': snapshot.date().isoformat(timespec='seconds'),
-            'modifiedTime': snapshot.date().isoformat(timespec='seconds')
+            'createdTime': self._timeToRfc3339String(snapshot.date()),
+            'modifiedTime': self._timeToRfc3339String(snapshot.date())
         }
         response = requests.get(download_url, stream=True, headers=HEADERS)
         stream = ResponseStream(response.iter_content(262144))
@@ -142,6 +142,9 @@ class Drive(object):
         self._retryDriveServiceCall(self._drive().files().delete(fileId = snapshot.driveitem.id()))
         print("Deleted snapshot backup from drive '{}'".format(snapshot.name()))
         snapshot.driveitem = None
+
+    def _timeToRfc3339String(self, time):
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
     def readSnapshots(self, parent_id):

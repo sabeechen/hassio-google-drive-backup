@@ -1,24 +1,9 @@
 import os.path
-import sys
-import os
-import tarfile
 import json
-import argparse
-import datetime
 import wsgiref.simple_server
-import wsgiref.util
-import http.server
-import socketserver
 import threading
-import cherrypy
-import urllib
-import oauth2client
-import traceback
-import httplib2
 import random
 import string
-import flask
-import threading
 
 from urllib.parse import quote
 from urllib.parse import unquote
@@ -27,36 +12,29 @@ from datetime import timedelta
 from dateutil.tz import tzutc
 from dateutil.parser import parse
 from datetime import datetime
-from apiclient.http import MediaFileUpload
-from apiclient.errors import HttpError
 from pprint import pprint
 from time import sleep
-from googleapiclient.errors import HttpError
-from googleapiclient.discovery import build
-from oauth2client.client import OAuth2WebServerFlow
-from oauth2client.file import Storage
-from cherrypy import _cperror
 from flask import Flask
 from flask import request
 from flask import send_file
-from time import sleep
+from typing import List, Dict, Optional, Any
 
 app = Flask(__name__)
 
-snapshots = []
+snapshots: List[Dict[Any, Any]] = []
 NEW_SNAPSHOT_SLEEP_SECONDS = 20
 
 @app.route('/')
-def index():
+def index() -> str:
     return 'Running'
 
 @app.route('/snapshots', methods=['GET'])
-def getsnapshots():
+def getsnapshots() -> str:
     return formatDataResponse({'snapshots' : snapshots})
 
 
 @app.route('/snapshots/new/full', methods=['POST'])
-def newSnapshot():
+def newSnapshot() -> str:
     slug = getSlugName()
     input_json = request.get_json()
     sleep(NEW_SNAPSHOT_SLEEP_SECONDS)
@@ -69,8 +47,8 @@ def newSnapshot():
     return formatDataResponse(slug)
 
 @app.route('/snapshots/<slug>/remove', methods=['POST'])
-def delete(slug):
-    delete = None
+def delete(slug: str) -> str:
+    delete: Optional[Dict[Any, Any]] = None
     for snapshot in snapshots:
         if snapshot['slug'] == slug:
             delete = snapshot
@@ -80,30 +58,28 @@ def delete(slug):
     return formatDataResponse("deleted")
 
 @app.route('/snapshots/<slug>/info', methods=['GET'])
-def info(slug):
-    delete = None
+def info(slug: str) -> str:
     for snapshot in snapshots:
         if snapshot['slug'] == slug:
             return formatDataResponse(snapshot)
     raise Exception('no snapshot with this slug')
 
 @app.route('/snapshots/<slug>/download', methods=['GET'])
-def download(slug):
-    delete = None
+def download(slug: str) -> Any:
     for snapshot in snapshots:
         if snapshot['slug'] == slug:
             return send_file('C:\\Users\\home\\Desktop\\d84fa4bd.tar')
     raise Exception('no snapshot with this slug')
 
 @app.route('/addons/self/info', methods=['GET'])
-def hostInfo():
+def hostInfo() -> str:
     return formatDataResponse({
     "webui": "http://[HOST]:1627/",
 })
 
 
 @app.route('/info', methods=['GET'])
-def selfInfo():
+def selfInfo() -> str:
     return formatDataResponse({
     "supervisor": "version",
     "homeassistant": "version",
@@ -115,34 +91,34 @@ def selfInfo():
     "channel": "dev"
 })
 
-@app.route("/homeassistant/api/states/snapshot_backup.state", methods=['POST'])
-def setBackupState():
+@app.route("/homeassistant/api/states/sensor.snapshot_backup", methods=['POST'])
+def setBackupState() -> str:
     print("Updated snapshot state with: {}".format(request.get_json()))
     return ""
 
 @app.route("/homeassistant/api/states/binary_sensor.snapshots_stale", methods=['POST'])
-def setBinarySensorState():
+def setBinarySensorState() ->str:
     print("Updated snapshot stale sensor with: {}".format(request.get_json()))
     return ""
 
 @app.route("/homeassistant/api/services/persistent_notification/create", methods=['POST'])
-def createNotification():
+def createNotification() -> str:
     print("Created notification with: {}".format(request.get_json()))
     return ""
 
 @app.route("/homeassistant/api/services/persistent_notification/dismiss", methods=['POST'])
-def dismissNotification():
+def dismissNotification() -> str:
     print("Dismissed notification with: {}".format(request.get_json()))
     return ""
 
 @app.route('/snapshots/slugname')
-def getSlugName():
+def getSlugName() -> str:
         return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8)) 
 
-def formatDataResponse(data):
+def formatDataResponse(data: Any) -> str:
     return json.dumps({'result' : 'ok', 'data' : data})
 
-def formatErrorResponse(error):
+def formatErrorResponse(error: str) -> Dict[str, str]:
     return {'result' : error}
 
 if __name__ == '__main__':

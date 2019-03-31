@@ -1,6 +1,7 @@
 import os.path
 import pprint
 import json
+from typing import Dict, List, Tuple, Any
 
 HASSIO_OPTIONS_FILE = '/data/options.json'
 
@@ -17,7 +18,7 @@ DEFAULTS = {
     "hours_before_snapshot": 1,
     "folder_file_path": "/data/folder.dat",
     "credentials_file_path": "/data/credentials.dat",
-    "seconds_between_refreshes": 60 * 60, # once per hour, refresh everythin regardless
+    "seconds_between_refreshes": 60 * 60,  # once per hour, refresh everythin regardless
     "seconds_between_directory_checks": 10,
     "verbose": False,
     "use_ssl": False,
@@ -25,14 +26,16 @@ DEFAULTS = {
     "keyfile": "/ssl/privkey.pem",
     "require_login": False,
     "backup_directory": "/backup",
-    "snapshot_stale_minutes" : 60 * 3,
-    "ha_bearer" : ""
+    "snapshot_stale_minutes": 60 * 3,
+    "ha_bearer": "",
+    "snapshot_time_of_day": "02:00"
 }
+
 
 class Config(object):
 
-    def __init__(self, file_paths):
-        self.config = DEFAULTS
+    def __init__(self, file_paths: List[str]):
+        self.config: Dict[str, Any] = DEFAULTS
         for config_file in [HASSIO_OPTIONS_FILE, ""]:
             if os.path.isfile(config_file):
                 with open(config_file) as file_handle:
@@ -45,77 +48,65 @@ class Config(object):
         print("Loaded config:")
         pprint.pprint(self.config)
 
+    def maxSnapshotsInHassio(self) -> int:
+        return int(self.config['max_snapshots_in_hassio'])
 
-    def maxSnapshotsInHassio(self):
-        return self.config['max_snapshots_in_hassio']
+    def maxSnapshotsInGoogleDrive(self) -> int:
+        return int(self.config['max_snapshots_in_google_drive'])
 
+    def hassioBaseUrl(self) -> str:
+        return str(self.config['hassio_base_url'])
 
-    def maxSnapshotsInGoogleDrive(self):
-        return self.config['max_snapshots_in_google_drive']
+    def haBaseUrl(self) -> str:
+        return str(self.config['ha_base_url'])
 
-        
-    def hassioBaseUrl(self):
-        return self.config['hassio_base_url']
+    def pathSeparator(self) -> str:
+        return str(self.config['path_separator'])
 
-    def haBaseUrl(self):
-        return self.config['ha_base_url']
+    def port(self) -> int:
+        return int(self.config['port'])
 
-        
-    def pathSeparator(self):
-        return self.config['path_separator']
+    def daysBetweenSnapshots(self) -> float:
+        return float(self.config['days_between_snapshots'])
 
-        
-    def port(self):
-        return self.config['port']
+    def hoursBeforeSnapshot(self) -> float:
+        return float(self.config['hours_before_snapshot'])
 
-        
-    def daysBetweenSnapshots(self):
-        return self.config['days_between_snapshots']
+    def folderFilePath(self) -> str:
+        return str(self.config['folder_file_path'])
 
-        
-    def hoursBeforeSnapshot(self):
-        return self.config['hours_before_snapshot']
+    def credentialsFilePath(self) -> str:
+        return str(self.config['credentials_file_path'])
 
-        
-    def folderFilePath(self):
-        return self.config['folder_file_path']
+    def secondsBetweenRefreshes(self) -> int:
+        return int(self.config['seconds_between_refreshes'])
 
-        
-    def credentialsFilePath(self):
-        return self.config['credentials_file_path']
+    def secondsBetweenDirectoryChecks(self) -> float:
+        return float(self.config['seconds_between_directory_checks'])
 
-    def secondsBetweenRefreshes(self):
-        return self.config['seconds_between_refreshes']
+    def verbose(self) -> bool:
+        return bool(self.config['verbose'])
 
-    def secondsBetweenDirectoryChecks(self):
-        return self.config['seconds_between_directory_checks']
+    def useSsl(self) -> bool:
+        return bool(self.config['use_ssl'])
 
-    def verbose(self):
-        return self.config['verbose']
+    def certFile(self) -> str:
+        return str(self.config['certfile'])
 
-    def useSsl(self):
-        return self.config['use_ssl']
+    def keyFile(self) -> str:
+        return str(self.config['keyfile'])
 
-    def certFile(self):
-        return self.config['certfile']
+    def requireLogin(self) -> bool:
+        return bool(self.config['require_login'])
 
-    def keyFile(self):
-        return self.config['keyfile']
+    def backupDirectory(self) -> str:
+        return str(self.config['backup_directory'])
 
-    def requireLogin(self):
-        return self.config['require_login']
+    def snapshotStaleMinutes(self) -> float:
+        return float(self.config['snapshot_stale_minutes'])
 
-    def backupDirectory(self):
-        return self.config['backup_directory']
+    def haBearer(self) -> str:
+        return str(self.config['ha_bearer'])
 
-    def snapshotStaleMinutes(self):
-        return self.config['snapshot_stale_minutes']
-
-    def haBearer(self):
-        return self.config['ha_bearer']
-
-
-
-
-
-             
+    def snapshotTimeOfDay(self) -> str:
+        return str(self.config['snapshot_time_of_day'])

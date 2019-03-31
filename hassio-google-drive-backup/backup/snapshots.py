@@ -1,83 +1,102 @@
-import datetime
 
 from datetime import datetime
 from .helpers import parseDateTime
+from abc import ABC, abstractmethod
+from typing import Dict, List, Tuple, Optional, Any
 
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"
 PROP_KEY_NAME = "snapshot_name"
 
-class DriveSnapshot(object):
+
+class AbstractSnapshot(ABC):
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+    @abstractmethod
+    def slug(self) -> str:
+        pass
+
+    @abstractmethod
+    def size(self) -> int:
+        pass
+
+    @abstractmethod
+    def date(self) -> datetime:
+        pass
+
+
+class DriveSnapshot(AbstractSnapshot):
     """
     Represents a Hass.io snapshot stored on Google Drive
     """
-    def __init__(self, source):
+    def __init__(self, source: Dict[Any, Any]):
         self.source = source.copy()
 
-    def id(self):
-        return self.source.get('id')
+    def id(self) -> str:
+        return str(self.source.get('id'))
 
-    def name(self):
-        return self.source.get('appProperties')[PROP_KEY_NAME]
+    def name(self) -> str:
+        return self.source.get('appProperties')[PROP_KEY_NAME] #type: ignore
 
-    def slug(self):
-        return self.source.get('appProperties')[PROP_KEY_SLUG]
+    def slug(self) -> str:
+        return self.source.get('appProperties')[PROP_KEY_SLUG] #type: ignore
 
-    def size(self):
-        return self.source.get('size') 
+    def size(self) -> int:
+        return self.source.get('size') #type: ignore
 
-    def date(self):
-        return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE])
+    def date(self) -> datetime:
+        return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE]) #type: ignore
 
-    def __str__(self):
-        return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id())
+    def __str__(self) -> str:
+        return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id()) 
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str) -> str:
         return self.__str__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
 
-
-class HASnapshot(object):
+class HASnapshot(AbstractSnapshot):
     """
     Represents a Hass.io snapshot stored locally in Home Assistant
     """
-    def __init__(self, source):
-        self.source = source.copy()
+    def __init__(self, source: Dict[str, Any]):
+        self.source: Dict[str, Any] = source.copy()
 
-    def name(self):
-        return self.source['name']
+    def name(self) -> str:
+        return str(self.source['name'])
 
-    def slug(self):
-        return self.source['slug']
+    def slug(self) -> str:
+        return str(self.source['slug'])
 
-    def size(self):
-        return self.source['size'] * 1024 * 1024
+    def size(self) -> int:
+        return int(self.source['size']) * 1024 * 1024
 
-    def date(self):
+    def date(self) -> datetime:
         return parseDateTime(self.source['date'])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<HA: {0} Name: {1}>".format(self.slug(), self.name())
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str) -> str:
         return self.__str__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
 
 class Snapshot(object):
     """
-    Represents a Hass.io snapshot stored on Google Drive, locally in 
-    Home Assistant, or a pending snapshot we expect to see show up later 
+    Represents a Hass.io snapshot stored on Google Drive, locally in
+    Home Assistant, or a pending snapshot we expect to see show up later
     """
-    def __init__(self, snapshot):
-        self.driveitem = None
-        self.pending = False
-        self.ha = None
+    def __init__(self, snapshot: Optional[AbstractSnapshot]):
+        self.driveitem: Optional[DriveSnapshot] = None
+        self.pending: bool = False
+        self.ha: Optional[HASnapshot] = None
         if isinstance(snapshot, HASnapshot):
             self.ha = snapshot
             self.driveitem = None
@@ -86,52 +105,51 @@ class Snapshot(object):
             self.driveitem = snapshot
             self.ha = None
             self.pending = False
-        else :
+        else:
             self.pending = True
-        self.pending_name = None
-        self.pending_date = None
-        self.pending_slug = None
-        self.uploading_pct = -1
-        self.pendingHasFailed = False
-        self.will_backup = True
+        self.pending_name: Optional[str] = ""
+        self.pending_date: Optional[datetime] = None
+        self.pending_slug: Optional[str] = None
+        self.uploading_pct: int = -1
+        self.pendingHasFailed: bool = False
+        self.will_backup: bool = True
 
-    def setPending(self, name, date):
+    def setPending(self, name: str, date: datetime) -> None:
         self.pending_name = name
         self.pending_date = date
         self.pending_slug = "PENDING"
         self.pending = True
 
-    def endPending(self, slug):
+    def endPending(self, slug: str) -> None:
         self.pending_slug = slug
 
-    def pendingFailed(self):
+    def pendingFailed(self) -> None:
         self.pendingHasFailed = True
 
-    def setWillBackup(self, will):
+    def setWillBackup(self, will: bool) -> None:
         self.will_backup = will
 
-    def name(self):
+    def name(self) -> str:
         if self.driveitem:
             return self.driveitem.name()
         elif self.ha:
             return self.ha.name()
-        elif self.pending:
+        elif self.pending and self.pending_name:
             return self.pending_name
         else:
             return "error"
 
-    def slug(self):
+    def slug(self) -> str:
         if self.driveitem:
             return self.driveitem.slug()
         elif self.ha:
             return self.ha.slug()
-        elif self.pending:
+        elif self.pending and self.pending_slug:
             return self.pending_slug
         else:
             return "error"
 
-
-    def size(self):
+    def size(self) -> int:
         if self.driveitem:
             return self.driveitem.size()
         elif self.ha:
@@ -139,27 +157,27 @@ class Snapshot(object):
         else:
             return 0
 
-    def date(self):
+    def date(self) -> datetime:
         if self.driveitem:
             return self.driveitem.date()
         elif self.ha:
             return self.ha.date()
-        elif self.pending:
+        elif self.pending and self.pending_date:
             return self.pending_date
         else:
             return datetime.now()
 
-    def sizeString(self):
+    def sizeString(self) -> str:
         size_bytes = float(self.size())
         if size_bytes <= 1024.0:
             return str(int(size_bytes)) + " B"
-        if size_bytes <= 1024.0*1024.0:
-            return str(int(size_bytes/1024.0)) + " kB"
-        if size_bytes <= 1024.0*1024.0*1024.0:
-            return str(int(size_bytes/(1024.0*1024.0))) + " MB"
-        return str(int(size_bytes/(1024.0*1024.0*1024.0))) + " GB"
+        if size_bytes <= 1024.0 * 1024.0:
+            return str(int(size_bytes / 1024.0)) + " kB"
+        if size_bytes <= 1024.0 * 1024.0 * 1024.0:
+            return str(int(size_bytes / (1024.0 * 1024.0))) + " MB"
+        return str(int(size_bytes / (1024.0 * 1024.0 * 1024.0))) + " GB"
 
-    def status(self):
+    def status(self) -> str:
         if self.isInDrive() and self.isInHA():
             return "Backed Up"
         if self.isInDrive() and not self.isInHA():
@@ -173,8 +191,9 @@ class Snapshot(object):
                 return "Hass.io Only"
         if self.pending:
             return "Pending"
+        return "Invalid State"
 
-    def setDrive(self, drive):
+    def setDrive(self, drive: DriveSnapshot) -> None:
         self.driveitem = drive
         self.pending_name = None
         self.pending_date = None
@@ -182,7 +201,7 @@ class Snapshot(object):
         self.uploading_pct = -1
         self.pending = False
 
-    def setHA(self, ha):
+    def setHA(self, ha: HASnapshot) -> None:
         self.ha = ha
         self.pending_name = None
         self.pending_date = None
@@ -190,37 +209,32 @@ class Snapshot(object):
         self.uploading_pct = -1
         self.pending = False
 
-    def isInDrive(self):
-        return not self.driveitem is None
+    def isInDrive(self) -> bool:
+        return self.driveitem is not None
 
+    def isInHA(self) -> bool:
+        return self.ha is not None
 
-    def isInHA(self):
-        return not self.ha is None
-
-
-    def isPending(self):
+    def isPending(self) -> bool:
         return self.pending and not self.isInHA() and not self.pendingHasFailed
 
-
-    def isDeleted(self):
+    def isDeleted(self) -> bool:
         return not self.isPending() and not self.isInHA() and not self.isInDrive()
 
-
-    def update(self, snapshot):
+    def update(self, snapshot: AbstractSnapshot) -> None:
         if isinstance(snapshot, HASnapshot):
             self.ha = snapshot
         else:
             self.drive = snapshot
 
-
-    def uploading(self, percent):
+    def uploading(self, percent: int) -> None:
         self.uploading_pct = percent
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<Slug: {0} Ha: {1} Drive: {2} Pending: {3}>".format(self.slug(), self.ha, self.driveitem, self.pending)
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str) -> str:
         return self.__str__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()

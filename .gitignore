@@ -2,3 +2,5 @@
 *.dat
 *.id
 .pytest_cache/*
+.mypy_cache/*
+*drive_creds*

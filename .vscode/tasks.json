@@ -49,5 +49,15 @@
                 "cwd": "${workspaceFolder}"
             }
         }
+        ,
+        {
+            "label": "Publish local add-on",
+            "type": "shell",
+            "command": "python deploy_local_addon.py \\\\192.168.1.144",
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        }
     ]
 }

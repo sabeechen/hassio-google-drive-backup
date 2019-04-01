@@ -45,18 +45,35 @@ def take(iterable: Sequence[T], count: int) -> Generator[T, None, None]:
 
 
 def formatTimeSince(time: datetime) -> str:
-    delta = relativedelta(nowutc(), time)
+    delta: relativedelta = None
+    flavor = ""
+    if time < nowutc():
+        delta = relativedelta(nowutc(), time)
+        flavor = " ago"
+    else:
+        delta = relativedelta(time, nowutc())
+        flavor = ""
+    if delta.years > 0:
+        return "{0} years{1}".format(delta.years, flavor) 
     if (delta.months != 0):
-        return "{} months ago".format(delta.months)
+        if delta.days > 15:
+            return "{0} months{1}".format(delta.months + 1, flavor)
+        return "{0} months{1}".format(delta.months, flavor)
     if (delta.days != 0):
-        return "{} days ago".format(delta.days)
+        if delta.hours >= 12:
+            return "{0} days{1}".format(delta.days + 1, flavor)
+        return "{0} days{1}".format(delta.days, flavor)
     if (delta.hours != 0):
-        return "{} hours ago".format(delta.hours)
+        if delta.minutes >= 30:
+            return "{0} hours{1}".format(delta.hours + 1, flavor)
+        return "{0} hours{1}".format(delta.hours, flavor)
     if (delta.minutes != 0):
-        return "{} minutes ago".format(delta.minutes)
+        if delta.minutes >= 30:
+            return "{0} minutes{1}".format(delta.minutes + 1, flavor)
+        return "{0} minutes{1}".format(delta.minutes, flavor)
     if (delta.seconds != 0):
-        return "{} seconds ago".format(delta.seconds)
-    return "just now"
+        return "{0} seconds{1}".format(delta.seconds, flavor)
+    return "right now"
 
 
 def formatException(e: Exception) -> str:

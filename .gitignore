@@ -4,3 +4,4 @@
 .pytest_cache/*
 .mypy_cache/*
 *drive_creds*
+dev/backup/*.tar

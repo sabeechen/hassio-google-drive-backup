@@ -1,20 +1,18 @@
-import backup
-
 from .snapshots import Snapshot
 from .snapshots import DriveSnapshot
 from .snapshots import HASnapshot
-from .helpers import nowutc
 from .helpers import makeDict
 from .helpers import count
 from .helpers import take
 from .helpers import formatException
 from .drive import Drive
-from .hassio import Hassio
+from .hassio import Hassio, SnapshotInProgress
 from .watcher import Watcher
 from .config import Config
+from .time import Time
 from pprint import pprint
-from time import sleep
 from dateutil.relativedelta import relativedelta
+from dateutil.tz import tzlocal
 from threading import Lock
 from datetime import timedelta
 from datetime import datetime
@@ -38,29 +36,26 @@ ERROR_BACKOFF_EXP_MUL = 2
 
 
 class Engine(object):
-    """
-    TODO: Need to hadnle having mroe hassio snapshots than
-    TODO: Test function of disabling drive or hassio cleanup
-    """
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, drive: Drive, hassio: Hassio, time: Time):
+        self.time: Time = time
         self.config: Config = config
-        self.earliest_backup_time: datetime = nowutc() + timedelta(hours=self.config.hoursBeforeSnapshot())
         self.folder_id: Optional[str] = None
         self.snapshots: List[Snapshot] = []
-        self.drive: Drive = Drive(self.config)
+        self.drive: Drive = drive
         self.lock: Lock = Lock()
-        self.hassio: Hassio = Hassio(self.config)
+        self.hassio: Hassio = hassio
         self.last_error: Optional[Exception] = None
         self.watcher: Watcher = Watcher(config)
-        self.last_refresh: datetime = nowutc() + relativedelta(hours=-6)
+        self.last_refresh: datetime = self.time.now() + relativedelta(hours=-6)
         self.notified: bool = False
-        self.last_success: datetime = nowutc()
+        self.last_success: datetime = self.time.now()
         self.addon_info: Optional[Dict[Any, Any]] = None
         self.host_info: Optional[Dict[Any, Any]] = None
         self.sim_error: Optional[str] = None
-        self.next_error_rety: datetime = nowutc()
+        self.next_error_rety: datetime = self.time.now()
         self.next_error_backoff: int = ERROR_BACKOFF_MIN_SECS
         self.one_shot: bool = False
+        self.snapshots_stale: bool = False
 
     def saveCreds(self, creds: Credentials) -> None:
         self.drive.saveCreds(creds)
@@ -79,21 +74,22 @@ class Engine(object):
         return count(self.snapshots, HA_LAMBDA)
 
     def doBackupWorkflow(self) -> None:
-        self.last_refresh = nowutc()
+        self.last_refresh = self.time.now()
         try:
             self.lock.acquire()
             if self.addon_info is None:
                 self.host_info = self.hassio.readHostInfo()
                 self.addon_info = self.hassio.readAddonInfo()
             self._checkForBackup()
+            self.snapshots_stale = False
             self.last_error = None
-            self.last_success = nowutc()
-            self.next_error_rety = nowutc()
+            self.last_success = self.time.now()
+            self.next_error_rety = self.time.now()
             self.next_error_backoff = ERROR_BACKOFF_MIN_SECS
         except Exception as e:
             print(formatException(e))
             print("A retry will be attempted in {} seconds".format(self.next_error_backoff))
-            self.next_error_rety = nowutc() + relativedelta(seconds=self.next_error_backoff)
+            self.next_error_rety = self.time.now() + relativedelta(seconds=self.next_error_backoff)
             self.next_error_backoff = self.next_error_backoff * ERROR_BACKOFF_EXP_MUL
             if self.next_error_backoff > ERROR_BACKOFF_MAX_SECS:
                 self.next_error_backoff = ERROR_BACKOFF_MAX_SECS
@@ -102,11 +98,35 @@ class Engine(object):
         finally:
             self.lock.release()
 
+    def getNextSnapshotTime(self) -> datetime:
+        if len(self.snapshots) == 0:
+            return self.time.now() - timedelta(days = 1)
+        newest: datetime = max(self.snapshots, key=DATE_LAMBDA).date()
+
+        if self.config.snapshotTimeOfDay() is None:
+            return newest + timedelta(days=self.config.daysBetweenSnapshots())
+        parts = self.config.snapshotTimeOfDay().split(":")
+        if len(parts) != 2:
+            return newest + timedelta(days=self.config.daysBetweenSnapshots())
+        hour: int = int(parts[0])
+        minute: int = int(parts[1])
+        if hour >= 24 or minute >= 60:
+            return newest + timedelta(days=self.config.daysBetweenSnapshots())
+
+        newest_local: datetime = self.time.toLocal(newest)
+        time_that_day_local = datetime(newest_local.year, newest_local.month, newest_local.day, hour, minute, 0, tzinfo=self.time.local_tz)
+        if newest_local < time_that_day_local:
+            # Latest snapshot is before the snapshot time for that day
+            return self.time.toUtc(time_that_day_local)
+        else:
+            # return the next snapshot after the delta
+            return self.time.toUtc(time_that_day_local + timedelta(days=self.config.daysBetweenSnapshots()))
+        
     def maybeSendStalenessNotifications(self) -> None:
         try:
             self.hassio.updateSnapshotsSensor("error", self.snapshots)
-            if nowutc() >= self.last_success + timedelta(minutes=self.config.snapshotStaleMinutes()):
-                self.hassio.updateSnapshotStaleSensor(True)
+            if self.time.now() >= self.last_success + timedelta(minutes=self.config.snapshotStaleMinutes()):
+                self.snapshots_stale = True
                 if not self.notified:
                     if self.addon_info and self.host_info:
                         url = self.addon_info["webui"].replace("[HOST]", self.host_info["hostname"])
@@ -118,25 +138,36 @@ class Engine(object):
             # Just eat this error, since we got an error updating status abotu the error
             print(formatException(e))
 
+    def needsRefresh(self) -> bool:
+        # refresh every once in a while regardless
+        needsRefresh: bool = self.time.now() > self.last_refresh + relativedelta(seconds=self.config.secondsBetweenRefreshes())
+
+        # We need a refresh if we need a new snapshot
+        needsRefresh = needsRefresh or (self.time.now() > self.getNextSnapshotTime()) 
+
+        # Don't refresh if we haven't passed the error bakcoff time.
+        if self.time.now() < self.next_error_rety:
+            needsRefresh = False
+
+        # Refresh if there are new files in the backup directory
+        needsRefresh = needsRefresh or self.watcher.haveFilesChanged()
+
+        if self.one_shot:
+            self.one_shot = False
+            needsRefresh = True
+
+        return needsRefresh
+
     def run(self) -> None:
         while True:
-            # refresh every once in a while regardless
-            needsRefresh: bool = nowutc() > self.last_refresh + relativedelta(seconds=self.config.secondsBetweenRefreshes())
-
-            # Refresh if there are new files in the backup directory
-            needsRefresh = needsRefresh or self.watcher.haveFilesChanged()
-
-            # Refresh every 20 seconds if there was an error
-            needsRefresh = needsRefresh or (nowutc() > self.last_refresh + relativedelta(seconds=20) and self.last_error is not None)
-
-            if self.one_shot:
-                self.one_shot = False
-                needsRefresh = True
-
-            if needsRefresh:
+            if self.needsRefresh():
                 self.doBackupWorkflow()
-
-            sleep(self.config.secondsBetweenDirectoryChecks())
+            try:
+                self.hassio.updateSnapshotStaleSensor(self.snapshots_stale)
+            except:
+                # Just eat the error, we'll keep retrying.
+                pass
+            self.time.sleep(self.config.secondsBetweenDirectoryChecks())
 
     def deleteSnapshot(self, slug: str, drive: bool, ha: bool) -> None:
         for snapshot in self.snapshots:
@@ -155,6 +186,9 @@ class Engine(object):
         raise Exception("Couldn't find this snapshot")
 
     def startSnapshot(self) -> Snapshot:
+        for snapshot in self.snapshots:
+            if snapshot.isPending():
+                raise SnapshotInProgress()
         snapshot = self.hassio.newSnapshot()
         self.snapshots.append(snapshot)
         return snapshot
@@ -177,7 +211,6 @@ class Engine(object):
             pprint(drive_map)
             print("Ha map: ")
             pprint(ha_map)
-
         for snapshot_from_drive in drive_snapshots:
             if not snapshot_from_drive.slug() in local_map:
                 drive_snapshot: Snapshot = Snapshot(snapshot_from_drive)
@@ -185,11 +218,15 @@ class Engine(object):
                 local_map[drive_snapshot.slug()] = drive_snapshot
             else:
                 local_map[snapshot_from_drive.slug()].setDrive(snapshot_from_drive)
+        
+        
+        added_from_ha: bool = False
         for snapshot_from_ha in ha_snapshots:
             if not snapshot_from_ha.slug() in local_map:
                 ha_snapshot: Snapshot = Snapshot(snapshot_from_ha)
                 self.snapshots.append(ha_snapshot)
                 local_map[ha_snapshot.slug()] = ha_snapshot
+                added_from_ha = True
             else:
                 local_map[snapshot_from_ha.slug()].setHA(snapshot_from_ha)
         for snapshot in self.snapshots:
@@ -199,6 +236,9 @@ class Engine(object):
                 snapshot.ha = None
             if snapshot.isDeleted():
                 self.snapshots.remove(snapshot)
+            if added_from_ha and snapshot.isPending():
+                self.snapshots.remove(snapshot)
+                self.hassio.killPending()
 
         self.snapshots.sort(key=DATE_LAMBDA)
         if (self.config.verbose()):
@@ -227,10 +267,12 @@ class Engine(object):
         if len(self.snapshots) > 0:
             oldest = min(self.snapshots, key=DATE_LAMBDA)
 
-        now = nowutc()
-        if (oldest is None or now > (oldest.date() + timedelta(days=self.config.daysBetweenSnapshots()))) and now > self.earliest_backup_time:
-            print("Trigger new backup")
-            self.snapshots.append(self.hassio.newSnapshot())
+        if self.time.now() > self.getNextSnapshotTime():
+            print("Start new scheduled backup")
+            try:
+                self.startSnapshot()
+            except SnapshotInProgress:
+                pass
 
         if self.sim_error is not None:
             raise Exception(self.sim_error)

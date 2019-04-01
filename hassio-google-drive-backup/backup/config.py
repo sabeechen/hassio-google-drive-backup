@@ -1,7 +1,7 @@
 import os.path
 import pprint
 import json
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 
 HASSIO_OPTIONS_FILE = '/data/options.json'
 
@@ -28,13 +28,13 @@ DEFAULTS = {
     "backup_directory": "/backup",
     "snapshot_stale_minutes": 60 * 3,
     "ha_bearer": "",
-    "snapshot_time_of_day": "02:00"
+    "snapshot_time_of_day": ""
 }
 
 
 class Config(object):
 
-    def __init__(self, file_paths: List[str]):
+    def __init__(self, file_paths: List[str] = [], extra_config: Dict[str, any] = {}):
         self.config: Dict[str, Any] = DEFAULTS
         for config_file in [HASSIO_OPTIONS_FILE, ""]:
             if os.path.isfile(config_file):
@@ -45,6 +45,8 @@ class Config(object):
                 with open(config_file) as file_handle:
                     print("Loading config from " + config_file)
                     self.config.update(json.load(file_handle))
+
+        self.config.update(extra_config)
         print("Loaded config:")
         pprint.pprint(self.config)
 
@@ -108,5 +110,7 @@ class Config(object):
     def haBearer(self) -> str:
         return str(self.config['ha_bearer'])
 
-    def snapshotTimeOfDay(self) -> str:
-        return str(self.config['snapshot_time_of_day'])
+    def snapshotTimeOfDay(self) -> Optional[str]:
+        if len(str(self.config['snapshot_time_of_day'])) > 0:
+            return str(self.config['snapshot_time_of_day'])
+        return None

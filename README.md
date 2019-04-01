@@ -40,13 +40,26 @@ The add-on is installed like any other.
 7.   You should be redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.  You're done!
 
 ## Configuration Options
-I addition to the options described in the instructions above:
-*   **verbose** (default: false): If true, enable additional debug logging.  Useful if you start seeing errors and need to file a bug with me.
+In addition to the options described in the instructions above:
+*  **snapshot_time_of_day** (default: None): The time of day (local time) that new snapshots should be created in 24 hour "HH:MM" format.  When not specified (the default), snapshots are created at the same time of day of the most recent snapshot.
+> #### Example: Create snapshots at 1:30pm
+> `"snapshot_time_of_day": "13:30"`
+*   **snapshot_stale_minutes** (default: 180):  How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention.  Setting this too low can cause you to be notified of transient errors, ie the internet, Google Drive, or Home Assistant being offline briefly.
+> #### Example: Notify after 12 hours of staleness
+> `"snapshot_stale_minutes": "500"`
+*   **require_login** (default: true): When true, requires your home assistant username and password to access the backpup status page.  Turning this off isn't recommended.
+> #### Example: Don't require login
+> `"require_login": false`
 *   **certfile** (default: /ssl/certfile.pem): The path to your ssl keyfile
 *   **keyfile** (default: /ssl/keyfile.pem): the path to your ssl certfile
-*   **require_login** (default: true): When true, requires your home assistant username and password to access the backpup status page.  Turning this off isn't recommended.
-*   **snapshot_stale_minutes** (default: 180):  How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention.  Setting this too low can cause you to be notified of transient errors, ie the internet being down briefly.
-*  **hours_before_snapshot** (default: 1):  How logn the add-on shoudl wait after startup before scheduling a new snapshot, if one is scheduled.  Prevents the add-on from scheduling a snapshot if one was created recently and the add-on was restarted. 
+> #### Example: Use certs you keep in a weird place
+>   `"certfile": "/ssl/weird/path/cert.pem"`,
+>
+>   `"keyfile": "/ssl/weird/path/key.pem"`
+*   **verbose** (default: false): If true, enable additional debug logging.  Useful if you start seeing errors and need to file a bug with me.
+
+> #### Example: Turn on verbose logging
+> `"verbose": true`
 
 ## FAQ
 ### How will I know this will be there when I need it?
@@ -95,7 +108,7 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
           message: Please visit the 'Hass.io Google Drive Backup ' add-on status page
             for details.
 
-You could automate anything off of this binary sensor.  The add-on also exposes a sensor `snapshot_backup.state` that exposes the details of each snapshot.  I'm working on a custom lovelace component to expose that information.
+You could automate anything off of this binary sensor.  The add-on also exposes a sensor `sensor.snapshot_backup` that exposes the details of each snapshot.  I'm working on a custom lovelace component to expose that information.
 
 ### Can I put a link to the web UI in home assistant?
 You can use [panel_iframe](https://www.home-assistant.io/components/panel_iframe/) to add a link to the Web UI from Home Assistant's side panel.  Try adding snippet below to your configuration.yaml file.
@@ -106,7 +119,10 @@ panel_iframe:
     icon: mdi:cloud-upload
     url: 'http://hassio.local:1627'
 ```
-You might need to change the `url:` if you use ssl or access Home Assistant through a different hostname. 
+You might need to change the `url:` if you use ssl or access Home Assistant through a different hostname.
+
+### Can I specify what time of day snapshots should be created?
+You can add `"snapshot_time_of_day": "13:00"` to your add-on configuration to make snapshots always happen at 1pm.  Specify the time in 24 hour format of `"HH:MM"`.  When unspecified, the next snapshot will be created at the same time of day as the last one.
 
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
@@ -124,9 +140,6 @@ The Add-on will only ever look at snapshots in the folder in Google Drive it cre
 Yes, though I'll point out that Google Gives you a lot of free storage, 15GB at the time of this writing, and their infrastructure is a lot more resiliant than any of your hard drives.  If you set the configuration option:
 `"max_snapshots_in_google_drive": 0`
 Then it won't try to upload anything to Google Drive.
-
-### I installed the add-on but, I don't have any snapshots, and it doesn't look like its making any.  What gives?
-The add-on prevents itself from making any new **automatic** snapshots for an hour after its first starts up.  This is to prevent it from requesting a snapshot while Hass.io is already be making one.  You can still ask it to make one manuall by pressing the "New Snapshot" button on the status web UI, or you can just be patient for crying out loud.
 
 ### What do I do if I've found an error?
 If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage.  This should include a link to pre-populate a new issue in github, which I'd encourage you to do.  Additioanlly you can set the add-on config option `"verbose" : true` to get information from the add-on's logs to help me with debugging.

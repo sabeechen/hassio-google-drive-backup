@@ -95,6 +95,13 @@
         	Loading...</h5>
             </div>
             <br/>
+            <br/>
+            <div>
+            	<h6>Next snapshot</h6>
+            	<h5 class="right" id="next_snapshot">
+        	Loading...</h5>
+            </div>
+            <br/>
           </div>
         </div>
 
@@ -277,7 +284,8 @@
   		var jqxhr = $.get( "getstatus", function(data) {
   		  $('#ha_snapshots').empty().append(data.ha_snapshots);
   		  $('#drive_snapshots').empty().append(data.drive_snapshots);
-  		  $('#last_snapshot').empty().append(data.last_snapshot);
+        $('#last_snapshot').empty().append(data.last_snapshot);
+        $('#next_snapshot').empty().append(data.next_snapshot);
   		  $('#drive_button').attr("href","https://drive.google.com/drive/u/0/folders/" + data.folder_id);
   		  snapshot_div = $('#snapshots')
   		  snapshot_div.html("")

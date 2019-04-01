@@ -3,7 +3,6 @@ import sys
 import os
 import json
 import requests
-import threading
 
 from requests import Response
 from pprint import pprint
@@ -17,6 +16,7 @@ from .helpers import formatException
 from .knownerror import KnownError
 from .config import Config
 from typing import Optional, Any, List, Dict
+from threading import Lock, Thread
 
 # Secodns to wait after starting a snapshot before we consider it successful.
 SNAPSHOT_FASTFAIL_SECOND = 10
@@ -27,17 +27,22 @@ HEADERS_HA = {'Authorization': 'Bearer ' + str(os.environ.get("HASSIO_TOKEN"))}
 
 NOTIFICATION_ID = "backup_broken"
 
+class SnapshotInProgress(KnownError):
+    def __init__(self):
+        super(SnapshotInProgress, self).__init__("A snapshot is already in progress")
+
+
 class Hassio(object):
     """
     Stores logic for interacting with the Hass.io add-on API
     """
     def __init__(self, config: Config):
         self.config: Config = config
-        self.snapshot_thread: threading.Thread = threading.Thread(target = self._getSnapshot)
+        self.snapshot_thread: Thread = Thread(target = self._getSnapshot)
         self.snapshot_thread.daemon = True
         self.pending_snapshot: Optional[Snapshot] = None
         self.pending_snapshot_error: Optional[Exception] = None
-        self.lock: threading.Lock = threading.Lock()
+        self.lock: Lock = Lock()
 
     def _getSnapshot(self) -> None:
         try:
@@ -52,10 +57,19 @@ class Hassio(object):
                                 now_local.minute,
                                 now_local.second)
             snapshot_url = "{0}snapshots/new/full".format(self.config.hassioBaseUrl())
-            self.pending_snapshot = Snapshot(None)
-            self.pending_snapshot.setPending(backup_name, now_utc)
+            try:
+                self.lock.acquire()
+                self.pending_snapshot = Snapshot(None)
+                self.pending_snapshot.setPending(backup_name, now_utc)
+            finally:
+                self.lock.release()
             return_info = self._postHassioData(snapshot_url, {'name': backup_name})
-            self.pending_snapshot.endPending(return_info['slug'])
+            try:
+                self.lock.acquire()
+                if self.pending_snapshot:
+                    self.pending_snapshot.endPending(return_info['slug'])
+            finally:
+                self.lock.release()
         except Exception as e:
             try:
                 self.lock.acquire()
@@ -66,6 +80,14 @@ class Hassio(object):
             finally:
                 self.lock.release()
 
+    def killPending(self) -> None:
+        try:
+            self.lock.acquire()
+            self.pending_snapshot_error = None
+            self.pending_snapshot = None
+        finally:
+            self.lock.release()
+
     def auth(self, user: str, password: str) -> None:
          self._postHassioData("{}auth".format(self.config.hassioBaseUrl()), {"username": user, "password": password})
 
@@ -74,20 +96,25 @@ class Hassio(object):
         try:
             self.lock.acquire()
             if not self.snapshot_thread is None and self.snapshot_thread.is_alive():
-                raise Exception("A snapshot is already in progress")
-            self.snapshot_thread = threading.Thread(target = self._getSnapshot)
+                raise SnapshotInProgress()
+            self.snapshot_thread = Thread(target = self._getSnapshot)
             self.snapshot_thread.start()
         finally:
             self.lock.release()
         self.snapshot_thread.join(timeout = SNAPSHOT_FASTFAIL_SECOND)
         try:
             self.lock.acquire()
-            if not self.pending_snapshot_error is None:
+            if self.pending_snapshot_error is not None and isinstance(self.pending_snapshot_error, SnapshotInProgress) and not self.pending_snapshot:
+                # A snapshot was started "outside" of the add-on, so create a stub that we'll later associate with the pending snapshot once it shows up
+                self.pending_snapshot = Snapshot(None)
+                self.pending_snapshot.setPending("Pending Snapshot", nowutc())
+                return self.pending_snapshot
+            if self.pending_snapshot_error is not None:
                 raise self.pending_snapshot_error # pylint: disable-msg=E0702
             elif not self.pending_snapshot is None:
                 return self.pending_snapshot
             else:
-                raise Exception("Unexpected circumstances, everything is null")
+                raise KnownError("Unexpected circumstances, pending snapshot is null")
         finally:
             self.lock.release()
 
@@ -120,12 +147,13 @@ class Hassio(object):
             if resp.status_code == 400 and "snapshots/new/full" in resp.url:
                 # Hass.io seems to return http 400 when snapshot is already in progress, which is
                 # great because there is no way to differentiate it from a malformed error.
-                raise KnownError("A snapshot is already in progress")
+                raise SnapshotInProgress()
             print("Hass.io responded with: {0} {1}".format(resp, resp.text))
             raise Exception('Request to Hassio failed, HTTP error: {0} Message: {1}'.format(resp, resp.text))
         details: Dict[str, Any] = resp.json()
         if self.config.verbose():
-            print("Hassio said: " + str(details))
+            print("Hassio said: ")
+            pprint(details)
         if not "result" in details or not "data" in details or details["result"] != "ok":
             if "result" in details:
                 raise Exception("Hassio said: " + details["result"])

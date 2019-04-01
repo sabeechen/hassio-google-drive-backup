@@ -1,8 +1,7 @@
  {
- 	"max_snapshots_in_hassio": 10,
-    "max_snapshots_in_google_drive": 2,
-    "days_between_backups": 1,
-    "hours_before_backup": 1,
+ 	"max_snapshots_in_hassio": 5,
+    "max_snapshots_in_google_drive": 5,
+    "days_between_snapshots": 1,
     "verbose" : true,
     "use_ssl": false,
     "hassio_base_url": "http://127.0.0.1:5000/",
@@ -12,5 +11,6 @@
     "certfile": "../dev/ssl/fullchain.pem",
     "keyfile": "../dev/ssl/privkey.pem",
     "folder_file_path": "../dev/data/folder.dat",
-    "credentials_file_path": "../dev/data/credentials.dat"
+    "credentials_file_path": "../dev/data/credentials.dat",
+    "snapshot_time_of_day": "21:24"
 }

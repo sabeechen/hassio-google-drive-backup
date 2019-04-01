@@ -13,7 +13,8 @@ from .helpers import formatTimeSince
 from .helpers import formatException
 from .engine import Engine
 from .config import Config
-from .snapshots import Snapshot, HASnapshot, DriveSnapshot 
+from .snapshots import Snapshot, HASnapshot, DriveSnapshot
+from .knownerror import KnownError
 from typing import Dict, List, Any, Optional
 
 # Used to Google's oauth verification
@@ -61,6 +62,7 @@ class Server(object):
         self.engine: Engine = engine
         self.config: Config = config
         self.auth_cache: Dict[str, Any] = {}
+        print("Auth url: " + self.oauth_flow.step1_get_authorize_url())
 
     @cherrypy.expose #type: ignore
     @cherrypy.tools.json_out() #type: ignore
@@ -84,6 +86,10 @@ class Server(object):
             })
         status['drive_snapshots'] = self.engine.driveSnapshotCount()
         status['ha_snapshots'] = self.engine.haSnapshotCount()
+        next: datetime = self.engine.getNextSnapshotTime()
+        if (next < nowutc()):
+            next = nowutc()
+        status['next_snapshot'] = formatTimeSince(next)
         if last_backup:
             status['last_snapshot'] = formatTimeSince(last_backup)
         else:
@@ -92,6 +98,8 @@ class Server(object):
         if self.engine.last_error is not None:
             if isinstance(self.engine.last_error, HttpAccessTokenRefreshError):
                 status['last_error'] = BAD_TOKEN_ERROR_MESSAGE
+            if isinstance(self.engine.last_error, KnownError):
+                status['last_error'] = self.engine.last_error.message
             elif isinstance(self.engine.last_error, Exception):
                 status['last_error'] = formatException(self.engine.last_error)
             else:
@@ -135,6 +143,8 @@ class Server(object):
 
             snapshot = self.engine.startSnapshot()
             return {"name": snapshot.name()}
+        except KnownError as e:
+            return {"error": e.message, "detail" : e.detail}
         except Exception as e:
             return {"error": formatException(e)}
 

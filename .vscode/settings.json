@@ -1,6 +1,6 @@
 {
     "python.unitTest.pyTestArgs": [
-        "dev"
+        "hassio-google-drive-backup"
     ],
     "python.unitTest.unittestEnabled": false,
     "python.unitTest.nosetestsEnabled": false,

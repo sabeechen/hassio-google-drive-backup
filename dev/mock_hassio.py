@@ -18,11 +18,18 @@ from flask import Flask
 from flask import request
 from flask import send_file
 from typing import List, Dict, Optional, Any
+from threading import Lock
+from flask_api import status  # type: ignore
+from shutil import copyfile
 
 app = Flask(__name__)
 
 snapshots: List[Dict[Any, Any]] = []
-NEW_SNAPSHOT_SLEEP_SECONDS = 20
+NEW_SNAPSHOT_SLEEP_SECONDS = 30
+TAR_FILE = "sample_tar.tar"
+BACKUP_DIR = "backup"
+snapshotting = False
+snapshot_lock : Lock = Lock()
 
 @app.route('/')
 def index() -> str:
@@ -34,17 +41,27 @@ def getsnapshots() -> str:
 
 
 @app.route('/snapshots/new/full', methods=['POST'])
-def newSnapshot() -> str:
-    slug = getSlugName()
-    input_json = request.get_json()
-    sleep(NEW_SNAPSHOT_SLEEP_SECONDS)
-    snapshots.append({
-        'name' : input_json['name'],
-        'date' : str(datetime.now()),
-        'size' : 81694720,
-        'slug' : slug
+def newSnapshot() -> Any:
+    seconds = NEW_SNAPSHOT_SLEEP_SECONDS
+    if 'seconds' in request.args.keys():
+        seconds = int(request.args['seconds'])
+    if not snapshot_lock.acquire(blocking=False):
+        return "", status.HTTP_400_BAD_REQUEST
+    try:
+        slug = getSlugName()
+        input_json = request.get_json()
+        name = input_json['name']
+        sleep(seconds)
+        snapshots.append({
+            'name' : name,
+            'date' : str(datetime.now(tzutc()).isoformat()),
+            'size' : os.path.getsize(TAR_FILE) / 1024.0 / 1024.0,
+            'slug' : slug
         })
-    return formatDataResponse(slug)
+        copyfile(TAR_FILE, BACKUP_DIR + "/" + slug + ".tar")
+        return formatDataResponse({"slug": slug})
+    finally:
+        snapshot_lock.release()
 
 @app.route('/snapshots/<slug>/remove', methods=['POST'])
 def delete(slug: str) -> str:
@@ -55,6 +72,7 @@ def delete(slug: str) -> str:
     if not delete:
         raise Exception('no snapshot with this slug')
     snapshots.pop(snapshots.index(delete))
+    
     return formatDataResponse("deleted")
 
 @app.route('/snapshots/<slug>/info', methods=['GET'])
@@ -68,7 +86,7 @@ def info(slug: str) -> str:
 def download(slug: str) -> Any:
     for snapshot in snapshots:
         if snapshot['slug'] == slug:
-            return send_file('C:\\Users\\home\\Desktop\\d84fa4bd.tar')
+            return send_file(TAR_FILE)
     raise Exception('no snapshot with this slug')
 
 @app.route('/addons/self/info', methods=['GET'])
@@ -91,38 +109,46 @@ def selfInfo() -> str:
     "channel": "dev"
 })
 
+
 @app.route("/homeassistant/api/states/sensor.snapshot_backup", methods=['POST'])
 def setBackupState() -> str:
     print("Updated snapshot state with: {}".format(request.get_json()))
     return ""
+
 
 @app.route("/homeassistant/api/states/binary_sensor.snapshots_stale", methods=['POST'])
 def setBinarySensorState() ->str:
     print("Updated snapshot stale sensor with: {}".format(request.get_json()))
     return ""
 
+
 @app.route("/homeassistant/api/services/persistent_notification/create", methods=['POST'])
 def createNotification() -> str:
     print("Created notification with: {}".format(request.get_json()))
     return ""
+
 
 @app.route("/homeassistant/api/services/persistent_notification/dismiss", methods=['POST'])
 def dismissNotification() -> str:
     print("Dismissed notification with: {}".format(request.get_json()))
     return ""
 
+
 @app.route('/snapshots/slugname')
 def getSlugName() -> str:
         return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8)) 
 
+
 def formatDataResponse(data: Any) -> str:
-    return json.dumps({'result' : 'ok', 'data' : data})
+    return json.dumps({'result': 'ok', 'data': data}, sort_keys=True, indent=4)
+
 
 def formatErrorResponse(error: str) -> Dict[str, str]:
-    return {'result' : error}
+    return {'result': error}
+
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', threaded=True)
 
 
 

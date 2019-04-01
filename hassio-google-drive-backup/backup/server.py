@@ -86,10 +86,14 @@ class Server(object):
             })
         status['drive_snapshots'] = self.engine.driveSnapshotCount()
         status['ha_snapshots'] = self.engine.haSnapshotCount()
-        next: datetime = self.engine.getNextSnapshotTime()
-        if (next < nowutc()):
-            next = nowutc()
-        status['next_snapshot'] = formatTimeSince(next)
+        next: Optional[datetime] = self.engine.getNextSnapshotTime()
+        if not next:
+            status['next_snapshot'] = "Disabled"
+        elif (next < nowutc()):
+            status['next_snapshot'] = formatTimeSince(nowutc())
+        else:
+            status['next_snapshot'] = formatTimeSince(next)
+
         if last_backup:
             status['last_snapshot'] = formatTimeSince(last_backup)
         else:

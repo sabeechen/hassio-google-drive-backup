@@ -98,7 +98,9 @@ class Engine(object):
         finally:
             self.lock.release()
 
-    def getNextSnapshotTime(self) -> datetime:
+    def getNextSnapshotTime(self) -> Optional[datetime]:
+        if self.config.daysBetweenSnapshots() <= 0:
+            return None
         if len(self.snapshots) == 0:
             return self.time.now() - timedelta(days = 1)
         newest: datetime = max(self.snapshots, key=DATE_LAMBDA).date()
@@ -143,7 +145,9 @@ class Engine(object):
         needsRefresh: bool = self.time.now() > self.last_refresh + relativedelta(seconds=self.config.secondsBetweenRefreshes())
 
         # We need a refresh if we need a new snapshot
-        needsRefresh = needsRefresh or (self.time.now() > self.getNextSnapshotTime()) 
+        next_snapshot = self.getNextSnapshotTime()
+        if next_snapshot:
+            needsRefresh = needsRefresh or (self.time.now() > next_snapshot) 
 
         # Don't refresh if we haven't passed the error bakcoff time.
         if self.time.now() < self.next_error_rety:
@@ -255,7 +259,7 @@ class Engine(object):
     def _checkForBackup(self) -> None:
         # Get the local and remote snapshots available
         self._syncSnapshots()
-        while self.config.maxSnapshotsInHassio() >= 1 and self.haSnapshotCount() > self.config.maxSnapshotsInHassio():
+        while self.config.maxSnapshotsInHassio() > 0 and self.haSnapshotCount() > self.config.maxSnapshotsInHassio():
             oldest_hassio: Snapshot = min(filter(HA_LAMBDA, self.snapshots), key=DATE_LAMBDA)
             self.hassio.deleteSnapshot(oldest_hassio)
             if not oldest_hassio.isInDrive():
@@ -267,7 +271,8 @@ class Engine(object):
         if len(self.snapshots) > 0:
             oldest = min(self.snapshots, key=DATE_LAMBDA)
 
-        if self.time.now() > self.getNextSnapshotTime():
+        next_snapshot = self.getNextSnapshotTime()
+        if next_snapshot and self.time.now() > next_snapshot:
             print("Start new scheduled backup")
             try:
                 self.startSnapshot()

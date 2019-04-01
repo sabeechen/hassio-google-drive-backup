@@ -1,7 +1,7 @@
  {
- 	"max_snapshots_in_hassio": 5,
-    "max_snapshots_in_google_drive": 5,
-    "days_between_snapshots": 1,
+ 	"max_snapshots_in_hassio": 0,
+    "max_snapshots_in_google_drive": 0,
+    "days_between_snapshots": 0,
     "verbose" : true,
     "use_ssl": false,
     "hassio_base_url": "http://127.0.0.1:5000/",

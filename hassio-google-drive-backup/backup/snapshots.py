@@ -79,7 +79,7 @@ class HASnapshot(AbstractSnapshot):
         return parseDateTime(self.source['date'])
 
     def __str__(self) -> str:
-        return "<HA: {0} Name: {1}>".format(self.slug(), self.name())
+        return "<HA: {0} Name: {1} {2}>".format(self.slug(), self.name(), self.date().isoformat())
 
     def __format__(self, format_spec: str) -> str:
         return self.__str__()
@@ -231,7 +231,7 @@ class Snapshot(object):
         self.uploading_pct = percent
 
     def __str__(self) -> str:
-        return "<Slug: {0} Ha: {1} Drive: {2} Pending: {3}>".format(self.slug(), self.ha, self.driveitem, self.pending)
+        return "<Slug: {0} Ha: {1} Drive: {2} Pending: {3} {4}>".format(self.slug(), self.ha, self.driveitem, self.pending, self.date().isoformat())
 
     def __format__(self, format_spec: str) -> str:
         return self.__str__()

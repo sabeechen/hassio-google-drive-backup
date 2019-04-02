@@ -14,6 +14,14 @@
             "cwd": "${workspaceFolder}/hassio-google-drive-backup"
         },
         {
+            "name": "Python: Mock Hass.io",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/dev/mock_hassio.py",
+            "args" : [],
+            "cwd": "${workspaceFolder}/dev"
+        },
+        {
             "name": "Python: Current File (Integrated Terminal)",
             "type": "python",
             "request": "launch",

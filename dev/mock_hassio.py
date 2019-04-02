@@ -21,6 +21,7 @@ from typing import List, Dict, Optional, Any
 from threading import Lock
 from flask_api import status  # type: ignore
 from shutil import copyfile
+from dateutil.parser import parse
 
 app = Flask(__name__)
 
@@ -42,9 +43,16 @@ def getsnapshots() -> str:
 
 @app.route('/snapshots/new/full', methods=['POST'])
 def newSnapshot() -> Any:
+    pprint(request.args)
     seconds = NEW_SNAPSHOT_SLEEP_SECONDS
-    if 'seconds' in request.args.keys():
+    if 'seconds' in request.args.keys():  # type: ignore
         seconds = int(request.args['seconds'])
+
+    date: Optional[datetime] = None
+    if 'date' in request.args.keys(): # type: ignore
+        date = parse(request.args['date'], tzinfos=tzutc)
+    else:
+        date = datetime.now(tzutc())
     if not snapshot_lock.acquire(blocking=False):
         return "", status.HTTP_400_BAD_REQUEST
     try:
@@ -54,7 +62,7 @@ def newSnapshot() -> Any:
         sleep(seconds)
         snapshots.append({
             'name' : name,
-            'date' : str(datetime.now(tzutc()).isoformat()),
+            'date' : str(date.isoformat()),
             'size' : os.path.getsize(TAR_FILE) / 1024.0 / 1024.0,
             'slug' : slug
         })

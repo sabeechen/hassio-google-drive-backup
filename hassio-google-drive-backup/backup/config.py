@@ -114,3 +114,24 @@ class Config(object):
         if len(str(self.config['snapshot_time_of_day'])) > 0:
             return str(self.config['snapshot_time_of_day'])
         return None
+
+    def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
+        if 'generational_backup' in self.config:
+            base = self.config['generational_backup']
+            if 'days' not in base:
+                base['days'] = 0
+            if 'weeks' not in base:
+                base['weeks'] = 0
+            if 'months' not in base:
+                base['months'] = 0
+            if 'years' not in base:
+                base['years'] = 0
+            if 'day_of_week' not in base:
+                base['day_of_week'] = 'mon'
+            if 'day_of_month' not in base:
+                base['day_of_month'] = 1
+            if 'day_of_year' not in base:
+                base['day_of_year'] = 1
+            return base
+        else:
+            return None

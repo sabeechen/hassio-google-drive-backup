@@ -18,6 +18,7 @@ from datetime import timedelta
 from datetime import datetime
 from typing import Dict, List, Optional, Callable, Any, Sequence
 from oauth2client.client import Credentials #type: ignore
+from .backupscheme import GenerationalScheme, OldestScheme
 
 
 BAD_TOKEN_ERROR_MESSAGE: str = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
@@ -56,6 +57,12 @@ class Engine(object):
         self.next_error_backoff: int = ERROR_BACKOFF_MIN_SECS
         self.one_shot: bool = False
         self.snapshots_stale: bool = False
+        
+        gen_config = self.config.getGenerationalConfig()
+        if gen_config:
+            self.scheme = GenerationalScheme(self.time, gen_config)
+        else:
+            self.scheme = OldestScheme()
 
     def saveCreds(self, creds: Credentials) -> None:
         self.drive.saveCreds(creds)
@@ -251,20 +258,22 @@ class Engine(object):
 
     def _purgeDriveBackups(self) -> None:
         while self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() > self.config.maxSnapshotsInGoogleDrive():
-            oldest: Snapshot = min(filter(DRIVE_LAMBDA, self.snapshots), key=DATE_LAMBDA)
+            oldest: Snapshot = self.scheme.getOldest(filter(DRIVE_LAMBDA, self.snapshots))
             self.drive.deleteSnapshot(oldest)
             if oldest.isDeleted():
                 self.snapshots.remove(oldest)
 
-    def _checkForBackup(self) -> None:
-        # Get the local and remote snapshots available
-        self._syncSnapshots()
+    def _purgeHaSnapshots(self) -> None:
         while self.config.maxSnapshotsInHassio() > 0 and self.haSnapshotCount() > self.config.maxSnapshotsInHassio():
-            oldest_hassio: Snapshot = min(filter(HA_LAMBDA, self.snapshots), key=DATE_LAMBDA)
+            oldest_hassio: Snapshot = self.scheme.getOldest(filter(HA_LAMBDA, self.snapshots))
             self.hassio.deleteSnapshot(oldest_hassio)
             if not oldest_hassio.isInDrive():
                 self.snapshots.remove(oldest_hassio)
 
+    def _checkForBackup(self) -> None:
+        # Get the local and remote snapshots available
+        self._syncSnapshots()
+        self._purgeHaSnapshots()
         self._purgeDriveBackups()
 
         oldest: Optional[Snapshot] = None

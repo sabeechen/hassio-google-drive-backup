@@ -5,7 +5,7 @@ import json
 import requests
 
 from requests import Response
-from pprint import pprint
+from pprint import pformat
 from datetime import datetime
 from time import sleep
 from oauth2client.client import HttpAccessTokenRefreshError # type: ignore
@@ -15,6 +15,7 @@ from .helpers import nowutc
 from .helpers import formatException
 from .knownerror import KnownError
 from .config import Config
+from .logbase import LogBase
 from typing import Optional, Any, List, Dict
 from threading import Lock, Thread
 
@@ -32,7 +33,7 @@ class SnapshotInProgress(KnownError):
         super(SnapshotInProgress, self).__init__("A snapshot is already in progress")
 
 
-class Hassio(object):
+class Hassio(LogBase):
     """
     Stores logic for interacting with the Hass.io add-on API
     """
@@ -148,12 +149,11 @@ class Hassio(object):
                 # Hass.io seems to return http 400 when snapshot is already in progress, which is
                 # great because there is no way to differentiate it from a malformed error.
                 raise SnapshotInProgress()
-            print("Hass.io responded with: {0} {1}".format(resp, resp.text))
+            self.debug("Hass.io responded with: {0} {1}".format(resp, resp.text))
             raise Exception('Request to Hassio failed, HTTP error: {0} Message: {1}'.format(resp, resp.text))
         details: Dict[str, Any] = resp.json()
-        if self.config.verbose():
-            print("Hassio said: ")
-            pprint(details)
+        self.debug("Hassio said: ")
+        self.debug(pformat(details))
         if not "result" in details or not "data" in details or details["result"] != "ok":
             if "result" in details:
                 raise Exception("Hassio said: " + details["result"])
@@ -162,13 +162,11 @@ class Hassio(object):
         return details["data"]  # type: ignore
 
     def _getHassioData(self, url: str) -> Dict[str, Any]:
-        if self.config.verbose():
-            print("Making Hassio request: " + url)
+        self.debug("Making Hassio request: " + url)
         return self._validateHassioReply(requests.get(url, headers=HEADERS))
 
     def _postHassioData(self, url: str, json_data: Dict[str, Any]) -> Dict[str, Any]:
-        if self.config.verbose():
-            print("Making Hassio request: " + url)
+        self.debug("Making Hassio request: " + url)
         return self._validateHassioReply(requests.post(url, headers=HEADERS, json = json_data))
 
     def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
@@ -178,12 +176,11 @@ class Hassio(object):
         else:
             headers = HEADERS_HA
         try:
-            if self.config.verbose():
-                print("Making Ha request: " + self.config.haBaseUrl() + path)
-                print("With Data: {0}".format(data))
+            self.debug("Making Ha request: " + self.config.haBaseUrl() + path)
+            self.debug("With Data: {0}".format(data))
             requests.post(self.config.haBaseUrl() + path, headers=headers, json = data).raise_for_status()
         except Exception as e:
-            print(formatException(e))
+            self.error(formatException(e))
 
 
     def sendNotification(self, title: str, message: str) -> None:

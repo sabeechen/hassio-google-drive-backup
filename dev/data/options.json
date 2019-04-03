@@ -2,7 +2,7 @@
  	"max_snapshots_in_hassio": 5,
     "max_snapshots_in_google_drive": 5,
     "days_between_snapshots": 1,
-    "verbose" : true,
+    "verbose" : false,
     "use_ssl": false,
     "hassio_base_url": "http://127.0.0.1:5000/",
     "ha_base_url": "http://127.0.0.1:5000/homeassistant/api/",
@@ -13,10 +13,11 @@
     "folder_file_path": "../dev/data/folder.dat",
     "credentials_file_path": "../dev/data/credentials.dat",
     "snapshot_time_of_day": "21:24",
-    "generational_backup": {
-        "days": 3,
-        "weeks": 2,
-        "months": 2,
-        "years": 2
-    }   
+    "generational_days": 1,
+    "generational_weeks": 2,
+    "generational_months": 3,
+    "generational_years": 4,
+    "generational_day_of_week": "tue",
+    "generational_day_of_month": 5,
+    "generational_day_of_year": 6
 }

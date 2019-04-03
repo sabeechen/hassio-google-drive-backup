@@ -6,7 +6,6 @@ from datetime import datetime
 from datetime import timedelta
 from calendar import monthrange
 
-
 class BackupScheme(ABC):
     def __init__(self):
         pass

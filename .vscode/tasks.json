@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run Sync Server Locally",
+            "label": "RUN: Add-on",
             "type": "shell",
             "command": "python run.py ../dev/data/options.json",
             "options": {
@@ -17,7 +17,7 @@
             }
         },
         {
-            "label": "Run Mock Hass.io Server",
+            "label": "RUN: Mock Hass.io Server",
             "type": "shell",
             "command": "python mock_hassio.py",
             "options": {
@@ -26,7 +26,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Run local Docker Instance",
+            "label": "RUN: Add-on in Docker Instance",
             "type": "shell",
             "command": "${workspaceFolder}/run_local_docker.bat",
             "options": {
@@ -35,13 +35,13 @@
             "problemMatcher": []
         },
         {
-            "label": "Stop Local Docker Instance",
+            "label": "STOP: Add-on in docker",
             "type": "shell",
             "command": "docker kill $(docker ps -q --filter \"label=run-from-vscode=1\")",
             "problemMatcher": []
         },
         {
-            "label": "Publish a new version to Docker Hub",
+            "label": "PUBLISH: New version to Docker Hub",
             "type": "shell",
             "command": "${workspaceFolder}/deploy.bat",
             "problemMatcher": [],
@@ -51,9 +51,9 @@
         }
         ,
         {
-            "label": "Publish local add-on",
+            "label": "DEPLOY: Add-on to local hassio",
             "type": "shell",
-            "command": "python deploy_local_addon.py \\\\192.168.1.144",
+            "command": "python deploy_local_addon.py \\\\hassio",
             "problemMatcher": [],
             "options": {
                 "cwd": "${workspaceFolder}"

@@ -33,9 +33,9 @@
          
       </div>
       <div class="row center">
-        <div class="col s5" >
+        <div class="col s5">
           <h4 class="orange-text text-darken-4">Option 1</h4>
-            Login through an <a href="http://philosophyofpen.com/hassiodrivebackup">external domain</a> configured to authenticate this add-on.  You'll be routed back to this page after you're finished and you're finished and your credentials only get stored locally.
+            Login through an <a href="http://philosophyofpen.com/hassiodrivebackup">external domain</a> configured to authenticate this add-on.  You'll be routed back to this page after you're finished and your credentials only get stored locally.
         </br/>
           <a href="http://materializecss.com/getting-started.html" id="authenticate-button" class="btn-large waves-effect waves-light orange">Authenticate with Google Drive</a>
         </div>
@@ -45,24 +45,55 @@
         <div class="col s5">
           
             <h4 class="orange-text text-darken-4">Option 2</h4>
-            If that doean't work or you just want to keep things as local as possible, login with Google to get an authentication code, then bring it back here to let the add-on access your drive.
-            <div class="row center">
-                <a href="/manualauth"  target="_blank" class="btn-large waves-effect waves-light orange">Get code from Google</a>
-            </div>
+            Follow the <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md">instructions here</a> to get your own client ID and client secret from Google.  This is a much more complicated and time consuming approach, but doesn't require you to authenticate yourself with an external domain.
             <div class="row">
-                <form class="col s10" action="/manualauth" method="get">
+              <form class="col s10" action="/manualauth" method="get">
+                <div class="row">
+                  <div class="input-field col s12">
+                    <i class="material-icons prefix">vpn_key</i>
+                    <input id="client_id" name="client_id" type="text" class="validate"/>
+                    <label for="client_id">Client ID</label>
+                  </div>
+                  </div>
                   <div class="row">
                     <div class="input-field col s12">
                       <i class="material-icons prefix">vpn_key</i>
-                      <input id="code" name="code" type="text" class="validate">
-                      <label for="code">Code from Google</label>
+                      <input id="client_secret" name="client_secret" type="text" class="validate"/>
+                      <label for="client_secret">Client Secret</label>
                     </div>
                   </div>
-                </form>
-                <div class="col s2">
-                      <a target="_blank" class="btn-large waves-effect waves-light orange" id="manualauthbutton" onClick="submitCode()">Submit</a>
+                  <div class=row>
+                      <div class="input-field col s12">
+                        <a target="_blank" class="btn-large waves-effect waves-light orange disabled" id="secret_button" onclick="getAuthUrl()">Connect</a>
+                      </div>
+                  </div>
+              </form>
+              <div class=row>
+                  <div class="col s12" id="help_text" style="display: none">
+                    <p>
+                      Click "Connect" once you have a client ID and client secret.  This will redirect you to Google's authentications servers where you you will be given an authentication code that you can enter below to finish authorization.
+                    </p>
+                  </div>
+              </div>
+              <div class="row" style="display: none" id="code_form">
+                <div class="col s12">
+                  <form class="col s10" action="/manualauth" method="get" >
+                    <div class="row">
+                      <div class="input-field col s12">
+                        <i class="material-icons prefix">vpn_key</i>
+                        <input id="code" name="code" type="text" class="validate disabled">
+                        <label for="code">Code from Google</label>
+                      </div>
+                    </div>
+                    <div class=row>
+                        <div class="col s12">
+                          <a target="_blank" class="btn-large waves-effect waves-light orange disabled" id="manualauthbutton" onClick="submitCode()">Authorize</a>
+                        </div>
+                    </div>
+                  </form>
                 </div>
               </div>
+            </div>
         </div>
       </div>
       <div class="row center">
@@ -109,14 +140,69 @@
   <script src="js/init.js"></script>
   <script type="text/javascript">
     document.getElementById("authenticate-button").href = 
-      "/authenticatewithdrive?redirecthost=" + encodeURIComponent(location.protocol + "//" + location.hostname + ":" + location.port + "/token");
+      "https://philosophyofpen.com/login/backup.py?redirectbacktoken=" + encodeURIComponent(location.protocol + "//" + location.hostname + ":" + location.port + "/token");
 
-    function submitCode() {
-      var code = $("#code").val();
-        if (code && code.length > 0) {
-          window.location.href = "/manualauth?code=" + code;
+      function submitCode() {
+        var code = $("#code").val();
+          if (!code || code.length == 0) {
+            M.toast({html: "Please enter the code you got form Google by clicking \"connect\" above"})
+          }
+          var url = "/manualauth?code=" + code;
+          $.get(url, 
+          function(data) {
+            M.toast({html: "Requesting authorization URL..."})
+            if (data.hasOwnProperty("auth_url")) {
+              console.log("Redirecting to " + data.auth_url)
+              window.location = data.auth_url
+            } else if (data.hasOwnProperty("error")) {
+              M.toast({html: data.error})
+            }
+          }, "json")
+      }
+
+      function updateHref() {
+        var client_id = $("#client_id").val();
+        var client_secret = $("#client_secret").val();
+          if (client_id && client_id.length > 0 && client_secret && client_secret.length > 0) {
+            $("#secret_button").removeClass('disabled');
+            $("#help_text").fadeIn(400)
+            $("#code_form").fadeIn(400)
+          } else {
+            $("#secret_button").addClass('disabled');
+          }
+      }
+      $("#client_id").change(updateHref)
+      $("#client_secret").change(updateHref)
+      $("#client_secret").keyup(updateHref)
+      $("#client_id").keyup(updateHref)
+      $("#client_secret").mouseup(updateHref)
+      $("#client_id").mouseup(updateHref)
+
+      function getAuthUrl() {
+        var client_id = $("#client_id").val();
+        var client_secret = $("#client_secret").val();
+        if (!(client_id && client_id.length > 0 && client_secret && client_secret.length > 0)) {
+          M.toast({html: "Please enter a Client Id and Client Secret first"})
         }
-    }
+        var url = "/manualauth?client_id=" + client_id + "&client_secret=" + client_secret;
+        console.log("Requesting auth url from " + url);
+        $.get(url, 
+          function(data) {
+            M.toast({html: "Requesting authorization URL..."})
+            if (data.hasOwnProperty("auth_url")) {
+              console.log("Opening window to " + data.auth_url)
+              window.open(data.auth_url);
+              $("#code").removeClass("disabled")
+              $("#manualauthbutton").removeClass("disabled")
+            } else if (data.hasOwnProperty("error")) {
+              M.toast({html: data.error})
+              
+              $("#code").addClass("disabled")
+              $("#manualauthbutton").addClass("disabled")
+            }
+          }, "json")
+      }
+
   </script>
   </body>
 </html>

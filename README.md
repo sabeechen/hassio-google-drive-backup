@@ -42,24 +42,30 @@ The add-on is installed like any other.
 ## Configuration Options
 In addition to the options described in the instructions above:
 *  **snapshot_time_of_day** (default: None): The time of day (local time) that new snapshots should be created in 24 hour "HH:MM" format.  When not specified (the default), snapshots are created at the same time of day of the most recent snapshot.
-> #### Example: Create snapshots at 1:30pm
-> `"snapshot_time_of_day": "13:30"`
+    > #### Example: Create snapshots at 1:30pm
+    > `"snapshot_time_of_day": "13:30"`
 *   **snapshot_stale_minutes** (default: 180):  How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention.  Setting this too low can cause you to be notified of transient errors, ie the internet, Google Drive, or Home Assistant being offline briefly.
-> #### Example: Notify after 12 hours of staleness
-> `"snapshot_stale_minutes": "500"`
+    > #### Example: Notify after 12 hours of staleness
+    > `"snapshot_stale_minutes": "500"`
 *   **require_login** (default: true): When true, requires your home assistant username and password to access the backpup status page.  Turning this off isn't recommended.
-> #### Example: Don't require login
-> `"require_login": false`
+    > #### Example: Don't require login
+    > `"require_login": false`
 *   **certfile** (default: /ssl/certfile.pem): The path to your ssl keyfile
 *   **keyfile** (default: /ssl/keyfile.pem): the path to your ssl certfile
-> #### Example: Use certs you keep in a weird place
->   `"certfile": "/ssl/weird/path/cert.pem"`,
->
->   `"keyfile": "/ssl/weird/path/key.pem"`
+    > #### Example: Use certs you keep in a weird place
+    > ```json
+    >   "certfile": "/ssl/weird/path/cert.pem",
+    >   "keyfile": "/ssl/weird/path/key.pem"
+    > ```
 *   **verbose** (default: false): If true, enable additional debug logging.  Useful if you start seeing errors and need to file a bug with me.
-
-> #### Example: Turn on verbose logging
-> `"verbose": true`
+    > #### Example: Turn on verbose logging
+    > `"verbose": true`
+*   **generational_*** (default: None): When set, older snapshots will be kept longer using a [generational backup scheme](https://en.wikipedia.org/wiki/Backup_rotation_scheme). See the [question below](#can-i-keep-older-backups-for-longer) for configuration options.
+    > #### Example: Keep a snapshot once every day 3 days and once a week for 4 weeks
+    > ```json
+    >   "generational_days": 3,
+    >   "generational_weeks": 4
+    > ```
 
 ## FAQ
 ### How will I know this will be there when I need it?
@@ -123,6 +129,35 @@ You might need to change the `url:` if you use ssl or access Home Assistant thro
 
 ### Can I specify what time of day snapshots should be created?
 You can add `"snapshot_time_of_day": "13:00"` to your add-on configuration to make snapshots always happen at 1pm.  Specify the time in 24 hour format of `"HH:MM"`.  When unspecified, the next snapshot will be created at the same time of day as the last one.
+
+### Can I keep older backups for longer?
+The add-on can be configured to keep [generational backups](https://en.wikipedia.org/wiki/Backup_rotation_scheme) on daily, weekly, monthly, and yearly intervals instead of just deleting the oldest snapshot.  This can be useful if, for example, you've made an erroneous change but haven't noticed for several days and all the backups before the change are gone.  With a configuration setting like this...
+```json
+  "generational_days": 3,
+  "generational_weeks": 4,
+  "generational_months": 12,
+  "generational_years": 5
+ ```
+ ... a snapshot will be kept for the last 3 days, the last 4 weeks, the last 12 months, and the last 5 years.  Additionally you may configure the day of the week, day of the month, and day of the year that weekly, monthly, and yearly snapshots are maintained.
+  ```json
+    "generational_days": 3,
+    
+    "generational_weeks": 4,
+    "generational_day_of_week": "mon",  // Can be 'mon', 'tue', 'wed', 'thu', 'fri', 'sat' or 'sun' (defaults to 'mon')
+
+    "generational_months": 12,
+    "generational_day_of_month": 1, // Can be 1 through 31 (defaults to 1) 
+
+    "generational_years": 5,
+    "generational_day_of_year": 1, // can be 1 through 365 (defaults to 1)
+ ```
+ * Any combination of days, weeks, months, and years can be used.  They all default to 0.
+ * Its highly reccommended to set '`"days_between_snapshots": 1`' to ensure a snapshot is available for each day.
+ * Ensure you've set `max_snapshots_in_drive` appropriatly high to keep enough snapshots (24 in the example above).
+ * Once this option is enabled, it may take several days or weeks to see older snapshots get cleaned up.  Old snapshots will only get deleted when the number present exceeds `max_snapshots_in_drive` or `max_snapshots_in_hassio`
+ 
+### I already have something that creates snapshots on a schedule.  Can I use this just to backup to Google Drive?
+If you set '`"days_between_snapshots": 0`', then the add-on won't try to create new snapshots but will still back up any it finds to Google Drive and clean up old snapshots in both Home Assistant and Google Drive.  This can be useful if you already  have for example an automation that creates snapshots on a schedule. 
 
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:

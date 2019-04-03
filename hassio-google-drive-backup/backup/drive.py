@@ -6,6 +6,7 @@ import httplib2 #type: ignore
 from datetime import datetime
 from googleapiclient.discovery import build # type: ignore
 from googleapiclient.discovery import Resource
+from googleapiclient.errors import ResumableUploadError
 from apiclient.http import MediaIoBaseUpload# type: ignore
 from apiclient.errors import HttpError # type: ignore
 from oauth2client.client import Credentials # type: ignore
@@ -21,6 +22,7 @@ from typing import Optional, List, Dict, TypeVar, Callable, Any
 from requests import Response
 from .config import Config
 from .responsestream import ResponseStream
+from .logbase import LogBase
 
 # Defines the retry strategy for calls made to Drive
 # max # of time to retry and call to Drive
@@ -41,7 +43,7 @@ QUERY_FIELDS = "nextPageToken,files(id,name,appProperties,size, trashed)"
 CREATE_FIELDS = "id,name,appProperties,size,trashed"
 
 
-class Drive(object):
+class Drive(LogBase):
     """
     Stores the logic for makign calls to Google Drive and managing credentials necessary to do so.
     """
@@ -103,16 +105,16 @@ class Drive(object):
                 if last_percent != new_percent:
                     last_percent = new_percent
                     snapshot.uploading(last_percent)
-                    print("Uploading {1} {0}%".format(last_percent, snapshot.name()))
+                    self.info("Uploading {1} {0}%".format(last_percent, snapshot.name()))
         snapshot.uploading(100)
         snapshot.setDrive(DriveSnapshot(drive_response))
 
     def deleteSnapshot(self, snapshot: Snapshot) -> None:
-        print("Deleting: {}".format(snapshot))
+        self.info("Deleting: {}".format(snapshot))
         if not snapshot.driveitem:
             raise Exception("Drive item was null")
         self._retryDriveServiceCall(self._drive().files().delete(fileId=snapshot.driveitem.id()))
-        print("Deleted snapshot backup from drive '{}'".format(snapshot.name()))
+        self.info("Deleted snapshot backup from drive '{}'".format(snapshot.name()))
         snapshot.driveitem = None
 
     def _timeToRfc3339String(self, time: datetime) -> str:
@@ -147,13 +149,13 @@ class Drive(object):
             except HttpError as e:
                 if attempts >= DRIVE_MAX_RETRIES:
                     # fail, too many retries
-                    print("Too many calls to Drive failed, so we'll give up for now")
+                    self.error("Too many calls to Drive failed, so we'll give up for now")
                     raise e
                 # Only retry 403 and 5XX error, see https://developers.google.com/drive/api/v3/manage-uploads
                 if e.resp.status != 403 and int(e.resp.status / 5) != 5:
-                    print("Drive returned non-retryable error code: {0}".format(e.resp.status))
+                    self.error("Drive returned non-retryable error code: {0}".format(e.resp.status))
                     raise e
-                print("Drive returned error code: {0}:, we'll retry in {1} seconds".format(e.resp.status, backoff))
+                self.error("Drive returned error code: {0}:, we'll retry in {1} seconds".format(e.resp.status, backoff))
                 sleep(backoff)
                 backoff *= DRIVE_EXPONENTIAL_BACKOFF
 
@@ -168,22 +170,22 @@ class Drive(object):
                     folder = self._retryDriveServiceCall(self._drive().files().get(fileId=folder_id, fields='id,trashed,capabilities'))
                     caps = folder.get('capabilities')
                     if folder.get('trashed'):
-                        print("The Drive Snapshot Folder is in the trash, so we'll make a new one")
+                        self.info("The Drive Snapshot Folder is in the trash, so we'll make a new one")
                         return self._createDriveFolder()
                     elif not caps['canAddChildren']:
-                        print("Can't add Snapshot to the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
+                        prself.infont("Can't add Snapshot to the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
                         return self._createDriveFolder()
                     elif not caps['canListChildren']:
-                        print("Can't list Snapshot of the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
+                        self.info("Can't list Snapshot of the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
                         return self._createDriveFolder()
                     elif not caps['canRemoveChildren']:
-                        print("Can't delete Snapshot of the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
+                        self.info("Can't delete Snapshot of the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
                         return self._createDriveFolder()
                     return folder_id
                 except HttpError as e:
                     # 404 means the folder oean't exist (maybe it got moved?)
                     if e.resp.status == 404:
-                        print("The Drive Snapshot folder is gone, so we'll create a new one.")
+                        self.info("The Drive Snapshot folder is gone, so we'll create a new one.")
                         return self._createDriveFolder()
                     else:
                         raise e
@@ -191,7 +193,7 @@ class Drive(object):
             return self._createDriveFolder()
 
     def _createDriveFolder(self) -> str:
-        print('Creating folder "{}" in "My Drive"'.format(FOLDER_NAME))
+        self.info('Creating folder "{}" in "My Drive"'.format(FOLDER_NAME))
         file_metadata: Dict[str, str] = {
             'name': FOLDER_NAME,
             'mimeType': FOLDER_MIME_TYPE

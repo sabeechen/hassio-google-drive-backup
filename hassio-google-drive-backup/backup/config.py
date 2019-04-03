@@ -1,6 +1,7 @@
 import os.path
-import pprint
 import json
+import logging
+from .logbase import LogBase
 from typing import Dict, List, Tuple, Any, Optional
 
 HASSIO_OPTIONS_FILE = '/data/options.json'
@@ -32,7 +33,7 @@ DEFAULTS = {
 }
 
 
-class Config(object):
+class Config(LogBase):
 
     def __init__(self, file_paths: List[str] = [], extra_config: Dict[str, any] = {}):
         self.config: Dict[str, Any] = DEFAULTS
@@ -43,12 +44,20 @@ class Config(object):
         for config_file in file_paths:
             if os.path.isfile(config_file):
                 with open(config_file) as file_handle:
-                    print("Loading config from " + config_file)
+                    self.info("Loading config from " + config_file)
                     self.config.update(json.load(file_handle))
 
         self.config.update(extra_config)
-        print("Loaded config:")
-        pprint.pprint(self.config)
+        self.info("Loaded config:")
+        self.info(json.dumps(self.config, sort_keys=True, indent=4))
+        if self.verbose():
+            self.setConsoleLevel(logging.DEBUG)
+        else:
+            self.setConsoleLevel(logging.INFO)
+        gen_config = self.getGenerationalConfig()
+        if gen_config:
+            self.info("Generationl backup config:")
+            self.info(json.dumps(gen_config, sort_keys=True, indent=4))
 
     def maxSnapshotsInHassio(self) -> int:
         return int(self.config['max_snapshots_in_hassio'])
@@ -116,22 +125,29 @@ class Config(object):
         return None
 
     def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
-        if 'generational_backup' in self.config:
-            base = self.config['generational_backup']
-            if 'days' not in base:
-                base['days'] = 0
-            if 'weeks' not in base:
-                base['weeks'] = 0
-            if 'months' not in base:
-                base['months'] = 0
-            if 'years' not in base:
-                base['years'] = 0
-            if 'day_of_week' not in base:
-                base['day_of_week'] = 'mon'
-            if 'day_of_month' not in base:
-                base['day_of_month'] = 1
-            if 'day_of_year' not in base:
-                base['day_of_year'] = 1
-            return base
-        else:
+        if 'generational_days' not in self.config and 'generational_weeks' not in self.config and 'generational_months' not in self.config and 'generational_years' not in self.config: 
             return None
+        base = {
+            'days': 0,
+            'weeks': 0,
+            'months': 0,
+            'years': 0,
+            'day_of_week': 'mon',
+            'day_of_month': 1,
+            'day_of_year': 1
+        }
+        if 'generational_days' in self.config:
+            base['days'] = self.config['generational_days']
+        if 'generational_weeks' in self.config:
+            base['weeks'] = self.config['generational_weeks']
+        if 'generational_months' in self.config:
+            base['months'] = self.config['generational_months']
+        if 'generational_years' in self.config:
+            base['years'] = self.config['generational_years']
+        if 'generational_day_of_week' in self.config:
+            base['day_of_week'] = self.config['generational_day_of_week']
+        if 'generational_day_of_month' in self.config:
+            base['day_of_month'] = self.config['generational_day_of_month']
+        if 'generational_day_of_year' in self.config:
+           base['day_of_year'] =  self.config['generational_day_of_year']
+        return base

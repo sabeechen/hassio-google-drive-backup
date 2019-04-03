@@ -29,11 +29,19 @@
     </div>
   </div>
   <div class='error' style='display:none' id="toast">You shouldn't see this</div>
+  <ul id="main_dropdown" class="dropdown-content">
+    <li><a href="/log?format=html" target="_blank">View Logs</a></li>
+    <li class="divider"></li>
+    <li><a href="#!" onClick="simulateError()">Simulate Error</a></li>
+    <li class="divider"></li>
+    <li><a href="#!" onClick="stopSimulateError()">Stop Simulating Error</a></li>
+  </ul>
   <nav class="grey darken-3" role="navigation">
     <div class="nav-wrapper container">
-    	<a id="logo-container" href="/" class="brand-logo"><img src="/images/logo.png" width=40 height=40/>Hassio Google Drive Backup
-    			
-    	</a>
+      <a id="logo-container" href="/" class="brand-logo"><img src="/images/logo.png" width=40 height=40/>Hassio Google Drive Backup</a>
+      <ul class="right hide-on-med-and-down">
+        <li><a class="dropdown-trigger" href="#!" data-target="main_dropdown">&nbsp;&nbsp;  Tools and Debugging&nbsp;&nbsp;<i class="material-icons right">arrow_drop_down</i></a></li>
+      </ul>
     </div>
   </nav>
   <div class="container">
@@ -43,15 +51,53 @@
           <div class="card red darken-4">
             <div class="card-content white-text">
               <span class="card-title">Error while backing up</span>
-              <p>The add-on got the error below while trying to back up.  Some transient errors are expected (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your snapshots won't get backed up and the information you see on this page may be stale.</p>
+              <p>The add-on got the error below while trying to sync your snapshots.  Some transient errors are expected (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your snapshots won't get backed up and the information you see on this page may be stale.  If you file an issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the "Download Logs" link below</p>
               <br/>
               <p id="error_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
-            <div class="card-action white-text">
-                <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
-            </div>
+              <div class="card-action white-text">
+                  <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
+              </div>
               <div class="card-action white-text">
                 <a id="error_github_link" href="#" target="_blank">File this issue on Github</a>
               </div>
+              <div class="card-action white-text">
+                <a id="download_logs_link" href="/log?format=download" target="_blank">Download logs</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" id="drive_full_card" style='display:none'>
+        <div class="col s12 m9">
+          <div class="card red darken-4">
+            <div class="card-content white-text">
+              <span class="card-title">Google Drive is Full</span>
+              <p>Google Drive is full, backups can't continue until space is available.  You can go to Google Drive's <a href="https://drive.google.com/drive/quota">quota page</a> to see whats using up space in your Google Drive, but because that space is shared between several Google products (eg GMail, Google Photos) one of those products might be using the space instead.  You can see your usage across all those products on Google's <a href="https://drive.google.com/settings/storage">storage settings</a> page.</p>
+              <p>To resolve this you can:</p>
+              <ul class="browser-default">
+                <li>Free up space in Google Drive, GMail, or Google Photos by deleting things.</li>
+                <li>Store fewer snapshots by setting "max_snapshots_in_google_dirve" to something smaller in your add-on configuration.</li>
+                <li><a href="https://drive.google.com/settings/storage">Buy more storage</a> from Google</li>
+                <li>Make your snapshots smaller (see <a href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this tip</a>)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" id="creds_bad_card" style='display:none'>
+        <div class="col s12 m9">
+          <div class="card red darken-4">
+            <div class="card-content white-text">
+              <span class="card-title">Couldn't Log in with Google</span>
+              <p>Google Drive rejected your credentials. Your snapshots will not be backed up until this is resolved.</p>
+              <p>This can happen if:</p>
+              <ul class="browser-default">
+                <li>You revoked the add-on's access in your Google account settings.</li>
+                <li>You recently changed your Google account password.</li>
+                <li>You haven't used your Google account for over 6 months.</li>
+                <li>The add-on's credentials changed, or Google changed them.</li>
+              </ul>
+              <p>To resolve this, you'll need to <a href="/reauthenticate">authenticate</a> this add-on with Google again.  If that still doesn't help, you may need to update the add-on</p>
             </div>
           </div>
         </div>
@@ -315,7 +361,15 @@
   		  	snapshot_div.html("<div class='row'><div class='col s1'></div><div class='col s2 valign-wrapper center' style=\"font-size: 90px\"><i class='red-text text-darken-4 large material-icons'>block</i></div><div class='col s7 center valign-wrapper'><p>You don't have any snapshots in Google Drive or Home Assistant.  Use the button to the right to create a snapshot and start backing up.</p><div><div>")
   		  }
 
-  		  if (data.last_error != ""){
+        if (data.last_error == "creds_bad") {
+          $('#error_card').css("display", "none");
+          $('#drive_full_card').css("display", "none");
+          $('#creds_bad_card').fadeIn(400);
+        } else if (data.last_error == "drive_full") {
+          $('#error_card').css("display", "none");
+          $('#drive_full_card').fadeIn(400);
+          $('#creds_bad_card').css("display", "none");
+        } else if (data.last_error != "") {
   		  	$('#error_paragraph').text(data.last_error);
   		  	desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and including that here.  :\n\n" + data.last_error;
   		  	parts = data.last_error.split('\n');
@@ -328,9 +382,13 @@
   		  	}
   		  	$('#error_github_link').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title="+encodeURIComponent(title)+"&assignee=sabeechen&body=" + encodeURIComponent(desc));
   		  	$('#error_github_search').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + title.replace("\"", "\\\"") + "\""));
-  		  	$('#error_card').fadeIn(400);
+          $('#error_card').fadeIn(400);
+          $('#drive_full_card').css("display", "none");
+          $('#creds_bad_card').css("display", "none");
   		  } else {
-  		  	$('#error_card').css("display", "none");
+          $('#error_card').css("display", "none");
+          $('#drive_full_card').css("display", "none");
+          $('#creds_bad_card').css("display", "none");
         }
         $('.tooltipped').tooltip({"exitDelay": 1000});
   		}, "json")
@@ -339,7 +397,21 @@
   		    console.log("Status update failed: ")
   		    console.log(e)
   		  })
-  	}	
+    }
+    
+    function simulateError() {
+      $.get("/simerror?error=This%20is%20a%20fake%20error.%20Select%20'Stop%20Simulated%20Error'%20from%20the%20menu%20to%20stop%20it.", 
+        function(data) {
+          triggerSync()
+        })
+    }
+
+    function stopSimulateError() {
+      $.get("/simerror?error=", 
+        function(data) {
+          triggerSync()
+        })
+}
   
   	$('#newsnapshotlink').click(
       function(){
@@ -379,6 +451,7 @@
       refreshstats();
 
       $('.tooltipped').tooltip();
+      $(".dropdown-trigger").dropdown();
 	  });
   </script>
   </body>

@@ -1,4 +1,19 @@
 # Changelog
+## [0.6] - 2019-04-03
+### Added
+- Adds a config options for generational backup to keep daily, weekly, monthly, and yearly snapshots.  See the [FAQ](https://github.com/sabeechen/hassio-google-drive-backup#can-i-keep-older-backups-for-longer) on GitHub for details.
+- Adds the ability to turn off automatic snapshots by setting `"days_between_snapshots": 0`
+- Adds uniform logging (timestamps and level) throughout the project.
+- Adds a top level menu for viewing the add-on debug logs and "simualting" backup errors.
+- Adds better error messaging when Drive runs out of space or credentials are invalidated.
+
+### Fixes
+- Fixes a configuration error that caused the defualt configuration options to be invalid.
+
+### Changes
+- Delegates Google credential authentication entirely to the domain so project crednetials aren't stored in the add-on.
+- Changes the "Manual" authentication workflow to requre users to generate their own client Id and client secret.
+
 ## [0.52] - 2019-03-31
 ### Added
 - Adds a config option for fixing setting time of day snapshots should happen, try adding `"snapshot_time_of_day": "13:00"` to your config for example to schedule snapshots at 1pm.

@@ -1,9 +1,10 @@
 import os
 from .helpers import formatException
 from .config import Config
+from .logbase import LogBase
 from typing import Optional, List
 
-class Watcher(object):
+class Watcher(LogBase):
 
     def __init__(self, config: Config):
         self.last_list: Optional[List[str]] = None
@@ -16,16 +17,15 @@ class Watcher(object):
                 self.last_list.sort()
                 return False
             dirs = os.listdir(self.config.backupDirectory())
-            if self.config.verbose():
-                print("Backup directory: {}".format(dirs))
+            self.debug("Backup directory: {}".format(dirs))
             dirs.sort()
             if dirs == self.last_list:
                 return False
             else:
-                print("Backup directory has changed")
+                self.info("Backup directory has changed")
                 self.last_list = dirs
                 return True
         except Exception as e:
-            print(formatException(e))
+            self.error(formatException(e))
             return False
 

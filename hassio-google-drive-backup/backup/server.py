@@ -8,6 +8,7 @@ from datetime import timedelta
 from datetime import datetime
 from oauth2client.client import OAuth2WebServerFlow # type: ignore
 from oauth2client.client import HttpAccessTokenRefreshError
+from oauth2client.client import OAuth2Credentials
 from .helpers import nowutc
 from .helpers import formatTimeSince
 from .helpers import formatException
@@ -15,21 +16,16 @@ from .engine import Engine
 from .config import Config
 from .snapshots import Snapshot, HASnapshot, DriveSnapshot
 from .knownerror import KnownError
+from .logbase import LogBase
 from typing import Dict, List, Any, Optional
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
-AUTHORIZED_REDIRECT: str = "https://philosophyofpen.com/hassiodrivebackup/authorize.html"
-CLIENT_ID: str = '933944288016-01vb6f2do5l0992m08imi0e3fekg54as.apps.googleusercontent.com'
-CLIENT_SECRET: str = '7Kdx-RdsCuJ2IreKq47UbU6g'
-BAD_TOKEN_ERROR_MESSAGE: str = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
-
-CLIENT_ID_MANUAL: str = "933944288016-ut29pjreodea7ni675jp1sqr2bc630sh.apps.googleusercontent.com"
-CLIENT_SECRET_MANUAL: str = "-AsQoNZbUV93JpIdKMcGHU63"
 MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
+DRIVE_FULL_MESSAGE = "The user's Drive storage quota has been exceeded"
 
 
-class Server(object):
+class Server(LogBase):
     """
     Add delete capabilities
 
@@ -41,28 +37,11 @@ class Server(object):
     ADD Comments
     """
     def __init__(self, root: str, engine: Engine, config : Config):
-        self.oauth_flow: OAuth2WebServerFlow = OAuth2WebServerFlow(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            scope=SCOPE,
-            redirect_uri=AUTHORIZED_REDIRECT,
-            include_granted_scopes='true',
-            prompt='consent',
-            access_type='offline')
-
-        self.oauth_flow_manual: OAuth2WebServerFlow = OAuth2WebServerFlow(
-            client_id=CLIENT_ID_MANUAL,
-            client_secret=CLIENT_SECRET_MANUAL,
-            scope=SCOPE,
-            redirect_uri=MANUAL_CODE_REDIRECT_URI,
-            include_granted_scopes='true',
-            prompt='consent',
-            access_type='offline')
+        self.oauth_flow_manual: OAuth2WebServerFlow = None
         self.root: str = root
         self.engine: Engine = engine
         self.config: Config = config
         self.auth_cache: Dict[str, Any] = {}
-        print("Auth url: " + self.oauth_flow.step1_get_authorize_url())
 
     @cherrypy.expose #type: ignore
     @cherrypy.tools.json_out() #type: ignore
@@ -99,31 +78,57 @@ class Server(object):
         else:
             status['last_snapshot'] = "Never"
 
-        if self.engine.last_error is not None:
-            if isinstance(self.engine.last_error, HttpAccessTokenRefreshError):
-                status['last_error'] = BAD_TOKEN_ERROR_MESSAGE
-            if isinstance(self.engine.last_error, KnownError):
-                status['last_error'] = self.engine.last_error.message
-            elif isinstance(self.engine.last_error, Exception):
-                status['last_error'] = formatException(self.engine.last_error)
-            else:
-                status['last_error'] = str(self.engine.last_error)
-        else:
-            status['last_error'] = ""
+        status['last_error'] = self.getError()
         return status
 
-    @cherrypy.expose #type: ignore
-    def authenticatewithdrive(self, redirecthost: str) -> None:
-        # Redirect to the webpage that takes you to the google auth page.
-        raise cherrypy.HTTPRedirect('{0}?authurl={1}&redirecturl={2}'.format(AUTHORIZED_REDIRECT, quote(self.oauth_flow.step1_get_authorize_url()), redirecthost))
-
-    @cherrypy.expose #type: ignore
-    def manualauth(self, code: str="") -> None:
-        if code == "":
-            # Redirect to the webpage that takes you to the google auth page.
-            raise cherrypy.HTTPRedirect(self.oauth_flow_manual.step1_get_authorize_url())
+    def getError(self) -> str:
+        if self.engine.last_error is not None:
+            if isinstance(self.engine.last_error, HttpAccessTokenRefreshError):
+                return "creds_bad"
+            if isinstance(self.engine.last_error, KnownError):
+                return self.engine.last_error.message
+            elif isinstance(self.engine.last_error, Exception):
+                formatted = formatException(self.engine.last_error)
+                if DRIVE_FULL_MESSAGE in formatted:
+                    return "drive_full"
+                return formatted
+            else:
+                return str(self.engine.last_error)
         else:
-            self.engine.saveCreds(self.oauth_flow_manual.step2_exchange(code))
+            return ""
+        
+    @cherrypy.expose #type: ignore
+    @cherrypy.tools.json_out()
+    def manualauth(self, code: str="", client_id="", client_secret="") -> None:
+        if client_id != "" and client_secret != "":
+            try:
+                # Redirect to the webpage that takes you to the google auth page.
+                self.oauth_flow_manual = OAuth2WebServerFlow(
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        scope=SCOPE,
+                        redirect_uri=MANUAL_CODE_REDIRECT_URI,
+                        include_granted_scopes='true',
+                        prompt='consent',
+                        access_type='offline')
+                return {
+                    'auth_url': self.oauth_flow_manual.step1_get_authorize_url()
+                }
+            except Exception as e:
+                return {
+                    'error': "Couldn't create authorizatin URL, Google said:" + str(e)
+                }
+            raise cherrypy.HTTPRedirect(self.oauth_flow_manual.step1_get_authorize_url())
+        elif code != "":
+            try:
+                self.engine.saveCreds(self.oauth_flow_manual.step2_exchange(code))
+                return {
+                     'auth_url': "/"
+                }
+            except Exception as e:
+                return {
+                    'error': "Couldn't create authorizatin URL, Google said:" + str(e)
+                }
             raise cherrypy.HTTPRedirect("/")
 
     def auth(self, realm: str, username: str, password: str) -> bool:
@@ -134,7 +139,7 @@ class Server(object):
             self.auth_cache[username] = {'password': password, 'timeout': (nowutc() + timedelta(minutes=10))}
             return True
         except Exception as e:
-            print(formatException(e))
+            self.error(formatException(e))
             return False
 
     @cherrypy.expose #type: ignore
@@ -163,13 +168,34 @@ class Server(object):
             self.engine.deleteSnapshot(slug, delete_drive, delete_ha)
             return {"message": "Its gone!"}
         except Exception as e:
-            print(formatException(e))
+            self.error(formatException(e))
             return {"message": "{}".format(e), "error_details": formatException(e)}
+
+    
+    @cherrypy.expose # type: ignore
+    def log(self, format="download") ->  Any:
+        if format == "html":
+            cherrypy.response.headers['Content-Type'] = 'text/html'
+        else:
+            cherrypy.response.headers['Content-Type'] = 'text/plain'
+            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="hassio-google-drive-backup.log"'
+
+        def content():
+            if format == "html":
+                yield "<html><head><title>Hass.io Google Drive Backup Log</title></head><body><pre>\n"
+            for line in self.getHistory():
+                if line:
+                    yield line + "\n"
+            if format == "html":
+                yield "</pre></body>\n"
+        return content()
 
     @cherrypy.expose # type: ignore
     def token(self, **kwargs:  Dict[str, Any]) -> None:
-        # fetch the token, save the credentials so we can look them up later.
-        self.engine.saveCreds(self.oauth_flow.step2_exchange(kwargs['code']))
+        # TODO: Need to do some error handling here.  Exceptions will surface using the cherrypy default.
+        if 'creds' in kwargs:
+            creds = OAuth2Credentials.from_json(kwargs['creds'])
+            #creds.from_json(kwargs[creds].strip("'"))
         raise cherrypy.HTTPRedirect("/")
 
     @cherrypy.expose # type: ignore
@@ -191,6 +217,7 @@ class Server(object):
         return open("www/index.html")
 
     def run(self) -> None:
+        self.info("Starting server...")
         conf:  Dict[Any, Any] = {
             'global': {
                 'server.socket_port': self.config.port(),
@@ -201,8 +228,10 @@ class Server(object):
                 'tools.staticdir.dir': os.getcwd() + self.config.pathSeparator() + self.root
             }
         }
-        if not self.config.verbose():
-            conf['global']['log.screen'] = False
+        conf['global']['log.access_file'] = ""
+        conf['global']['log.error_file'] = ""
+        conf['global']['log.screen'] = False
+        conf['global']['response.stream'] = True
 
         if self.config.requireLogin():
             conf[self.config.pathSeparator()].update({

@@ -1,3 +1,4 @@
+import json
 from .snapshots import Snapshot
 from .snapshots import DriveSnapshot
 from .snapshots import HASnapshot
@@ -10,7 +11,7 @@ from .hassio import Hassio, SnapshotInProgress
 from .watcher import Watcher
 from .config import Config
 from .time import Time
-from pprint import pprint
+from pprint import pformat
 from dateutil.relativedelta import relativedelta
 from dateutil.tz import tzlocal
 from threading import Lock
@@ -19,7 +20,8 @@ from datetime import datetime
 from typing import Dict, List, Optional, Callable, Any, Sequence
 from oauth2client.client import Credentials #type: ignore
 from .backupscheme import GenerationalScheme, OldestScheme
-
+from .logbase import LogBase
+from .knownerror import KnownError
 
 BAD_TOKEN_ERROR_MESSAGE: str = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
 
@@ -36,7 +38,7 @@ ERROR_BACKOFF_MAX_SECS = 60 * 60
 ERROR_BACKOFF_EXP_MUL = 2
 
 
-class Engine(object):
+class Engine(LogBase):
     def __init__(self, config: Config, drive: Drive, hassio: Hassio, time: Time):
         self.time: Time = time
         self.config: Config = config
@@ -94,8 +96,8 @@ class Engine(object):
             self.next_error_rety = self.time.now()
             self.next_error_backoff = ERROR_BACKOFF_MIN_SECS
         except Exception as e:
-            print(formatException(e))
-            print("A retry will be attempted in {} seconds".format(self.next_error_backoff))
+            self.error(formatException(e))
+            self.error("A retry will be attempted in {} seconds".format(self.next_error_backoff))
             self.next_error_rety = self.time.now() + relativedelta(seconds=self.next_error_backoff)
             self.next_error_backoff = self.next_error_backoff * ERROR_BACKOFF_EXP_MUL
             if self.next_error_backoff > ERROR_BACKOFF_MAX_SECS:
@@ -145,7 +147,7 @@ class Engine(object):
                     self.notified = True
         except Exception as e:
             # Just eat this error, since we got an error updating status abotu the error
-            print(formatException(e))
+            log.error(formatException(e))
 
     def needsRefresh(self) -> bool:
         # refresh every once in a while regardless
@@ -197,6 +199,7 @@ class Engine(object):
         raise Exception("Couldn't find this snapshot")
 
     def startSnapshot(self) -> Snapshot:
+        self.info("Creating new snapshot")
         for snapshot in self.snapshots:
             if snapshot.isPending():
                 raise SnapshotInProgress()
@@ -215,13 +218,12 @@ class Engine(object):
         drive_map: Dict[str, DriveSnapshot] = makeDict(drive_snapshots, DRIVE_SLUG_LAMBDA)
         ha_map: Dict[str, HASnapshot] = makeDict(ha_snapshots, HA_SLUG_LAMBDA)
 
-        if (self.config.verbose()):
-            print("Local map: ")
-            pprint(local_map)
-            print("Drive map: ")
-            pprint(drive_map)
-            print("Ha map: ")
-            pprint(ha_map)
+        self.debug("Local map: ")
+        self.debug(pformat(local_map))
+        self.debug("Drive map: ")
+        self.debug(pformat(drive_map))
+        self.debug("Ha map: ")
+        self.debug(pformat(ha_map))
         for snapshot_from_drive in drive_snapshots:
             if not snapshot_from_drive.slug() in local_map:
                 drive_snapshot: Snapshot = Snapshot(snapshot_from_drive)
@@ -253,8 +255,8 @@ class Engine(object):
 
         self.snapshots.sort(key=DATE_LAMBDA)
         if (self.config.verbose()):
-            print("Final Snapshots:")
-            pprint(self.snapshots)
+            self.debug("Final Snapshots:")
+            self.debug(pformat(self.snapshots))
 
     def _purgeDriveBackups(self) -> None:
         while self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() > self.config.maxSnapshotsInGoogleDrive():
@@ -282,14 +284,14 @@ class Engine(object):
 
         next_snapshot = self.getNextSnapshotTime()
         if next_snapshot and self.time.now() > next_snapshot:
-            print("Start new scheduled backup")
+            self.info("Start new scheduled backup")
             try:
                 self.startSnapshot()
             except SnapshotInProgress:
                 pass
 
         if self.sim_error is not None:
-            raise Exception(self.sim_error)
+            raise KnownError(self.sim_error)
 
         # Get the snapshots that should be backed up, which is at most N of the oldest
         # snapshots in home assistant which aren't in Drive.
@@ -304,14 +306,14 @@ class Engine(object):
         for to_backup in should_backup:
             if self.drive.enabled():
                 snapshot.setWillBackup(True)
-                print("Uploading {}".format(to_backup))
+                self.info("Uploading {}".format(to_backup))
                 if not self.folder_id:
                     raise Exception("No folder Id")
                 self.drive.saveSnapshot(to_backup, self.hassio.downloadUrl(to_backup), self.folder_id)
 
                 # purge backups again, since adding one might have put us over the limit
                 self._purgeDriveBackups()
-                print("Upload complete")
+                self.info("Upload complete")
             else:
                 snapshot.setWillBackup(False)
 

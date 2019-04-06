@@ -190,7 +190,7 @@ class Server(LogBase):
         # TODO: Need to do some error handling here.  Exceptions will surface using the cherrypy default.
         if 'creds' in kwargs:
             creds = OAuth2Credentials.from_json(kwargs['creds'])
-            #creds.from_json(kwargs[creds].strip("'"))
+            self.engine.saveCreds(creds)
         raise cherrypy.HTTPRedirect("/")
 
     @cherrypy.expose  # type: ignore

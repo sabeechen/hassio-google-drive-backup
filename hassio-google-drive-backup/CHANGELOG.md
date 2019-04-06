@@ -1,4 +1,9 @@
 # Changelog
+## [0.61] - 2019-04-03
+
+### Fixes
+- Fixes an issue the prevents Google Drive credentials from being saved during reauthentication.
+
 ## [0.6] - 2019-04-03
 ### Added
 - Adds a config options for generational backup to keep daily, weekly, monthly, and yearly snapshots.  See the [FAQ](https://github.com/sabeechen/hassio-google-drive-backup#can-i-keep-older-backups-for-longer) on GitHub for details.

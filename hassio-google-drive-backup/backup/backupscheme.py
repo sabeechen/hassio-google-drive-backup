@@ -1,10 +1,11 @@
-from typing import Dict, List, Tuple, Sequence, Optional
+from typing import Any, Dict, List, Sequence, Optional
 from abc import ABC, abstractmethod
 from .snapshots import Snapshot
 from .time import Time
 from datetime import datetime
 from datetime import timedelta
 from calendar import monthrange
+
 
 class BackupScheme(ABC):
     def __init__(self):
@@ -49,7 +50,6 @@ class GenerationalScheme(BackupScheme):
             return None
 
         snapshots.sort(key=lambda s: s.date())
-    
         day_of_week = 3
         lookup = {
             'mon': 0,
@@ -62,7 +62,6 @@ class GenerationalScheme(BackupScheme):
         }
         if 'day_of_week' in self.partitions and self.partitions['day_of_week'] in lookup:
             day_of_week = lookup[self.partitions['day_of_week']]
-            
 
         last = self.time.toLocal(snapshots[len(snapshots) - 1].date())
         lookups: List[Partition] = []
@@ -104,5 +103,3 @@ class GenerationalScheme(BackupScheme):
 
         # no non-keep is invalid, so delete the oldest keeper
         return min(keepers, default=None, key=lambda s: s.date())
-
-        

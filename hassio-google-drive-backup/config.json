@@ -41,7 +41,10 @@
     "generational_years": "int(0,)?",
     "generational_day_of_year": "int(1,365)?",
     "generational_day_of_month": "int(1,31)?",
-    "generational_day_of_week": "match(^(mon|tue|wed|thu|fri|sat|sun)$)?"
+    "generational_day_of_week": "match(^(mon|tue|wed|thu|fri|sat|sun)$)?",
+    "notify_for_stale_snapshots": "bool?",
+    "enable_snapshot_stale_sensor": "bool?",
+    "enable_snapshot_state_Sensor": "bool?"
   },
   "ports": {
     "1627/tcp": 1627

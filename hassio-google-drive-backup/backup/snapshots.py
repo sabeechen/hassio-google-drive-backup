@@ -2,7 +2,7 @@
 from datetime import datetime
 from .helpers import parseDateTime
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, Optional, Any
 
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"
@@ -38,19 +38,19 @@ class DriveSnapshot(AbstractSnapshot):
         return str(self.source.get('id'))
 
     def name(self) -> str:
-        return self.source.get('appProperties')[PROP_KEY_NAME] #type: ignore
+        return self.source.get('appProperties')[PROP_KEY_NAME]  # type: ignore
 
     def slug(self) -> str:
-        return self.source.get('appProperties')[PROP_KEY_SLUG] #type: ignore
+        return self.source.get('appProperties')[PROP_KEY_SLUG]  # type: ignore
 
     def size(self) -> int:
-        return self.source.get('size') #type: ignore
+        return self.source.get('size')  # type: ignore
 
     def date(self) -> datetime:
-        return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE]) #type: ignore
+        return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE])  # type: ignore
 
     def __str__(self) -> str:
-        return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id()) 
+        return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id())
 
     def __format__(self, format_spec: str) -> str:
         return self.__str__()

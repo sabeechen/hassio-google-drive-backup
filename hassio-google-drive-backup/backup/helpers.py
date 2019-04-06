@@ -11,6 +11,7 @@ Some helper functions because I find python's API's intolerable
 T = TypeVar('T')
 V = TypeVar('V')
 
+
 def parseDateTime(text: str) -> datetime:
     return parse(text, tzinfos=tzutc)
 
@@ -54,7 +55,7 @@ def formatTimeSince(time: datetime) -> str:
         delta = relativedelta(time, nowutc())
         flavor = ""
     if delta.years > 0:
-        return "{0} years{1}".format(delta.years, flavor) 
+        return "{0} years{1}".format(delta.years, flavor)
     if (delta.months != 0):
         if delta.days > 15:
             return "{0} months{1}".format(delta.months + 1, flavor)

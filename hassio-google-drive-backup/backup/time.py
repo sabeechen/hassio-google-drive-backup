@@ -6,7 +6,7 @@ from time import sleep
 
 
 class Time(object):
-    def __init__(self, local_tz = tzlocal()):
+    def __init__(self, local_tz=tzlocal()):
         self.local_tz = local_tz
 
     def now(self) -> datetime:

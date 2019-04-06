@@ -1,24 +1,23 @@
 import os.path
 import os
 import requests
-import httplib2 #type: ignore
+import httplib2  # type: ignore
 
 from datetime import datetime
-from googleapiclient.discovery import build # type: ignore
+from googleapiclient.discovery import build  # type: ignore
 from googleapiclient.discovery import Resource
-from googleapiclient.errors import ResumableUploadError
-from apiclient.http import MediaIoBaseUpload# type: ignore
-from apiclient.errors import HttpError # type: ignore
-from oauth2client.client import Credentials # type: ignore
+from apiclient.http import MediaIoBaseUpload  # type: ignore
+from apiclient.errors import HttpError  # type: ignore
+from oauth2client.client import Credentials  # type: ignore
 from time import sleep
-from oauth2client.file import Storage # type: ignore
+from oauth2client.file import Storage  # type: ignore
 from .snapshots import DriveSnapshot
 from .snapshots import Snapshot
 from .snapshots import PROP_KEY_DATE
 from .snapshots import PROP_KEY_SLUG
 from .snapshots import PROP_KEY_NAME
 from .hassio import HEADERS
-from typing import Optional, List, Dict, TypeVar, Callable, Any
+from typing import List, Dict, TypeVar, Any
 from requests import Response
 from .config import Config
 from .responsestream import ResponseStream
@@ -136,7 +135,8 @@ class Drive(LogBase):
 
     T = TypeVar('T')
     V = TypeVar('V')
-    def _retryDriveServiceCall(self, request: Any, func: Any=None) -> Any:
+
+    def _retryDriveServiceCall(self, request: Any, func: Any = None) -> Any:
         attempts = 0
         backoff = DRIVE_RETRY_INITIAL_SECONDS
         while True:
@@ -173,7 +173,7 @@ class Drive(LogBase):
                         self.info("The Drive Snapshot Folder is in the trash, so we'll make a new one")
                         return self._createDriveFolder()
                     elif not caps['canAddChildren']:
-                        prself.infont("Can't add Snapshot to the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
+                        self.infont("Can't add Snapshot to the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
                         return self._createDriveFolder()
                     elif not caps['canListChildren']:
                         self.info("Can't list Snapshot of the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")

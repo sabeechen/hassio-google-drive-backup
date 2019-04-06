@@ -1,6 +1,7 @@
 
 from io import BytesIO, SEEK_SET, SEEK_END
-from typing import Sequence, Any, Dict, List, Optional
+from typing import Any, Optional
+
 
 class ResponseStream(object):
     """
@@ -27,7 +28,7 @@ class ResponseStream(object):
     def tell(self) -> Any:
         return self._bytes.tell()
 
-    def read(self, size: Optional[int] =None) -> Any:
+    def read(self, size: Optional[int] = None) -> Any:
         left_off_at = self._bytes.tell()
         if size is None:
             self._load_all()
@@ -38,7 +39,7 @@ class ResponseStream(object):
         self._bytes.seek(left_off_at)
         return self._bytes.read(size)
 
-    def seek(self, position: int, whence: Any =SEEK_SET) -> Any:
+    def seek(self, position: int, whence: Any = SEEK_SET) -> Any:
         if whence == SEEK_END:
             self._load_all()
         else:

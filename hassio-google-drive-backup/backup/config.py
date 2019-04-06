@@ -2,7 +2,7 @@ import os.path
 import json
 import logging
 from .logbase import LogBase
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, List, Any, Optional
 
 HASSIO_OPTIONS_FILE = '/data/options.json'
 
@@ -29,7 +29,10 @@ DEFAULTS = {
     "backup_directory": "/backup",
     "snapshot_stale_minutes": 60 * 3,
     "ha_bearer": "",
-    "snapshot_time_of_day": ""
+    "snapshot_time_of_day": "",
+    "notify_for_stale_snapshots": True,
+    "enable_snapshot_stale_sensor": True,
+    "enable_snapshot_state_Sensor": True
 }
 
 
@@ -125,7 +128,7 @@ class Config(LogBase):
         return None
 
     def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
-        if 'generational_days' not in self.config and 'generational_weeks' not in self.config and 'generational_months' not in self.config and 'generational_years' not in self.config: 
+        if 'generational_days' not in self.config and 'generational_weeks' not in self.config and 'generational_months' not in self.config and 'generational_years' not in self.config:
             return None
         base = {
             'days': 0,
@@ -149,5 +152,14 @@ class Config(LogBase):
         if 'generational_day_of_month' in self.config:
             base['day_of_month'] = self.config['generational_day_of_month']
         if 'generational_day_of_year' in self.config:
-           base['day_of_year'] =  self.config['generational_day_of_year']
+            base['day_of_year'] = self.config['generational_day_of_year']
         return base
+
+    def notifyForStaleSnapshots(self) -> bool:
+        return self.config["notify_for_stale_snapshots"]
+
+    def enableSnapshotStaleSensor(self) -> bool:
+        return self.config["enable_snapshot_stale_sensor"]
+
+    def enableSnapshotStateSensor(self) -> bool:
+        return self.config["enable_snapshot_state_Sensor"]

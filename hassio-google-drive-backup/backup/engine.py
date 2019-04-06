@@ -1,4 +1,3 @@
-import json
 from .snapshots import Snapshot
 from .snapshots import DriveSnapshot
 from .snapshots import HASnapshot
@@ -13,12 +12,11 @@ from .config import Config
 from .time import Time
 from pprint import pformat
 from dateutil.relativedelta import relativedelta
-from dateutil.tz import tzlocal
 from threading import Lock
 from datetime import timedelta
 from datetime import datetime
-from typing import Dict, List, Optional, Callable, Any, Sequence
-from oauth2client.client import Credentials #type: ignore
+from typing import Dict, List, Optional, Callable, Any
+from oauth2client.client import Credentials  # type: ignore
 from .backupscheme import GenerationalScheme, OldestScheme
 from .logbase import LogBase
 from .knownerror import KnownError
@@ -59,7 +57,7 @@ class Engine(LogBase):
         self.next_error_backoff: int = ERROR_BACKOFF_MIN_SECS
         self.one_shot: bool = False
         self.snapshots_stale: bool = False
-        
+
         gen_config = self.config.getGenerationalConfig()
         if gen_config:
             self.scheme = GenerationalScheme(self.time, gen_config)
@@ -111,7 +109,7 @@ class Engine(LogBase):
         if self.config.daysBetweenSnapshots() <= 0:
             return None
         if len(self.snapshots) == 0:
-            return self.time.now() - timedelta(days = 1)
+            return self.time.now() - timedelta(days=1)
         newest: datetime = max(self.snapshots, key=DATE_LAMBDA).date()
 
         if self.config.snapshotTimeOfDay() is None:
@@ -132,7 +130,7 @@ class Engine(LogBase):
         else:
             # return the next snapshot after the delta
             return self.time.toUtc(time_that_day_local + timedelta(days=self.config.daysBetweenSnapshots()))
-        
+
     def maybeSendStalenessNotifications(self) -> None:
         try:
             self.hassio.updateSnapshotsSensor("error", self.snapshots)
@@ -147,7 +145,7 @@ class Engine(LogBase):
                     self.notified = True
         except Exception as e:
             # Just eat this error, since we got an error updating status abotu the error
-            log.error(formatException(e))
+            self.error(formatException(e))
 
     def needsRefresh(self) -> bool:
         # refresh every once in a while regardless
@@ -156,7 +154,7 @@ class Engine(LogBase):
         # We need a refresh if we need a new snapshot
         next_snapshot = self.getNextSnapshotTime()
         if next_snapshot:
-            needsRefresh = needsRefresh or (self.time.now() > next_snapshot) 
+            needsRefresh = needsRefresh or (self.time.now() > next_snapshot)
 
         # Don't refresh if we haven't passed the error bakcoff time.
         if self.time.now() < self.next_error_rety:
@@ -177,7 +175,7 @@ class Engine(LogBase):
                 self.doBackupWorkflow()
             try:
                 self.hassio.updateSnapshotStaleSensor(self.snapshots_stale)
-            except:
+            except Exception:
                 # Just eat the error, we'll keep retrying.
                 pass
             self.time.sleep(self.config.secondsBetweenDirectoryChecks())
@@ -231,8 +229,7 @@ class Engine(LogBase):
                 local_map[drive_snapshot.slug()] = drive_snapshot
             else:
                 local_map[snapshot_from_drive.slug()].setDrive(snapshot_from_drive)
-        
-        
+
         added_from_ha: bool = False
         for snapshot_from_ha in ha_snapshots:
             if not snapshot_from_ha.slug() in local_map:
@@ -277,10 +274,6 @@ class Engine(LogBase):
         self._syncSnapshots()
         self._purgeHaSnapshots()
         self._purgeDriveBackups()
-
-        oldest: Optional[Snapshot] = None
-        if len(self.snapshots) > 0:
-            oldest = min(self.snapshots, key=DATE_LAMBDA)
 
         next_snapshot = self.getNextSnapshotTime()
         if next_snapshot and self.time.now() > next_snapshot:

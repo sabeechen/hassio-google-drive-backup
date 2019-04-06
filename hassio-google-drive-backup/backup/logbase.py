@@ -2,6 +2,7 @@ import logging
 
 HISTORY_SIZE = 1000
 
+
 class HistoryHandler(logging.Handler):
     def __init__(self):
         super(HistoryHandler, self).__init__()
@@ -15,8 +16,8 @@ class HistoryHandler(logging.Handler):
     def getHistory(self):
         for x in range(HISTORY_SIZE):
             yield self.history[(self.history_index + x) % HISTORY_SIZE]
-        
-            
+
+
 logger: logging.Logger = logging.getLogger("appwide")
 logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
@@ -29,7 +30,7 @@ history_handler = HistoryHandler()
 history_handler.setLevel(logging.DEBUG)
 history_handler.setFormatter(formatter)
 logger.addHandler(history_handler)
-        
+
 
 class LogBase(object):
 

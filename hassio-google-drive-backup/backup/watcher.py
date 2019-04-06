@@ -4,6 +4,7 @@ from .config import Config
 from .logbase import LogBase
 from typing import Optional, List
 
+
 class Watcher(LogBase):
 
     def __init__(self, config: Config):
@@ -28,4 +29,3 @@ class Watcher(LogBase):
         except Exception as e:
             self.error(formatException(e))
             return False
-

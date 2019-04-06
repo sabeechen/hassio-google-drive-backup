@@ -1,12 +1,9 @@
 import os.path
 import os
-import cherrypy # type: ignore
-
-
-from urllib.parse import quote
+import cherrypy  # type: ignore
 from datetime import timedelta
 from datetime import datetime
-from oauth2client.client import OAuth2WebServerFlow # type: ignore
+from oauth2client.client import OAuth2WebServerFlow  # type: ignore
 from oauth2client.client import HttpAccessTokenRefreshError
 from oauth2client.client import OAuth2Credentials
 from .helpers import nowutc
@@ -14,10 +11,9 @@ from .helpers import formatTimeSince
 from .helpers import formatException
 from .engine import Engine
 from .config import Config
-from .snapshots import Snapshot, HASnapshot, DriveSnapshot
 from .knownerror import KnownError
 from .logbase import LogBase
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -36,17 +32,17 @@ class Server(LogBase):
     Change the app credentials to use somethig more specific than philopen
     ADD Comments
     """
-    def __init__(self, root: str, engine: Engine, config : Config):
+    def __init__(self, root: str, engine: Engine, config: Config):
         self.oauth_flow_manual: OAuth2WebServerFlow = None
         self.root: str = root
         self.engine: Engine = engine
         self.config: Config = config
         self.auth_cache: Dict[str, Any] = {}
 
-    @cherrypy.expose #type: ignore
-    @cherrypy.tools.json_out() #type: ignore
+    @cherrypy.expose  # type: ignore
+    @cherrypy.tools.json_out()  # type: ignore
     def getstatus(self) -> Dict[Any, Any]:
-        status:  Dict[Any, Any] = {}
+        status: Dict[Any, Any] = {}
         status['folder_id'] = self.engine.folder_id
         status['snapshots'] = []
         last_backup: Optional[datetime] = None
@@ -96,21 +92,21 @@ class Server(LogBase):
                 return str(self.engine.last_error)
         else:
             return ""
-        
-    @cherrypy.expose #type: ignore
+
+    @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()
-    def manualauth(self, code: str="", client_id="", client_secret="") -> None:
+    def manualauth(self, code: str = "", client_id="", client_secret="") -> None:
         if client_id != "" and client_secret != "":
             try:
                 # Redirect to the webpage that takes you to the google auth page.
                 self.oauth_flow_manual = OAuth2WebServerFlow(
-                        client_id=client_id,
-                        client_secret=client_secret,
-                        scope=SCOPE,
-                        redirect_uri=MANUAL_CODE_REDIRECT_URI,
-                        include_granted_scopes='true',
-                        prompt='consent',
-                        access_type='offline')
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    scope=SCOPE,
+                    redirect_uri=MANUAL_CODE_REDIRECT_URI,
+                    include_granted_scopes='true',
+                    prompt='consent',
+                    access_type='offline')
                 return {
                     'auth_url': self.oauth_flow_manual.step1_get_authorize_url()
                 }
@@ -123,7 +119,7 @@ class Server(LogBase):
             try:
                 self.engine.saveCreds(self.oauth_flow_manual.step2_exchange(code))
                 return {
-                     'auth_url': "/"
+                    'auth_url': "/"
                 }
             except Exception as e:
                 return {
@@ -142,9 +138,9 @@ class Server(LogBase):
             self.error(formatException(e))
             return False
 
-    @cherrypy.expose #type: ignore
-    @cherrypy.tools.json_out() #type: ignore
-    def triggerbackup(self) ->  Dict[Any, Any]:
+    @cherrypy.expose  # type: ignore
+    @cherrypy.tools.json_out()  # type: ignore
+    def triggerbackup(self) -> Dict[Any, Any]:
         try:
             for snapshot in self.engine.snapshots:
                 if snapshot.isPending():
@@ -153,13 +149,13 @@ class Server(LogBase):
             snapshot = self.engine.startSnapshot()
             return {"name": snapshot.name()}
         except KnownError as e:
-            return {"error": e.message, "detail" : e.detail}
+            return {"error": e.message, "detail": e.detail}
         except Exception as e:
             return {"error": formatException(e)}
 
-    @cherrypy.expose # type: ignore
-    @cherrypy.tools.json_out() # type: ignore
-    def deleteSnapshot(self, slug: str, drive: str, ha: str) ->  Dict[Any, Any]:
+    @cherrypy.expose  # type: ignore
+    @cherrypy.tools.json_out()  # type: ignore
+    def deleteSnapshot(self, slug: str, drive: str, ha: str) -> Dict[Any, Any]:
         delete_drive: bool = (drive == "true")
         delete_ha: bool = (ha == "true")
         try:
@@ -171,9 +167,8 @@ class Server(LogBase):
             self.error(formatException(e))
             return {"message": "{}".format(e), "error_details": formatException(e)}
 
-    
-    @cherrypy.expose # type: ignore
-    def log(self, format="download") ->  Any:
+    @cherrypy.expose  # type: ignore
+    def log(self, format="download") -> Any:
         if format == "html":
             cherrypy.response.headers['Content-Type'] = 'text/html'
         else:
@@ -190,35 +185,35 @@ class Server(LogBase):
                 yield "</pre></body>\n"
         return content()
 
-    @cherrypy.expose # type: ignore
-    def token(self, **kwargs:  Dict[str, Any]) -> None:
+    @cherrypy.expose  # type: ignore
+    def token(self, **kwargs: Dict[str, Any]) -> None:
         # TODO: Need to do some error handling here.  Exceptions will surface using the cherrypy default.
         if 'creds' in kwargs:
             creds = OAuth2Credentials.from_json(kwargs['creds'])
             #creds.from_json(kwargs[creds].strip("'"))
         raise cherrypy.HTTPRedirect("/")
 
-    @cherrypy.expose # type: ignore
-    def simerror(self, error: str="") -> None:
+    @cherrypy.expose  # type: ignore
+    def simerror(self, error: str = "") -> None:
         if len(error) == 0:
             self.engine.simulateError(None)
         else:
             self.engine.simulateError(error)
 
-    @cherrypy.expose # type: ignore
+    @cherrypy.expose  # type: ignore
     def index(self) -> Any:
         if not self.engine.driveEnabled():
             return open("www/index.html")
         else:
             return open("www/working.html")
 
-    @cherrypy.expose # type: ignore
+    @cherrypy.expose  # type: ignore
     def reauthenticate(self) -> Any:
         return open("www/index.html")
 
     def run(self) -> None:
         self.info("Starting server...")
-        conf:  Dict[Any, Any] = {
+        conf: Dict[Any, Any] = {
             'global': {
                 'server.socket_port': self.config.port(),
                 'server.socket_host': '0.0.0.0',
@@ -245,8 +240,8 @@ class Server(LogBase):
             cherrypy.server.ssl_private_key = self.config.keyFile()
         cherrypy.quickstart(self, self.config.pathSeparator(), conf)
 
-    @cherrypy.expose # type: ignore
-    @cherrypy.tools.json_out() # type: ignore
-    def backupnow(self) ->  Any:
+    @cherrypy.expose  # type: ignore
+    @cherrypy.tools.json_out()  # type: ignore
+    def backupnow(self) -> Any:
         self.engine.doBackupWorkflow()
         return self.getstatus()

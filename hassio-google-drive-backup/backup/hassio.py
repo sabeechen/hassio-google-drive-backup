@@ -1,14 +1,10 @@
 import os.path
-import sys
 import os
-import json
 import requests
 
 from requests import Response
 from pprint import pformat
 from datetime import datetime
-from time import sleep
-from oauth2client.client import HttpAccessTokenRefreshError # type: ignore
 from .snapshots import HASnapshot
 from .snapshots import Snapshot
 from .helpers import nowutc
@@ -28,6 +24,7 @@ HEADERS_HA = {'Authorization': 'Bearer ' + str(os.environ.get("HASSIO_TOKEN"))}
 
 NOTIFICATION_ID = "backup_broken"
 
+
 class SnapshotInProgress(KnownError):
     def __init__(self):
         super(SnapshotInProgress, self).__init__("A snapshot is already in progress")
@@ -39,7 +36,7 @@ class Hassio(LogBase):
     """
     def __init__(self, config: Config):
         self.config: Config = config
-        self.snapshot_thread: Thread = Thread(target = self._getSnapshot)
+        self.snapshot_thread: Thread = Thread(target=self._getSnapshot)
         self.snapshot_thread.daemon = True
         self.pending_snapshot: Optional[Snapshot] = None
         self.pending_snapshot_error: Optional[Exception] = None
@@ -51,12 +48,12 @@ class Hassio(LogBase):
             now_local: datetime = datetime.now()
             now_utc: datetime = nowutc()
             backup_name: str = "Full Snapshot {0}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}".format(
-                                now_local.year, 
-                                now_local.month, 
-                                now_local.day, 
-                                now_local.hour,
-                                now_local.minute,
-                                now_local.second)
+                now_local.year,
+                now_local.month,
+                now_local.day,
+                now_local.hour,
+                now_local.minute,
+                now_local.second)
             snapshot_url = "{0}snapshots/new/full".format(self.config.hassioBaseUrl())
             try:
                 self.lock.acquire()
@@ -90,19 +87,18 @@ class Hassio(LogBase):
             self.lock.release()
 
     def auth(self, user: str, password: str) -> None:
-         self._postHassioData("{}auth".format(self.config.hassioBaseUrl()), {"username": user, "password": password})
+        self._postHassioData("{}auth".format(self.config.hassioBaseUrl()), {"username": user, "password": password})
 
-    
     def newSnapshot(self) -> Snapshot:
         try:
             self.lock.acquire()
-            if not self.snapshot_thread is None and self.snapshot_thread.is_alive():
+            if self.snapshot_thread is not None and self.snapshot_thread.is_alive():
                 raise SnapshotInProgress()
-            self.snapshot_thread = Thread(target = self._getSnapshot)
+            self.snapshot_thread = Thread(target=self._getSnapshot)
             self.snapshot_thread.start()
         finally:
             self.lock.release()
-        self.snapshot_thread.join(timeout = SNAPSHOT_FASTFAIL_SECOND)
+        self.snapshot_thread.join(timeout=SNAPSHOT_FASTFAIL_SECOND)
         try:
             self.lock.acquire()
             if self.pending_snapshot_error is not None and isinstance(self.pending_snapshot_error, SnapshotInProgress) and not self.pending_snapshot:
@@ -111,8 +107,8 @@ class Hassio(LogBase):
                 self.pending_snapshot.setPending("Pending Snapshot", nowutc())
                 return self.pending_snapshot
             if self.pending_snapshot_error is not None:
-                raise self.pending_snapshot_error # pylint: disable-msg=E0702
-            elif not self.pending_snapshot is None:
+                raise self.pending_snapshot_error  # pylint: disable-msg=E0702
+            elif self.pending_snapshot is not None:
                 return self.pending_snapshot
             else:
                 raise KnownError("Unexpected circumstances, pending snapshot is null")
@@ -131,13 +127,13 @@ class Hassio(LogBase):
             snapshot_details: Dict[Any, Any] = self._getHassioData("{0}snapshots/{1}/info".format(self.config.hassioBaseUrl(), snapshot['slug']))
             snapshots.append(HASnapshot(snapshot_details))
 
-        snapshots.sort(key = lambda x : x.date())
+        snapshots.sort(key=lambda x: x.date())
         return snapshots
 
-    def readAddonInfo(self) -> Dict[str, Any]:    
+    def readAddonInfo(self) -> Dict[str, Any]:
         return self._getHassioData(self.config.hassioBaseUrl() + "addons/self/info")
 
-    def readHostInfo(self) -> Dict[str, Any]:    
+    def readHostInfo(self) -> Dict[str, Any]:
         return self._getHassioData(self.config.hassioBaseUrl() + "info")
 
     def downloadUrl(self, snapshot: Snapshot) -> str:
@@ -154,7 +150,7 @@ class Hassio(LogBase):
         details: Dict[str, Any] = resp.json()
         self.debug("Hassio said: ")
         self.debug(pformat(details))
-        if not "result" in details or not "data" in details or details["result"] != "ok":
+        if "result" not in details or "data" not in details or details["result"] != "ok":
             if "result" in details:
                 raise Exception("Hassio said: " + details["result"])
             else:
@@ -167,7 +163,7 @@ class Hassio(LogBase):
 
     def _postHassioData(self, url: str, json_data: Dict[str, Any]) -> Dict[str, Any]:
         self.debug("Making Hassio request: " + url)
-        return self._validateHassioReply(requests.post(url, headers=HEADERS, json = json_data))
+        return self._validateHassioReply(requests.post(url, headers=HEADERS, json=json_data))
 
     def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
         headers: Dict[str, str] = {}
@@ -178,46 +174,51 @@ class Hassio(LogBase):
         try:
             self.debug("Making Ha request: " + self.config.haBaseUrl() + path)
             self.debug("With Data: {0}".format(data))
-            requests.post(self.config.haBaseUrl() + path, headers=headers, json = data).raise_for_status()
+            requests.post(self.config.haBaseUrl() + path, headers=headers, json=data).raise_for_status()
         except Exception as e:
             self.error(formatException(e))
 
-
     def sendNotification(self, title: str, message: str) -> None:
+        if not self.sendNotification():
+            return
         data: Dict[str, str] = {
-            "title" : title,
-            "message" : message,
-            "notification_id" : NOTIFICATION_ID
+            "title": title,
+            "message": message,
+            "notification_id": NOTIFICATION_ID
         }
         self._postHaData("services/persistent_notification/create", data)
 
     def dismissNotification(self) -> None:
+        if not self.sendNotification():
+            return
         data: Dict[str, str] = {
-            "notification_id" : NOTIFICATION_ID
+            "notification_id": NOTIFICATION_ID
         }
         self._postHaData("services/persistent_notification/dismiss", data)
 
     def updateSnapshotStaleSensor(self, state: bool) -> None:
-        data: Dict[str, Any] = {
-            "state": state,
-            "attributes":{
-                "friendly_name":"Snapshots Stale",
-                "device_class": "problem"
-                }
-        } 
-        self._postHaData("states/binary_sensor.snapshots_stale", data)
-
-    def updateSnapshotsSensor(self, state: str, snapshots : List[Snapshot]) -> None:
+        if not self.updateSnapshotStaleSensor():
+            return
         data: Dict[str, Any] = {
             "state": state,
             "attributes": {
-                "friendly_name":"Snapshot State",
-                "last_snapshot": str(max(snapshots, key=lambda s:s.date(), default="")),  # type: ignore
-                "spanshots_in_google_drive": len(list(filter(lambda s:s.isInDrive(), snapshots))),
-                "spanshots_in_hassio": len(list(filter(lambda s:s.isInHA(), snapshots))),
-                "snapshots": list(map(lambda s: {"name":s.name(), "date":str(s.date()), "state":s.status()}, snapshots))
+                "friendly_name": "Snapshots Stale",
+                "device_class": "problem"
+            }
+        }
+        self._postHaData("states/binary_sensor.snapshots_stale", data)
+
+    def updateSnapshotsSensor(self, state: str, snapshots: List[Snapshot]) -> None:
+        if not self.config.enableSnapshotStateSensor():
+            return
+        data: Dict[str, Any] = {
+            "state": state,
+            "attributes": {
+                "friendly_name": "Snapshot State",
+                "last_snapshot": str(max(snapshots, key=lambda s: s.date(), default="")),  # type: ignore
+                "spanshots_in_google_drive": len(list(filter(lambda s: s.isInDrive(), snapshots))),
+                "spanshots_in_hassio": len(list(filter(lambda s: s.isInHA(), snapshots))),
+                "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date()), "state": s.status()}, snapshots))
             }
         }
         self._postHaData("states/sensor.snapshot_backup", data)
-
-

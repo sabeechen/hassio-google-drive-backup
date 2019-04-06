@@ -19,5 +19,8 @@
     "generational_years": 4,
     "generational_day_of_week": "tue",
     "generational_day_of_month": 5,
-    "generational_day_of_year": 6
+    "generational_day_of_year": 6,
+    "notify_for_stale_snapshots": false,
+    "enable_snapshot_stale_sensor": false,
+    "enable_snapshot_state_Sensor": false
 }

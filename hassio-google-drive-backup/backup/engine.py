@@ -58,11 +58,12 @@ class Engine(LogBase):
         self.one_shot: bool = False
         self.snapshots_stale: bool = False
 
+    def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
         if gen_config:
-            self.scheme = GenerationalScheme(self.time, gen_config)
+            return GenerationalScheme(self.time, gen_config)
         else:
-            self.scheme = OldestScheme()
+            return OldestScheme()
 
     def saveCreds(self, creds: Credentials) -> None:
         self.drive.saveCreds(creds)
@@ -257,14 +258,14 @@ class Engine(LogBase):
 
     def _purgeDriveBackups(self) -> None:
         while self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() > self.config.maxSnapshotsInGoogleDrive():
-            oldest: Snapshot = self.scheme.getOldest(filter(DRIVE_LAMBDA, self.snapshots))
+            oldest: Snapshot = self.getDeleteScheme().getOldest(filter(DRIVE_LAMBDA, self.snapshots))
             self.drive.deleteSnapshot(oldest)
             if oldest.isDeleted():
                 self.snapshots.remove(oldest)
 
     def _purgeHaSnapshots(self) -> None:
         while self.config.maxSnapshotsInHassio() > 0 and self.haSnapshotCount() > self.config.maxSnapshotsInHassio():
-            oldest_hassio: Snapshot = self.scheme.getOldest(filter(HA_LAMBDA, self.snapshots))
+            oldest_hassio: Snapshot = self.getDeleteScheme().getOldest(filter(HA_LAMBDA, self.snapshots))
             self.hassio.deleteSnapshot(oldest_hassio)
             if not oldest_hassio.isInDrive():
                 self.snapshots.remove(oldest_hassio)

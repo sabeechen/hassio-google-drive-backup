@@ -1,7 +1,9 @@
 *.pyc
 *.dat
 *.id
+*pychache*
 .pytest_cache/*
 .mypy_cache/*
 *drive_creds*
 dev/backup/*.tar
+hassio-google-drive-backup/backup/__pycache__/server.cpython-37.pyc.16291344

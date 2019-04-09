@@ -32,22 +32,25 @@ DEFAULTS = {
     "snapshot_time_of_day": "",
     "notify_for_stale_snapshots": True,
     "enable_snapshot_stale_sensor": True,
-    "enable_snapshot_state_Sensor": True
+    "enable_snapshot_state_sensor": True
 }
 
 
 class Config(LogBase):
 
     def __init__(self, file_paths: List[str] = [], extra_config: Dict[str, any] = {}):
-        self.config: Dict[str, Any] = DEFAULTS
+        self.config_path = ""
+        self.config: Dict[str, Any] = DEFAULTS.copy()
         for config_file in [HASSIO_OPTIONS_FILE, ""]:
             if os.path.isfile(config_file):
                 with open(config_file) as file_handle:
+                    self.config_path = config_file
                     self.config.update(json.load(file_handle))
         for config_file in file_paths:
             if os.path.isfile(config_file):
                 with open(config_file) as file_handle:
                     self.info("Loading config from " + config_file)
+                    self.config_path = config_file
                     self.config.update(json.load(file_handle))
 
         self.config.update(extra_config)
@@ -162,4 +165,108 @@ class Config(LogBase):
         return self.config["enable_snapshot_stale_sensor"]
 
     def enableSnapshotStateSensor(self) -> bool:
-        return self.config["enable_snapshot_state_Sensor"]
+        return self.config["enable_snapshot_state_sensor"]
+
+    def update(self, **kwargs) -> None:
+        # load the existing config
+        old_config: Dict[str, Any] = None
+        with open(self.config_path) as file_handle:
+            old_config = json.load(file_handle)
+
+        # Required options
+        if 'max_snapshots_in_hassio' in kwargs and len(kwargs['max_snapshots_in_hassio']) > 0:
+            old_config['max_snapshots_in_hassio'] = kwargs['max_snapshots_in_hassio']
+
+        if 'max_snapshots_in_google_drive' in kwargs and len(kwargs['max_snapshots_in_google_drive']) > 0:
+            old_config['max_snapshots_in_google_drive'] = kwargs['max_snapshots_in_google_drive']
+
+        if 'use_ssl' in kwargs and kwargs['use_ssl'] == 'on':
+            old_config['use_ssl'] = True
+            if 'certfile' in kwargs and len(kwargs['certfile']) > 0:
+                old_config['certfile'] = kwargs['certfile']
+            if 'keyfile' in kwargs and len(kwargs['keyfile']) > 0:
+                old_config['keyfile'] = kwargs['keyfile']
+        else:
+            old_config['use_ssl'] = False
+            if 'certfile' in old_config:
+                del old_config['certfile']
+            if 'keyfile' in old_config:
+                del old_config['keyfile']
+
+        # optional boolean config
+        if 'require_login' not in kwargs:
+            old_config['require_login'] = False
+        elif 'require_login' in old_config:
+            del old_config['require_login']
+
+        if 'notify_for_stale_snapshots' not in kwargs:
+            old_config['notify_for_stale_snapshots'] = False
+        elif 'notify_for_stale_snapshots' in old_config:
+            del old_config['notify_for_stale_snapshots']
+
+        if 'enable_snapshot_stale_sensor' not in kwargs:
+            old_config['enable_snapshot_stale_sensor'] = False
+        elif 'enable_snapshot_stale_sensor' in old_config:
+            del old_config['enable_snapshot_stale_sensor']
+
+        if 'enable_snapshot_state_sensor' not in kwargs:
+            old_config['enable_snapshot_state_sensor'] = False
+        elif 'enable_snapshot_state_sensor' in old_config:
+            del old_config['enable_snapshot_state_sensor']
+
+        if 'snapshot_time_of_day' in kwargs and len(kwargs['snapshot_time_of_day']) > 0:
+            old_config['snapshot_time_of_day'] = kwargs['snapshot_time_of_day']
+        elif 'snapshot_time_of_day' in old_config:
+            del old_config['snapshot_time_of_day']
+
+        if 'generational_enabled' not in kwargs or kwargs['generational_enabled'] == 'off':
+            if 'generational_days' in old_config:
+                del old_config['generational_days']
+            if 'generational_weeks' in old_config:
+                del old_config['generational_weeks']
+            if 'generational_months' in old_config:
+                del old_config['generational_months']
+            if 'generational_years' in old_config:
+                del old_config['generational_years']
+        else:
+            if 'generational_days' in kwargs and len(kwargs['generational_days']) > 0:
+                old_config['generational_days'] = int(kwargs['generational_days'])
+            else:
+                old_config['generational_weeks'] = 0
+
+            if 'generational_weeks' in kwargs and len(kwargs['generational_weeks']) > 0:
+                old_config['generational_weeks'] = int(kwargs['generational_weeks'])
+            else:
+                old_config['generational_weeks'] = 0
+
+            if 'generational_months' in kwargs and len(kwargs['generational_months']) > 0:
+                old_config['generational_months'] = int(kwargs['generational_months'])
+            else:
+                old_config['generational_months'] = 0
+
+            if 'generational_years' in kwargs and len(kwargs['generational_years']) > 0:
+                old_config['generational_years'] = int(kwargs['generational_years'])
+            else:
+                old_config['generational_years'] = 0
+
+            if 'generational_day_of_week' in kwargs and len(kwargs['generational_day_of_week']) > 0:
+                old_config['generational_day_of_week'] = kwargs['generational_day_of_week']
+            else:
+                old_config['generational_day_of_week'] = 'mon'
+
+            if 'generational_day_of_month' in kwargs and len(kwargs['generational_day_of_month']) > 0:
+                old_config['generational_day_of_month'] = int(kwargs['generational_day_of_month'])
+            else:
+                old_config['generational_day_of_month'] = 1
+
+            if 'generational_day_of_year' in kwargs and len(kwargs['generational_day_of_year']) > 0:
+                old_config['generational_day_of_year'] = int(kwargs['generational_day_of_year'])
+            else:
+                old_config['generational_day_of_year'] = 1
+        self.info(str(kwargs))
+
+        with open(self.config_path, "w") as file_handle:
+            json.dump(old_config, file_handle, indent=4)
+
+        self.config = DEFAULTS.copy()
+        self.config.update(old_config)

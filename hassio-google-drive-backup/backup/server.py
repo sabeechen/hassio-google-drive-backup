@@ -245,3 +245,17 @@ class Server(LogBase):
     def backupnow(self) -> Any:
         self.engine.doBackupWorkflow()
         return self.getstatus()
+
+    @cherrypy.expose  # type: ignore
+    @cherrypy.tools.json_out()  # type: ignore
+    def getconfig(self) -> Any:
+        return self.config.config
+
+    @cherrypy.expose  # type: ignore
+    @cherrypy.tools.json_out()  # type: ignore
+    @cherrypy.tools.json_in()  # type: ignore
+    def saveconfig(self, **kwargs) -> Any:
+        self.config.update(**kwargs)
+
+    # TODO: close window after saving
+    # TODO: restart server after changing require auth or ssl

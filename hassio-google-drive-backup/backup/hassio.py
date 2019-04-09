@@ -179,7 +179,7 @@ class Hassio(LogBase):
             self.error(formatException(e))
 
     def sendNotification(self, title: str, message: str) -> None:
-        if not self.sendNotification():
+        if not self.config.notifyForStaleSnapshots():
             return
         data: Dict[str, str] = {
             "title": title,
@@ -189,7 +189,7 @@ class Hassio(LogBase):
         self._postHaData("services/persistent_notification/create", data)
 
     def dismissNotification(self) -> None:
-        if not self.sendNotification():
+        if not self.config.notifyForStaleSnapshots():
             return
         data: Dict[str, str] = {
             "notification_id": NOTIFICATION_ID
@@ -197,7 +197,7 @@ class Hassio(LogBase):
         self._postHaData("services/persistent_notification/dismiss", data)
 
     def updateSnapshotStaleSensor(self, state: bool) -> None:
-        if not self.updateSnapshotStaleSensor():
+        if not self.config.enableSnapshotStaleSensor():
             return
         data: Dict[str, Any] = {
             "state": state,

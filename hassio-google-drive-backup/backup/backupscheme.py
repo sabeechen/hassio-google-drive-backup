@@ -66,12 +66,12 @@ class GenerationalScheme(BackupScheme):
         last = self.time.toLocal(snapshots[len(snapshots) - 1].date())
         lookups: List[Partition] = []
         for x in range(0, self.partitions['days']):
-            start = datetime(last.year, last.month, last.day, tzinfo=last.tzinfo) - timedelta(days=x)
+            start = datetime(last.year, last.month, last.day).astimezone(last.tzinfo) - timedelta(days=x)
             end = start + timedelta(days=1)
             lookups.append(Partition(start, end, start + timedelta(hours=12)))
 
         for x in range(0, self.partitions['weeks']):
-            start = datetime(last.year, last.month, last.day, tzinfo=last.tzinfo) - timedelta(days=last.weekday()) - timedelta(weeks=x)
+            start = datetime(last.year, last.month, last.day).astimezone(last.tzinfo) - timedelta(days=last.weekday()) - timedelta(weeks=x)
             end = start + timedelta(days=7)
             lookups.append(Partition(start, end, start + timedelta(days=day_of_week, hours=12)))
 
@@ -81,14 +81,14 @@ class GenerationalScheme(BackupScheme):
             if last.month - month_offset < 1:
                 year_offset = year_offset + 1
                 month_offset = month_offset - 12
-            start = datetime(last.year - year_offset, last.month - month_offset, 1, tzinfo=last.tzinfo)
+            start = datetime(last.year - year_offset, last.month - month_offset, 1).astimezone(last.tzinfo)
             weekday, days = monthrange(start.year, start.month)
             end = start + timedelta(days=days)
             lookups.append(Partition(start, end, start + timedelta(days=self.partitions['day_of_month'] - 1)))
 
         for x in range(0, self.partitions['years']):
-            start = datetime(last.year - x, 1, 1, tzinfo=last.tzinfo)
-            end = datetime(last.year - x + 1, 1, 1, tzinfo=last.tzinfo)
+            start = datetime(last.year - x, 1, 1).astimezone(last.tzinfo)
+            end = datetime(last.year - x + 1, 1, 1).astimezone(last.tzinfo)
             lookups.append(Partition(start, end, start + timedelta(days=self.partitions['day_of_year'] - 1)))
 
         keepers = set()

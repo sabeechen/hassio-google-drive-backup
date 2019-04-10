@@ -11,10 +11,10 @@ from pytest_mock import mocker
 from datetime import datetime, timedelta, timezone
 from dateutil.tz import gettz
 
-base_date: datetime = datetime(1985, 12, 6, 1, 0, 0, tzinfo=timezone.utc)
-next_minute: datetime = datetime(1985, 12, 6, 1, 1, 0, tzinfo=timezone.utc)
-prev_minute: datetime = datetime(1985, 12, 6, 0, 59, 0, tzinfo=timezone.utc)
-next_day: datetime = datetime(1985, 12, 7, 1, 0, 0, tzinfo=timezone.utc)
+base_date: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
+next_minute: datetime = datetime(1985, 12, 6, 1, 1, 0).astimezone(timezone.utc)
+prev_minute: datetime = datetime(1985, 12, 6, 0, 59, 0).astimezone(timezone.utc)
+next_day: datetime = datetime(1985, 12, 7, 1, 0, 0).astimezone(timezone.utc)
 test_tz=gettz('Egypt Standard Time')
 def test_engine_no_work_do_nothing(mocker) -> None:
     time: Time = getMockTime(mocker)
@@ -84,13 +84,13 @@ def test_next_backup_time_with_snapshot_time_before_snapshot(mocker) -> None:
     config: Config = Config(extra_config={"snapshot_time_of_day": "01:00", "days_between_snapshots" : 1})
     drive: Drive = Drive(config)
     
-    date_local = datetime(1928, 12, 6, 0, 59, tzinfo=test_tz)
+    date_local = datetime(1928, 12, 6, 0, 59).astimezone(test_tz)
     new_snapshot = makeHASnapshot("test", time.toUtc(date_local))
     hassio: Hassio = getMockHassio(mocker, config, snapshots=[new_snapshot])
 
     engine: Engine = Engine(config, drive, hassio, time)
     engine.doBackupWorkflow()
-    assert engine.getNextSnapshotTime() == datetime(1928, 12, 6, 1, 00, tzinfo=test_tz)
+    assert engine.getNextSnapshotTime() == datetime(1928, 12, 6, 1, 00).astimezone(test_tz)
 
 
 def test_next_backup_time_with_snapshot_time_after_snapshot(mocker) -> None:
@@ -98,20 +98,20 @@ def test_next_backup_time_with_snapshot_time_after_snapshot(mocker) -> None:
     config: Config = Config(extra_config={"snapshot_time_of_day": "01:00", "days_between_snapshots" : 1})
     drive: Drive = Drive(config)
     
-    date_local = datetime(1928, 12, 6, 1, 1, tzinfo=test_tz)
+    date_local = datetime(1928, 12, 6, 1, 1).astimezone(test_tz)
     new_snapshot = makeHASnapshot("test", time.toUtc(date_local))
     hassio: Hassio = getMockHassio(mocker, config, snapshots=[new_snapshot])
 
     engine: Engine = Engine(config, drive, hassio, time)
     engine.doBackupWorkflow()
-    assert engine.getNextSnapshotTime() == datetime(1928, 12, 7, 1, 00, tzinfo=test_tz)
+    assert engine.getNextSnapshotTime() == datetime(1928, 12, 7, 1, 00).astimezone(test_tz)
 
 def test_next_backup_time_with_broken_time_of_day(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)
     config: Config = Config(extra_config={"snapshot_time_of_day": "24:00", "days_between_snapshots" : 1})
     drive: Drive = Drive(config)
     
-    date_local = datetime(1928, 12, 6, 1, 1, tzinfo=test_tz)
+    date_local = datetime(1928, 12, 6, 1, 1).astimezone(test_tz)
     new_snapshot = makeHASnapshot("test", time.toUtc(date_local))
     hassio: Hassio = getMockHassio(mocker, config, snapshots=[new_snapshot])
 

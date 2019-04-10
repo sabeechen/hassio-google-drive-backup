@@ -124,7 +124,7 @@ class Engine(LogBase):
             return newest + timedelta(days=self.config.daysBetweenSnapshots())
 
         newest_local: datetime = self.time.toLocal(newest)
-        time_that_day_local = datetime(newest_local.year, newest_local.month, newest_local.day, hour, minute, 0, tzinfo=self.time.local_tz)
+        time_that_day_local = datetime(newest_local.year, newest_local.month, newest_local.day, hour, minute, 0).astimezone(self.time.local_tz)
         if newest_local < time_that_day_local:
             # Latest snapshot is before the snapshot time for that day
             return self.time.toUtc(time_that_day_local)

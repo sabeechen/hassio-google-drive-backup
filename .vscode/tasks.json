@@ -6,7 +6,7 @@
         {
             "label": "RUN: Add-on",
             "type": "shell",
-            "command": "python run.py ../dev/data/options.json",
+            "command": "python run.py ../dev/data/dev_options.json ../dev/data/options.json",
             "options": {
                 "cwd": "${workspaceFolder}/hassio-google-drive-backup"
             },

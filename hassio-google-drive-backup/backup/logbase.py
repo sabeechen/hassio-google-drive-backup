@@ -30,6 +30,8 @@ history_handler = HistoryHandler()
 history_handler.setLevel(logging.DEBUG)
 history_handler.setFormatter(formatter)
 logger.addHandler(history_handler)
+logging.getLogger("cherrypy.error").addHandler(history_handler)
+logging.getLogger("cherrypy.error").addHandler(console_handler)
 
 
 class LogBase(object):

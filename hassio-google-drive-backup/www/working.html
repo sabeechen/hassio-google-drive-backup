@@ -31,7 +31,7 @@
   <div id="settings_modal" class="modal">
     <div class="modal-content">
       <h4>Add-on Settings</h4>
-      <p>Once you save the settings, the add-on will restart automatically.</p>
+      <p>Settings take effect right after saving them.  If you enable or disable SSL, you may need to go to a different address to access the UI after the setting sare saved.</p>
       <div class="row">
         <form class="col s12" method="get" id="settings_form">
           <div class="row">
@@ -108,14 +108,26 @@
           </div>
           <div class="row">
             <div class="col s12">
-              <ul class="collapsible expandable">
+              <ul class="collapsible expandable" id="ssl_header">
                 <li>
                   <div class="collapsible-header">
                     <i class="material-icons">expand_more</i>
                       <label>
-                        <input type="checkbox" name="use_ssl" id="use_ssl" class="filled-in"/>
+                        <input type="checkbox" name="use_ssl" id="use_ssl" class="filled-in" onchange="sslChanged()"/>
                         <span>Use SSL</span>
                       </label>
+                      <script type="text/javascript">
+                        function sslChanged() {
+                          var checked = $('#use_ssl').prop('checked');
+                          var open = $('#ssl_header').hasClass('active')
+                          var instance = M.Collapsible.getInstance(document.getElementById('ssl_header'));
+                          if (checked && !open) {
+                            instance.open(0)
+                          } else if (!checked && open) {
+                            instance.close(0)
+                          }
+                        }
+                      </script>
                   </div>
                   <div class="collapsible-body">
                       <div class="row">
@@ -141,14 +153,26 @@
           </div>
           <div class="row">
             <div class="col s12">
-              <ul class="collapsible expandable">
+              <ul class="collapsible expandable" id='generational_dialog'>
                 <li>
                   <div class="collapsible-header">
                     <i class="material-icons">expand_more</i>
                       <label>
-                        <input type="checkbox" id="generational_enabled" name="generational_enabled" class="filled-in"/>
+                        <input type="checkbox" id="generational_enabled" name="generational_enabled" class="filled-in" onchange="genChanged()"/>
                         <span>Keep Generational Backups</span>
                       </label>
+                      <script type="text/javascript">
+                        function genChanged() {
+                          var checked = $('#generational_enabled').prop('checked');
+                          var open = $('#generational_dialog').hasClass('active')
+                          var instance = M.Collapsible.getInstance(document.getElementById('generational_dialog'));
+                          if (checked && !open) {
+                            instance.open(0)
+                          } else if (!checked && open) {
+                            instance.close(0)
+                          }
+                        }
+                      </script>
                   </div>
                   <div class="collapsible-body">
                     <div class="row">
@@ -458,8 +482,6 @@
                 $('#snapshot_time_of_day').val("")
               }
 
-
-
               if (data.hasOwnProperty("use_ssl")) {
                 $('#use_ssl').prop('checked', data.use_ssl)
               } else {
@@ -550,11 +572,10 @@
                 $('#generational_day_of_week').val("mon")
               }
 
-              //document.getElementById('settings_form').checkValidity()
-              //$('#settings_form').validate()
-              //$('#settings_form').valid()
               $("#settings_error").hide()
-              M.updateTextFields()
+              M.updateTextFields();
+              sslChanged();
+              genChanged();
             }, "json")
     }
 
@@ -568,8 +589,15 @@
       console.log($('#settings_form').serialize());
       var jqxhr = $.get("saveconfig?" + $('#settings_form').serialize(), 
             function(data) {
-              toast("Settings saved")
+              if (!errorToast(data)) {
+                M.Modal.getInstance(document.getElementById("settings_modal")).close();
+              }
             }, "json")
+        .fail(
+          function(e) {
+            errorToast(e)
+          }
+        )
     }
 
     function triggerSync() {
@@ -645,29 +673,40 @@
     function errorToast(error) {
       message = "";
       details = "";
+      var isError = false;
       if (error.hasOwnProperty("message") && error.hasOwnProperty("error_details")) {
         // Its an error messag form the server
         message = error.message;
         details = error.error_details;
+        isError = true;
       } else if (error.hasOwnProperty("status") && error.hasOwnProperty("statusText") && error.hasOwnProperty("responseText")) {
         // Its an HTTP error, so format appropriately
         message = "Got unexpected HTTP error " + error.status + ": " + error.statusText;
         details = error.responseText;
+        isError = true;
       } else if (error.hasOwnProperty("error")) {
         message = error.error
         details = JSON.stringify(error, undefined, 2)
+        isError = true;
       } else if (error.hasOwnProperty("message")) {
         message = error.message
-        details = JSON.stringify(error, undefined, 2)
+        //details = JSON.stringify(error, undefined, 2)
+        isError = false;
       } else {
         message = "Got an unexpected error"
         details = JSON.stringify(error, undefined, 2)
+        isError = true;
       }
 
-      button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
-      $('#error_details_paragraph').text(details);
+      button_text = ""
+      if (details.length > 0) {
+        button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+        $('#error_details_paragraph').text(details);
+      }
+      
       console.log(error)
       toast(message + button_text);
+      return isError;
     }
     // Refreshes the display with stats from the server.
     function refreshstats() {

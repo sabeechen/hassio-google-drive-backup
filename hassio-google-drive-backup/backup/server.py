@@ -1,6 +1,8 @@
 import os.path
 import os
 import cherrypy  # type: ignore
+import logging
+import logging.config
 from datetime import timedelta
 from datetime import datetime
 from oauth2client.client import OAuth2WebServerFlow  # type: ignore
@@ -217,16 +219,18 @@ class Server(LogBase):
             'global': {
                 'server.socket_port': self.config.port(),
                 'server.socket_host': '0.0.0.0',
+                'engine.autoreload.on': False,
+                'log.access_file': '',
+                'log.error_file': '',
+                'log.screen': False,
+                'response.stream': True
+
             },
             self.config.pathSeparator(): {
                 'tools.staticdir.on': True,
                 'tools.staticdir.dir': os.getcwd() + self.config.pathSeparator() + self.root
             }
         }
-        conf['global']['log.access_file'] = ""
-        conf['global']['log.error_file'] = ""
-        conf['global']['log.screen'] = False
-        conf['global']['response.stream'] = True
 
         if self.config.requireLogin():
             conf[self.config.pathSeparator()].update({
@@ -238,7 +242,62 @@ class Server(LogBase):
         if self.config.useSsl():
             cherrypy.server.ssl_certificate = self.config.certFile()
             cherrypy.server.ssl_private_key = self.config.keyFile()
-        cherrypy.quickstart(self, self.config.pathSeparator(), conf)
+
+        LOG_CONF = {
+            'version': 1,
+
+            'formatters': {
+                'void': {
+                    'format': ''
+                },
+                'standard': {
+                    'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+                },
+            },
+            'handlers': {
+                'default': {
+                    'level':'INFO',
+                    'class':'logging.StreamHandler',
+                    'formatter': 'standard',
+                    'stream': 'ext://sys.stdout'
+                },
+                'cherrypy_console': {
+                    'level':'INFO',
+                    'class':'logging.StreamHandler',
+                    'formatter': 'void',
+                    'stream': 'ext://sys.stdout'
+                },
+                'cherrypy_error': {
+                    'level':'INFO',
+                    'class':'logging.StreamHandler',
+                    'formatter': 'void',
+                    'stream': 'ext://sys.stdout'
+                },
+            },
+            'loggers': {
+                '': {
+                    'handlers': ['default'],
+                    'level': 'INFO'
+                },
+                'cherrypy.access': {
+                    'handlers': ['cherrypy_console'],
+                    'level': 'INFO',
+                    'propagate': False
+                },
+                'cherrypy.error': {
+                    'handlers': ['cherrypy_console'],
+                    'level': 'INFO',
+                    'propagate': False
+                },
+            }
+        }
+        #logging.config.dictConfig(LOG_CONF)
+        cherrypy.engine.stop()
+        cherrypy.config.update(conf)
+        cherrypy.tree.mount(self, self.config.pathSeparator(), conf)
+        cherrypy.engine.start()
+
+        self.info("Server started")
 
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()  # type: ignore
@@ -255,7 +314,13 @@ class Server(LogBase):
     @cherrypy.tools.json_out()  # type: ignore
     @cherrypy.tools.json_in()  # type: ignore
     def saveconfig(self, **kwargs) -> Any:
-        self.config.update(**kwargs)
+        try:
+            self.config.update(**kwargs)
+            self.run()
+            return {'message': 'Settings saved'}
+        except Exception as e:
+            return {
+                'message': 'Failed to save settings',
+                'error_details': formatException(e)
+            }
 
-    # TODO: close window after saving
-    # TODO: restart server after changing require auth or ssl

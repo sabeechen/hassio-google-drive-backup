@@ -1,0 +1,10 @@
+{
+    "hassio_base_url": "http://127.0.0.1:5000/",
+    "ha_base_url": "http://127.0.0.1:5000/homeassistant/api/",
+    "snapshot_stale_minutes": 0.5,
+    "backup_directory": "../dev/backup",
+    "folder_file_path": "../dev/data/folder.dat",
+    "credentials_file_path": "../dev/data/credentials.dat",
+    "certfile": "../dev/ssl/fullchain.pem",
+    "keyfile": "../dev/ssl/privkey.pem"
+}

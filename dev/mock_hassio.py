@@ -117,6 +117,10 @@ def selfInfo() -> str:
     "channel": "dev"
 })
 
+@app.route('/auth', methods=['GET', 'POST'])
+def auth() -> str:
+    return formatDataResponse({})
+
 
 @app.route("/homeassistant/api/states/sensor.snapshot_backup", methods=['POST'])
 def setBackupState() -> str:

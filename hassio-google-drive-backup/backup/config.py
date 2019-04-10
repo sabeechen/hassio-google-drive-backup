@@ -175,10 +175,10 @@ class Config(LogBase):
 
         # Required options
         if 'max_snapshots_in_hassio' in kwargs and len(kwargs['max_snapshots_in_hassio']) > 0:
-            old_config['max_snapshots_in_hassio'] = kwargs['max_snapshots_in_hassio']
+            old_config['max_snapshots_in_hassio'] = int(kwargs['max_snapshots_in_hassio'])
 
         if 'max_snapshots_in_google_drive' in kwargs and len(kwargs['max_snapshots_in_google_drive']) > 0:
-            old_config['max_snapshots_in_google_drive'] = kwargs['max_snapshots_in_google_drive']
+            old_config['max_snapshots_in_google_drive'] = int(kwargs['max_snapshots_in_google_drive'])
 
         if 'use_ssl' in kwargs and kwargs['use_ssl'] == 'on':
             old_config['use_ssl'] = True
@@ -194,8 +194,8 @@ class Config(LogBase):
                 del old_config['keyfile']
 
         # optional boolean config
-        if 'require_login' not in kwargs:
-            old_config['require_login'] = False
+        if 'require_login' in kwargs and kwargs['require_login'] == 'on':
+            old_config['require_login'] = True
         elif 'require_login' in old_config:
             del old_config['require_login']
 

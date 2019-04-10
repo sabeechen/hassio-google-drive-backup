@@ -28,10 +28,7 @@
         {
             "label": "RUN: Add-on in Docker Instance",
             "type": "shell",
-            "command": "${workspaceFolder}/run_local_docker.bat",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "command": "./run_local_docker.py",
             "problemMatcher": []
         },
         {
@@ -43,21 +40,14 @@
         {
             "label": "PUBLISH: New version to Docker Hub",
             "type": "shell",
-            "command": "${workspaceFolder}/deploy.bat",
-            "problemMatcher": [],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            }
-        }
-        ,
+            "command": "./deploy.py",
+            "problemMatcher": []
+        },
         {
             "label": "DEPLOY: Add-on to local hassio",
             "type": "shell",
-            "command": "python deploy_local_addon.py \\\\hassio",
-            "problemMatcher": [],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            }
+            "command": "./deploy_local_addon.py \\\\hassio",
+            "problemMatcher": []
         }
     ]
 }

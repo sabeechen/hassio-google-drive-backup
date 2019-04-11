@@ -1,11 +1,9 @@
 import os.path
 import os
-import cherrypy  # type: ignore
-import logging
-import logging.config
+import cherrypy
 from datetime import timedelta
 from datetime import datetime
-from oauth2client.client import OAuth2WebServerFlow  # type: ignore
+from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.client import HttpAccessTokenRefreshError
 from oauth2client.client import OAuth2Credentials
 from .helpers import nowutc
@@ -61,6 +59,7 @@ class Server(LogBase):
                 'inHA': snapshot.isInHA(),
                 'isPending': snapshot.isPending()
             })
+        status['ask_error_reports'] = (self.config.sendErrorReports() is None)
         status['drive_snapshots'] = self.engine.driveSnapshotCount()
         status['ha_snapshots'] = self.engine.haSnapshotCount()
         next: Optional[datetime] = self.engine.getNextSnapshotTime()
@@ -243,55 +242,6 @@ class Server(LogBase):
             cherrypy.server.ssl_certificate = self.config.certFile()
             cherrypy.server.ssl_private_key = self.config.keyFile()
 
-        LOG_CONF = {
-            'version': 1,
-
-            'formatters': {
-                'void': {
-                    'format': ''
-                },
-                'standard': {
-                    'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
-                },
-            },
-            'handlers': {
-                'default': {
-                    'level':'INFO',
-                    'class':'logging.StreamHandler',
-                    'formatter': 'standard',
-                    'stream': 'ext://sys.stdout'
-                },
-                'cherrypy_console': {
-                    'level':'INFO',
-                    'class':'logging.StreamHandler',
-                    'formatter': 'void',
-                    'stream': 'ext://sys.stdout'
-                },
-                'cherrypy_error': {
-                    'level':'INFO',
-                    'class':'logging.StreamHandler',
-                    'formatter': 'void',
-                    'stream': 'ext://sys.stdout'
-                },
-            },
-            'loggers': {
-                '': {
-                    'handlers': ['default'],
-                    'level': 'INFO'
-                },
-                'cherrypy.access': {
-                    'handlers': ['cherrypy_console'],
-                    'level': 'INFO',
-                    'propagate': False
-                },
-                'cherrypy.error': {
-                    'handlers': ['cherrypy_console'],
-                    'level': 'INFO',
-                    'propagate': False
-                },
-            }
-        }
-        #logging.config.dictConfig(LOG_CONF)
         cherrypy.engine.stop()
         cherrypy.config.update(conf)
         cherrypy.tree.mount(self, self.config.pathSeparator(), conf)
@@ -310,12 +260,19 @@ class Server(LogBase):
     def getconfig(self) -> Any:
         return self.config.config
 
+    @cherrypy.expose
+    def errorreports(self, send: str) -> None:
+        if send == "true":
+            self.config.setSendErrorReports(self.engine.hassio.updateConfig, True)
+        else:
+            self.config.setSendErrorReports(self.engine.hassio.updateConfig, False)
+
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()  # type: ignore
     @cherrypy.tools.json_in()  # type: ignore
     def saveconfig(self, **kwargs) -> Any:
         try:
-            self.config.update(**kwargs)
+            self.config.update(self.engine.hassio.updateConfig, **kwargs)
             self.run()
             return {'message': 'Settings saved'}
         except Exception as e:
@@ -323,4 +280,3 @@ class Server(LogBase):
                 'message': 'Failed to save settings',
                 'error_details': formatException(e)
             }
-

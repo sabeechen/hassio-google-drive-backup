@@ -1,9 +1,7 @@
 {
     "max_snapshots_in_hassio": 19,
     "max_snapshots_in_google_drive": 18,
-    "days_between_snapshots": 1,
-    "use_ssl": true,
-    "generational_day_of_week": "mon",
-    "generational_day_of_month": 1,
-    "generational_day_of_year": 1
+    "days_between_snapshots": 3,
+    "use_ssl": false,
+    "send_error_reports": false
 }

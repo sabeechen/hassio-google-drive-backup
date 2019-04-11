@@ -1,4 +1,11 @@
 # Changelog
+## [0.7] - 2019-04-11
+
+### Added
+- Config option `snapshot_password` for password protecting snapshots.
+- A settings menu within the web interface, which lets you modify the add-on's settings without having to touch json.  Try in from the upper right menu of the web-UI.
+- Created an opt-in setting to allow sending error reports.  Add `"send_error_reports": true` to your config to help me out, or just clock "YES" in the dialog you see in the web UI after installing the latest version.
+
 ## [0.61] - 2019-04-03
 
 ### Fixes

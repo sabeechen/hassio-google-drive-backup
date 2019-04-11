@@ -61,7 +61,10 @@ class Hassio(LogBase):
                 self.pending_snapshot.setPending(backup_name, now_utc)
             finally:
                 self.lock.release()
-            return_info = self._postHassioData(snapshot_url, {'name': backup_name})
+            data = {'name': backup_name}
+            if len(self.config.snapshotPassword()) > 0:
+                data['password'] = self.config.snapshotPassword()
+            return_info = self._postHassioData(snapshot_url, data)
             try:
                 self.lock.acquire()
                 if self.pending_snapshot:
@@ -208,17 +211,25 @@ class Hassio(LogBase):
         }
         self._postHaData("states/binary_sensor.snapshots_stale", data)
 
+    def updateConfig(self, config) -> None:
+        self._postHassioData("{0}addons/self/options".format(self.config.hassioBaseUrl()), {'options': config})
+
     def updateSnapshotsSensor(self, state: str, snapshots: List[Snapshot]) -> None:
         if not self.config.enableSnapshotStateSensor():
             return
+
+        last = ""
+        if len(snapshots) > 0:
+            last = max(snapshots, key=lambda s: s.date()).date().isoformat()
+
         data: Dict[str, Any] = {
             "state": state,
             "attributes": {
                 "friendly_name": "Snapshot State",
-                "last_snapshot": str(max(snapshots, key=lambda s: s.date(), default="")),  # type: ignore
+                "last_snapshot": last,  # type: ignore
                 "spanshots_in_google_drive": len(list(filter(lambda s: s.isInDrive(), snapshots))),
                 "spanshots_in_hassio": len(list(filter(lambda s: s.isInHA(), snapshots))),
-                "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date()), "state": s.status()}, snapshots))
+                "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date().isoformat()), "state": s.status()}, snapshots))
             }
         }
         self._postHaData("states/sensor.snapshot_backup", data)

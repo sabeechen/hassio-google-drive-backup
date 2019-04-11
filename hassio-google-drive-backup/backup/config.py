@@ -32,7 +32,9 @@ DEFAULTS = {
     "snapshot_time_of_day": "",
     "notify_for_stale_snapshots": True,
     "enable_snapshot_stale_sensor": True,
-    "enable_snapshot_state_sensor": True
+    "enable_snapshot_state_sensor": True,
+    "snapshot_password": "",
+    "send_error_reports": None
 }
 
 
@@ -41,11 +43,6 @@ class Config(LogBase):
     def __init__(self, file_paths: List[str] = [], extra_config: Dict[str, any] = {}):
         self.config_path = ""
         self.config: Dict[str, Any] = DEFAULTS.copy()
-        for config_file in [HASSIO_OPTIONS_FILE, ""]:
-            if os.path.isfile(config_file):
-                with open(config_file) as file_handle:
-                    self.config_path = config_file
-                    self.config.update(json.load(file_handle))
         for config_file in file_paths:
             if os.path.isfile(config_file):
                 with open(config_file) as file_handle:
@@ -64,6 +61,18 @@ class Config(LogBase):
         if gen_config:
             self.info("Generationl backup config:")
             self.info(json.dumps(gen_config, sort_keys=True, indent=4))
+
+    def setSendErrorReports(self, handler, send: bool) -> None:
+        self.config['send_error_reports'] = send
+
+        old_config: Dict[str, Any] = None
+        with open(self.config_path) as file_handle:
+            old_config = json.load(file_handle)
+        old_config['send_error_reports'] = send
+        handler(old_config)
+
+    def snapshotPassword(self) -> str:
+        return str(self.config['snapshot_password'])
 
     def maxSnapshotsInHassio(self) -> int:
         return int(self.config['max_snapshots_in_hassio'])
@@ -106,6 +115,9 @@ class Config(LogBase):
 
     def useSsl(self) -> bool:
         return bool(self.config['use_ssl'])
+
+    def sendErrorReports(self) -> Optional[bool]:
+        return self.config['send_error_reports']
 
     def certFile(self) -> str:
         return str(self.config['certfile'])
@@ -167,7 +179,7 @@ class Config(LogBase):
     def enableSnapshotStateSensor(self) -> bool:
         return self.config["enable_snapshot_state_sensor"]
 
-    def update(self, **kwargs) -> None:
+    def update(self, handler, **kwargs) -> None:
         # load the existing config
         old_config: Dict[str, Any] = None
         with open(self.config_path) as file_handle:
@@ -179,6 +191,15 @@ class Config(LogBase):
 
         if 'max_snapshots_in_google_drive' in kwargs and len(kwargs['max_snapshots_in_google_drive']) > 0:
             old_config['max_snapshots_in_google_drive'] = int(kwargs['max_snapshots_in_google_drive'])
+
+        if 'days_between_snapshots' in kwargs and len(kwargs['days_between_snapshots']) > 0:
+            old_config['days_between_snapshots'] = int(kwargs['days_between_snapshots'])
+
+        if 'snapshot_password' in kwargs:
+            if len(kwargs['snapshot_password']) > 0:
+                old_config['snapshot_password'] = kwargs['snapshot_password']
+            elif 'snapshot_password' in old_config:
+                del old_config['snapshot_password']
 
         if 'use_ssl' in kwargs and kwargs['use_ssl'] == 'on':
             old_config['use_ssl'] = True
@@ -192,6 +213,16 @@ class Config(LogBase):
                 del old_config['certfile']
             if 'keyfile' in old_config:
                 del old_config['keyfile']
+
+        if 'send_error_reports' in kwargs and kwargs['send_error_reports'] == 'on':
+            old_config['send_error_reports'] = True
+        else:
+            old_config['send_error_reports'] = False
+
+        if 'verbose' in kwargs and kwargs['verbose'] == 'on':
+            old_config['verbose'] = True
+        elif 'verbose' in old_config:
+            del old_config['verbose']
 
         # optional boolean config
         if 'require_login' in kwargs and kwargs['require_login'] == 'on':
@@ -249,24 +280,27 @@ class Config(LogBase):
             else:
                 old_config['generational_years'] = 0
 
-            if 'generational_day_of_week' in kwargs and len(kwargs['generational_day_of_week']) > 0:
-                old_config['generational_day_of_week'] = kwargs['generational_day_of_week']
-            else:
-                old_config['generational_day_of_week'] = 'mon'
+        if 'generational_day_of_week' in kwargs and len(kwargs['generational_day_of_week']) > 0:
+            old_config['generational_day_of_week'] = kwargs['generational_day_of_week']
 
-            if 'generational_day_of_month' in kwargs and len(kwargs['generational_day_of_month']) > 0:
-                old_config['generational_day_of_month'] = int(kwargs['generational_day_of_month'])
-            else:
-                old_config['generational_day_of_month'] = 1
+        if 'generational_day_of_week' in old_config and old_config['generational_day_of_week'] == "mon":
+            del old_config['generational_day_of_week']
 
-            if 'generational_day_of_year' in kwargs and len(kwargs['generational_day_of_year']) > 0:
-                old_config['generational_day_of_year'] = int(kwargs['generational_day_of_year'])
-            else:
-                old_config['generational_day_of_year'] = 1
+        if 'generational_day_of_month' in kwargs and len(kwargs['generational_day_of_month']) > 0:
+            old_config['generational_day_of_month'] = int(kwargs['generational_day_of_month'])
+
+        if 'generational_day_of_month' in old_config and old_config['generational_day_of_month'] == 1:
+            del old_config['generational_day_of_month']
+
+        if 'generational_day_of_year' in kwargs and len(kwargs['generational_day_of_year']) > 0:
+            old_config['generational_day_of_year'] = int(kwargs['generational_day_of_year'])
+
+        if 'generational_day_of_year' in old_config and old_config['generational_day_of_year'] == 1:
+            del old_config['generational_day_of_year']
+
         self.info(str(kwargs))
 
-        with open(self.config_path, "w") as file_handle:
-            json.dump(old_config, file_handle, indent=4)
+        handler(old_config)
 
         self.config = DEFAULTS.copy()
         self.config.update(old_config)

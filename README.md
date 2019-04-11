@@ -40,13 +40,19 @@ The add-on is installed like any other.
 7.   You should be redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.  You're done!
 
 ## Configuration Options
-In addition to the options described in the instructions above:
+You can modify the add-ons setting by changing its config json file (like any add-on) or by opening the settings menu from the top right of the web UI.  In addition to the options described in the instructions above you can set:
 *  **snapshot_time_of_day** (default: None): The time of day (local time) that new snapshots should be created in 24 hour "HH:MM" format.  When not specified (the default), snapshots are created at the same time of day of the most recent snapshot.
     > #### Example: Create snapshots at 1:30pm
     > `"snapshot_time_of_day": "13:30"`
 *   **snapshot_stale_minutes** (default: 180):  How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention.  Setting this too low can cause you to be notified of transient errors, ie the internet, Google Drive, or Home Assistant being offline briefly.
     > #### Example: Notify after 12 hours of staleness
     > `"snapshot_stale_minutes": "500"`
+*   **snapshot_password** (default: None):  When set, snapshots are created witha password.  You'll need to remember this password when restoring snapshots.
+    > #### Example: Use a password for snapshot archives
+    > `"snapshot_password": "super_secret"`
+*   **send_error_reports** (default: False):  When true, the text of unexpected errors will be sent to database maintained by the developer.  This helps idenfity problems with new releases and provide better context messages when errors come up.
+    > #### Example: Allow sending error reports
+    > `"send_error_reports": True`
 *   **require_login** (default: true): When true, requires your home assistant username and password to access the backpup status page.  Turning this off isn't recommended.
     > #### Example: Don't require login
     > `"require_login": false`

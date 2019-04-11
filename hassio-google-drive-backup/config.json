@@ -1,6 +1,6 @@
 {
   "name": "Hass.io Google Drive Backup",
-  "version": "0.61",
+  "version": "0.7",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically back up Hass.io snapshots to Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
@@ -44,7 +44,9 @@
     "generational_day_of_week": "match(^(mon|tue|wed|thu|fri|sat|sun)$)?",
     "notify_for_stale_snapshots": "bool?",
     "enable_snapshot_stale_sensor": "bool?",
-    "enable_snapshot_state_sensor": "bool?"
+    "enable_snapshot_state_sensor": "bool?",
+    "send_error_reports": "bool?",
+    "snapshot_password": "str?"
   },
   "ports": {
     "1627/tcp": 1627

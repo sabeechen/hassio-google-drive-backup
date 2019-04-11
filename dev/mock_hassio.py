@@ -1,14 +1,9 @@
+#!/usr/bin/python3.7
 import os.path
 import json
-import wsgiref.simple_server
-import threading
 import random
 import string
 
-from urllib.parse import quote
-from urllib.parse import unquote
-from dateutil.relativedelta import relativedelta
-from datetime import timedelta
 from dateutil.tz import tzutc
 from dateutil.parser import parse
 from datetime import datetime
@@ -21,7 +16,6 @@ from typing import List, Dict, Optional, Any
 from threading import Lock
 from flask_api import status  # type: ignore
 from shutil import copyfile
-from dateutil.parser import parse
 
 app = Flask(__name__)
 
@@ -30,15 +24,17 @@ NEW_SNAPSHOT_SLEEP_SECONDS = 30
 TAR_FILE = "sample_tar.tar"
 BACKUP_DIR = "backup"
 snapshotting = False
-snapshot_lock : Lock = Lock()
+snapshot_lock: Lock = Lock()
+
 
 @app.route('/')
 def index() -> str:
     return 'Running'
 
+
 @app.route('/snapshots', methods=['GET'])
 def getsnapshots() -> str:
-    return formatDataResponse({'snapshots' : snapshots})
+    return formatDataResponse({'snapshots': snapshots})
 
 
 @app.route('/snapshots/new/full', methods=['POST'])
@@ -49,7 +45,7 @@ def newSnapshot() -> Any:
         seconds = int(request.args['seconds'])
 
     date: Optional[datetime] = None
-    if 'date' in request.args.keys(): # type: ignore
+    if 'date' in request.args.keys():  # type: ignore
         date = parse(request.args['date'], tzinfos=tzutc)
     else:
         date = datetime.now(tzutc())
@@ -60,16 +56,20 @@ def newSnapshot() -> Any:
         input_json = request.get_json()
         name = input_json['name']
         sleep(seconds)
-        snapshots.append({
-            'name' : name,
-            'date' : str(date.isoformat()),
-            'size' : os.path.getsize(TAR_FILE) / 1024.0 / 1024.0,
-            'slug' : slug
-        })
+        snapshot_info = {
+            'name': name,
+            'date': str(date.isoformat()),
+            'size': os.path.getsize(TAR_FILE) / 1024.0 / 1024.0,
+            'slug': slug
+        }
+        if 'password' in input_json:
+            snapshot_info['password'] = input_json['password']
+        snapshots.append(snapshot_info)
         copyfile(TAR_FILE, BACKUP_DIR + "/" + slug + ".tar")
         return formatDataResponse({"slug": slug})
     finally:
         snapshot_lock.release()
+
 
 @app.route('/snapshots/<slug>/remove', methods=['POST'])
 def delete(slug: str) -> str:
@@ -80,8 +80,8 @@ def delete(slug: str) -> str:
     if not delete:
         raise Exception('no snapshot with this slug')
     snapshots.pop(snapshots.index(delete))
-    
     return formatDataResponse("deleted")
+
 
 @app.route('/snapshots/<slug>/info', methods=['GET'])
 def info(slug: str) -> str:
@@ -90,6 +90,7 @@ def info(slug: str) -> str:
             return formatDataResponse(snapshot)
     raise Exception('no snapshot with this slug')
 
+
 @app.route('/snapshots/<slug>/download', methods=['GET'])
 def download(slug: str) -> Any:
     for snapshot in snapshots:
@@ -97,25 +98,27 @@ def download(slug: str) -> Any:
             return send_file(TAR_FILE)
     raise Exception('no snapshot with this slug')
 
+
 @app.route('/addons/self/info', methods=['GET'])
 def hostInfo() -> str:
     return formatDataResponse({
-    "webui": "http://[HOST]:1627/",
-})
+        "webui": "http://[HOST]:1627/"
+    })
 
 
 @app.route('/info', methods=['GET'])
 def selfInfo() -> str:
     return formatDataResponse({
-    "supervisor": "version",
-    "homeassistant": "version",
-    "hassos": "null|version",
-    "hostname": "localhost",
-    "machine": "type",
-    "arch": "arch",
-    "supported_arch": [],
-    "channel": "dev"
-})
+        "supervisor": "version",
+        "homeassistant": "version",
+        "hassos": "null|version",
+        "hostname": "localhost",
+        "machine": "type",
+        "arch": "arch",
+        "supported_arch": [],
+        "channel": "dev"
+    })
+
 
 @app.route('/auth', methods=['GET', 'POST'])
 def auth() -> str:
@@ -129,7 +132,7 @@ def setBackupState() -> str:
 
 
 @app.route("/homeassistant/api/states/binary_sensor.snapshots_stale", methods=['POST'])
-def setBinarySensorState() ->str:
+def setBinarySensorState() -> str:
     print("Updated snapshot stale sensor with: {}".format(request.get_json()))
     return ""
 
@@ -148,7 +151,15 @@ def dismissNotification() -> str:
 
 @app.route('/snapshots/slugname')
 def getSlugName() -> str:
-        return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8)) 
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
+
+@app.route('/addons/self/options', methods=['POST'])
+def setOptions() -> str:
+    pprint(request.get_json())
+    with open("data/options.json", "w") as file:
+        file.write(json.dumps(request.get_json()['options'], indent=4))
+    return formatDataResponse({})
 
 
 def formatDataResponse(data: Any) -> str:
@@ -161,6 +172,3 @@ def formatErrorResponse(error: str) -> Dict[str, str]:
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', threaded=True)
-
-
-

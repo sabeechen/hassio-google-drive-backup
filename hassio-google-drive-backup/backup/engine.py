@@ -20,6 +20,8 @@ from oauth2client.client import Credentials  # type: ignore
 from .backupscheme import GenerationalScheme, OldestScheme
 from .logbase import LogBase
 from .knownerror import KnownError
+from urllib.parse import quote
+from requests import get
 
 BAD_TOKEN_ERROR_MESSAGE: str = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
 
@@ -57,6 +59,7 @@ class Engine(LogBase):
         self.next_error_backoff: int = ERROR_BACKOFF_MIN_SECS
         self.one_shot: bool = False
         self.snapshots_stale: bool = False
+        self.last_error_reported = False
 
     def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
@@ -94,6 +97,7 @@ class Engine(LogBase):
             self.last_success = self.time.now()
             self.next_error_rety = self.time.now()
             self.next_error_backoff = ERROR_BACKOFF_MIN_SECS
+            self.last_error_reported = False
         except Exception as e:
             self.error(formatException(e))
             self.error("A retry will be attempted in {} seconds".format(self.next_error_backoff))
@@ -102,9 +106,30 @@ class Engine(LogBase):
             if self.next_error_backoff > ERROR_BACKOFF_MAX_SECS:
                 self.next_error_backoff = ERROR_BACKOFF_MAX_SECS
             self.last_error = e
+            if not self.last_error_reported:
+                self.last_error_reported = True
+                if self.config.sendErrorReports():
+                    self.sendErrorReport(e)
             self.maybeSendStalenessNotifications()
         finally:
             self.lock.release()
+
+    def sendErrorReport(self, e: Any) -> None:
+        message = ""
+        if isinstance(e, Exception):
+            message = formatException(e)
+        else:
+            message = str(e)
+        self.info("Sending error report (see settings to disable)")
+        version = "unknown"
+        if 'version' in self.addon_info:
+            version = self.addon_info['version']
+        url: str = "https://philosophyofpen.com/login/error.py?error={0}&version={1}".format(quote(message), quote(version))
+        try:
+            get(url, timeout=5)
+        except:
+            # just eat any error
+            pass
 
     def getNextSnapshotTime(self) -> Optional[datetime]:
         if self.config.daysBetweenSnapshots() <= 0:

@@ -6,7 +6,7 @@
         {
             "label": "RUN: Add-on",
             "type": "shell",
-            "command": "python run.py ../dev/data/dev_options.json ../dev/data/options.json",
+            "command": "python3.7 run.py ../dev/data/dev_options.json ../dev/data/options.json",
             "options": {
                 "cwd": "${workspaceFolder}/hassio-google-drive-backup"
             },
@@ -19,7 +19,7 @@
         {
             "label": "RUN: Mock Hass.io Server",
             "type": "shell",
-            "command": "python mock_hassio.py",
+            "command": "./mock_hassio.py",
             "options": {
                 "cwd": "${workspaceFolder}/dev"
             },
@@ -46,8 +46,15 @@
         {
             "label": "DEPLOY: Add-on to local hassio",
             "type": "shell",
-            "command": "./deploy_local_addon.py \\\\hassio",
+            "command": "./deploy_local_addon.py /run/user/1000/gvfs/smb-share:server=192.168.1.144,share=addons",
+            "problemMatcher": []
+        },
+        {
+            "label": "DEPLOY: Add-on to local hassio (docker image)",
+            "type": "shell",
+            "command": "./deploy_local_addon.py /run/user/1000/gvfs/smb-share:server=192.168.1.144,share=addons --docker",
             "problemMatcher": []
         }
+
     ]
 }

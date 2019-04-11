@@ -18,7 +18,11 @@ base_date: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
 next_minute: datetime = datetime(1985, 12, 6, 1, 1, 0).astimezone(timezone.utc)
 prev_minute: datetime = datetime(1985, 12, 6, 0, 59, 0).astimezone(timezone.utc)
 next_day: datetime = datetime(1985, 12, 7, 1, 0, 0).astimezone(timezone.utc)
-test_tz = gettz('Egypt Standard Time')
+test_tz = gettz('America/Chicago')
+
+
+def test_timezone() -> None:
+    assert test_tz is not None
 
 
 def test_trivial(mocker) -> None:
@@ -199,10 +203,10 @@ def test_removal_order(mocker) -> None:
 def test_simulate_daily_backup_for_4_years(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)
     config = {
-        'days': 4, 
+        'days': 4,
         'weeks': 4,
-        'day_of_week': 'mon', 
-        'months': 4, 
+        'day_of_week': 'mon',
+        'months': 4,
         'day_of_month': 1,
         'years': 4,
         'day_of_year': 1
@@ -217,8 +221,8 @@ def test_simulate_daily_backup_for_4_years(mocker) -> None:
         while len(snapshots) > num_snapshots:
             snapshots.remove(scheme.getOldest(snapshots))
         today = today + timedelta(days=1)
-    
-    assert getRemovalOrder(scheme, snapshots) == [
+    order = getRemovalOrder(scheme, snapshots)
+    assert order == [
         # 4 years
         datetime(2019, 1, 1).astimezone(test_tz),
         datetime(2020, 1, 1).astimezone(test_tz),

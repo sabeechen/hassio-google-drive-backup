@@ -11,13 +11,14 @@ from backup.hassio import Hassio
 from backup.time import Time
 from threading import Thread
 from time import sleep
+from backup.config import HASSIO_OPTIONS_FILE
 
 
-if __name__ == '__main__':
+def main() -> None:
     logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
     time: Time = Time()
-    config: Config = Config(sys.argv[1:])
+    config: Config = Config([HASSIO_OPTIONS_FILE] + sys.argv[1:])
     drive: Drive = Drive(config)
     hassio: Hassio = Hassio(config)
     engine: engine = Engine(config, drive, hassio, time)  # type: ignore
@@ -35,3 +36,7 @@ if __name__ == '__main__':
 
     while True:
         sleep(5)
+
+
+if __name__ == '__main__':
+    main()

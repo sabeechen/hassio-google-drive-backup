@@ -7,6 +7,7 @@ from typing import Dict, Optional, Any
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"
 PROP_KEY_NAME = "snapshot_name"
+PROP_DETAILS = "snapshot_details"
 
 
 class AbstractSnapshot(ABC):
@@ -48,6 +49,12 @@ class DriveSnapshot(AbstractSnapshot):
 
     def date(self) -> datetime:
         return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE])  # type: ignore
+
+    def details(self) -> Dict[str, Any]:
+        props = self.source.get('appProperties')
+        if PROP_DETAILS in props:
+            return props[PROP_DETAILS]
+        return {}
 
     def __str__(self) -> str:
         return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id())
@@ -226,6 +233,14 @@ class Snapshot(object):
             self.ha = snapshot
         else:
             self.drive = snapshot
+
+    def details(self):
+        if self.isInHA():
+            return self.ha.source
+        elif self.isInDrive():
+            return self.drive.details()
+        else:
+            return {}
 
     def uploading(self, percent: int) -> None:
         self.uploading_pct = percent

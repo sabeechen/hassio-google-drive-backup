@@ -59,7 +59,7 @@ def main() -> None:
                 "BUILD_ARCH": platform
             }
         )
-        
+
         print("Pushing " + tag_platform)
         for line in client.images.push(tag_platform, stream=True, decode=True):
             print(line)

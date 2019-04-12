@@ -2,11 +2,13 @@ import os.path
 import os
 import requests
 import httplib2
+import io
 
 from datetime import datetime
 from googleapiclient.discovery import build
 from googleapiclient.discovery import Resource
 from apiclient.http import MediaIoBaseUpload
+from apiclient.http import MediaIoBaseDownload
 from apiclient.errors import HttpError
 from oauth2client.client import Credentials
 from time import sleep
@@ -170,7 +172,7 @@ class Drive(LogBase):
 
                 # Query drive for the folder to make sure it still exists and we have the right permission on it.
                 try:
-                    folder = self._retryDriveServiceCall(self._drive().files().get(fileId=folder_id, fields='id,trashed,capabilities,mimeType,name,modifiedTime'))
+                    folder = self._get(folder_id)
                     if not self._isValidFolder(folder):
                         self.info("Existing snapshot folder was invalid, so we'll try to find an existing one")
                         return self._findDriveFolder()
@@ -184,6 +186,9 @@ class Drive(LogBase):
                         raise e
         else:
             return self._findDriveFolder()
+
+    def _get(self, id):
+        return self._retryDriveServiceCall(self._drive().files().get(fileId=id, fields=SELECT_FIELDS))
 
     def _findDriveFolder(self) -> str:
         folders = []
@@ -247,7 +252,7 @@ class Drive(LogBase):
                 "backup_folder": "true",
             },
         }
-        folder = self._retryDriveServiceCall(self._drive().files().create(body=file_metadata, fields='id'))
+        folder = self._retryDriveServiceCall(self._drive().files().create(body=file_metadata, fields=CREATE_FIELDS))
         return self._saveFolder(folder)
 
     def _saveFolder(self, folder: Any) -> str:
@@ -256,5 +261,17 @@ class Drive(LogBase):
             folder_file.write(folder.get('id'))
         return folder.get('id')
 
-    def downloadDriveFile(id):
-        pass
+    def download(self, id):
+        return ResponseStream(self._download(id))
+
+    def _download(self, id):
+        request = self._drive().files().get_media(fileId=id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            print("Download {}".format(int(status.progress() * 100)))
+            yield fh.getbuffer()
+            fh.truncate(0)
+        fh.close()

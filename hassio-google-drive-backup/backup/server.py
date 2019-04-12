@@ -14,6 +14,9 @@ from .config import Config
 from .knownerror import KnownError
 from .logbase import LogBase
 from typing import Dict, Any, Optional
+from .responsestream import ResponseStream
+from .snapshots import Snapshot
+from cherrypy.lib.static import serve_file
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -280,3 +283,29 @@ class Server(LogBase):
                 'message': 'Failed to save settings',
                 'error_details': formatException(e)
             }
+
+    @cherrypy.expose
+    def download(self, slug):
+        found: Optional[Snapshot] = None
+        for snapshot in self.engine.snapshots:
+            if snapshot.slug() == slug:
+                found = snapshot
+                break
+
+        if not found or (not found.ha and not found.driveitem):
+            raise cherrypy.HTTPError(404)
+
+        if found.ha:
+            return serve_file(
+                os.path.abspath(os.path.join(self.config.backupDirectory(), found.slug() + ".tar")),
+                "application/tar",
+                "attachment",
+                "{}.tar".format(found.name()))
+        elif found.driveitem:
+            cherrypy.response.headers['Content-Type'] = 'application/tar'
+            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="{}.tar"'.format(found.name())
+            cherrypy.response.headers['Content-Length'] = str(found.size())
+
+            return self.engine.drive.download(found.driveitem.id())
+        else:
+            raise cherrypy.HTTPError(404)

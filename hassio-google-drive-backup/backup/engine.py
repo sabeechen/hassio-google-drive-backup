@@ -298,6 +298,11 @@ class Engine(LogBase):
     def _checkForBackup(self) -> None:
         # Get the local and remote snapshots available
         self._syncSnapshots()
+
+        if not self.driveEnabled:
+            self.hassio.updateSnapshotsSensor("waiting", self.snapshots)
+            return
+
         self._purgeHaSnapshots()
         self._purgeDriveBackups()
 

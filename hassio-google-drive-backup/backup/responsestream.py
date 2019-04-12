@@ -9,7 +9,7 @@ class ResponseStream(object):
     Shamelessly stolen from https://gist.github.com/obskyr/b9d4b4223e7eaf4eedcd9defabb34f13
     """
     def __init__(self, request_iterator: Any):
-        self._bytes = BytesIO()
+        self._bytes: BytesIO = BytesIO()
         self._iterator = request_iterator
 
     def _load_all(self) -> Any:

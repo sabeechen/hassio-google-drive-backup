@@ -6,11 +6,14 @@
     "configurations": [
 
         {
-            "name": "Python: backup.py",
+            "name": "Python: run.py",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/hassio-google-drive-backup/run.py",
-            "args" : ["${workspaceFolder}/dev/data/options.json"],
+            "args" : [
+                "${workspaceFolder}/dev/data/dev_options.json",
+                "${workspaceFolder}/dev/data/options.json"
+            ],
             "cwd": "${workspaceFolder}/hassio-google-drive-backup"
         },
         {

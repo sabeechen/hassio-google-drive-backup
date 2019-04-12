@@ -60,10 +60,14 @@ def newSnapshot() -> Any:
             'name': name,
             'date': str(date.isoformat()),
             'size': os.path.getsize(TAR_FILE) / 1024.0 / 1024.0,
-            'slug': slug
+            'slug': slug,
+            'version': 'dev',
+            'type': 'full'
         }
         if 'password' in input_json:
-            snapshot_info['password'] = input_json['password']
+            snapshot_info['protected'] = True
+        else:
+            snapshot_info['protected'] = False
         snapshots.append(snapshot_info)
         copyfile(TAR_FILE, BACKUP_DIR + "/" + slug + ".tar")
         return formatDataResponse({"slug": slug})

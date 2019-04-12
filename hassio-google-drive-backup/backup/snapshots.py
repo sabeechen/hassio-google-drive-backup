@@ -7,7 +7,9 @@ from typing import Dict, Optional, Any
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"
 PROP_KEY_NAME = "snapshot_name"
-PROP_DETAILS = "snapshot_details"
+PROP_TYPE = "type"
+PROP_VERSION = "version"
+PROP_PROTECTED = "protected"
 
 
 class AbstractSnapshot(ABC):
@@ -50,11 +52,23 @@ class DriveSnapshot(AbstractSnapshot):
     def date(self) -> datetime:
         return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE])  # type: ignore
 
-    def details(self) -> Dict[str, Any]:
+    def snapshotType(self) -> str:
         props = self.source.get('appProperties')
-        if PROP_DETAILS in props:
-            return props[PROP_DETAILS]
-        return {}
+        if PROP_TYPE in props:
+            return props[PROP_TYPE]
+        return "full"
+
+    def version(self) -> str:
+        props = self.source.get('appProperties')
+        if PROP_VERSION in props:
+            return props[PROP_VERSION]
+        return "?"
+
+    def protected(self) -> bool:
+        props = self.source.get('appProperties')
+        if PROP_PROTECTED in props:
+            return props[PROP_VERSION] == "true" or props[PROP_VERSION] == "True"
+        return False
 
     def __str__(self) -> str:
         return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id())
@@ -84,6 +98,15 @@ class HASnapshot(AbstractSnapshot):
 
     def date(self) -> datetime:
         return parseDateTime(self.source['date'])
+
+    def snapshotType(self) -> str:
+        return str(self.source['type'])
+
+    def version(self) -> str:
+        return str(self.source['version'])
+
+    def protected(self) -> bool:
+        return bool(self.source['protected'])
 
     def __str__(self) -> str:
         return "<HA: {0} Name: {1} {2}>".format(self.slug(), self.name(), self.date().isoformat())
@@ -163,6 +186,30 @@ class Snapshot(object):
             return self.ha.size()
         else:
             return 0
+
+    def snapshotType(self) -> str:
+        if self.ha:
+            return self.ha.snapshotType()
+        elif self.driveitem:
+            return self.driveItem.snapshotType()
+        else:
+            return "pending"
+
+    def version(self) -> str:
+        if self.ha:
+            return self.ha.snapshotType()
+        elif self.driveitem:
+            return self.driveitem.snapshotType()
+        else:
+            return "?"
+
+    def protected(self) -> bool:
+        if self.ha:
+            return self.ha.protected()
+        elif self.driveitem:
+            return self.driveitem.protected()
+        else:
+            return False
 
     def date(self) -> datetime:
         if self.driveitem:

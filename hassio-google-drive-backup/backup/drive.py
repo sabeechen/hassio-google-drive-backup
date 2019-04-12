@@ -1,23 +1,24 @@
 import os.path
 import os
 import requests
-import httplib2  # type: ignore
-import json
+import httplib2
 
 from datetime import datetime
-from googleapiclient.discovery import build  # type: ignore
+from googleapiclient.discovery import build
 from googleapiclient.discovery import Resource
-from apiclient.http import MediaIoBaseUpload  # type: ignore
-from apiclient.errors import HttpError  # type: ignore
-from oauth2client.client import Credentials  # type: ignore
+from apiclient.http import MediaIoBaseUpload
+from apiclient.errors import HttpError
+from oauth2client.client import Credentials
 from time import sleep
-from oauth2client.file import Storage  # type: ignore
+from oauth2client.file import Storage
 from .snapshots import DriveSnapshot
 from .snapshots import Snapshot
 from .snapshots import PROP_KEY_DATE
 from .snapshots import PROP_KEY_SLUG
 from .snapshots import PROP_KEY_NAME
-from .snapshots import PROP_DETAILS
+from .snapshots import PROP_TYPE
+from .snapshots import PROP_VERSION
+from .snapshots import PROP_PROTECTED
 from .hassio import HEADERS
 from typing import List, Dict, TypeVar, Any
 from requests import Response
@@ -25,6 +26,7 @@ from .config import Config
 from .responsestream import ResponseStream
 from .logbase import LogBase
 from .thumbnail import THUMBNAIL_IMAGE
+from .helpers import parseDateTime
 
 # Defines the retry strategy for calls made to Drive
 # max # of time to retry and call to Drive
@@ -40,14 +42,15 @@ FOLDER_NAME = 'Hass.io Snapshots'
 DRIVE_VERSION = "v3"
 DRIVE_SERVICE = "drive"
 
+SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabilities"
 THUMBNAIL_MIME_TYPE = "image/png"
-QUERY_FIELDS = "nextPageToken,files(id,name,appProperties,size, trashed)"
-CREATE_FIELDS = "id,name,appProperties,size,trashed"
+QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
+CREATE_FIELDS = SELECT_FIELDS
 
 
 class Drive(LogBase):
     """
-    Stores the logic for makign calls to Google Drive and managing credentials necessary to do so.
+    Stores the logic for making calls to Google Drive and managing credentials necessary to do so.
     """
     def __init__(self, config: Config):
         self.cred_storage: Storage = Storage(config.credentialsFilePath())
@@ -82,7 +85,9 @@ class Drive(LogBase):
                 PROP_KEY_SLUG: snapshot.slug(),
                 PROP_KEY_DATE: str(snapshot.date()),
                 PROP_KEY_NAME: str(snapshot.name()),
-                PROP_DETAILS: json.dumps(snapshot.details(), indent=4)
+                PROP_TYPE: str(snapshot.snapshotType()),
+                PROP_VERSION: str(snapshot.version()),
+                PROP_PROTECTED: str(snapshot.protected())
             },
             'contentHints': {
                 'indexableText': 'Hass.io hassio snapshot backup home assistant',
@@ -125,13 +130,7 @@ class Drive(LogBase):
 
     def readSnapshots(self, parent_id: str) -> List[DriveSnapshot]:
         snapshots: List[DriveSnapshot] = []
-        request = self._drive().files().list(
-            q="'{}' in parents".format(parent_id),
-            fields=QUERY_FIELDS,
-            pageSize=20
-        )
-        response = self._retryDriveServiceCall(request)
-        for child in response['files']:
+        for child in self._iterateQuery(q="'{}' in parents".format(parent_id)):
             properties = child.get('appProperties')
             if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties and not child.get('trashed'):
                 snapshots.append(DriveSnapshot(child))
@@ -171,39 +170,91 @@ class Drive(LogBase):
 
                 # Query drive for the folder to make sure it still exists and we have the right permission on it.
                 try:
-                    folder = self._retryDriveServiceCall(self._drive().files().get(fileId=folder_id, fields='id,trashed,capabilities'))
-                    caps = folder.get('capabilities')
-                    if folder.get('trashed'):
-                        self.info("The Drive Snapshot Folder is in the trash, so we'll make a new one")
-                        return self._createDriveFolder()
-                    elif not caps['canAddChildren']:
-                        self.infont("Can't add Snapshot to the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
-                        return self._createDriveFolder()
-                    elif not caps['canListChildren']:
-                        self.info("Can't list Snapshot of the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
-                        return self._createDriveFolder()
-                    elif not caps['canRemoveChildren']:
-                        self.info("Can't delete Snapshot of the Drive backup folder (maybe you lost ownership?), so we'll create a new one.")
-                        return self._createDriveFolder()
+                    folder = self._retryDriveServiceCall(self._drive().files().get(fileId=folder_id, fields='id,trashed,capabilities,mimeType,name,modifiedTime'))
+                    if not self._isValidFolder(folder):
+                        self.info("Existing snapshot folder was invalid, so we'll try to find an existing one")
+                        return self._findDriveFolder()
                     return folder_id
                 except HttpError as e:
                     # 404 means the folder oean't exist (maybe it got moved?)
                     if e.resp.status == 404:
-                        self.info("The Drive Snapshot folder is gone, so we'll create a new one.")
-                        return self._createDriveFolder()
+                        self.info("The Drive Snapshot folder is gone")
+                        return self._findDriveFolder()
                     else:
                         raise e
         else:
-            return self._createDriveFolder()
+            return self._findDriveFolder()
+
+    def _findDriveFolder(self) -> str:
+        folders = []
+
+        for child in self._iterateQuery(q="mimeType='" + FOLDER_MIME_TYPE + "'"):
+            if self._isValidFolder(child):
+                folders.append(child)
+
+        folders.sort(key=lambda c: parseDateTime(c.get("modifiedTime")))
+        if len(folders) > 0:
+            self.info("Found " + folders[len(folders) - 1].get('name'))
+            return self._saveFolder(folders[len(folders) - 1])
+        return self._createDriveFolder()
+
+    def _iterateQuery(self, q=None):
+        token = None
+        while(True):
+            if token:
+                request = self._drive().files().list(
+                    q=q,
+                    fields=QUERY_FIELDS,
+                    pageToken=token,
+                    pageSize=1
+                )
+            else:
+                request = self._drive().files().list(
+                    q=q,
+                    fields=QUERY_FIELDS,
+                    pageSize=1
+                )
+            response = self._retryDriveServiceCall(request)
+            for child in response['files']:
+                yield child
+            if 'nextPageToken' not in response or len(response['nextPageToken']) == 0:
+                break
+            token = response['nextPageToken']
+
+    def _isValidFolder(self, folder) -> bool:
+        try:
+            caps = folder.get('capabilities')
+            if folder.get('trashed'):
+                return False
+            elif not caps['canAddChildren']:
+                return False
+            elif not caps['canListChildren']:
+                return False
+            elif not caps['canRemoveChildren']:
+                return False
+            elif folder.get("mimeType") != FOLDER_MIME_TYPE:
+                return False
+        except Exception:
+            return False
+        return True
 
     def _createDriveFolder(self) -> str:
         self.info('Creating folder "{}" in "My Drive"'.format(FOLDER_NAME))
         file_metadata: Dict[str, str] = {
             'name': FOLDER_NAME,
-            'mimeType': FOLDER_MIME_TYPE
+            'mimeType': FOLDER_MIME_TYPE,
+            'appProperties': {
+                "backup_folder": "true",
+            },
         }
         folder = self._retryDriveServiceCall(self._drive().files().create(body=file_metadata, fields='id'))
-        folder_id: str = str(folder.get('id'))
+        return self._saveFolder(folder)
+
+    def _saveFolder(self, folder: Any) -> str:
+        self.info("Saving snapshot folder: " + folder.get('id'))
         with open(self.config.folderFilePath(), "w") as folder_file:
             folder_file.write(folder.get('id'))
-        return folder_id
+        return folder.get('id')
+
+    def downloadDriveFile(id):
+        pass

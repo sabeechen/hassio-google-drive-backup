@@ -1,15 +1,6 @@
-import pytest
-import mock 
-
-from ..engine import Engine
 from ..time import Time
-from ..drive import Drive
-from ..hassio import Hassio
-from ..config import Config
-from ..snapshots import Snapshot, HASnapshot, DriveSnapshot
 from ..backupscheme import GenerationalScheme
-from ..backupscheme import OldestScheme
-from pytest_mock import mocker
+from ..snapshots import HASnapshot, Snapshot
 from datetime import datetime, timedelta, timezone
 from dateutil.tz import gettz
 from dateutil.tz import tzutc
@@ -28,9 +19,9 @@ def test_timezone() -> None:
 def test_trivial(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)
     config = {
-        'days': 1, 
-        'weeks': 0, 
-        'months': 0, 
+        'days': 1,
+        'weeks': 0,
+        'months': 0,
         'years': 0
     }
 
@@ -68,10 +59,10 @@ def test_trivial_oldest(mocker) -> None:
 def test_duplicate_weeks(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)
     config = {
-        'days': 0, 
+        'days': 0,
         'weeks': 1,
         'day_of_week': 'wed',
-        'months': 0, 
+        'months': 0,
         'years': 0
     }
 
@@ -90,11 +81,12 @@ def test_duplicate_weeks(mocker) -> None:
         datetime(1985, 12, 4).astimezone(test_tz)
     ]
 
+
 def test_duplicate_months(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)
     config = {
-        'days': 0, 
-        'weeks': 0, 
+        'days': 0,
+        'weeks': 0,
         'months': 2,
         'day_of_month': 15,
         'years': 0
@@ -119,9 +111,9 @@ def test_duplicate_months(mocker) -> None:
 def test_duplicate_years(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)
     config = {
-        'days': 0, 
+        'days': 0,
         'weeks': 0,
-        'months': 0, 
+        'months': 0,
         'years': 2,
         'day_of_year': 1
     }
@@ -141,6 +133,7 @@ def test_duplicate_years(mocker) -> None:
         datetime(1985, 1, 1).astimezone(test_tz)
     ]
 
+
 def test_removal_order(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)
     config = {
@@ -150,12 +143,12 @@ def test_removal_order(mocker) -> None:
         'day_of_week': 'mon',
 
         'months': 2,
-        'day_of_month' : 15,
+        'day_of_month': 15,
 
         'years': 2,
         'day_of_year': 1
     }
-    
+
     scheme = GenerationalScheme(time, config)
 
     snapshots = [
@@ -199,6 +192,7 @@ def test_removal_order(mocker) -> None:
         datetime(1985, 12, 6).astimezone(test_tz),
         datetime(1985, 12, 7).astimezone(test_tz)
     ]
+
 
 def test_simulate_daily_backup_for_4_years(mocker) -> None:
     time: Time = getMockTime(mocker, base_date)

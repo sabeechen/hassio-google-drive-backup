@@ -5,6 +5,7 @@ A complete and easy to configure solution for backing up your snapshots to Googl
 * Automatically creates new snapshots on a configurable schedule.
 * Uploads any snapshots it finds to Google Drive.
 * Automatically cleans up old snapshots in Home Assistant and Google drive so you don't run out of space.
+* Lets you upload snapshots directly from Google Drive, which makes [restoring from a fresh install](#how-do-i-restore-a-snapshot) very easy.
 * Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
 
 This is for you if you want to quickly set up a backup strategy without having to do much work.
@@ -72,6 +73,14 @@ You can modify the add-ons setting by changing its config json file (like any ad
     >   "generational_days": 3,
     >   "generational_weeks": 4
     > ```
+*   **exclude_folders** (default: None): When set, excludes the comma separated list of folders by creating a partial snapshot.
+*   **exclude_addons** (default: None): When set, excludes the comma separated list of addons by creating a partial snapshot.
+    > #### Example: Create partial snapshots with no folders and no configurator add-on
+    > ```json
+    >   "exclude_folders": "homeassistant,ssl,share,addons/local",
+    >   "exclude_addons": "core_configurator"
+    > ```
+        Note: folders and add-ons must be identified by their 'slug' name.  Its recommended to use the "Settings" dialog within the add-on web UI to configure partial snapshots since these names are esoteric and hard to find. 
 
 ## FAQ
 ### How will I know this will be there when I need it?
@@ -86,6 +95,12 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 
 Redundancy is the foundation of reliability.  With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
 
+### How do I restore a snapshot?
+The snapshots can be copied over to your Home Assistant "/backups" folder like any snapshot, however because I found this tedious to do on a fresh install of Home Assistant I've made a workflow thats a little easier.  On your fresh install of Hass.io:
+*  [Install the add-on.](#installation)  Once linked with Google Drive, you should see the snapshots you created previously show up.
+* Click "Actions" -> "Upload" which will upload the snapshot to Home Assistant directly from Google Drive.  Wait for the upload to finish.
+* Click "Actions" -> "Restore" to be taken to the Hass.io restore page, or just navigate there through the Home Assistant interface.
+* You'll see the snapshot you uploaded.  Click on it and select "Wipe & Restore".  Congrats! you're back up and running.
 
 ### I never look at HA notifications.  Can I show information about backups in my Home Assistant Interface?
 The add-on creates a few sensors that show the status of snapshots that you could trigger automations off of.  `binary_sensor.snapshots_stale` becomes true when the add-on has trouble backing up or creating snapshots.  For example the lovelace card below only shows up in the UI when snapshots go stale:
@@ -167,6 +182,7 @@ If you set '`"days_between_snapshots": 0`', then the add-on won't try to create 
 
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
+* You can opt-in to sending error reports form the add-on sent to a database maintained by me.  This includes the full text of the error's stack trace, the error message, and the version of the add-on you're running.  This helps notice problems with new releases but leaving it off (the default unless you turn it on) doesn't affect the functionality of the add-on in any way.
 * Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance.  This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive.  Your password is never seen by me or the add-on.
 * The add-on has access to the files in Google Drive it created, which is the 'Hass.io Snapshots' folder and any snapshots it uploads.  See the https://www.googleapis.com/auth/drive.file scope in the [Drive REST API v3 Documentation](https://developers.google.com/drive/api/v3/about-auth) for details, this is the only scope the add-on requests for your account.
 * Google stores a history of information about the number of requests, number of errors, and latency of requests made by this Add-on and makes a graph of that visible to me.  This is needed because Google only gives me a certain quota for requests shared between all users of the add-on, so I need to be aware if someone is abusing it.

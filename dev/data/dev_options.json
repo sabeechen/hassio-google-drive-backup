@@ -1,6 +1,7 @@
 {
     "hassio_base_url": "http://127.0.0.1:5000/",
     "ha_base_url": "http://127.0.0.1:5000/homeassistant/api/",
+    "hassio_header": "test_header",
     "snapshot_stale_minutes": 0.5,
     "backup_directory": "../dev/backup",
     "folder_file_path": "../dev/data/folder.dat",

@@ -1,5 +1,5 @@
-import os.path
 import json
+import os
 import logging
 from .logbase import LogBase
 from typing import Dict, List, Any, Optional
@@ -34,33 +34,40 @@ DEFAULTS = {
     "enable_snapshot_stale_sensor": True,
     "enable_snapshot_state_sensor": True,
     "snapshot_password": "",
-    "send_error_reports": None
+    "send_error_reports": None,
+    "exclude_folders": "",
+    "exclude_addons": ""
 }
 
 
 class Config(LogBase):
-
     def __init__(self, file_paths: List[str] = [], extra_config: Dict[str, any] = {}):
         self.config_path = ""
         self.config: Dict[str, Any] = DEFAULTS.copy()
         for config_file in file_paths:
-            if os.path.isfile(config_file):
-                with open(config_file) as file_handle:
-                    self.info("Loading config from " + config_file)
-                    self.config_path = config_file
-                    self.config.update(json.load(file_handle))
+            with open(config_file) as file_handle:
+                self.info("Loading config from " + config_file)
+                self.config_path = config_file
+                self.config.update(json.load(file_handle))
 
-        self.config.update(extra_config)
-        self.info("Loaded config:")
-        self.info(json.dumps(self.config, sort_keys=True, indent=4))
+        self.default: Dict[str, Any] = DEFAULTS.copy()
+        for config_file in file_paths[:-1]:
+            with open(config_file) as file_handle:
+                self.default.update(json.load(file_handle))
+
         if self.verbose():
             self.setConsoleLevel(logging.DEBUG)
         else:
             self.setConsoleLevel(logging.INFO)
+
+        self.config.update(extra_config)
+        self.debug("Loaded config:")
+        self.debug(json.dumps(self.config, sort_keys=True, indent=4))
+
         gen_config = self.getGenerationalConfig()
         if gen_config:
-            self.info("Generationl backup config:")
-            self.info(json.dumps(gen_config, sort_keys=True, indent=4))
+            self.debug("Generationl backup config:")
+            self.debug(json.dumps(gen_config, sort_keys=True, indent=4))
 
     def setSendErrorReports(self, handler, send: bool) -> None:
         self.config['send_error_reports'] = send
@@ -70,6 +77,12 @@ class Config(LogBase):
             old_config = json.load(file_handle)
         old_config['send_error_reports'] = send
         handler(old_config)
+
+    def excludeFolders(self) -> str:
+        return str(self.config['exclude_folders'])
+
+    def excludeAddons(self) -> str:
+        return str(self.config['exclude_addons'])
 
     def snapshotPassword(self) -> str:
         return str(self.config['snapshot_password'])
@@ -142,6 +155,18 @@ class Config(LogBase):
             return str(self.config['snapshot_time_of_day'])
         return None
 
+    def getHassioHeaders(self):
+        if 'hassio_header' in self.config:
+            return {"X-HASSIO-KEY": self.config['hassio_header']}
+        else:
+            return {"X-HASSIO-KEY": os.environ.get("HASSIO_TOKEN")}
+
+    def getHaHeaders(self):
+        if 'hassio_header' in self.config:
+            return {'Authorization': 'Bearer ' + self.config['hassio_header']}
+        else:
+            return {'Authorization': 'Bearer ' + str(os.environ.get("HASSIO_TOKEN"))}
+
     def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
         if 'generational_days' not in self.config and 'generational_weeks' not in self.config and 'generational_months' not in self.config and 'generational_years' not in self.config:
             return None
@@ -179,7 +204,7 @@ class Config(LogBase):
     def enableSnapshotStateSensor(self) -> bool:
         return self.config["enable_snapshot_state_sensor"]
 
-    def update(self, handler, **kwargs) -> None:
+    def update(self, handler, **kwargs: Dict[str, Any]) -> None:
         # load the existing config
         old_config: Dict[str, Any] = None
         with open(self.config_path) as file_handle:
@@ -250,6 +275,24 @@ class Config(LogBase):
         elif 'snapshot_time_of_day' in old_config:
             del old_config['snapshot_time_of_day']
 
+        if 'partial_snapshots' not in kwargs or kwargs['partial_snapshots'] == 'off':
+            if 'exclude_folders' in old_config:
+                del old_config['exclude_folders']
+            if 'exclude_addons' in old_config:
+                del old_config['exclude_addons']
+            if 'exclude_homeassistant' in old_config:
+                del old_config['exclude_homeassistant']
+        else:
+            if 'exclude_folders' in kwargs and len(kwargs['exclude_folders']) > 0:
+                old_config['exclude_folders'] = kwargs['exclude_folders']
+            elif 'exclude_folders' in old_config:
+                del old_config['exclude_folders']
+
+            if 'exclude_addons' in kwargs and len(kwargs['exclude_addons']) > 0:
+                old_config['exclude_addons'] = kwargs['exclude_addons']
+            elif 'exclude_addons' in old_config:
+                del old_config['exclude_addons']
+
         if 'generational_enabled' not in kwargs or kwargs['generational_enabled'] == 'off':
             if 'generational_days' in old_config:
                 del old_config['generational_days']
@@ -298,9 +341,7 @@ class Config(LogBase):
         if 'generational_day_of_year' in old_config and old_config['generational_day_of_year'] == 1:
             del old_config['generational_day_of_year']
 
-        self.info(str(kwargs))
-
         handler(old_config)
 
-        self.config = DEFAULTS.copy()
+        self.config = self.default.copy()
         self.config.update(old_config)

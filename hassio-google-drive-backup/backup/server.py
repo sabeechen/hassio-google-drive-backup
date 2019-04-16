@@ -14,7 +14,6 @@ from .config import Config
 from .knownerror import KnownError
 from .logbase import LogBase
 from typing import Dict, Any, Optional
-from .responsestream import ResponseStream
 from .snapshots import Snapshot
 from cherrypy.lib.static import serve_file
 
@@ -22,6 +21,7 @@ from cherrypy.lib.static import serve_file
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
 MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 DRIVE_FULL_MESSAGE = "The user's Drive storage quota has been exceeded"
+CANT_REACH_GOOGLE_MESSAGE = "Unable to find the server at www.googleapis.com"
 
 
 class Server(LogBase):
@@ -41,6 +41,7 @@ class Server(LogBase):
         self.engine: Engine = engine
         self.config: Config = config
         self.auth_cache: Dict[str, Any] = {}
+        self.last_log_index = 0
 
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()  # type: ignore
@@ -52,6 +53,9 @@ class Server(LogBase):
         for snapshot in self.engine.snapshots:
             if (last_backup is None or snapshot.date() > last_backup):
                 last_backup = snapshot.date()
+            details = None
+            if snapshot.ha:
+                details = snapshot.ha.source
             status['snapshots'].append({
                 'name': snapshot.name(),
                 'slug': snapshot.slug(),
@@ -60,11 +64,15 @@ class Server(LogBase):
                 'date': str(snapshot.date()),
                 'inDrive': snapshot.isInDrive(),
                 'inHA': snapshot.isInHA(),
-                'isPending': snapshot.isPending()
+                'isPending': snapshot.isPending(),
+                'protected': snapshot.protected(),
+                'type': snapshot.version(),
+                'details': details
             })
         status['ask_error_reports'] = (self.config.sendErrorReports() is None)
         status['drive_snapshots'] = self.engine.driveSnapshotCount()
         status['ha_snapshots'] = self.engine.haSnapshotCount()
+        status['restore_link'] = self.getRestoreLink()
         next: Optional[datetime] = self.engine.getNextSnapshotTime()
         if not next:
             status['next_snapshot'] = "Disabled"
@@ -79,7 +87,18 @@ class Server(LogBase):
             status['last_snapshot'] = "Never"
 
         status['last_error'] = self.getError()
+        status["firstSync"] = self.engine.firstSync
         return status
+
+    def getRestoreLink(self):
+        if not self.engine.homeassistant_info:
+            return ""
+        if self.engine.homeassistant_info['ssl']:
+            url = "https://"
+        else:
+            url = "http://"
+        url = url + "{host}:" + str(self.engine.homeassistant_info['port']) + "/hassio/snapshots"
+        return url
 
     def getError(self) -> str:
         if self.engine.last_error is not None:
@@ -91,6 +110,8 @@ class Server(LogBase):
                 formatted = formatException(self.engine.last_error)
                 if DRIVE_FULL_MESSAGE in formatted:
                     return "drive_full"
+                elif CANT_REACH_GOOGLE_MESSAGE in formatted:
+                    return "cant_reach_google"
                 return formatted
             else:
                 return str(self.engine.last_error)
@@ -172,7 +193,11 @@ class Server(LogBase):
             return {"message": "{}".format(e), "error_details": formatException(e)}
 
     @cherrypy.expose  # type: ignore
-    def log(self, format="download") -> Any:
+    def log(self, format="download", catchup=False) -> Any:
+        if not catchup:
+            self.last_log_index = 0
+        if format == "view":
+            return open("www/logs.html")
         if format == "html":
             cherrypy.response.headers['Content-Type'] = 'text/html'
         else:
@@ -182,29 +207,29 @@ class Server(LogBase):
         def content():
             if format == "html":
                 yield "<html><head><title>Hass.io Google Drive Backup Log</title></head><body><pre>\n"
-            for line in self.getHistory():
+            for line in self.getHistory(self.last_log_index):
+                self.last_log_index = line[0]
                 if line:
-                    yield line + "\n"
+                    yield line[1].replace("\n", "   \n") + "\n"
             if format == "html":
                 yield "</pre></body>\n"
         return content()
 
-    @cherrypy.expose  # type: ignore
+    @cherrypy.expose
     def token(self, **kwargs: Dict[str, Any]) -> None:
-        # TODO: Need to do some error handling here.  Exceptions will surface using the cherrypy default.
         if 'creds' in kwargs:
             creds = OAuth2Credentials.from_json(kwargs['creds'])
             self.engine.saveCreds(creds)
         raise cherrypy.HTTPRedirect("/")
 
-    @cherrypy.expose  # type: ignore
+    @cherrypy.expose
     def simerror(self, error: str = "") -> None:
         if len(error) == 0:
             self.engine.simulateError(None)
         else:
             self.engine.simulateError(error)
 
-    @cherrypy.expose  # type: ignore
+    @cherrypy.expose
     def index(self) -> Any:
         if not self.engine.driveEnabled():
             return open("www/index.html")
@@ -261,7 +286,10 @@ class Server(LogBase):
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()  # type: ignore
     def getconfig(self) -> Any:
-        return self.config.config
+        data = self.config.config.copy()
+        data['addons'] = self.engine.hassio.readSupervisorInfo()['addons']
+        # get the latest list of add-ons
+        return data
 
     @cherrypy.expose
     def errorreports(self, send: str) -> None:
@@ -281,6 +309,36 @@ class Server(LogBase):
         except Exception as e:
             return {
                 'message': 'Failed to save settings',
+                'error_details': formatException(e)
+            }
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def upload(self, slug):
+        try:
+            found: Optional[Snapshot] = None
+            for snapshot in self.engine.snapshots:
+                if snapshot.slug() == slug:
+                    found = snapshot
+                    break
+
+            if not found or not found.driveitem:
+                raise cherrypy.HTTPError(404)
+
+            if found.isDownloading():
+                return {'message': "Snapshot is already being uploaded."}
+
+            path = os.path.join(self.config.backupDirectory(), found.slug() + ".tar")
+            self.engine.drive.downloadToFile(found.driveitem.id(), path, found)
+            self.engine.hassio.refreshSnapshots()
+            self.engine.doBackupWorkflow()
+
+            if not found.isInHA():
+                {'message': "Soemthing wen't wrong, Hass.io didn't recognize the snapshot."}
+            return {'message': "Snapshot uploaded"}
+        except Exception as e:
+            return {
+                'message': 'Failed to Upload snapshot',
                 'error_details': formatException(e)
             }
 

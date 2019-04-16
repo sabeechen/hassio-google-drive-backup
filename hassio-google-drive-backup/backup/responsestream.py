@@ -1,46 +1,70 @@
+import io
+from typing import Any
+from .logbase import LogBase
 
-from io import BytesIO, SEEK_SET, SEEK_END
-from typing import Any, Optional
 
-
-class ResponseStream(object):
-    """
-    Wraps a response stream so you can use it like a file.
-    Shamelessly stolen from https://gist.github.com/obskyr/b9d4b4223e7eaf4eedcd9defabb34f13
-    """
-    def __init__(self, request_iterator: Any):
-        self._bytes: BytesIO = BytesIO()
+class IteratorByteStream(io.IOBase, LogBase):
+    def __init__(self, request_iterator: Any, size: int = None):
+        self._position = 0
+        self._bytes = bytearray()
         self._iterator = request_iterator
 
-    def _load_all(self) -> Any:
-        self._bytes.seek(0, SEEK_END)
-        for chunk in self._iterator:
-            self._bytes.write(chunk)
+    def close(self):
+        pass
 
-    def _load_until(self, goal_position: int) -> Any:
-        current_position = self._bytes.seek(0, SEEK_END)
-        while current_position < goal_position:
-            try:
-                current_position = self._bytes.write(next(self._iterator))
-            except StopIteration:
-                break
+    def isatty(self):
+        return False
+
+    def fileno(self):
+        raise OSError()
+
+    def flush(self):
+        pass
+
+    def readable(self):
+        return True
+
+    def seekable(self):
+        return False
+
+    def truncate(self, size=None):
+        raise OSError()
+
+    def writable(self):
+        return False
+
+    def readline(self, size=-1):
+        raise OSError()
 
     def tell(self) -> Any:
-        return self._bytes.tell()
+        return self._position
 
-    def read(self, size: Optional[int] = None) -> Any:
-        left_off_at = self._bytes.tell()
-        if size is None:
-            self._load_all()
-        else:
-            goal_position = left_off_at + size
-            self._load_until(goal_position)
+    def read(self, size: int = 1024) -> Any:
+        if len(self._bytes) > size:
+            # buffer is big enough, just return
+            ret = self._bytes[:size]
+            self._position = self._position + size
+            self._bytes = self._bytes[size:]
+            return bytes(ret)
 
-        self._bytes.seek(left_off_at)
-        return self._bytes.read(size)
-
-    def seek(self, position: int, whence: Any = SEEK_SET) -> Any:
-        if whence == SEEK_END:
-            self._load_all()
-        else:
-            self._bytes.seek(position, whence)
+        # buffer is too small.  Advance until we fill it
+        ret = self._bytes
+        self._position = self._position + len(self._bytes)
+        self._bytes = bytearray()
+        while len(ret) < size:
+            needed = size - len(ret)
+            try:
+                next_block = next(self._iterator)
+                if len(next_block) <= needed:
+                    # all goes to return
+                    ret.extend(next_block)
+                    self._position = self._position + len(next_block)
+                    self._bytes = bytearray()
+                else:
+                    # part goes to return
+                    ret.extend(next_block[:needed])
+                    self._position = self._position + needed
+                    self._bytes = bytearray(next_block[needed:])
+            except StopIteration:
+                break
+        return bytes(ret)

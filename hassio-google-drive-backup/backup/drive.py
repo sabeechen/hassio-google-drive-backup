@@ -1,8 +1,6 @@
 import os.path
 import os
-import requests
 import httplib2
-import io
 
 from datetime import datetime
 from googleapiclient.discovery import build
@@ -21,14 +19,14 @@ from .snapshots import PROP_KEY_NAME
 from .snapshots import PROP_TYPE
 from .snapshots import PROP_VERSION
 from .snapshots import PROP_PROTECTED
-from .hassio import HEADERS
 from typing import List, Dict, TypeVar, Any
-from requests import Response
 from .config import Config
-from .responsestream import ResponseStream
+from .responsestream import IteratorByteStream
 from .logbase import LogBase
 from .thumbnail import THUMBNAIL_IMAGE
 from .helpers import parseDateTime
+from .helpers import formatException
+from .seekablerequest import SeekableRequest
 
 # Defines the retry strategy for calls made to Drive
 # max # of time to retry and call to Drive
@@ -48,6 +46,17 @@ SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabi
 THUMBNAIL_MIME_TYPE = "image/png"
 QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
 CREATE_FIELDS = SELECT_FIELDS
+
+
+class Buffer(object):
+    def __init__(self):
+        self.bytes = None
+
+    def write(self, bytes):
+        self.bytes = bytes
+
+    def close(self):
+        pass
 
 
 class Drive(LogBase):
@@ -101,9 +110,8 @@ class Drive(LogBase):
             'createdTime': self._timeToRfc3339String(snapshot.date()),
             'modifiedTime': self._timeToRfc3339String(snapshot.date())
         }
-        response: Response = requests.get(download_url, stream=True, headers=HEADERS)
-        stream: ResponseStream = ResponseStream(response.iter_content(262144))
-        media: MediaIoBaseUpload = MediaIoBaseUpload(stream, mimetype='application/tar', chunksize=262144, resumable=True)
+        stream: SeekableRequest = SeekableRequest(download_url, headers=self.config.getHassioHeaders())
+        media: MediaIoBaseUpload = MediaIoBaseUpload(stream, mimetype='application/tar', chunksize=5 * 262144, resumable=True)
         snapshot.uploading(0)
         request = self._drive().files().create(media_body=media, body=file_metadata, fields=CREATE_FIELDS)
         drive_response = None
@@ -115,7 +123,7 @@ class Drive(LogBase):
                 if last_percent != new_percent:
                     last_percent = new_percent
                     snapshot.uploading(last_percent)
-                    self.info("Uploading {1} {0}%".format(last_percent, snapshot.name()))
+                    self.debug("Uploading {1} {0}%".format(last_percent, snapshot.name()))
         snapshot.uploading(100)
         snapshot.setDrive(DriveSnapshot(drive_response))
 
@@ -262,16 +270,37 @@ class Drive(LogBase):
         return folder.get('id')
 
     def download(self, id):
-        return ResponseStream(self._download(id))
+        return IteratorByteStream(self._download(id))
 
     def _download(self, id):
         request = self._drive().files().get_media(fileId=id)
-        fh = io.BytesIO()
-        downloader = MediaIoBaseDownload(fh, request)
+        fh = Buffer()
+        downloader = MediaIoBaseDownload(fh, request, chunksize=5 * 1024 * 1024)
         done = False
         while done is False:
             status, done = downloader.next_chunk()
-            print("Download {}".format(int(status.progress() * 100)))
-            yield fh.getbuffer()
-            fh.truncate(0)
+            self.debug("Downloading {0} {1}%".format(id, int(status.progress() * 100)))
+            yield fh.bytes
         fh.close()
+
+    def downloadToFile(self, id, path, snapshot: Snapshot = None) -> bool:
+        try:
+            request = self._drive().files().get_media(fileId=id)
+            if snapshot:
+                snapshot.setDownloading(0)
+            with open(path, "wb") as fh:
+                downloader = MediaIoBaseDownload(fh, request, chunksize=5 * 1024 * 1024)  # 5Mb chunk
+                done = False
+                while done is False:
+                    status, done = downloader.next_chunk()
+                    self.debug("Uploading '{0}' {1}%".format(id, int(status.progress() * 100)))
+                    if snapshot:
+                        snapshot.setDownloading(int(status.progress() * 100))
+            if snapshot:
+                snapshot.setDownloading(100)
+            return True
+        except Exception as e:
+            if snapshot:
+                snapshot.downloadFailed()
+            self.error(formatException(e))
+            return False

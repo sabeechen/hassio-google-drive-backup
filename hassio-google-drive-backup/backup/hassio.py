@@ -1,7 +1,5 @@
-import os.path
-import os
 import requests
-
+import json
 from requests import Response
 from pprint import pformat
 from datetime import datetime
@@ -17,10 +15,6 @@ from threading import Lock, Thread
 
 # Secodns to wait after starting a snapshot before we consider it successful.
 SNAPSHOT_FASTFAIL_SECOND = 10
-
-HEADERS = {"X-HASSIO-KEY": os.environ.get("HASSIO_TOKEN")}
-
-HEADERS_HA = {'Authorization': 'Bearer ' + str(os.environ.get("HASSIO_TOKEN"))}
 
 NOTIFICATION_ID = "backup_broken"
 
@@ -45,26 +39,69 @@ class Hassio(LogBase):
     def _getSnapshot(self) -> None:
         try:
             self.pending_snapshot_error = None
+
+            addon_info = self.readSupervisorInfo()['addons']
+            addons: List[str] = []
+            for addon in addon_info:
+                addons.append(addon['slug'])
+
+            # build the partial snapshot request.
+            request_info = {
+                'addons': [],
+                'folders': []
+            }
+            isPartial = False
+            folders = ["ssl", "share", "homeassistant", "addons/local"]
+            for folder in folders:
+                if folder not in self.config.excludeFolders():
+                    request_info['folders'].append(folder)
+                else:
+                    isPartial = True
+
+            for addon in addons:
+                if addon not in self.config.excludeAddons():
+                    request_info['addons'].append(addon)
+                else:
+                    isPartial = True
+            if len(self.config.snapshotPassword()) > 0:
+                request_info['password'] = self.config.snapshotPassword()
+
+            if isPartial:
+                snapshot_type = "Partial"
+            else:
+                del request_info['folders']
+                del request_info['addons']
+                snapshot_type = "Full"
+
             now_local: datetime = datetime.now()
             now_utc: datetime = nowutc()
-            backup_name: str = "Full Snapshot {0}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}".format(
+            backup_name: str = "{6} Snapshot {0}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}".format(
                 now_local.year,
                 now_local.month,
                 now_local.day,
                 now_local.hour,
                 now_local.minute,
-                now_local.second)
-            snapshot_url = "{0}snapshots/new/full".format(self.config.hassioBaseUrl())
+                now_local.second,
+                snapshot_type)
+
+            request_info['name'] = backup_name
+
             try:
                 self.lock.acquire()
                 self.pending_snapshot = Snapshot(None)
                 self.pending_snapshot.setPending(backup_name, now_utc)
             finally:
                 self.lock.release()
-            data = {'name': backup_name}
-            if len(self.config.snapshotPassword()) > 0:
-                data['password'] = self.config.snapshotPassword()
-            return_info = self._postHassioData(snapshot_url, data)
+
+            if isPartial:
+                # partial snapshot
+                url = "{0}snapshots/new/partial".format(self.config.hassioBaseUrl())
+                return_info = self._postHassioData(url, request_info)
+            else:
+                # full snapshot
+                url = "{0}snapshots/new/full".format(self.config.hassioBaseUrl())
+                return_info = self._postHassioData(url, request_info)
+
             try:
                 self.lock.acquire()
                 if self.pending_snapshot:
@@ -76,8 +113,8 @@ class Hassio(LogBase):
                 self.lock.acquire()
                 if self.pending_snapshot:
                     self.pending_snapshot.pendingFailed()
-                    self.pending_snapshot_error = e
                     self.pending_snapshot = None
+                self.pending_snapshot_error = e
             finally:
                 self.lock.release()
 
@@ -118,26 +155,62 @@ class Hassio(LogBase):
         finally:
             self.lock.release()
 
+    def uploadSnapshot(self, file, name=""):
+        url: str = "{0}snapshots/new/upload".format(self.config.hassioBaseUrl())
+        return self._postHassioData(url, file=file, name=name)
+
     def deleteSnapshot(self, snapshot: Snapshot) -> None:
         delete_url: str = "{0}snapshots/{1}/remove".format(self.config.hassioBaseUrl(), snapshot.slug())
         self._postHassioData(delete_url, {})
         snapshot.ha = None
 
+    def get(self, slug):
+        return HASnapshot(self._getHassioData("{0}snapshots/{1}/info".format(self.config.hassioBaseUrl(), slug)))
+
     def readSnapshots(self) -> List[HASnapshot]:
         snapshots: List[HASnapshot] = []
         snapshot_list: Dict[str, List[Dict[str, Any]]] = self._getHassioData(self.config.hassioBaseUrl() + "snapshots")
         for snapshot in snapshot_list['snapshots']:
-            snapshot_details: Dict[Any, Any] = self._getHassioData("{0}snapshots/{1}/info".format(self.config.hassioBaseUrl(), snapshot['slug']))
-            snapshots.append(HASnapshot(snapshot_details))
+            snapshots.append(self.get(snapshot['slug']))
 
         snapshots.sort(key=lambda x: x.date())
         return snapshots
+
+    def getHaInfo(self):
+        url = "{0}homeassistant/info".format(self.config.hassioBaseUrl())
+        return self._getHassioData(url)
 
     def readAddonInfo(self) -> Dict[str, Any]:
         return self._getHassioData(self.config.hassioBaseUrl() + "addons/self/info")
 
     def readHostInfo(self) -> Dict[str, Any]:
         return self._getHassioData(self.config.hassioBaseUrl() + "info")
+
+    def hassioget(self, url):
+        return self._getHassioData(self.config.hassioBaseUrl() + url)
+
+    def hassiopost(self, url, data):
+        return self._postHassioData(self.config.hassioBaseUrl() + url, data)
+
+    def refreshSnapshots(self):
+        url = "{0}snapshots/reload".format(self.config.hassioBaseUrl())
+        return self._postHassioData(url)
+
+    def readSupervisorInfo(self):
+        url = "{0}supervisor/info".format(self.config.hassioBaseUrl())
+        return self._getHassioData(url)
+
+    def restoreSnapshot(self, slug: str, password: str = None, snapshot: Snapshot = None) -> None:
+        snapshot.restoring = True
+        try:
+            url: str = "{0}snapshots/{1}/restore/full".format(self.config.hassioBaseUrl(), slug)
+            if password:
+                self._postHassioData(url, {'password': password})
+            else:
+                self._postHassioData(url, {})
+            snapshot.restoring = False
+        except Exception:
+            snapshot.restoring = None
 
     def downloadUrl(self, snapshot: Snapshot) -> str:
         return "{0}snapshots/{1}/download".format(self.config.hassioBaseUrl(), snapshot.slug())
@@ -153,31 +226,31 @@ class Hassio(LogBase):
         details: Dict[str, Any] = resp.json()
         self.debug("Hassio said: ")
         self.debug(pformat(details))
-        if "result" not in details or "data" not in details or details["result"] != "ok":
+        if "result" not in details or details["result"] != "ok":
             if "result" in details:
                 raise Exception("Hassio said: " + details["result"])
             else:
                 raise Exception("Malformed response from Hassio: " + str(details))
-        return details["data"]  # type: ignore
+
+        if "data" not in details:
+            return None
+
+        return details["data"]
 
     def _getHassioData(self, url: str) -> Dict[str, Any]:
         self.debug("Making Hassio request: " + url)
-        return self._validateHassioReply(requests.get(url, headers=HEADERS))
+        return self._validateHassioReply(requests.get(url, headers=self.config.getHassioHeaders()))
 
-    def _postHassioData(self, url: str, json_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _postHassioData(self, url: str, json_data: Dict[str, Any] = {}, file=None, name="file.tar") -> Dict[str, Any]:
         self.debug("Making Hassio request: " + url)
-        return self._validateHassioReply(requests.post(url, headers=HEADERS, json=json_data))
+        if not file:
+            return self._validateHassioReply(requests.post(url, headers=self.config.getHassioHeaders(), json=json_data))
+        else:
+            return self._validateHassioReply(requests.post(url, headers=self.config.getHassioHeaders(), json=json_data, files={name: file}))
 
     def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
-        headers: Dict[str, str] = {}
-        if len(self.config.haBearer()) > 0:
-            headers = {'Authorization': 'Bearer ' + self.config.haBearer()}
-        else:
-            headers = HEADERS_HA
         try:
-            self.debug("Making Ha request: " + self.config.haBaseUrl() + path)
-            self.debug("With Data: {0}".format(data))
-            requests.post(self.config.haBaseUrl() + path, headers=headers, json=data).raise_for_status()
+            requests.post(self.config.haBaseUrl() + path, headers=self.config.getHaHeaders(), json=data).raise_for_status()
         except Exception as e:
             self.error(formatException(e))
 
@@ -212,7 +285,7 @@ class Hassio(LogBase):
         self._postHaData("states/binary_sensor.snapshots_stale", data)
 
     def updateConfig(self, config) -> None:
-        self._postHassioData("{0}addons/self/options".format(self.config.hassioBaseUrl()), {'options': config})
+        return self._postHassioData("{0}addons/self/options".format(self.config.hassioBaseUrl()), {'options': config})
 
     def updateSnapshotsSensor(self, state: str, snapshots: List[Snapshot]) -> None:
         if not self.config.enableSnapshotStateSensor():

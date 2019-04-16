@@ -67,7 +67,7 @@ class DriveSnapshot(AbstractSnapshot):
     def protected(self) -> bool:
         props = self.source.get('appProperties')
         if PROP_PROTECTED in props:
-            return props[PROP_VERSION] == "true" or props[PROP_VERSION] == "True"
+            return props[PROP_PROTECTED] == "true" or props[PROP_PROTECTED] == "True"
         return False
 
     def __str__(self) -> str:
@@ -103,7 +103,7 @@ class HASnapshot(AbstractSnapshot):
         return str(self.source['type'])
 
     def version(self) -> str:
-        return str(self.source['version'])
+        return str(self.source['homeassistant'])
 
     def protected(self) -> bool:
         return bool(self.source['protected'])
@@ -127,6 +127,8 @@ class Snapshot(object):
         self.driveitem: Optional[DriveSnapshot] = None
         self.pending: bool = False
         self.ha: Optional[HASnapshot] = None
+        self.donwloading = -1
+        self.donwload_failed = False
         if isinstance(snapshot, HASnapshot):
             self.ha = snapshot
             self.driveitem = None
@@ -143,6 +145,7 @@ class Snapshot(object):
         self.uploading_pct: int = -1
         self.pendingHasFailed: bool = False
         self.will_backup: bool = True
+        self.restoring = None
 
     def setPending(self, name: str, date: datetime) -> None:
         self.pending_name = name
@@ -231,7 +234,25 @@ class Snapshot(object):
             return str(int(size_bytes / (1024.0 * 1024.0))) + " MB"
         return str(int(size_bytes / (1024.0 * 1024.0 * 1024.0))) + " GB"
 
+    def setDownloading(self, percent):
+        self.donwloading = percent
+        self.downloadFailed = False
+
+    def downloadFailed(self):
+        self.donwload_failed = True
+
     def status(self) -> str:
+        if self.isRestoring():
+            if self.restoring:
+                return "Restoring"
+            else:
+                return "Restore Complete"
+        if self.isDownloading():
+            if self.donwload_failed:
+                return "Loading Failed!"
+            if self.donwloading == 100:
+                return "Refreshing snapshot".format(self.donwloading)
+            return "Loading {0}%".format(self.donwloading)
         if self.isInDrive() and self.isInHA():
             return "Backed Up"
         if self.isInDrive() and not self.isInHA():
@@ -246,6 +267,12 @@ class Snapshot(object):
         if self.pending:
             return "Pending"
         return "Invalid State"
+
+    def isDownloading(self):
+        return self.donwloading >= 0
+
+    def isRestoring(self):
+        return self.restoring is not None
 
     def setDrive(self, drive: DriveSnapshot) -> None:
         self.driveitem = drive
@@ -262,6 +289,8 @@ class Snapshot(object):
         self.pending_slug = None
         self.uploading_pct = -1
         self.pending = False
+        self.donwloading = -1
+        self.donwload_failed = False
 
     def isInDrive(self) -> bool:
         return self.driveitem is not None

@@ -54,6 +54,12 @@
             "type": "shell",
             "command": "./deploy_local_addon.py /run/user/1000/gvfs/smb-share:server=192.168.1.144,share=addons --docker",
             "problemMatcher": []
+        },
+        {
+            "label": "DEPLOY: Dev docker image",
+            "type": "shell",
+            "command": "./build_dev_docker.py",
+            "problemMatcher": []
         }
 
     ]

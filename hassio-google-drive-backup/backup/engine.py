@@ -60,6 +60,8 @@ class Engine(LogBase):
         self.one_shot: bool = False
         self.snapshots_stale: bool = False
         self.last_error_reported = False
+        self.homeassistant_info = None
+        self.firstSync = False
 
     def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
@@ -93,6 +95,9 @@ class Engine(LogBase):
                 self.addon_info = self.hassio.readAddonInfo()
             self._checkForBackup()
             self.snapshots_stale = False
+
+            if self.last_error is not None:
+                self.info("Looks like the error resolved itself, snapshots are synced")
             self.last_error = None
             self.last_success = self.time.now()
             self.next_error_rety = self.time.now()
@@ -127,7 +132,7 @@ class Engine(LogBase):
         url: str = "https://philosophyofpen.com/login/error.py?error={0}&version={1}".format(quote(message), quote(version))
         try:
             get(url, timeout=5)
-        except:
+        except Exception:
             # just eat any error
             pass
 
@@ -280,6 +285,7 @@ class Engine(LogBase):
         if (self.config.verbose()):
             self.debug("Final Snapshots:")
             self.debug(pformat(self.snapshots))
+        self.firstSync = True
 
     def _purgeDriveBackups(self) -> None:
         while self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() > self.config.maxSnapshotsInGoogleDrive():
@@ -298,6 +304,8 @@ class Engine(LogBase):
     def _checkForBackup(self) -> None:
         # Get the local and remote snapshots available
         self._syncSnapshots()
+        if not self.homeassistant_info:
+            self.homeassistant_info = self.hassio.getHaInfo()
 
         if not self.driveEnabled:
             self.hassio.updateSnapshotsSensor("waiting", self.snapshots)
@@ -330,7 +338,7 @@ class Engine(LogBase):
         for to_backup in should_backup:
             if self.drive.enabled():
                 snapshot.setWillBackup(True)
-                self.info("Uploading {}".format(to_backup))
+                self.info("Uploading {}".format(to_backup.name()))
                 if not self.folder_id:
                     raise Exception("No folder Id")
                 self.drive.saveSnapshot(to_backup, self.hassio.downloadUrl(to_backup), self.folder_id)

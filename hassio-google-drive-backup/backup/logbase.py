@@ -10,12 +10,15 @@ class HistoryHandler(logging.Handler):
         self.history_index = 0
 
     def emit(self, record):
-        self.history[self.history_index] = self.format(record)
-        self.history_index = (self.history_index + 1) % HISTORY_SIZE
+        self.history[self.history_index % HISTORY_SIZE] = self.format(record)
+        self.history_index += 1
 
-    def getHistory(self):
-        for x in range(HISTORY_SIZE):
-            yield self.history[(self.history_index + x) % HISTORY_SIZE]
+    def getHistory(self, start=0):
+        end = self.history_index
+        if end - start >= HISTORY_SIZE:
+            start = end - HISTORY_SIZE
+        for x in range(start, end):
+            yield (x + 1, self.history[x % HISTORY_SIZE])
 
 
 logger: logging.Logger = logging.getLogger("appwide")
@@ -54,5 +57,5 @@ class LogBase(object):
     def setConsoleLevel(self, level) -> None:
         console_handler.setLevel(level)
 
-    def getHistory(self):
-        return history_handler.getHistory()
+    def getHistory(self, index=0):
+        return history_handler.getHistory(index)

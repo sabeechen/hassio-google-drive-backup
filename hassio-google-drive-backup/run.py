@@ -18,7 +18,12 @@ def main() -> None:
     logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
     time: Time = Time()
-    config: Config = Config([HASSIO_OPTIONS_FILE] + sys.argv[1:])
+
+    if len(sys.argv) == 1:
+        config: Config = Config([HASSIO_OPTIONS_FILE])
+    else:
+        config: Config = Config(sys.argv[1:])
+
     drive: Drive = Drive(config)
     hassio: Hassio = Hassio(config)
     engine: engine = Engine(config, drive, hassio, time)  # type: ignore

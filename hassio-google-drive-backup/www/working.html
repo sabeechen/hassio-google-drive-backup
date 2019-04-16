@@ -1,19 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
   <title>Hassio Google Drive Backup</title>
 
   <!-- CSS  -->
   <link href="css/icons.css" rel="stylesheet">
-  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
-  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
-  <link rel="icon" 
-      type="image/png"
-      href="/images/favicon.png">
+  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="/images/favicon.png">
   <script src="js/jquery.js"></script>
+  <script src="js/materialize.js"></script>
+  <script src="js/init.js"></script>
+  <script src="js/scripts.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/restore.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function () {
+      // Needed to make modal dialogs work.
+      $('.modal').modal();
+
+      // Every 5 seconds, refresh the metrics form the server.
+      window.setInterval(refreshstats, 5000);
+      refreshstats();
+
+      $('.tooltipped').tooltip();
+      $(".dropdown-trigger").dropdown();
+      $('.collapsible').collapsible();
+      $('.sidenav').sidenav();
+    });
+  </script>
 </head>
+
 <body>
   <!-- Modal Structure -->
   <div id="deletemodal" class="modal">
@@ -22,52 +42,257 @@
       <p id="delete_text"></p>
     </div>
     <div class="modal-footer">
-      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_drive">Delete in Google Drive</a>
-      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_ha">Delete in Hass.io</a>
-      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_both">Delete Everywhere</a>
-      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text" id="delete_cancel">Cancel</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text"
+        id="delete_drive">Delete in Google Drive</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text"
+        id="delete_ha">Delete in Hass.io</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text"
+        id="delete_both">Delete Everywhere</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat" id="delete_cancel">Cancel</a>
+    </div>
+  </div>
+  <div id="uploadmodal" class="modal">
+    <div class="modal-content">
+      <h4>Upload this snapshot to Hass.io</h4>
+      <p>Are you sure you'd like to upload this snapshot back to Hass.io? The snapshot will be downloaded from Google
+        Drive, and after that you'll be able to restore it.</p>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat orange darken-4 white-text"
+        id="do_upload_button">Upload Snapshot</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat" id="upload_cancel">Cancel</a>
+    </div>
+  </div>
+  <div id="restoremodal" class="modal">
+    <div class="modal-content">
+      <h4>Restore this snapshot?</h4>
+      <p>Please confirm you'd like to restore this snapshot. This process is irreversible.</p>
+      <ul class="browser-default">
+        <li>Changes you've made since the snapshot was created will be permanently lost.</li>
+        <li>Home Assistant and this add-on will be unresponsive until it is finished setting back up, which in some
+          cases can take hours.</li>
+        <li>If the snapshot doesn't have this add-on in it, you may need to reinstall the add-on</li>
+      </ul>
+      <div id="restore_password_div">
+        <p>
+          This snapshot is protected with a password. Please enter it to allow the snapshot to be restored.
+        </p>
+        <form class="col s12" method="get" id="restore_form">
+          <div class="row">
+            <div class="input-field col s12 m6 l3">
+              <i class="material-icons prefix">vpn_key</i>
+              <input type="password" autocomplete="new-password" id="restore_password" name="restore_password"
+                class="validate" />
+              <label for="restore_password">Password</label>
+              <span class="helper-text">The password you used to create this snapshot.</span>
+            </div>
+          </div>
+      </div>
+      <div class="row" style="margin-bottom: 5px;">
+        <div class="col s12">
+          <label>
+            <input type="checkbox" name="partial_restore" id="partial_restore" class="filled-in"
+              onchange="toggleSlide(this, 'restore_partial_details');" />
+            <span>Restore only part of this snapshot</span>
+            <br />
+            <span class="helper-text">Choose which folders and add-on you'd like to restore from this snapshot.</span>
+          </label>
+        </div>
+      </div>
+      <div class="row" id="restore_partial_details" style="display: none">
+        <div class="col s11 offset-s1">
+          <div class="row">
+            <div class="input-field col s12">
+              <label class="checkbox-label">
+                <input type="checkbox" name="restore_homeassistant" id="restore_homeassistant" class="filled-in"
+                  checked />
+                <span>Home Assistant <span id="restore_homeassistant_version" class="helper-text"></span></span>
+                <br />
+                <span class="helper-text">Restore Home Assistant</span>
+              </label>
+            </div>
+          </div>
+          <div class="row" style="margin-bottom: 0px">
+            <div class="col s12">
+              <p style="font-weight: bold;">Folders</p>
+              <ul style="margin-bottom: 0px; margin-top: 0px">
+                <li class="indented-li">
+                  <label>
+                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_homeassistant"
+                      id="restore_folder_homeassistant" class="filled-in" checked />
+                    <span class="checkbox-label">Home Assistant Configuration</span>
+                    <br />
+                    <span class="helper-text">Restore the files and folders from your Home Assistant config
+                      directory, eg configuration.yaml</span>
+                  </label>
+                </li>
+                <li class="indented-li">
+                  <label class="checkbox-label">
+                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_ssl"
+                      id="restore_folder_ssl" class="filled-in" checked />
+                    <span class="checkbox-label">SSL</span>
+                    <br />
+                    <span class="helper-text">Restore your "/ssl" directory, where your certfile and keyfile
+                      are typically stored.</span>
+                  </label>
+                </li>
+                <li class="indented-li">
+                  <label class="checkbox-label">
+                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_share"
+                      id="restore_folder_share" class="filled-in" checked />
+                    <span class="checkbox-label">Share</span>
+                    <br />
+                    <span class="helper-text">Restore your "/share" directory.</span>
+                  </label>
+                </li>
+                <li class="indented-li">
+                  <label class="checkbox-label">
+                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_addons"
+                      id="restore_folder_addons" class="filled-in" checked />
+                    <span class="checkbox-label">Local Addons</span>
+                    <br />
+                    <span class="helper-text">Restore your local addons directory. This directory will be empty
+                      unless you use it for add-on development.</span>
+                  </label>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s12">
+              <p style="font-weight: bold;">Addons</p>
+              <ul id="restore_addons">
+
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      </form> 
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="waves-effect waves-green btn-flat orange darken-4 white-text" id="do_restore_button">Restore
+        Snapshot</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat" id="restore_cancel">Cancel</a>
+    </div>
+  </div>
+
+  <div id="snapshot-template" style="display: none">
+    <div class="snapshot-ui">
+      <div class="row" style="margin-bottom: 10px; margin-top: 10px;">
+        <div class="col s1"><i class="large material-icons" style="font-size: 30px">archive</i></div>
+        <div class="col s11">
+          <div>
+            <span id="name" class="left truncate"></span>
+            <span class="right" style="font-weight: bold;">
+              <span id="status"></span>
+              <i class="material-icons small tooltipped" id="status-help" style="font-size: 15px; vertical-align: top"
+                data-position="right" data-tooltip="error">help</i>
+            </span>
+            <br />
+            <span class="left">Size: <span id="size"></span></span>
+            <br />
+            <a class='dropdown-trigger btn right' href='#' data-target='action_dropdown' id="action_dropdown_button"
+              style="display: none;">
+              <i class="material-icons medium left">keyboard_arrow_down</i>
+              Actions
+            </a>
+            <br />
+            <a href="#" onclick="showDetails(this);return false;" id="status-details"><i class="material-icons left"
+                style="margin-right: 3px">info</i></a>
+            <i class="material-icons left icon-protected tooltipped" data-position="right"
+              data-tooltip="This snapshot is password protected" style="margin-right: 3px">vpn_key</i>
+          </div>
+          <ul id='action_dropdown' class='dropdown-content'>
+            <li id="delete_option">
+              <a href="#!" id="delete_link" data-target="deletemodal" class="modal-trigger tooltipped"
+                data-position="left" data-tooltip="Deletes the snapshot from Hass.io, Google Drive, or both."
+                onClick="confirmDeleteSnapshot(this);return false;">
+                <i class="material-icons left" style="font-size: 25px">delete_forever</i>Delete
+              </a>
+            </li>
+            <li id="download_option">
+              <a href="#!" id="download_link" class="tooltipped" data-position="left"
+                data-tooltip="Save the snapshot archive to your computer."
+                onClick="downloadSnapshot(this);return false;">
+                <i class="material-icons left" style="font-size: 25px">file_download</i>Download
+              </a>
+            </li>
+            <li class="divider" tabindex="-1"></li>
+            <li id="restore_option">
+              <a href="#!" id="restore_link" class="tooltipped"
+                data-position="left"
+                data-tooltip="Restore the snapshot, overwriting your current configuration with this archive's.">
+                <i class="material-icons left" style="font-size: 25px">input</i>Restore
+              </a>
+            </li>
+            <li id="upload_option">
+              <a href="#!" id="upload_link" data-target="uploadmodal" class="modal-trigger tooltipped"
+                data-position="left"
+                data-tooltip="Upload the snapshot from Google Drive to Hass.io.  <br/>You'll need to do this if you want to restore the snapshot."
+                onClick="uploadSnapshot(this);return false;">
+                <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="divider">
+      </div>
     </div>
   </div>
   <div id="settings_modal" class="modal">
     <div class="modal-content">
       <h4>Add-on Settings</h4>
-      <p>Settings take effect right after saving them.  If you enable or disable SSL, you may need to go to a different address to access the UI after the settings are saved.  See the <a href="https://github.com/sabeechen/hassio-google-drive-backup#configuration-options" target="_blank">GitHub Readme</a> for more help with settings.</p>
+      <p>Settings take effect right after saving them. If you enable or disable SSL, you may need to go to a different
+        address to access the UI after the settings are saved. See the <a
+          href="https://github.com/sabeechen/hassio-google-drive-backup#configuration-options" target="_blank">GitHub
+          Readme</a> for more help with settings.</p>
       <div class="row">
         <form class="col s12" method="get" id="settings_form">
           <div class="row">
             <div class="input-field col s6">
               <i class="material-icons prefix">computer</i>
-              <input type="number" id="max_snapshots_in_hassio" name="max_snapshots_in_hassio" min="0" class="validate"/>
+              <input type="number" id="max_snapshots_in_hassio" name="max_snapshots_in_hassio" min="0"
+                class="validate" />
               <label for="max_snapshots_in_hassio">Snapshots in Home Assistant</label>
-              <span class="helper-text" >The maximum number of snapshots to keep locally in Home Assistant, or 0 to disable cleanup of old snapshots entirely.</span>
+              <span class="helper-text">The maximum number of snapshots to keep locally in Home Assistant, or 0 to
+                disable cleanup of old snapshots entirely.</span>
             </div>
             <div class="input-field col s6">
-                <i class="material-icons prefix">cloud_upload</i>
-                <input type="number" id="max_snapshots_in_google_drive" name="max_snapshots_in_google_drive" min="0" class="validate"/>
-                <label for="max_snapshots_in_google_drive">Snapshots in Google Drive</label>
-                <span class="helper-text" >The maximum number of snapshots to keep remotely in Google Drive, or 0 to disable cleanup of old snapshots entirely.</span>
-              </div>
+              <i class="material-icons prefix">cloud_upload</i>
+              <input type="number" id="max_snapshots_in_google_drive" name="max_snapshots_in_google_drive" min="0"
+                class="validate" />
+              <label for="max_snapshots_in_google_drive">Snapshots in Google Drive</label>
+              <span class="helper-text">The maximum number of snapshots to keep remotely in Google Drive, or 0 to
+                disable cleanup of old snapshots entirely.</span>
+            </div>
           </div>
           <div class="row">
-                <div class="input-field col s6">
-                  <i class="material-icons prefix">date_range</i>
-                  <input type="number" id="days_between_snapshots" name="days_between_snapshots" min="0" class="validate"/>
-                  <label for="days_between_snapshots">Days between snapshots</label>
-                  <span class="helper-text" >The number of days between snapshots, or 0 to disable automatic snapshot creation.</span>
-                </div>
-                <div class="input-field col s6">
-                    <i class="material-icons prefix">alarm_on</i>
-                    <input type="text" id="snapshot_time_of_day" name="snapshot_time_of_day" pattern="^[0-2]\d:[0-5]\d$" class="validate"/>
-                    <label for="snapshot_time_of_day">Snapshot time of day</label>
-                    <span class="helper-text">The time of day when snapshots should be taken in the form 'HH:mm' (24 hour clock).</span>
-                  </div>
+            <div class="input-field col s6">
+              <i class="material-icons prefix">date_range</i>
+              <input type="number" id="days_between_snapshots" name="days_between_snapshots" min="0" class="validate" />
+              <label for="days_between_snapshots">Days between snapshots</label>
+              <span class="helper-text">The number of days between snapshots, or 0 to disable automatic snapshot
+                creation.</span>
+            </div>
+            <div class="input-field col s6">
+              <i class="material-icons prefix">alarm_on</i>
+              <input type="text" id="snapshot_time_of_day" name="snapshot_time_of_day" pattern="^[0-2]\d:[0-5]\d$"
+                class="validate" />
+              <label for="snapshot_time_of_day">Snapshot time of day</label>
+              <span class="helper-text">The time of day when snapshots should be taken in the form 'HH:mm' (24 hour
+                clock).</span>
+            </div>
           </div>
           <div class="row">
             <div class="input-field col s6">
               <i class="material-icons prefix">vpn_key</i>
-              <input type="password" id="snapshot_password" name="snapshot_password" class="validate"/>
+              <input type="password" autocomplete="new-password" id="snapshot_password" name="snapshot_password"
+                class="validate" />
               <label for="snapshot_password">Password</label>
-              <span class="helper-text" >When set, creates snapshots protected by a password.  This password will be required by Hass.io when restoring the snapshot.  Leave blank to require no password.</span>
+              <span class="helper-text">When set, creates snapshots protected by a password. This password will be
+                required by Hass.io when restoring the snapshot. Leave blank to require no password.</span>
             </div>
           </div>
           <div class="row">
@@ -75,182 +300,250 @@
               <label>
                 <input type="checkbox" name="require_login" id="require_login" class="filled-in" />
                 <span>Require Login</span>
-                <br/>
-                <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.  Disabling this isn't recommended.</span>
+                <br />
+                <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.
+                  Disabling this isn't recommended.</span>
               </label>
             </div>
             <div class="col s6">
               <label>
                 <input type="checkbox" name="send_error_reports" id="send_error_reports" class="filled-in" />
                 <span>Send Error Reports</span>
-                <br/>
-                <span class="helper-text">Sends information about errors to a database maintained by developer.  This helps him identify problems with new releases and provide better help messages.</span>
+                <br />
+                <span class="helper-text">Sends information about errors to a database maintained by developer. This
+                  helps him identify problems with new releases and provide better help messages.</span>
               </label>
             </div>
           </div>
           <div class="row">
             <div class="col s6">
               <label>
-                <input type="checkbox" name="notify_for_stale_snapshots" id="notify_for_stale_snapshots" class="filled-in"/>
+                <input type="checkbox" name="notify_for_stale_snapshots" id="notify_for_stale_snapshots"
+                  class="filled-in" />
                 <span>Enable Staleness Notifications</span>
-                <br/>
-                <span class="helper-text">When there is a problem with the snapshots, show a persistant notification in the Home Assistant interface.</span>
+                <br />
+                <span class="helper-text">When there is a problem with the snapshots, show a persistant notification in
+                  the Home Assistant interface.</span>
               </label>
             </div>
             <div class="col s6">
               <label>
-                <input type="checkbox" name="enable_snapshot_stale_sensor" id="enable_snapshot_stale_sensor" class="filled-in"/>
+                <input type="checkbox" name="enable_snapshot_stale_sensor" id="enable_snapshot_stale_sensor"
+                  class="filled-in" />
                 <span>Enable Snapshot Stale Sensor</span>
-                <br/>
-                <span class="helper-text">Publishes a sensor, binary_sensor.snapshots_stale, indicating if there is a problem backing up or creating snapshots.</span>
+                <br />
+                <span class="helper-text">Publishes a sensor, binary_sensor.snapshots_stale, indicating if there is a
+                  problem backing up or creating snapshots.</span>
               </label>
             </div>
             <div class="col s6">
               <label>
-                <input type="checkbox" name="enable_snapshot_state_sensor" id="enable_snapshot_state_sensor" class="filled-in"/>
+                <input type="checkbox" name="enable_snapshot_state_sensor" id="enable_snapshot_state_sensor"
+                  class="filled-in" />
                 <span>Enable Snapshot State Sensor</span>
-                <br/>
-                <span class="helper-text">Publishes a sensor, sensor.snapshot_state, with the status of existing snapshots.</span>
+                <br />
+                <span class="helper-text">Publishes a sensor, sensor.snapshot_state, with the status of existing
+                  snapshots.</span>
               </label>
             </div>
           </div>
           <div class="row">
             <div class="col s12">
-              <ul class="collapsible expandable" id="ssl_header">
-                <li>
-                  <div class="collapsible-header">
-                    <i class="material-icons">expand_more</i>
-                      <label>
-                        <input type="checkbox" name="use_ssl" id="use_ssl" class="filled-in" onchange="sslChanged()"/>
-                        <span>Use SSL</span>
-                      </label>
-                      <script type="text/javascript">
-                        function sslChanged() {
-                          var checked = $('#use_ssl').prop('checked');
-                          var open = $('#ssl_header').hasClass('active')
-                          var instance = M.Collapsible.getInstance(document.getElementById('ssl_header'));
-                          if (checked && !open) {
-                            instance.open(0)
-                          } else if (!checked && open) {
-                            instance.close(0)
-                          }
-                        }
-                      </script>
-                  </div>
-                  <div class="collapsible-body">
-                      <div class="row">
-                          <div class="input-field col s12">
-                              <i class="material-icons prefix">vpn_key</i>
-                              <input type="text" id="certfile" name="certfile" class="validate"/>
-                              <label for="certfile">Certificate File</label>
-                              <span class="helper-text">The path to your certificate file.  If you use the default Let's Encrypt settings, the default should be correct.</span>
-                          </div>
-                        </div>
-                    <div class="row">
-                      <div class="input-field col s12">
-                        <i class="material-icons prefix">vpn_key</i>
-                        <input type="text" id="keyfile" name="keyfile" class="validate"/>
-                        <label for="keyfile">Key File</label>
-                        <span class="helper-text">The path to your key file.  If you use the default Let's Encrypt settings, the default should be correct.</span>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+              <label>
+                <input type="checkbox" name="use_ssl" id="use_ssl" class="filled-in"
+                  onchange="toggleSlide(this, 'settings_ssl_details');" />
+                <span>Use SSL</span>
+                <br />
+                <span class="helper-text">Require SSL to acces this web interface. You must already have SSL keys
+                  configured to use this. Note that once this setting is chnaged, you'll need to navigate to the new url
+                  to continue using this webpage.</span>
+              </label>
+            </div>
+          </div>
+          <div class="row" id="settings_ssl_details" style="display: none">
+            <div class="col s11 offset-s1">
+              <div class="row">
+                <div class="input-field col s12">
+                  <i class="material-icons prefix">vpn_key</i>
+                  <input type="text" id="certfile" name="certfile" class="validate" />
+                  <label for="certfile">Certificate File</label>
+                  <span class="helper-text">The path to your certificate file. If you use the default Let's
+                    Encrypt settings, the default should be correct.</span>
+                </div>
+              </div>
+              <div class="row">
+                <div class="input-field col s12">
+                  <i class="material-icons prefix">vpn_key</i>
+                  <input type="text" id="keyfile" name="keyfile" class="validate" />
+                  <label for="keyfile">Key File</label>
+                  <span class="helper-text">The path to your key file. If you use the default Let's Encrypt
+                    settings, the default should be correct.</span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="row">
             <div class="col s12">
-              <ul class="collapsible expandable" id='generational_dialog'>
-                <li>
-                  <div class="collapsible-header">
-                    <i class="material-icons">expand_more</i>
+              <label>
+                <input type="checkbox" id="generational_enabled" name="generational_enabled" class="filled-in"
+                  onchange="toggleSlide(this, 'settings_gen_details');" />
+                <span>Keep Generational Backups</span>
+                <br />
+                <span class="helper-text">Keeps older snapshots longer on daily, weekly, monthly, and yearly rotations
+                  instead of just
+                  deleting the oldest snapshots. When using this feature, its recommended that you keep "Days
+                  Between Snapshots" at 1.</span>
+              </label>
+            </div>
+            <div class="row" id="settings_gen_details" style="display: none">
+              <div class="col s11 offset-s1">
+                <div class="row">
+                  <div class="input-field col s6">
+                    <i class="material-icons prefix">date_range</i>
+                    <input type="number" id="generational_days" name="generational_days" min="0" class="validate" />
+                    <label for="generational_days">Days</label>
+                    <span class="helper-text">The number of daily snapshots to keep.</span>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="input-field col s6">
+                    <i class="material-icons prefix">date_range</i>
+                    <input type="number" id="generational_weeks" name="generational_weeks" min="0" class="validate" />
+                    <label for="generational_weeks">Weeks</label>
+                    <span class="helper-text">The number of weeks of snapshots to keep.</span>
+                  </div>
+                  <div class="input-field col s6">
+                    <select class="browser-default" name="generational_day_of_week" id="generational_day_of_week">
+                      <option value="mon" selected>Monday</option>
+                      <option value="tue">Tuesday</option>
+                      <option value="wed">Wednesday</option>
+                      <option value="thu">Thursday</option>
+                      <option value="fri">Friday</option>
+                      <option value="sat">Saturday</option>
+                      <option value="sun">Sunday</option>
+                    </select>
+                    <label class="helper-text">The day of the week when weekly snapshots will be kept.</label>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="input-field col s6">
+                    <i class="material-icons prefix">date_range</i>
+                    <input type="number" id="generational_months" name="generational_months" min="0" class="validate" />
+                    <label for="generational_months">Months</label>
+                    <span class="helper-text">The number of months of snapshots to keep.</span>
+                  </div>
+                  <div class="input-field col s6">
+                    <input type="number" id="generational_day_of_month" value=1 name="generational_day_of_month" min="1"
+                      max="31" class="validate" />
+                    <label for="generational_day_of_month">Day of Month</label>
+                    <span class="helper-text">The day of the month to keep monthly snapshots, from 1 to 31</span>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="input-field col s6">
+                    <i class="material-icons prefix">date_range</i>
+                    <input type="number" id="generational_years" name="generational_years" min="0" class="validate" />
+                    <label for="generational_years">Years</label>
+                    <span class="helper-text">The number of years of snapshots to keep.</span>
+                  </div>
+                  <div class="input-field col s6">
+                    <input type="number" id="generational_day_of_year" value=1 name="generational_day_of_year" min="1"
+                      max="365" class="validate" />
+                    <label for="generational_day_of_year">Day of Year</label>
+                    <span class="helper-text">The day of the year to keep yearly snapshots, from 1 to 365</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s12">
+              <label>
+                <input type="checkbox" name="partial_snapshots" id="partial_snapshots" class="filled-in"
+                  onchange="toggleSlide(this, 'settings_partial_details');" />
+                <span>Partial Snapshots</span>
+                <br />
+                <span class="helper-text">Partial snapshots allow you to selectively backup portions of your Home
+                  Assistant configuration,
+                  folder, and add-ons. Choose which parts of Home Assistant you'd like included in snapshots below.
+                  New add-ons will be automatically included in snapshots unless you update these settings to
+                  exclude them.</span>
+              </label>
+            </div>
+          </div>
+          <div class="row" id="settings_partial_details" style="display: none">
+            <div class="col s11 offset-s1">
+              <div class="row" style="display: none">
+                <div class="input-field col s12">
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="include_homeassistant" id="include_homeassistant" class="filled-in"
+                      checked />
+                    <span>Home Assistant <span id="homeassistant_version"></span></span>
+                    <br />
+                    <span class="helper-text">Backup Home Assistant</span>
+                  </label>
+                </div>
+              </div>
+              <div class="row" style="margin-bottom: 0px">
+                <div class="col s12">
+                  <span style="font-weight: bold">Folders</span>
+                  <ul>
+                    <li class="indented-li">
                       <label>
-                        <input type="checkbox" id="generational_enabled" name="generational_enabled" class="filled-in" onchange="genChanged()"/>
-                        <span>Keep Generational Backups</span>
+                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_homeassistant"
+                          id="folder_homeassistant" checked />
+                        <span class="checkbox-label">Home Assistant Configuration</span>
+                        <br />
+                        <span class="helper-text">Backup the files and folders from your Home Assistant config
+                          directory, eg configuration.yaml</span>
                       </label>
-                      <script type="text/javascript">
-                        function genChanged() {
-                          var checked = $('#generational_enabled').prop('checked');
-                          var open = $('#generational_dialog').hasClass('active')
-                          var instance = M.Collapsible.getInstance(document.getElementById('generational_dialog'));
-                          if (checked && !open) {
-                            instance.open(0)
-                          } else if (!checked && open) {
-                            instance.close(0)
-                          }
-                        }
-                      </script>
-                  </div>
-                  <div class="collapsible-body">
-                    <div class="row">
-                        <div class="col s12">
-                            <p>
-                              Keeps older snapshots longer on daily, weekly, monthly, and yearly rotations instead of just deleting the oldest snapshots.  When using this feature, its recommended that you keep "Days Between Snapshots" at 1.
-                            </p>
-                          </div>
-                    </div>
-                      <div class="row">
-                          <div class="input-field col s6">
-                              <i class="material-icons prefix">date_range</i>
-                              <input type="number" id="generational_days" name="generational_days" min="0" class="validate"/>
-                              <label for="generational_days">Days</label>
-                              <span class="helper-text">The number of daily snapshots to keep.</span>
-                            </div>
-                          </div>
-                          <div class="row">
-                              <div class="input-field col s6">
-                                  <i class="material-icons prefix">date_range</i>
-                                  <input type="number" id="generational_weeks" name="generational_weeks" min="0" class="validate"/>
-                                  <label for="generational_weeks">Weeks</label>
-                                  <span class="helper-text">The number of weeks of snapshots to keep.</span>
-                              </div>
-                              <div class="input-field col s6">
-                                  <select class="browser-default" name="generational_day_of_week" id="generational_day_of_week">                                <option value="mon" selected>Monday</option>
-                                    <option value="tue">Tuesday</option>
-                                    <option value="wed">Wednesday</option>
-                                    <option value="thu">Thursday</option>
-                                    <option value="fri">Friday</option>
-                                    <option value="sat">Saturday</option>
-                                    <option value="sun">Sunday</option>
-                                  </select>
-                                  <label class="helper-text">The day of the week when weekly snapshots will be kept.</label>
-                              </div>
-                        </div>
-                        <div class="row">
-                            <div class="input-field col s6">
-                                <i class="material-icons prefix">date_range</i>
-                                <input type="number" id="generational_months" name="generational_months" min="0" class="validate"/>
-                                <label for="generational_months">Months</label>
-                                <span class="helper-text">The number of months of snapshots to keep.</span>
-                            </div>
-                            <div class="input-field col s6">
-                                <input type="number" id="generational_day_of_month" value=1 name="generational_day_of_month" min="1" max="31" class="validate"/>
-                                <label for="generational_day_of_month">Day of Month</label>
-                                <span class="helper-text">The day of the month to keep monthly snapshots, from 1 to 31</span>
-                            </div>
-                      </div>
-                      <div class="row">
-                          <div class="input-field col s6">
-                              <i class="material-icons prefix">date_range</i>
-                              <input type="number" id="generational_years" name="generational_years" min="0" class="validate"/>
-                              <label for="generational_years">Years</label>
-                              <span class="helper-text">The number of years of snapshots to keep.</span>
-                          </div>
-                          <div class="input-field col s6">
-                              <input type="number" id="generational_day_of_year" value=1 name="generational_day_of_year" min="1" max="365" class="validate"/>
-                              <label for="generational_day_of_year">Day of Year</label>
-                              <span class="helper-text">The day of the year to keep yearly snapshots, from 1 to 365</span>
-                          </div>
-                    </div>
-                  </div>
-                </li>
-              </ul>
+                    </li>
+                    <li class="indented-li">
+                      <label class="checkbox-label">
+                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_ssl" id="folder_ssl"
+                           checked />
+                        <span class="checkbox-label">SSL</span>
+                        <br />
+                        <span class="helper-text">Backup your "/ssl" directory, where your certfile and keyfile
+                          are typically stored.</span>
+                      </label>
+                    </li>
+                    <li class="indented-li">
+                      <label class="checkbox-label">
+                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_share" id="folder_share"
+                           checked />
+                        <span class="checkbox-label">Share</span>
+                        <br />
+                        <span class="helper-text">Backup your "/share" directory.</span>
+                      </label>
+                    </li>
+                    <li class="indented-li">
+                      <label class="checkbox-label">
+                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_addons" id="folder_addons"
+                           checked />
+                        <span class="checkbox-label">Local Addons</span>
+                        <br />
+                        <span class="helper-text">Backup your local addons directory. This directory will be empty
+                          unless you use it for add-on development.</span>
+                      </label>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col s12">
+                  <span style="font-weight: bold;">Addons</span>
+                  <ul id="settings_addons">
+
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
           <div class="row red darken-4 white-text">
             <div class="col s12">
-                <p id="settings_error">Some configuration values are invalid.  Please check the entries above to ensure they're in the correct format, problematic entries show up in red.</p>
+              <p id="settings_error">Some configuration values are invalid. Please check the entries above to ensure
+                they're in the correct format, problematic entries show up in red.</p>
             </div>
           </div>
         </form>
@@ -261,36 +554,79 @@
       <a href="#!" class="modal-close waves-effect waves-green btn-flat" id="save_cancel">Cancel</a>
     </div>
   </div>
+  <div id="details_modal" class="modal">
+    
+    <div class="modal-content">
+      <h4> <i class="material-icons" style="font-size: 50px; padding-right: 10px; vertical-align: middle">info_outline</i><span >Snapshot Details</span></h4>
+      <p class="detail-node">
+        <span class="left-align" style="font-weight: bold; padding: 5px;">Name:</span> <span id="details_name"></span>
+      </p>
+      <p class="detail-node">
+        <span class="left-align" style="font-weight: bold; padding: 5px;">Date:</span> <span id="details_date"></span>
+      </p>
+      <p class="detail-node">
+        <span class="left-align" style="font-weight: bold; padding: 5px;">Home Assistant Version:</span> <span
+          id="details_ha_version"></span></p>
+      <p class="detail-node">
+        <span class="left-align" style="font-weight: bold; padding: 5px;">Type:</span> <span id="details_type"></span>
+      </p>
+      <p class="detail-node">
+        <span class="left-align" style="font-weight: bold; padding: 5px;">Password:</span> <span
+          id="details_password"></span></p>
+      <div id="details_folders_and_addons">
+        <p style="font-weight: bold; padding: 5px; margin-bottom: 0px; padding-bottom: 0px">Folders:</p>
+        <ul style="margin-left: 15px" id="details_folders"></ul>
+        <p style="font-weight: bold; padding: 5px; margin-bottom: 0px; padding-bottom: 0px">Addons:</p>
+        <ul style="margin-left: 15px" id="details_addons"></ul>
+      </div>
+      <div id="details_upload_reminder">
+        <p style="font-style: italic">
+          To see folders and addons included in this snapshot, you must upload it to Home Assistant by selecting "Actions" -> "Upload".
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat" id="save_cancel">Close</a>
+    </div>
+  </div>
   <div class='error' style='display:none' id="toast">You shouldn't see this</div>
-  <ul id="main_dropdown" class="dropdown-content">
-    <li><a href="/log?format=html" target="_blank">View Logs</a></li>
-    <li class="divider"></li>
-    <li><a href="#!" data-target="settings_modal" class="modal-trigger"  onClick="loadSettings()">Settings</a></li>
-    <li class="divider"></li>
-    <li><a href="#!" onClick="simulateError()">Simulate Error</a></li>
-    <li class="divider"></li>
-    <li><a href="#!" onClick="stopSimulateError()">Stop Simulating Error</a></li>
-  </ul>
+
   <nav class="grey darken-3" role="navigation">
     <div class="nav-wrapper container">
-      <a id="logo-container" href="/" class="brand-logo"><img src="/images/logo.png" width=40 height=40/>Hassio Google Drive Backup</a>
+      <a id="logo-container truncate" href="/" class="brand-logo">
+        <img style="vertical-align: middle" src="/images/logo.png" width=40 height=40 />
+        <span>Hass.io Google Drive Backup</span>
+      </a>
+      <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
       <ul class="right hide-on-med-and-down">
-        <li><a class="dropdown-trigger" href="#!" data-target="main_dropdown">&nbsp;&nbsp;  Tools and Debugging&nbsp;&nbsp;<i class="material-icons right">arrow_drop_down</i></a></li>
+        <li style="margin-right: 15px;"><a href="#!" onClick="loadSettings()"><i class="material-icons" style="display: inline; margin-right: 5px">settings</i><span style="vertical-align: top;">Settings</span></a></li>
+        <li style="margin-right: 15px;"><a href="/log?format=view" target="_blank"><i class="material-icons" style="display: inline; margin-right: 5px">dehaze</i><span style="vertical-align: top;">Logs</span></a></li>
       </ul>
     </div>
   </nav>
+  <ul class="sidenav" id="mobile-menu">
+      <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
+      <li><a href="/log?format=view" target="_blank"><i class="material-icons">dehaze</i>Logs</a></li>
+    </ul>
   <div class="container">
     <div class="section">
-      <div class="row" id="error_card" style='display:none'>
+      <div class="row" id="error_card" style="display: none">
         <div class="col s12 m9">
           <div class="card red darken-4">
             <div class="card-content white-text">
-              <span class="card-title">Error while backing up</span>
-              <p>The add-on got the error below while trying to sync your snapshots.  Some transient errors are expected (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your snapshots won't get backed up and the information you see on this page may be stale.  If you file an issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the "Download Logs" link below</p>
-              <br/>
+              <span class="card-title">
+                <i class="material-icons" style="font-size: 50px; padding-right: 10px;">sync_problem</i>
+                <span style="vertical-align: top;">Error while backing up</span>
+              </span>
+              <p>The add-on got the error below while trying to sync your snapshots. Some transient errors are expected
+                (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your
+                snapshots won't get backed up and the information you see on this page may be stale. If you file an
+                issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the
+                "Download Logs" link below</p>
+              <br />
               <p id="error_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
               <div class="card-action white-text">
-                  <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
+                <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
               </div>
               <div class="card-action white-text">
                 <a id="error_github_link" href="#" target="_blank">File this issue on Github</a>
@@ -302,29 +638,41 @@
           </div>
         </div>
       </div>
-      <div class="row" id="drive_full_card" style='display:none'>
+      <div class="row" id="drive_full_card" style="display: none">
         <div class="col s12 m9">
           <div class="card red darken-4">
-            <div class="card-content white-text">
-              <span class="card-title">Google Drive is Full</span>
-              <p>Google Drive is full, backups can't continue until space is available.  You can go to Google Drive's <a href="https://drive.google.com/drive/quota">quota page</a> to see whats using up space in your Google Drive, but because that space is shared between several Google products (eg GMail, Google Photos) one of those products might be using the space instead.  You can see your usage across all those products on Google's <a href="https://drive.google.com/settings/storage">storage settings</a> page.</p>
+                <i class="material-icons" style="font-size: 50px; padding-right: 10px;">disc_full</i>
+                <span style="vertical-align: top;">Google Drive is Full</span>
+              </span>
+              <p>Google Drive is full, backups can't continue until space is available. You can go to Google Drive's <a
+                  href="https://drive.google.com/drive/quota">quota page</a> to see whats using up space in your Google
+                Drive, but because that space is shared between several Google products (eg GMail, Google Photos) one of
+                those products might be using the space instead. You can see your usage across all those products on
+                Google's <a href="https://drive.google.com/settings/storage">storage settings</a> page.</p>
               <p>To resolve this you can:</p>
               <ul class="browser-default">
                 <li>Free up space in Google Drive, GMail, or Google Photos by deleting things.</li>
-                <li>Store fewer snapshots by setting "max_snapshots_in_google_dirve" to something smaller in your add-on configuration.</li>
+                <li>Store fewer snapshots by setting "max_snapshots_in_google_dirve" to something smaller in your add-on
+                  configuration.</li>
                 <li><a href="https://drive.google.com/settings/storage">Buy more storage</a> from Google</li>
-                <li>Make your snapshots smaller (see <a href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this tip</a>)</li>
+                <li>Make your snapshots smaller (see <a
+                    href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this
+                    tip</a>)</li>
               </ul>
             </div>
           </div>
         </div>
       </div>
-      <div class="row" id="creds_bad_card" style='display:none'>
+      <div class="row" id="creds_bad_card" style="display: none">
         <div class="col s12 m9">
           <div class="card red darken-4">
             <div class="card-content white-text">
-              <span class="card-title">Couldn't Log in with Google</span>
-              <p>Google Drive rejected your credentials. Your snapshots will not be backed up until this is resolved.</p>
+              <span class="card-title">
+                <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                <span style="vertical-align: top;">Couldn't Log in with Google</span>
+              </span>
+              <p>Google Drive rejected your credentials. Your snapshots will not be backed up until this is resolved.
+              </p>
               <p>This can happen if:</p>
               <ul class="browser-default">
                 <li>You revoked the add-on's access in your Google account settings.</li>
@@ -332,7 +680,32 @@
                 <li>You haven't used your Google account for over 6 months.</li>
                 <li>The add-on's credentials changed, or Google changed them.</li>
               </ul>
-              <p>To resolve this, you'll need to <a href="/reauthenticate">authenticate</a> this add-on with Google again.  If that still doesn't help, you may need to update the add-on</p>
+              <p>To resolve this, you'll need to <a href="/reauthenticate">authenticate</a> this add-on with Google
+                again. If that still doesn't help, you may need to update the add-on</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" id="cant_reach_google" style='display:none'>
+        <div class="col s12 m9">
+          <div class="card red darken-4">
+            <div class="card-content white-text">
+              <span class="card-title">
+                <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
+                <span style="vertical-align: top;">Couldn't Reach Google Drive</span>
+              </span>
+              <p>The add-on couldn't find Google Drive's servers at www.googleapis.com. Snapshots can't be backed up
+                without beaing able to reach this address.</p>
+              <p>Please ensure:</p>
+              <ul class="browser-default">
+                <li>The internet is working.</li>
+                <li>The server www.googleapis.com is reachable from your Home Assistant machine. Some ad-blocking and
+                  firewall software can block this address.</li>
+              </ul>
+              <p>You can also try restarting this add-on, Hass.io, or Home Assistant.</p>
+              <div class="card-action white-text">
+                <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+              </div>
             </div>
           </div>
         </div>
@@ -344,7 +717,7 @@
               <span class="card-title">Error details</span>
               <p id="error_details_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
               <div class="card-action white-text">
-                  <a target="_blank" onClick="$('#error_details_card').fadeOut(500)">Close</a>
+                <a target="_blank" onClick="$('#error_details_card').fadeOut(500)">Close</a>
               </div>
             </div>
           </div>
@@ -355,7 +728,10 @@
           <div class="card">
             <div class="card-content">
               <span class="card-title">Share Error Reports?</span>
-              <p>If you select yes the text of unexpected exceptions this add-on produces will be sent to a server metinained by the developer.  This is completely optional, but helps give him a heads up for problems with new releases and aids in providing better help messages when things go wrong.  If you're unsure, just select "No".  You can always change this in the settings menu up on the top right of the page.</p>
+              <p>If you select yes the text of unexpected exceptions this add-on produces will be sent to a server
+                metinained by the developer. This is completely optional, but helps give him a heads up for problems
+                with new releases and aids in providing better help messages when things go wrong. If you're unsure,
+                just select "No". You can always change this in the settings menu up on the top right of the page.</p>
               <div class="card-action white-text">
                 <a target="_blank" class="waves-effect waves-light btn" onClick="errorReports('true');">Yes</a>
                 <a target="_blank" class="waves-effect waves-light btn" onClick="errorReports('false');">No</a>
@@ -364,521 +740,128 @@
           </div>
         </div>
       </div>
-	  </div>
-      <div class="row">
-        <div class="col s12 m2">
-          <div class="icon-block">
-            <h2 class="center"><i class="material-icons">info</i></h2>
-            <h5 class="center">Info</h5>
-            <div>
-            	<h6>Snapshots in Hass.io</h6>
-            	<h5 class="right" id="ha_snapshots">
-        	Loading...</h5>
-            </div>
-            <br/>
-            <br/>
-            <div>
-            	<h6>Snapshots in Google Drive</h6>
-            	<h5 class="right" id="drive_snapshots">
-        	Loading...</h5>
-            </div>
-            <br/>
-            <br/>
-            <div>
-            	<h6>Most recent snapshot</h6>
-            	<h5 class="right" id="last_snapshot">
-        	Loading...</h5>
-            </div>
-            <br/>
-            <br/>
-            <div>
-            	<h6>Next snapshot</h6>
-            	<h5 class="right" id="next_snapshot">
-        	Loading...</h5>
-            </div>
-            <br/>
+    </div>
+    <div class="row">
+      <div class="col s12 l2 offset-l1 m3">
+        <div class="icon-block">
+          <h2 class="center hide-on-small-and-down"><i class="material-icons">info</i></h2>
+          <h5 class="center">Info</h5>
+          <div>
+            <h6>Snapshots in Hass.io</h6>
+            <h5 class="right" id="ha_snapshots">
+              Loading...</h5>
           </div>
-        </div>
-
-        <div class="col s12 m6">
-          <div class="icon-block">
-            <h2 class="center"><i class="material-icons">cloud_upload</i></h2>
-            <h5 class="center">Snapshots and Backups</h5>
-            <div id="snapshots">
-        	Loading...
-            <div class="divider"></div>
-            </div>
-            <div class="divider"></div>
-            <p><b>Backed Up</b> means the snapshot has been backed up to Google Drive
-            <p>
-              <b>Drive Only</b> means the snapshot has been backed up to Google Drive, but Home Assistant doesn't have a copy locally.  This is normal if you've configured the Add-on to store more backups in Google Drive vs Home Assistant.
-            </p>
-            <p>
-              <b>Waiting...</b> means the snapshot has been created and is waiting to be backed up to Google Drive.
-            </p>
-            <p>
-              <b>Pending</b> means the snapshot is still being created.  Its common for a snapshot to be hundreds of megabytes take up to an hour to be created, usually because of a very large sensor history database. See configuring purge_keep_days in your <a href="https://www.home-assistant.io/components/recorder/">recorder configuration</a> if you'd like to slim down the database size.
-            </p>
-            <p>
-              <b>Uploading XX%</b> means the snapshot is being uploaded.  You should see it in Google Drive soon.
-          	</p>
+          <br />
+          <br />
+          <div>
+            <h6>Snapshots in Google Drive</h6>
+            <h5 class="right" id="drive_snapshots">
+              Loading...</h5>
           </div>
-        </div>
-
-        <div class="col s12 m4">
-          <div class="icon-block">
-            <h2 class="center"><i class="material-icons">flash_on</i></h2>
-            <h5 class="center">Actions</h5><br/>
-            <a class="waves-effect waves-light btn" id="newsnapshotlink" ><i class="material-icons left">add</i>Create new Snapshot</a>
-            <br/>
-            <p class="light">Triggers a new snapshot in Hass.io.  Once done it will be uploaded like any other snapshot.  There is no way to see the progress of a snapshot being created until its complete.</p>
-            <a class="waves-effect waves-light btn" id="newsnapshotlink" onClick="triggerSync()" ><i class="material-icons left">autorenew</i>Sync Now</a>
-            <p class="light">The add-on will check periodically for new snapshots in Hass.io and Google Drive, but clicking this button will force it to check now</p>
-            <a class="waves-effect waves-light btn" id="drive_button" target="_blank"><i class="material-icons left">cloud</i>Open Snapshots</a>
-            <p class="light">Takes you to your snapshot folder in <a href="https://drive.google.com">Google Drive</a>.  The Add-on automatically creates this folder and its where new snapshots will be stored in the future.  If desired, you can move the folder to a different area in My Drive.</p>
-            <a class="waves-effect waves-light btn" href="/reauthenticate"><i class="material-icons left">autorenew</i>Reauthorize Google Drive</a>
-            <p class="light">Go here to authorize this Add-on with Google Drive again.  This may be necessary if your Google account settings change or you explicitly deauthorized the addon in your Google account <a href="https://myaccount.google.com/security">security settings</a>.</p>
+          <br />
+          <br />
+          <div>
+            <h6>Most recent snapshot</h6>
+            <h5 class="right" id="last_snapshot">
+              Loading...</h5>
           </div>
+          <br />
+          <br />
+          <div>
+            <h6>Next snapshot</h6>
+            <h5 class="right" id="next_snapshot">
+              Loading...</h5>
+          </div>
+          <br />
         </div>
       </div>
 
+      <div class="col s12 l4 m5">
+        <div class="icon-block">
+          <h2 class="center hide-on-small-and-down"><i class="material-icons">cloud_upload</i></h2>
+          <h5 class="center">Snapshots and Backups</h5>
+          <div>
+            <div class='row' id="no_snapshots_block" style="display:none">
+              <div class='col s1'></div>
+              <div class='col s2 valign-wrapper center' style="font-size: 90px">
+                <i class='red-text text-darken-4 material-icons'>block</i>
+              </div>
+              <div class='col s7 center valign-wrapper'>
+                <p>You don't have any snapshots in Google Drive or Home Assistant. Use the button to the right to create
+                  a snapshot and start backing up.</p>
+              </div>
+            </div>
+            <div id="snapshots_loading" class=row>
+              <div class='col s1'></div>
+              <div class='col s2 valign-wrapper center' style="font-size: 90px">
+                <i class='material-icons'>refresh</i>
+              </div>
+              <div class='col s7 center valign-wrapper'>
+                <p>Waiting for snapshots to load. If you don't see this go away soon, make sure the add-on is still
+                  running. Info on this page may be stale until then.</p>
+              </div>
+            </div>
+            <div id="snapshots">
+            </div>
+          </div>
+          <div class="divider"></div>
+        </div>
+      </div>
+
+      <div class="col s12 l4 m4">
+        <div class="icon-block">
+          <h2 class="center hide-on-small-and-down"><i class="material-icons">flash_on</i></h2>
+          <h5 class="center">Actions</h5><br />
+          <a class="waves-effect waves-light btn" style="margin-top: 5px" id="newsnapshotlink" onclick="newSnapshotClick(); return false;"><i
+              class="material-icons left">add</i>Create new
+            Snapshot</a>
+          <br />
+          <p class="light hide-on-small-and-down">Triggers a new snapshot in Hass.io. Once done it will be uploaded like any other snapshot.
+            There is no way to see the progress of a snapshot being created until its complete.</p>
+          <a class="waves-effect waves-light btn" style="margin-top: 5px" id="synclink" onClick="triggerSync()"><i
+              class="material-icons left">autorenew</i>Sync Now</a><br />
+          <p class="light hide-on-small-and-down">The add-on will check periodically for new snapshots in Hass.io and Google Drive, but
+            clicking this button will force it to check now</p>
+          <a class="waves-effect waves-light btn" style="margin-top: 5px" id="drive_button" target="_blank"><i
+              class="material-icons left">cloud</i>Open Snapshots</a><br />
+          <p class="light hide-on-small-and-down">Takes you to your snapshot folder in <a href="https://drive.google.com">Google Drive</a>. The
+            Add-on automatically creates this folder and its where new snapshots will be stored in the future. If
+            desired, you can move the folder to a different area in My Drive.</p>
+          <a class="waves-effect waves-light btn" style="margin-top: 5px" href="/reauthenticate"><i
+              class="material-icons left">autorenew</i>Reauthorize Google Drive</a><br />
+          <p class="light hide-on-small-and-down">Go here to authorize this Add-on with Google Drive again. This may be necessary if your
+            Google account settings change or you explicitly deauthorized the addon in your Google account <a
+              href="https://myaccount.google.com/security">security settings</a>.</p>
+        </div>
+      </div>
+      <div class="col l1 hide-on-medium-and-down"></div>
     </div>
-    <br><br>
+  </div>
+  <br><br>
   </div>
 
   <footer class="page-footer grey darken-3">
     <div class="container">
       <div class="row">
-      	<div class="col l3 s12">
+        <div class="col l3 s12">
           <h5 class="white-text">Connect</h5>
           <ul>
-            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a></li>
-            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue Tracker</a></li>
+            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a>
+            </li>
+            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue
+                Tracker</a></li>
             <li><a class="white-text" href="https://materializecss.com">Materialize</a></li>
           </ul>
         </div>
         <div class="col l6 s12">
           <h5 class="white-text">Who did this?</h5>
-          <p class="grey-text text-lighten-4">I'm an individual who works on projects like this in my spare time.  If you like it and would like to support me, I don't want your money but you can star my projects on <a href="https://github.com/sabeechen">Github</a></p>
+          <p class="grey-text text-lighten-4">I'm an individual who works on projects like this in my spare time. If you
+            like it and would like to support me, I don't want your money but you can star my projects on <a
+              href="https://github.com/sabeechen">Github</a></p>
         </div>
       </div>
     </div>
   </footer>
+</body>
 
-  <!--  Scripts-->
-  <script src="js/materialize.js"></script>
-  <script src="js/init.js"></script>
-  <script type="text/javascript">
-    function triggerBackup() {
-      var jqxhr = $.get("backupnow", 
-            function(data) {
-              refreshstats();
-            }, "json")
-    }
-
-    function loadSettings() {
-      var jqxhr = $.get("getconfig", 
-            function(data) {
-              console.log(data)
-              if (data.hasOwnProperty("max_snapshots_in_hassio")) {
-                $('#max_snapshots_in_hassio').val(data.max_snapshots_in_hassio)
-              } else {
-                $('#max_snapshots_in_hassio').val("")
-              }
-
-              if (data.hasOwnProperty("max_snapshots_in_google_drive")) {
-                $('#max_snapshots_in_google_drive').val(data.max_snapshots_in_google_drive)
-              } else {
-                $('#max_snapshots_in_google_drive').val("")
-              }
-
-              if (data.hasOwnProperty("days_between_snapshots")) {
-                $('#days_between_snapshots').val(data.days_between_snapshots)
-              } else {
-                $('#days_between_snapshots').val("")
-              }
-
-              if (data.hasOwnProperty("snapshot_time_of_day")) {
-                $('#snapshot_time_of_day').val(data.snapshot_time_of_day)
-              } else {
-                $('#snapshot_time_of_day').val("")
-              }
-
-              if (data.hasOwnProperty("send_error_reports")) {
-                $('#send_error_reports').prop('checked', data.send_error_reports)
-              } else {
-                $('#send_error_reports').prop('checked', false)
-              }
-
-              if (data.hasOwnProperty("use_ssl")) {
-                $('#use_ssl').prop('checked', data.use_ssl)
-              } else {
-                $('#use_ssl').prop('checked', false)
-              }
-
-              if (data.hasOwnProperty("certfile")) {
-                $('#certfile').val(data.certfile)
-              } else {
-                $('#certfile').val("")
-              }
-
-              if (data.hasOwnProperty("keyfile")) {
-                $('#keyfile').val(data.keyfile)
-              } else {
-                $('#keyfile').val("")
-              }
-
-              if (data.hasOwnProperty("require_login")) {
-                $('#require_login').prop('checked', data.require_login)
-              } else {
-                $('#require_login').prop('checked', false)
-              }
-
-              if (data.hasOwnProperty("notify_for_stale_snapshots")) {
-                $('#notify_for_stale_snapshots').prop('checked', data.notify_for_stale_snapshots)
-              } else {
-                $('#notify_for_stale_snapshots').prop('checked', false)
-              }
-
-              if (data.hasOwnProperty("enable_snapshot_stale_sensor")) {
-                $('#enable_snapshot_stale_sensor').prop('checked', data.enable_snapshot_stale_sensor)
-              } else {
-                $('#enable_snapshot_stale_sensor').prop('checked', false)
-              }
-
-              if (data.hasOwnProperty("enable_snapshot_state_sensor")) {
-                $('#enable_snapshot_state_sensor').prop('checked', data.enable_snapshot_state_sensor)
-              } else {
-                $('#enable_snapshot_state_sensor').prop('checked', false)
-              }
-
-              if (data.hasOwnProperty("generational_days") || data.hasOwnProperty("generational_weeks") || data.hasOwnProperty("generational_months") || data.hasOwnProperty("generational_years")) {
-                $('#generational_enabled').prop('checked', true)
-              } else {
-                $('#generational_enabled').prop('checked', false)
-              }
-
-              if (data.hasOwnProperty("generational_days")) {
-                $('#generational_days').val(data.generational_days)
-              } else {
-                $('#generational_days').val("0")
-              }
-
-              if (data.hasOwnProperty("generational_weeks")) {
-                $('#generational_weeks').val(data.generational_weeks)
-              } else {
-                $('#generational_weeks').val("0")
-              }
-              
-              if (data.hasOwnProperty("generational_months")) {
-                $('#generational_months').val(data.generational_months)
-              } else {
-                $('#generational_months').val("0")
-              }
-              
-              if (data.hasOwnProperty("generational_years")) {
-                $('#generational_years').val(data.generational_years)
-              } else {
-                $('#generational_years').val("0")
-              }
-
-              if (data.hasOwnProperty("generational_day_of_month")) {
-                $('#generational_day_of_month').val(data.generational_day_of_month)
-              } else {
-                $('#generational_day_of_month').val("1")
-              }
-
-              if (data.hasOwnProperty("generational_day_of_year")) {
-                $('#generational_day_of_year').val(data.generational_day_of_year)
-              } else {
-                $('#generational_day_of_year').val("1")
-              }
-
-              if (data.hasOwnProperty("generational_day_of_week")) {
-                $('#generational_day_of_week').val(data.generational_day_of_week)
-              } else {
-                $('#generational_day_of_week').val("mon")
-              }
-
-              if (data.hasOwnProperty("snapshot_password")) {
-                $('#snapshot_password').val(data.snapshot_password)
-              } else {
-                $('#generational_day_of_week').val("")
-              }
-
-              $("#settings_error").hide()
-              M.updateTextFields();
-              sslChanged();
-              genChanged();
-            }, "json")
-    }
-
-    function saveSettings() {
-      //$('#settings_form').validate();
-      if (!document.getElementById('settings_form').checkValidity()) {
-        $("#settings_error").show();
-        return;
-      }
-             
-      console.log($('#settings_form').serialize());
-      var jqxhr = $.get("saveconfig?" + $('#settings_form').serialize(), 
-            function(data) {
-              if (!errorToast(data)) {
-                M.Modal.getInstance(document.getElementById("settings_modal")).close();
-              }
-            }, "json")
-        .fail(
-          function(e) {
-            errorToast(e)
-          }
-        )
-    }
-
-    function errorReports(send) {
-      var jqxhr = $.get("errorreports?send=" + send)
-      $('#error_reports_card').fadeOut(500)
-    }
-
-    function triggerSync() {
-      toast("Syncing now...")
-       var jqxhr = $.get("backupnow", 
-            function(data) {
-              refreshstats();
-              toast("Done")
-            }, "json")
-    }
-
-  	function toast (text) {
-    		M.toast({html: text});
-  	}
-
-    // Triggers showing a modal confirmation dialog to delete a snapshot
-  	function confirmDeleteSnapshot(slug, inDrive, inHA) {
-      $("#delete_drive").attr("onClick", "deleteSnapshot('"+slug+"',"+inDrive+",false)");
-      $("#delete_ha").attr("onClick", "deleteSnapshot('"+slug+"',false,"+inHA+")");
-      $("#delete_both").attr("onClick", "deleteSnapshot('"+slug+"',"+inDrive+","+inHA+")");
-  		if (inDrive && inHA) {
-  			$("#delete_text").text("Are you sure you want to delete this snapshot?  It isn't backed up, so it will be gone forever.");
-  			$("#delete_drive").show();
-  			$("#delete_ha").show();
-  			$("#delete_both").show();
-  		} else if (inDrive && !inHA) {
-  			$("#delete_text").text("Are you sure you want to delete this snapshot form Google Drive?  It isn't stored in Home Assistant, so it will be gone forever.");
-  			$("#delete_drive").show();
-  			$("#delete_ha").hide();
-  			$("#delete_both").hide();
-  		} else if (!inDrive && inHA) {
-  			$("#delete_text").text("Are you sure you want to delete this snapshot?  It isn't backed up, so it will be gone forever.");
-  			$("#delete_drive").hide();
-  			$("#delete_ha").show();
-  			$("#delete_both").hide();
-  		}
-    }
-
-    function deleteSnapshot(slug, drive, ha) {
-      //console.log("Delete: " + slug + " Drive: " + drive + " HA: " + ha)
-      message = "Deleting snapshot from ";
-      if (drive && ha) {
-        message += "Hass.io and Google Drive"
-      } else if (drive) {
-        message += "Google Drive"
-      } else if (ha) {
-        message += "Hass.io"
-      } else {
-        message += "<i>...nowhere?</i>"
-      }
-      toast(message);
-      // Send the delete request
-      var deleteRequest = $.get( "deleteSnapshot?slug="+slug+"&drive="+drive+"&ha="+ha+"", 
-          function(data) {
-            if (data.hasOwnProperty("error_details")) {
-              errorToast(data)
-            } else {
-              toast(data.message);
-            }
-            refreshstats();
-          }, "json")
-        .fail(
-          function(e) {
-            errorToast(e)
-          }
-        )
-    }
-
-    function htmlEntities(str) {
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace("'", "&#39;");
-  }
-
-    function errorToast(error) {
-      message = "";
-      details = "";
-      var isError = false;
-      if (error.hasOwnProperty("message") && error.hasOwnProperty("error_details")) {
-        // Its an error messag form the server
-        message = error.message;
-        details = error.error_details;
-        isError = true;
-      } else if (error.hasOwnProperty("status") && error.hasOwnProperty("statusText") && error.hasOwnProperty("responseText")) {
-        // Its an HTTP error, so format appropriately
-        message = "Got unexpected HTTP error " + error.status + ": " + error.statusText;
-        details = error.responseText;
-        isError = true;
-      } else if (error.hasOwnProperty("error")) {
-        message = error.error
-        details = JSON.stringify(error, undefined, 2)
-        isError = true;
-      } else if (error.hasOwnProperty("message")) {
-        message = error.message
-        //details = JSON.stringify(error, undefined, 2)
-        isError = false;
-      } else {
-        message = "Got an unexpected error"
-        details = JSON.stringify(error, undefined, 2)
-        isError = true;
-      }
-
-      button_text = ""
-      if (details.length > 0) {
-        button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
-        $('#error_details_paragraph').text(details);
-      }
-      
-      console.log(error)
-      toast(message + button_text);
-      return isError;
-    }
-    // Refreshes the display with stats from the server.
-    function refreshstats() {
-  		var jqxhr = $.get( "getstatus", function(data) {
-  		  $('#ha_snapshots').empty().append(data.ha_snapshots);
-  		  $('#drive_snapshots').empty().append(data.drive_snapshots);
-        $('#last_snapshot').empty().append(data.last_snapshot);
-        $('#next_snapshot').empty().append(data.next_snapshot);
-  		  $('#drive_button').attr("href","https://drive.google.com/drive/u/0/folders/" + data.folder_id);
-  		  snapshot_div = $('#snapshots')
-  		  snapshot_div.html("")
-  		  var count = 0;
-  		  for (var key in data.snapshots) {
-  		    if (data.snapshots.hasOwnProperty(key)) {
-  		    	count++;
-  		    	snapshot = data.snapshots[key];
-  		    	inDrive = snapshot.inDrive;
-  		    	inHA = snapshot.inHA;
-  		    	button = `<button data-target="deletemodal" class="btn modal-trigger" onClick="confirmDeleteSnapshot('` + snapshot.slug + `', `+inDrive+`, `+inHA+`);return false;">Delete</button>`
-  		    	if (!inDrive && !inHA) {
-  		    		button = ""
-  		    	}
-  		        snapshot_div.append(`
-  		        	<div class=\"row\">
-              	<div class=\"col s1\"><i class=\"large material-icons\" style=\"font-size: 30px\">archive</i></div>
-              	<div class=\"col s8\">` + snapshot['name'] + `<br/>Size: ` + snapshot['size']+  `</div>
-              	<div class=\"col s3\"><b>` + snapshot['status']+  `</b><br/>
-              	`+button+`</div>
-          	</div>
-              <div class=\"divider\"></div>`);
-  		    }
-  		  }
-
-  		  if (count ==0) {
-  		  	snapshot_div.html("<div class='row'><div class='col s1'></div><div class='col s2 valign-wrapper center' style=\"font-size: 90px\"><i class='red-text text-darken-4 large material-icons'>block</i></div><div class='col s7 center valign-wrapper'><p>You don't have any snapshots in Google Drive or Home Assistant.  Use the button to the right to create a snapshot and start backing up.</p><div><div>")
-  		  }
-
-        if (data.last_error == "creds_bad") {
-          $('#error_card').css("display", "none");
-          $('#drive_full_card').css("display", "none");
-          $('#creds_bad_card').fadeIn(400);
-        } else if (data.last_error == "drive_full") {
-          $('#error_card').css("display", "none");
-          $('#drive_full_card').fadeIn(400);
-          $('#creds_bad_card').css("display", "none");
-        } else if (data.last_error != "") {
-  		  	$('#error_paragraph').text(data.last_error);
-  		  	desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and including that here.  :\n\n" + data.last_error;
-  		  	parts = data.last_error.split('\n');
-  		  	var title = "Unknown"
-  		  	for (var i = parts.length-1; i >=0; i--) {
-  		  		if (parts[i].trim() != "") {
-  			  		title = parts[i].trim();
-  			  		break;
-  			  	}
-  		  	}
-  		  	$('#error_github_link').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title="+encodeURIComponent(title)+"&assignee=sabeechen&body=" + encodeURIComponent(desc));
-  		  	$('#error_github_search').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + title.replace("\"", "\\\"") + "\""));
-          $('#error_card').fadeIn(400);
-          $('#drive_full_card').css("display", "none");
-          $('#creds_bad_card').css("display", "none");
-  		  } else {
-          $('#error_card').css("display", "none");
-          $('#drive_full_card').css("display", "none");
-          $('#creds_bad_card').css("display", "none");
-        }
-        if (data.ask_error_reports) {
-          $('#error_reports_card').fadeIn(500);
-        }
-        $('.tooltipped').tooltip({"exitDelay": 1000});
-  		}, "json")
-  		  
-  		  .fail(function(e) {
-  		    console.log("Status update failed: ")
-  		    console.log(e)
-  		  })
-    }
-    
-    function simulateError() {
-      $.get("/simerror?error=This%20is%20a%20fake%20error.%20Select%20'Stop%20Simulated%20Error'%20from%20the%20menu%20to%20stop%20it.", 
-        function(data) {
-          triggerSync()
-        })
-    }
-
-    function stopSimulateError() {
-      $.get("/simerror?error=", 
-        function(data) {
-          triggerSync()
-        })
-}
-  
-  	$('#newsnapshotlink').click(
-      function(){
-  		  toast("Requesting snapshot (takes a few seconds)...");
-
-    		// request the snapshot
-    		var jqxhr = $.get( "triggerbackup", 
-            function(data) {
-        			console.log(data);
-        			if (!data.hasOwnProperty("name")) {
-        				errorToast(data)
-        			} else {
-        				toast("Requested new backup '" + data.name + "'");
-                refreshstats();
-                triggerBackup();
-              }
-              
-      		  }, "json")
-          .fail(
-            function(e) {
-		          errorToast(e)
-		        }
-          )
-  		 
-  		  return false; 
-      }
-    );
-
-
-    // Runs on document load
-  	$(document).ready(function(){
-      // Needed to make modal dialogs work.
-	    $('.modal').modal();
-
-      // Every 5 seconds, refresh the metrics form the server.
-      window.setInterval(refreshstats, 5000);
-      refreshstats();
-
-      $('.tooltipped').tooltip();
-      $(".dropdown-trigger").dropdown();
-      $('.collapsible').collapsible();
-	  });
-  </script>
-  </body>
 </html>

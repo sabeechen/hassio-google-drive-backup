@@ -5,7 +5,6 @@ import os
 
 
 def test_BasicConfig(mocker) -> None:
-    
     assertConfigValue(
         method=Config.maxSnapshotsInHassio,
         default=4,
@@ -108,6 +107,26 @@ def test_BasicConfig(mocker) -> None:
         html_name="enable_snapshot_state_sensor",
         override=False,
         default_removes=True)
+
+
+def test_partial_snapshots():
+    assertConfigValue(
+        method=Config.excludeFolders,
+        default="",
+        param_name="exclude_folders",
+        html_name="exclude_folders",
+        override="something",
+        default_removes=True,
+        remove_if_not={"partial_snapshots": True})
+
+    assertConfigValue(
+        method=Config.excludeAddons,
+        default="",
+        param_name="exclude_addons",
+        html_name="exclude_addons",
+        override="something",
+        default_removes=True,
+        remove_if_not={"partial_snapshots": True})
 
 
 def test_GenerationalConfig(mocker) -> None:

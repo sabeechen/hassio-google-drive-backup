@@ -1,3 +1,21 @@
+## [0.6] - 2019-04-03
+### Added
+- Partial snapshot support.  Chose the folders and add-ons you want included in snapshots from the settings menu.
+-  Download snapshots form the new "Actions" menu.
+- Upload snapshots directly from Google Drive with one click!
+- Direct link to the restore web UI in Hass.io
+
+### Changes
+- Numerous UI tweaks.  The web-UI now renders well on any size screen (mobile-device sized included).
+- Log screen now updates dynamically.
+
+### Fixes
+- A memory error for uploading very large snapshots (previously they were held in RAM).
+- Snapshot status sensor displayed a convoluted string for the last snapshot, now it shows the date. 
+
+
+
+
 # Changelog
 ## [0.7] - 2019-04-11
 

@@ -6,7 +6,6 @@ from typing import Optional, List
 
 
 class Watcher(LogBase):
-
     def __init__(self, config: Config):
         self.last_list: Optional[List[str]] = None
         self.config: Config = config
@@ -18,7 +17,6 @@ class Watcher(LogBase):
                 self.last_list.sort()
                 return False
             dirs = os.listdir(self.config.backupDirectory())
-            self.debug("Backup directory: {}".format(dirs))
             dirs.sort()
             if dirs == self.last_list:
                 return False

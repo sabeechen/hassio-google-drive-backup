@@ -1,4 +1,4 @@
-## [0.6] - 2019-04-03
+## [0.8] - 2019-04-06
 ### Added
 - Partial snapshot support.  Chose the folders and add-ons you want included in snapshots from the settings menu.
 -  Download snapshots form the new "Actions" menu.

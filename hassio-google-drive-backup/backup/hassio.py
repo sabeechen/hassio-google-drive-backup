@@ -1,5 +1,4 @@
 import requests
-import json
 from requests import Response
 from pprint import pformat
 from datetime import datetime
@@ -34,7 +33,29 @@ class Hassio(LogBase):
         self.snapshot_thread.daemon = True
         self.pending_snapshot: Optional[Snapshot] = None
         self.pending_snapshot_error: Optional[Exception] = None
+        self.self_info = None
+        self.host_info = None
+        self.ha_info = None
         self.lock: Lock = Lock()
+
+    def loadInfo(self) -> None:
+        self.self_info = self.readAddonInfo()
+        self.host_info = self.readHostInfo()
+        self.ha_info = self.getHaInfo()
+        self.config.setIngressInfo(self.host_info)
+
+    def getIngressUrl(self):
+        if self.config.useIngress():
+            try:
+                if self.ha_info['ssl']:
+                    protocol = "https"
+                else:
+                    protocol = "http"
+                return "{0}://{1}:{2}/hassio/ingress/{3}".format(protocol, self.host_info['hostname'], self.ha_info['port'], self.self_info['slug'])
+            except KeyError:
+                return "/"
+        else:
+            return "/"
 
     def _getSnapshot(self) -> None:
         try:
@@ -182,6 +203,9 @@ class Hassio(LogBase):
 
     def readAddonInfo(self) -> Dict[str, Any]:
         return self._getHassioData(self.config.hassioBaseUrl() + "addons/self/info")
+
+    def readHassosInfo(self) -> Dict[str, Any]:
+        return self._getHassioData(self.config.hassioBaseUrl() + "hassos/info")
 
     def readHostInfo(self) -> Dict[str, Any]:
         return self._getHassioData(self.config.hassioBaseUrl() + "info")

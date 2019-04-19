@@ -52,16 +52,14 @@ class Engine(LogBase):
         self.last_refresh: datetime = self.time.now() + relativedelta(hours=-6)
         self.notified: bool = False
         self.last_success: datetime = self.time.now()
-        self.addon_info: Optional[Dict[Any, Any]] = None
-        self.host_info: Optional[Dict[Any, Any]] = None
         self.sim_error: Optional[str] = None
         self.next_error_rety: datetime = self.time.now()
         self.next_error_backoff: int = ERROR_BACKOFF_MIN_SECS
         self.one_shot: bool = False
         self.snapshots_stale: bool = False
         self.last_error_reported = False
-        self.homeassistant_info = None
         self.firstSync = False
+        self.cred_version = 0
 
     def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
@@ -69,9 +67,13 @@ class Engine(LogBase):
             return GenerationalScheme(self.time, gen_config)
         else:
             return OldestScheme()
+    
+    def credentialsVersion(self):
+        return self.cred_version
 
     def saveCreds(self, creds: Credentials) -> None:
         self.drive.saveCreds(creds)
+        self.cred_version += 1
         self.one_shot = True
 
     def simulateError(self, error: Optional[str]) -> None:
@@ -90,9 +92,6 @@ class Engine(LogBase):
         self.last_refresh = self.time.now()
         try:
             self.lock.acquire()
-            if self.addon_info is None:
-                self.host_info = self.hassio.readHostInfo()
-                self.addon_info = self.hassio.readAddonInfo()
             self._checkForBackup()
             self.snapshots_stale = False
 
@@ -127,8 +126,8 @@ class Engine(LogBase):
             message = str(e)
         self.info("Sending error report (see settings to disable)")
         version = "unknown"
-        if 'version' in self.addon_info:
-            version = self.addon_info['version']
+        if 'version' in self.hassio.self_info:
+            version = self.hassio.self_info['version']
         url: str = "https://philosophyofpen.com/login/error.py?error={0}&version={1}".format(quote(message), quote(version))
         try:
             get(url, timeout=5)
@@ -168,11 +167,11 @@ class Engine(LogBase):
             if self.time.now() >= self.last_success + timedelta(minutes=self.config.snapshotStaleMinutes()):
                 self.snapshots_stale = True
                 if not self.notified:
-                    if self.addon_info and self.host_info:
-                        url = self.addon_info["webui"].replace("[HOST]", self.host_info["hostname"])
-                        self.hassio.sendNotification("Hass.io Google Drive is Having Trouble", "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the [status page](" + url + ") for details.")
+                    if self.config.useIngress():
+                        url = "/hassio/ingress/" + self.hassio.self_info['slug']
                     else:
-                        self.hassio.sendNotification("Hass.io Google Drive is Having Trouble", "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the status page for details.")
+                        url = self.hassio.self_info["webui"].replace("[HOST]", self.hassio.host_info["hostname"])
+                    self.hassio.sendNotification("Hass.io Google Drive Backup is Having Trouble", "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the [status page](" + url + ") for details.")
                     self.notified = True
         except Exception as e:
             # Just eat this error, since we got an error updating status abotu the error
@@ -303,11 +302,10 @@ class Engine(LogBase):
 
     def _checkForBackup(self) -> None:
         # Get the local and remote snapshots available
+        self.hassio.loadInfo()
         self._syncSnapshots()
-        if not self.homeassistant_info:
-            self.homeassistant_info = self.hassio.getHaInfo()
 
-        if not self.driveEnabled:
+        if not self.driveEnabled():
             self.hassio.updateSnapshotsSensor("waiting", self.snapshots)
             return
 
@@ -331,6 +329,11 @@ class Engine(LogBase):
         should_backup.reverse()
         should_backup = list(take(should_backup, self.config.maxSnapshotsInGoogleDrive()))
         should_backup = list(filter(NOT_DRIVE_LAMBDA, should_backup))
+
+        # remove newer snapshots that are only in Drive
+        for snapshot in self.snapshots:
+            if len(should_backup) > 0 and snapshot.isInDrive() and not snapshot.isInHA() and snapshot.date() > should_backup[0].date():
+                should_backup.remove(should_backup[0])
 
         for snapshot in self.snapshots:
             snapshot.setWillBackup(snapshot in should_backup)

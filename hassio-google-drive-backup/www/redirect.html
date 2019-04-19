@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
+    <title>Hassio Google Drive Backup</title>
+
+    <!-- CSS  -->
+    <link href="css/icons.css" rel="stylesheet">
+    <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection" />
+    <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection" />
+    <link rel="icon" type="image/png" href="/images/favicon.png">
+    <script src="js/jquery.js"></script>
+    <script src="js/materialize.js"></script>
+    <script src="js/init.js"></script>
+    <script src="js/scripts.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/restore.js"></script>
+
+    <script type="text/javascript">
+
+        function redirect() {
+            let searchParams = new URLSearchParams(window.location.search);
+            if (searchParams.has('to')) {
+                window.location.assign(searchParams.get('to'));
+            }
+            else {
+                window.location.assign("{url}");
+            }
+        }
+
+        function sleep (time) {
+            return new Promise((resolve) => setTimeout(resolve, time));
+        }
+
+        $(document).ready(function () {
+            sleep(3000).then(() => {
+                redirect();
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row" id="hello_card">
+            <div class="col s12 m9">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">Redirecting...</span>
+                        <p>You should be redirected to <a href="{url}">{url}</a> in a moment. Click below to be redirected now.
+                        </p>
+                        <div class="card-action white-text">
+                            <a target="_blank" class="waves-effect waves-light btn" onclick="redirect(); return false;">go now</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

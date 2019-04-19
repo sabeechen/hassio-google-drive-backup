@@ -12,6 +12,7 @@ from backup.time import Time
 from threading import Thread
 from time import sleep
 from backup.config import HASSIO_OPTIONS_FILE
+from backup.logbase import LogBase
 
 
 def main() -> None:
@@ -24,8 +25,19 @@ def main() -> None:
     else:
         config: Config = Config(sys.argv[1:])
 
-    drive: Drive = Drive(config)
     hassio: Hassio = Hassio(config)
+    while True:
+        try:
+            hassio.loadInfo()
+            break
+        except Exception:
+            LogBase().critical("Unable to reach Hassio supervisor.  Please ensure the supervisor is running.")
+            sleep(10)
+
+    if config.warnIngress():
+        LogBase().warn("This add-on supports ingress but your verison of Home Assistant does not.  Please update to the latest verison of home Assistant.")
+
+    drive: Drive = Drive(config)
     engine: engine = Engine(config, drive, hassio, time)  # type: ignore
     server: Server = Server("www", engine, config)
 

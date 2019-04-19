@@ -16,6 +16,7 @@ from .logbase import LogBase
 from typing import Dict, Any, Optional
 from .snapshots import Snapshot
 from cherrypy.lib.static import serve_file
+from pathlib import Path
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -42,6 +43,9 @@ class Server(LogBase):
         self.config: Config = config
         self.auth_cache: Dict[str, Any] = {}
         self.last_log_index = 0
+        self.host_server = None
+        self.ingress_server = None
+        self.running = False
 
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()  # type: ignore
@@ -73,6 +77,10 @@ class Server(LogBase):
         status['drive_snapshots'] = self.engine.driveSnapshotCount()
         status['ha_snapshots'] = self.engine.haSnapshotCount()
         status['restore_link'] = self.getRestoreLink()
+        status['drive_enabled'] = self.engine.driveEnabled()
+        status['cred_version'] = self.engine.credentialsVersion()
+        status['warn_ingress_upgrade'] = self.config.warnExposeIngressUpgrade()
+        status['ingress_url'] = self.engine.hassio.getIngressUrl()
         next: Optional[datetime] = self.engine.getNextSnapshotTime()
         if not next:
             status['next_snapshot'] = "Disabled"
@@ -91,13 +99,15 @@ class Server(LogBase):
         return status
 
     def getRestoreLink(self):
-        if not self.engine.homeassistant_info:
+        if self.config.useIngress():
+            return "/hassio/snapshots"
+        if not self.engine.hassio.ha_info:
             return ""
-        if self.engine.homeassistant_info['ssl']:
+        if self.engine.hassio.ha_info['ssl']:
             url = "https://"
         else:
             url = "http://"
-        url = url + "{host}:" + str(self.engine.homeassistant_info['port']) + "/hassio/snapshots"
+        url = url + "{host}:" + str(self.engine.hassio.ha_info['port']) + "/hassio/snapshots"
         return url
 
     def getError(self) -> str:
@@ -120,13 +130,13 @@ class Server(LogBase):
 
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()
-    def manualauth(self, code: str = "", client_id="", client_secret="") -> None:
+    def manualauth(self, code: str = "", client_id: str = "", client_secret: str = "") -> None:
         if client_id != "" and client_secret != "":
             try:
                 # Redirect to the webpage that takes you to the google auth page.
                 self.oauth_flow_manual = OAuth2WebServerFlow(
-                    client_id=client_id,
-                    client_secret=client_secret,
+                    client_id=client_id.strip(),
+                    client_secret=client_secret.strip(),
                     scope=SCOPE,
                     redirect_uri=MANUAL_CODE_REDIRECT_URI,
                     include_granted_scopes='true',
@@ -139,18 +149,23 @@ class Server(LogBase):
                 return {
                     'error': "Couldn't create authorizatin URL, Google said:" + str(e)
                 }
-            raise cherrypy.HTTPRedirect(self.oauth_flow_manual.step1_get_authorize_url())
+            raise cherrypy.HTTPError()
         elif code != "":
             try:
                 self.engine.saveCreds(self.oauth_flow_manual.step2_exchange(code))
-                return {
-                    'auth_url': "/"
-                }
+                if self.config.useIngress() and 'ingress_url' in self.engine.hassio.self_info:
+                    return {
+                        'auth_url': self.engine.hassio.self_info['ingress_url']
+                    }
+                else:
+                    return {
+                        'auth_url': "/"
+                    }
             except Exception as e:
                 return {
                     'error': "Couldn't create authorizatin URL, Google said:" + str(e)
                 }
-            raise cherrypy.HTTPRedirect("/")
+            raise cherrypy.HTTPError()
 
     def auth(self, realm: str, username: str, password: str) -> bool:
         if username in self.auth_cache and self.auth_cache[username]['password'] == password and self.auth_cache[username]['timeout'] > nowutc():
@@ -205,9 +220,10 @@ class Server(LogBase):
             cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="hassio-google-drive-backup.log"'
 
         def content():
+            html = format == "colored"
             if format == "html":
                 yield "<html><head><title>Hass.io Google Drive Backup Log</title></head><body><pre>\n"
-            for line in self.getHistory(self.last_log_index):
+            for line in self.getHistory(self.last_log_index, html):
                 self.last_log_index = line[0]
                 if line:
                     yield line[1].replace("\n", "   \n") + "\n"
@@ -220,7 +236,10 @@ class Server(LogBase):
         if 'creds' in kwargs:
             creds = OAuth2Credentials.from_json(kwargs['creds'])
             self.engine.saveCreds(creds)
-        raise cherrypy.HTTPRedirect("/")
+        if self.config.useIngress():
+            return self.redirect("/hassio/ingress/" + self.engine.hassio.self_info['slug'])
+        else:
+            return self.redirect("/")
 
     @cherrypy.expose
     def simerror(self, error: str = "") -> None:
@@ -241,53 +260,69 @@ class Server(LogBase):
         return open("www/index.html")
 
     def run(self) -> None:
-        self.info("Starting server...")
+        if self.running:
+            self.info("Stopping server...")
+            cherrypy.engine.stop()
+
+        self.config.setIngressInfo(self.engine.hassio.host_info)
+
+        # unbind existing servers.
+        if self.host_server is not None:
+            self.host_server.unsubscribe()
+            self.host_server = None
+
         conf: Dict[Any, Any] = {
             'global': {
-                'server.socket_port': self.config.port(),
+                'server.socket_port': self.config.ingressPort(),
                 'server.socket_host': '0.0.0.0',
                 'engine.autoreload.on': False,
                 'log.access_file': '',
                 'log.error_file': '',
                 'log.screen': False,
                 'response.stream': True
-
             },
-            self.config.pathSeparator(): {
+            "/": {
                 'tools.staticdir.on': True,
-                'tools.staticdir.dir': os.getcwd() + self.config.pathSeparator() + self.root
+                'tools.staticdir.dir': os.getcwd() + self.config.pathSeparator() + self.root,
+                'tools.auth_basic.on': self.config.requireLogin(),
+                'tools.auth_basic.realm': 'localhost',
+                'tools.auth_basic.checkpassword': self.auth,
+                'tools.auth_basic.accept_charset': 'UTF-8'
             }
         }
 
-        if self.config.requireLogin():
-            conf[self.config.pathSeparator()].update({
-                'tools.auth_basic.on': True,
-                'tools.auth_basic.realm': 'localhost',
-                'tools.auth_basic.checkpassword': self.auth,
-                'tools.auth_basic.accept_charset': 'UTF-8'})
+        self.info("Starting server on port {}".format(self.config.ingressPort()))
 
-        if self.config.useSsl():
-            cherrypy.server.ssl_certificate = self.config.certFile()
-            cherrypy.server.ssl_private_key = self.config.keyFile()
-
-        cherrypy.engine.stop()
         cherrypy.config.update(conf)
-        cherrypy.tree.mount(self, self.config.pathSeparator(), conf)
+
+        if self.config.exposeExtraServer():
+            self.info("Starting server on port {}".format(self.config.port()))
+            self.host_server = cherrypy._cpserver.Server()
+            self.host_server.socket_port = self.config.port()
+            self.host_server._socket_host = "0.0.0.0"
+            self.host_server.subscribe()
+            if self.config.useSsl():
+                self.host_server.ssl_certificate = self.config.certFile()
+                self.host_server.ssl_private_key = self.config.keyFile()
+
+        cherrypy.tree.mount(self, "/", conf)
+
         cherrypy.engine.start()
-
         self.info("Server started")
+        self.running = True
 
-    @cherrypy.expose  # type: ignore
-    @cherrypy.tools.json_out()  # type: ignore
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def backupnow(self) -> Any:
         self.engine.doBackupWorkflow()
         return self.getstatus()
 
-    @cherrypy.expose  # type: ignore
-    @cherrypy.tools.json_out()  # type: ignore
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def getconfig(self) -> Any:
         data = self.config.config.copy()
         data['addons'] = self.engine.hassio.readSupervisorInfo()['addons']
+        data['support_ingress'] = self.config.useIngress()
         # get the latest list of add-ons
         return data
 
@@ -298,9 +333,20 @@ class Server(LogBase):
         else:
             self.config.setSendErrorReports(self.engine.hassio.updateConfig, False)
 
-    @cherrypy.expose  # type: ignore
-    @cherrypy.tools.json_out()  # type: ignore
-    @cherrypy.tools.json_in()  # type: ignore
+    @cherrypy.expose
+    def exposeserver(self, expose: str) -> None:
+        if expose == "true":
+            self.config.setExposeAdditionalServer(self.engine.hassio.updateConfig, True)
+        else:
+            self.config.setExposeAdditionalServer(self.engine.hassio.updateConfig, False)
+        try:
+            return {'redirect': self.engine.hassio.getIngressUrl()}
+        finally:
+            self.run()
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    @cherrypy.tools.json_in()
     def saveconfig(self, **kwargs) -> Any:
         try:
             self.config.update(self.engine.hassio.updateConfig, **kwargs)
@@ -334,13 +380,16 @@ class Server(LogBase):
             self.engine.doBackupWorkflow()
 
             if not found.isInHA():
-                {'message': "Soemthing wen't wrong, Hass.io didn't recognize the snapshot."}
+                {'message': "Soemthing wen't wrong, Hass.io didn't recognize the snapshot.  Please check the supervisor logs."}
             return {'message': "Snapshot uploaded"}
         except Exception as e:
             return {
                 'message': 'Failed to Upload snapshot',
                 'error_details': formatException(e)
             }
+
+    def redirect(self, url):
+        return Path("www/redirect.html").read_text().replace("{url}", url)
 
     @cherrypy.expose
     def download(self, slug):

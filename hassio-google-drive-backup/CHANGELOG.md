@@ -1,7 +1,22 @@
-## [0.8] - 2019-04-06
+## [0.9] - 2019-04-19
+### Added
+- Future support for ingress has been implemented but is currently disabled for compatibility reasons.  See [this issue](https://github.com/sabeechen/hassio-google-drive-backup/issues/19) for details. 
+- Added a help menu item.
+
+### Changes
+- Themed the interface in line with the default Home assistant colors.  I hope you like blue! Everything is blue.
+- The UI renders with a collapsed header when embedded in an iframe.  When used with ui-panel, it looks like a native part of the home assistant interface.
+- Collapsed right-side action items into a dropdown menu at the top of the page.
+- Redirects now occur through javascript, which will be necessary once ingress is enabled. 
+- Makes the manual authentication method a little less visible (its just behind a link)
+
+### Fixes
+- Add-on would delete and re-upload snapshots if you had a lot of newer ones sitting around in Drive and older ones sitting in Home Assistant.
+
+## [0.8] - 2019-04-16
 ### Added
 - Partial snapshot support.  Chose the folders and add-ons you want included in snapshots from the settings menu.
--  Download snapshots form the new "Actions" menu.
+- Download snapshots form the new "Actions" menu.
 - Upload snapshots directly from Google Drive with one click!
 - Direct link to the restore web UI in Hass.io
 
@@ -12,8 +27,6 @@
 ### Fixes
 - A memory error for uploading very large snapshots (previously they were held in RAM).
 - Snapshot status sensor displayed a convoluted string for the last snapshot, now it shows the date. 
-
-
 
 
 # Changelog

@@ -62,44 +62,44 @@
             }
             running = true;
             $.ajax(
-            {
-                url: "log?format=text&catchup=true",
-                success: function (data) {
-                    console.log(data);
-                    if (data.length > 0) { 
-                        $("#logwindow").append(data);
-                        $("#log_container").animate({ scrollTop: $('#log_container').prop("scrollHeight")}, 250);
-                    }
-                    if (toasted) {
-                        M.Toast.dismissAll();
-                        toasted = false;
-                    }
-                },
-                error: (
-                    function () {
-                        if (!toasted) {
-                            toasted = true;
-                            M.toast({ html: 'Lost connection to add-on, will keep trying to connect...', displayLength: 9999999 })
+                {
+                    url: "log?format=colored&catchup=true",
+                    success: function (data) {
+                        console.log(data);
+                        if (data.length > 0) {
+                            $("#logwindow").append(data);
+                            $("#log_container").animate({ scrollTop: $('#log_container').prop("scrollHeight") }, 250);
                         }
-                    }
-                ),
-                complete: function() {
-                    running = false;
-                },
-                timeout: 1000
-            });
+                        if (toasted) {
+                            M.Toast.dismissAll();
+                            toasted = false;
+                        }
+                    },
+                    error: (
+                        function () {
+                            if (!toasted) {
+                                toasted = true;
+                                M.toast({ html: 'Lost connection to add-on, will keep trying to connect...', displayLength: 9999999 })
+                            }
+                        }
+                    ),
+                    complete: function () {
+                        running = false;
+                    },
+                    timeout: 1000
+                });
         }
 
         $(document).ready(function () {
             $('#hello_card').data("closed", false);
             resize();
             $(window).resize(resize);
-            
+
             $.get("log?format=text",
                 function (data) {
                     console.log("Loading logs");
                     $("#logwindow").html(data);
-                    $("#log_container").animate({ scrollTop: $('#log_container').prop("scrollHeight")}, 250);
+                    $("#log_container").animate({ scrollTop: $('#log_container').prop("scrollHeight") }, 250);
                 })
                 .fail(
                     function (e) {
@@ -113,39 +113,40 @@
 
 <body>
     <div class="wrapper">
-            <div class="row" id="hello_card">
-                <div class="col s12 m9">
-                    <div class="card">
-                        <div class="card-content">
-                            <span class="card-title">A Message from the Developer</span>
-                            <p>Thanks for taking a look at the logs! I did my best to make this work well, but if you're
-                                here then maybe you've run into a problem. I'm only human after all. You can file an
-                                issue on the project <a
-                                    href="https://github.com/sabeechen/hassio-google-drive-backup/issues">GitHub issue
-                                    tracker</a>. I take bugs pretty seriously and I want this add-on to work well for
-                                you. You can download a copy of these logs to attach to an issue by clicking <a
-                                    href=log?format=download>here</a>.</p>
-                            <p style="margin-left: 30px;">-- Stephen <3</p> <div class="card-action white-text">
-                                    <a target="_blank" class="waves-effect waves-light btn"
-                                        onclick="closeHello();">Dismiss</a>
+        <div class="row" id="hello_card">
+            <div class="col s12 m9">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">A Message from the Developer</span>
+                        <p>Thanks for taking a look at the logs! I did my best to make this work well, but if you're
+                            here then maybe you've run into a problem. I'm only human after all. You can file an
+                            issue on the project <a
+                                href="https://github.com/sabeechen/hassio-google-drive-backup/issues">GitHub issue
+                                tracker</a>. I take bugs pretty seriously and I want this add-on to work well for
+                            you. You can download a copy of these logs to attach to an issue by clicking <a
+                                href=log?format=download>here</a>.</p>
+                        <p style="margin-left: 30px;">-- Stephen &lt;3</p>
+                        <div class="card-action white-text">
+                            <a target="_blank" class="waves-effect waves-light btn" onclick="closeHello();">Dismiss</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div id="log_container" style="background-color: black; overflow:scroll; color: white; width: 100%;">
-            <pre id="logwindow" style="margin: 10px;"> 
+            <pre id="logwindow" style="margin: 10px;">
                 Loading logs...
             </pre>
         </div>
         <div class="row" style="margin-bottom: 5px;">
-                <div class="col s12">
-                  <label>
-                    <input type="checkbox" name="pause" id="pause" class="filled-in"/>
+            <div class="col s12">
+                <label>
+                    <input type="checkbox" name="pause" id="pause" class="filled-in" />
                     <span>Pause output</span>
-                  </label>
-                </div>
-              </div>
+                </label>
+            </div>
+        </div>
     </div>
 </body>
+
 </html>

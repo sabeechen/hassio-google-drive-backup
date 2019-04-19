@@ -57,6 +57,7 @@ function loadSettings() {
         setInputValue("generational_day_of_month", data.generational_day_of_month);
         setInputValue("generational_day_of_year", data.generational_day_of_year);
         setInputValue("generational_day_of_week", data.generational_day_of_week);
+        setInputValue("expose_extra_server", data.expose_extra_server); 
 
         setInputValue("snapshot_password", data.snapshot_password);
 
@@ -99,12 +100,25 @@ function loadSettings() {
             .replace("{checked}", exclude_addons.includes(addon.slug) ? "" : "checked");
           $("#settings_addons").append(template);
         }
+
+        // Set helper text for additional server info depending on ingress support
+        if (data.support_ingress) {
+          $("#expose_extra_server_label").html("Expose an additional UI server on port 1627")
+          $("#expose_extra_server_help").html("Your version of Home Assistant supports ingress, so you can access the UI securely by clicking \"WEB UI\" form the add-on page.  If you'd also like to expose the UI from a different port with SSL and authentication options of your own choosing, select this box.")
+          $("#expose_extra_server").attr("disabled", false);
+        } else {
+          $("#expose_extra_server").attr("checked", true);
+          $("#expose_extra_server").attr("disabled", true);
+          $("#expose_extra_server_label").html("UI Server Options");
+          $("#expose_extra_server_help").html("Choose the SSL and authentication settings you'd like to use for this interface below.  In a future version of this add-on, this configuration will be optional if your version of Home Assistant supports ingress.");
+        }
   
         $("#settings_error").hide();
         M.updateTextFields();
         $("#use_ssl").trigger("change");
         $("#generational_enabled").trigger("change");
         $("#partial_snapshots").trigger("change");
+        $("#expose_extra_server").trigger("change");
         M.Modal.getInstance(document.querySelector('#settings_modal')).open();
       }, "json")
   }

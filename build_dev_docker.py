@@ -6,6 +6,7 @@ from typing import List
 def main() -> None:
     version: str = "devtesting"
     client = docker.from_env()
+    #platforms: List[str] = ["amd64"] #armv7"]
     platforms: List[str] = ["armv7"]
     for platform in platforms:
         tag_platform = "sabeechen/hassio-google-drive-backup-{0}:{1}".format(platform, version)

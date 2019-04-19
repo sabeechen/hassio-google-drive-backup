@@ -81,15 +81,15 @@ def hainfo() -> str:
     return formatDataResponse(
         {
             "version": "0.91.3",
-            "last_version": "0.91.3",
+            "last_version": "0.91.2",
             "machine": "raspberrypi3",
             "ip_address": "172.30.32.1",
             "arch": "armv7",
             "image": "homeassistant/raspberrypi3-homeassistant",
             "custom": True,
             "boot": True,
-            "port": 8123,
-            "ssl": True,
+            "port": 8099,
+            "ssl": False,
             "watchdog": True,
             "wait_boot": 600
         }
@@ -268,7 +268,8 @@ def download(slug: str) -> Any:
 @app.route('/addons/self/info', methods=['GET'])
 def hostInfo() -> str:
     return formatDataResponse({
-        "webui": "http://[HOST]:1627/"
+        "webui": "http://[HOST]:1627/",
+        'ingress_url': '/index'
     })
 
 
@@ -276,7 +277,7 @@ def hostInfo() -> str:
 def selfInfo() -> str:
     return formatDataResponse({
         "supervisor": "version",
-        "homeassistant": "version",
+        "homeassistant": "0.91.3",
         "hassos": "null|version",
         "hostname": "localhost",
         "machine": "type",

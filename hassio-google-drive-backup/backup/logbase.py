@@ -1,4 +1,5 @@
 import logging
+import sys
 
 HISTORY_SIZE = 1000
 
@@ -10,15 +11,42 @@ class HistoryHandler(logging.Handler):
         self.history_index = 0
 
     def emit(self, record):
-        self.history[self.history_index % HISTORY_SIZE] = self.format(record)
+        self.history[self.history_index % HISTORY_SIZE] = (record.levelno, self.format(record))
         self.history_index += 1
 
-    def getHistory(self, start=0):
+    def getHistory(self, start=0, html=False):
         end = self.history_index
         if end - start >= HISTORY_SIZE:
             start = end - HISTORY_SIZE
         for x in range(start, end):
-            yield (x + 1, self.history[x % HISTORY_SIZE])
+            item = self.history[x % HISTORY_SIZE]
+            if html:
+                if item[0] == logging.WARN:
+                    style = "console-warning"
+                elif item[0] == logging.ERROR:
+                    style = "console-error"
+                elif item[0] == logging.DEBUG:
+                    style = "console-debug"
+                elif item[0] == logging.CRITICAL:
+                    style = "console-critical"
+                elif item[0] == logging.FATAL:
+                    style = "console-fatal"
+                elif item[0] == logging.WARNING:
+                    style = "console-warning"
+                else:
+                    style = "console-default"
+                line = "<span class='" + style + "'>" + item[1] + "</span>"
+                yield (x + 1, line)
+            else:
+                yield (x + 1, item[1])
+
+
+class ColorHandler(logging.Handler):
+    def __init__(self):
+        super(ColorHandler, self).__init__()
+
+    def emit(self, record: logging.LogRecord):
+        sys.stdout.write(self.format(record) + "\n")
 
 
 logger: logging.Logger = logging.getLogger("appwide")
@@ -57,5 +85,5 @@ class LogBase(object):
     def setConsoleLevel(self, level) -> None:
         console_handler.setLevel(level)
 
-    def getHistory(self, index=0):
-        return history_handler.getHistory(index)
+    def getHistory(self, index, html):
+        return history_handler.getHistory(index, html)

@@ -129,6 +129,72 @@ def test_partial_snapshots():
         remove_if_not={"partial_snapshots": True})
 
 
+def test_expose_extra_server(mocker) -> None:
+    assertConfigValue(
+        method=Config.exposeExtraServer,
+        default=False,
+        param_name="expose_extra_server",
+        html_name="expose_extra_server",
+        override=True,
+        default_removes=True)
+
+    assert Config(extra_config={"expose_extra_server": True}).exposeExtraServer() is True
+    assert Config(extra_config={"expose_extra_server": True}).useIngress() is False
+    assert Config(extra_config={"expose_extra_server": True}).warnIngress() is False
+
+    config: Config = Config()
+
+    # Test strange version
+    config.setIngressInfo({'homeassistant': 'badversion'})
+    assert config.useIngress() is False
+    assert config.warnIngress() is True
+
+    # Test empty version
+    config.setIngressInfo({'homeassistant': ''})
+    assert config.useIngress() is False
+    assert config.warnIngress() is True
+
+    # Test null version
+    config.setIngressInfo({})
+    assert config.useIngress() is False
+    assert config.warnIngress() is True
+
+    # Test weird minimum version
+    config.setIngressInfo({'homeassistant': '0.91.3.otherinfo'})
+    assert config.useIngress() is True
+    assert config.warnIngress() is False
+
+    # Test older
+    config.setIngressInfo({'homeassistant': '0.91.2'})
+    assert config.useIngress() is False
+    assert config.warnIngress() is True
+
+    # Test older
+    config.setIngressInfo({'homeassistant': '0.90.3'})
+    assert config.useIngress() is False
+    assert config.warnIngress() is True
+
+    # Test minimum version
+    config.setIngressInfo({'homeassistant': '0.91.3'})
+    assert config.useIngress() is True
+    assert config.warnIngress() is False
+
+    # Test newer version
+    config.setIngressInfo({'homeassistant': '0.91.4'})
+    assert config.useIngress() is True
+    assert config.warnIngress() is False
+
+    # Test newer version
+    config.setIngressInfo({'homeassistant': '0.92.3'})
+    assert config.useIngress() is True
+    assert config.warnIngress() is False
+
+    # Test newer version
+    config.setIngressInfo({'homeassistant': '1.91.3'})
+    assert config.useIngress() is True
+    assert config.warnIngress() is False
+
+
 def test_GenerationalConfig(mocker) -> None:
     def getDays(s):
         if s.getGenerationalConfig():

@@ -6,6 +6,7 @@
     "backup_directory": "../dev/backup",
     "folder_file_path": "../dev/data/folder.dat",
     "credentials_file_path": "../dev/data/credentials.dat",
+    "ingress_upgrade_file": "../dev/data/ingress_upgrade",
     "certfile": "../dev/ssl/fullchain.pem",
     "keyfile": "../dev/ssl/privkey.pem"
 }

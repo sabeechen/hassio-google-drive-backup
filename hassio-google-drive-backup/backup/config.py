@@ -2,16 +2,19 @@ import json
 import os
 import logging
 from .logbase import LogBase
+from .helpers import formatException
 from typing import Dict, List, Any, Optional
 
 HASSIO_OPTIONS_FILE = '/data/options.json'
-
+MIN_INGRESS_VERSION = [0, 91, 3]
+ADDON_OPTIONS_FILE = 'config.json'
 DEFAULTS = {
     "max_snapshots_in_hassio": 4,
     "max_snapshots_in_google_drive": 4,
     "hassio_base_url": "http://hassio/",
     "ha_base_url": "http://hassio/homeassistant/api/",
     "path_separator": "/",
+    "ingress_port": 8099,
     "port": 1627,
     "days_between_snapshots": 3,
 
@@ -36,7 +39,9 @@ DEFAULTS = {
     "snapshot_password": "",
     "send_error_reports": None,
     "exclude_folders": "",
-    "exclude_addons": ""
+    "exclude_addons": "",
+    "expose_extra_server": False,
+    "ingress_upgrade_file": "/data/upgrade_ingress"
 }
 
 
@@ -69,6 +74,17 @@ class Config(LogBase):
             self.debug("Generationl backup config:")
             self.debug(json.dumps(gen_config, sort_keys=True, indent=4))
 
+        self.ha_version = "unknown"
+
+        # True when support for ingress urls is enabled.
+        self.ingress_enabled = False
+
+        # True if we shoudl wanr the user about upgradint othe lastest verison for ingress support.
+        self.warn_ingress = False
+
+        # True if we should watnt he user to disable their exposed Web UI
+        self.warn_expose_server = False
+
     def setSendErrorReports(self, handler, send: bool) -> None:
         self.config['send_error_reports'] = send
 
@@ -76,7 +92,93 @@ class Config(LogBase):
         with open(self.config_path) as file_handle:
             old_config = json.load(file_handle)
         old_config['send_error_reports'] = send
+        self.warn_expose_server = False
         handler(old_config)
+
+    def setExposeAdditionalServer(self, handler, expose) -> None:
+        self.config['expose_extra_server'] = expose
+
+        old_config: Dict[str, Any] = None
+        with open(self.config_path) as file_handle:
+            old_config = json.load(file_handle)
+        if expose:
+            old_config['expose_extra_server'] = expose
+        elif 'expose_extra_server' in old_config:
+            del old_config['expose_extra_server']
+
+        if not expose and 'require_login' in old_config:
+            del old_config['require_login']
+        handler(old_config)
+        if not os.path.exists(self.ingressUpgradeFile()):
+            with open(self.ingressUpgradeFile(), 'x'):
+                pass
+
+    def setIngressInfo(self, host_info):
+        # check if the add-on has ingress enabled
+        try:
+            with open(ADDON_OPTIONS_FILE) as handle:
+                addon_config = json.load(handle)
+                supports_ingress = "ingress" in addon_config and addon_config['ingress']
+        except Exception as e:
+            self.error(formatException(e))
+            supports_ingress = False
+
+        if not supports_ingress:
+            self.ingress_enabled = False
+            self.warn_ingress = False
+            self.warn_expose_server = False
+            self.config['expose_extra_server'] = True
+            return
+
+        self.warn_expose_server = False
+        if 'homeassistant' in host_info:
+            self.ingress_enabled = self._isGreaterOrEqualVersion(host_info['homeassistant'])
+            self.warn_ingress = not self.ingress_enabled
+        else:
+            self.ingress_enabled = False
+            self.warn_ingress = True
+            self.warn_expose_server = False
+        if not self.ingress_enabled:
+            # we must expose this server if ingress isn't enabled
+            self.config['expose_extra_server'] = True
+
+        # Handle upgrading from a previous version
+        if not os.path.exists(self.ingressUpgradeFile()) and self.ingress_enabled:
+            if os.path.exists(self.credentialsFilePath()):
+                # we've upgraded, so warn about ingress but expose the additional server.
+                self.warn_expose_server = True
+                self.config['expose_extra_server'] = True
+            else:
+                # its a new install, so just default to using ingress in the future.
+                with open(self.ingressUpgradeFile(), 'x'):
+                    pass
+
+    def warnExposeIngressUpgrade(self):
+        return self.warn_expose_server
+
+    def ingressUpgradeFile(self):
+        return self.config['ingress_upgrade_file']
+
+    def useIngress(self):
+        return self.ingress_enabled
+
+    def warnIngress(self):
+        return self.warn_ingress
+
+    def _isGreaterOrEqualVersion(self, version):
+        try:
+            version_parts = version.split(".")
+            for i in range(len(MIN_INGRESS_VERSION)):
+                version = int(version_parts[i])
+                if version < MIN_INGRESS_VERSION[i]:
+                    return False
+                if version > MIN_INGRESS_VERSION[i]:
+                    return True
+            # Version string is longer than the min verison, so we'll just assume its newer
+            return True
+        except ValueError:
+            self.error("Unable to parse Hoem Assistant version string: " + version)
+            return False
 
     def excludeFolders(self) -> str:
         return str(self.config['exclude_folders'])
@@ -104,6 +206,9 @@ class Config(LogBase):
 
     def port(self) -> int:
         return int(self.config['port'])
+
+    def ingressPort(self) -> int:
+        return int(self.config['ingress_port'])
 
     def daysBetweenSnapshots(self) -> float:
         return float(self.config['days_between_snapshots'])
@@ -137,6 +242,9 @@ class Config(LogBase):
 
     def keyFile(self) -> str:
         return str(self.config['keyfile'])
+
+    def exposeExtraServer(self) -> bool:
+        return bool(self.config['expose_extra_server'])
 
     def requireLogin(self) -> bool:
         return bool(self.config['require_login'])
@@ -269,6 +377,11 @@ class Config(LogBase):
             old_config['enable_snapshot_state_sensor'] = False
         elif 'enable_snapshot_state_sensor' in old_config:
             del old_config['enable_snapshot_state_sensor']
+
+        if 'expose_extra_server' in kwargs:
+            old_config['expose_extra_server'] = True
+        elif 'expose_extra_server' in old_config:
+            del old_config['expose_extra_server']
 
         if 'snapshot_time_of_day' in kwargs and len(kwargs['snapshot_time_of_day']) > 0:
             old_config['snapshot_time_of_day'] = kwargs['snapshot_time_of_day']

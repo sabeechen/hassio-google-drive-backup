@@ -1,5 +1,5 @@
 # Hass.io Google Drive Backup
-![](images/screenshot.png)
+![screenshot](images/screenshot.png)
 ## About
 A complete and easy to configure solution for backing up your snapshots to Google Drive
 * Automatically creates new snapshots on a configurable schedule.
@@ -44,29 +44,42 @@ The add-on is installed like any other.
 You can modify the add-ons setting by changing its config json file (like any add-on) or by opening the settings menu from the top right of the web UI.  In addition to the options described in the instructions above you can set:
 *  **snapshot_time_of_day** (default: None): The time of day (local time) that new snapshots should be created in 24 hour "HH:MM" format.  When not specified (the default), snapshots are created at the same time of day of the most recent snapshot.
     > #### Example: Create snapshots at 1:30pm
-    > `"snapshot_time_of_day": "13:30"`
+    > ```json
+    > "snapshot_time_of_day": "13:30"
+    > ```
 *   **snapshot_stale_minutes** (default: 180):  How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention.  Setting this too low can cause you to be notified of transient errors, ie the internet, Google Drive, or Home Assistant being offline briefly.
     > #### Example: Notify after 12 hours of staleness
-    > `"snapshot_stale_minutes": "500"`
+    > ```json
+    > "snapshot_stale_minutes": "500"
+    > ```
 *   **snapshot_password** (default: None):  When set, snapshots are created witha password.  You'll need to remember this password when restoring snapshots.
     > #### Example: Use a password for snapshot archives
-    > `"snapshot_password": "super_secret"`
+    > ```json
+    > "snapshot_password": "super_secret"
+    > ```
 *   **send_error_reports** (default: False):  When true, the text of unexpected errors will be sent to database maintained by the developer.  This helps idenfity problems with new releases and provide better context messages when errors come up.
     > #### Example: Allow sending error reports
-    > `"send_error_reports": True`
-*   **require_login** (default: true): When true, requires your home assistant username and password to access the backpup status page.  Turning this off isn't recommended.
-    > #### Example: Don't require login
-    > `"require_login": false`
-*   **certfile** (default: /ssl/certfile.pem): The path to your ssl keyfile
-*   **keyfile** (default: /ssl/keyfile.pem): the path to your ssl certfile
-    > #### Example: Use certs you keep in a weird place
     > ```json
-    >   "certfile": "/ssl/weird/path/cert.pem",
-    >   "keyfile": "/ssl/weird/path/key.pem"
+    > "send_error_reports": true
     > ```
+*   **UI Server Options** The UI is exposed through a webserver on port 1627, which you can map to an externally visible port from the add-on "Network" panel, which also defaults to port 1627.  You can configure a few more options to add SSL or require your Home assistant username/password.  In a future release, the add-on will support [ingress](https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/) but for now it is disabled for compatibility reasons (see [this issue](https://github.com/sabeechen/hassio-google-drive-backup/issues/19)).
+    *   **require_login** (default: false): When true, requires your home assistant username and password to access the Web UI.
+        > #### Example: Don't require login
+        > ```json
+        > "require_login": false
+        > ```
+    *   **certfile** (default: /ssl/certfile.pem): The path to your ssl keyfile
+    *   **keyfile** (default: /ssl/keyfile.pem): the path to your ssl certfile
+        > #### Example: Use certs you keep in a weird place
+        > ```json
+        >   "certfile": "/ssl/weird/path/cert.pem",
+        >   "keyfile": "/ssl/weird/path/key.pem"
+        > ```
 *   **verbose** (default: false): If true, enable additional debug logging.  Useful if you start seeing errors and need to file a bug with me.
     > #### Example: Turn on verbose logging
+    > ```json
     > `"verbose": true`
+    > ```
 *   **generational_*** (default: None): When set, older snapshots will be kept longer using a [generational backup scheme](https://en.wikipedia.org/wiki/Backup_rotation_scheme). See the [question below](#can-i-keep-older-backups-for-longer) for configuration options.
     > #### Example: Keep a snapshot once every day 3 days and once a week for 4 weeks
     > ```json
@@ -80,7 +93,16 @@ You can modify the add-ons setting by changing its config json file (like any ad
     >   "exclude_folders": "homeassistant,ssl,share,addons/local",
     >   "exclude_addons": "core_configurator"
     > ```
-        Note: folders and add-ons must be identified by their 'slug' name.  Its recommended to use the "Settings" dialog within the add-on web UI to configure partial snapshots since these names are esoteric and hard to find. 
+        Note: folders and add-ons must be identified by their 'slug' name.  Its recommended to use the "Settings" dialog within the add-on web UI to configure partial snapshots since these names are esoteric and hard to find.
+*   **enable_snapshot_stale_sensor** (default: true): When false, the add-on will not publish the [binary_sensor.snapshots](#how-will-i-know-this-will-be-there-when-i-need-it) stale sensor.
+*   **enable_snapshot_state_sensor** (default: true): When false, the add-on will not publish the [sensor.snapshot_state](#how-will-i-know-this-will-be-there-when-i-need-it)  sensor.
+*   **notify_for_stale_snapshots** (default: true): When false, the add-on will send a [persistent notification](#how-will-i-know-this-will-be-there-when-i-need-it) in Home Assistant when snapshots are stale.
+    > #### Example: Turn off notifications and sensor
+    > ```json
+    >   "enable_snapshot_stale_sensor": false,
+    >   "enable_snapshot_state_sensor": false,
+    >   "notify_for_stale_snapshots": false
+    > ```
 
 ## FAQ
 ### How will I know this will be there when I need it?
@@ -199,7 +221,7 @@ Yes, though I'll point out that Google Gives you a lot of free storage, 15GB at 
 Then it won't try to upload anything to Google Drive.
 
 ### What do I do if I've found an error?
-If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage.  This should include a link to pre-populate a new issue in github, which I'd encourage you to do.  Additioanlly you can set the add-on config option `"verbose" : true` to get information from the add-on's logs to help me with debugging.
+If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage.  This should include a link to pre-populate a new issue in github, which I'd encourage you to do.  Additioanlly you can set the add-on config option `"verbose": true` to get information from the add-on's logs to help me with debugging.
 
 ### Will this fill up my Google Drive?  Why are my snapshots so big?
 You'll need tot take care to ensure you don't configure this to blow up your Google Drive.  You might want to consider:

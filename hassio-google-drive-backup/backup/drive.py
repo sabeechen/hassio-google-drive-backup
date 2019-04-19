@@ -69,6 +69,7 @@ class Drive(LogBase):
         self.config: Config = config
 
     def saveCreds(self, creds: Credentials) -> None:
+        self.info("Saving new Google Drive credentials")
         self.creds = creds
         self.cred_storage.put(creds)
 
@@ -128,7 +129,7 @@ class Drive(LogBase):
         snapshot.setDrive(DriveSnapshot(drive_response))
 
     def deleteSnapshot(self, snapshot: Snapshot) -> None:
-        self.info("Deleting: {}".format(snapshot))
+        self.info("Deleting: {}".format(snapshot.name()))
         if not snapshot.driveitem:
             raise Exception("Drive item was null")
         self._retryDriveServiceCall(self._drive().files().delete(fileId=snapshot.driveitem.id()))

@@ -15,6 +15,10 @@ function toggleSlide(checkbox, target) {
   }
 }
 
+function restoreClick(target) {
+  window.top.location.replace($(target).data('url'))
+}
+
 function setInputValue(id, value) {
   if (value == null) {
     // Leave at default
@@ -32,7 +36,7 @@ function test(target) {
 }
 
 function downloadSnapshot(target) {
-  window.location.assign('/download?slug=' + encodeURIComponent($(target).data('snapshot').slug));
+  window.location.assign('download?slug=' + encodeURIComponent($(target).data('snapshot').slug));
 }
 
 function uploadSnapshot(target) {
@@ -114,6 +118,23 @@ function errorReports(send) {
   var jqxhr = $.get("errorreports?send=" + send)
   $('#error_reports_card').fadeOut(500)
 }
+hideIngress = false;
+function exposeServer(expose) {
+  hideIngress = true;
+  var jqxhr = $.get("exposeserver?expose=" + expose,
+    function (data) {
+    }, "json").fail(
+      function() {
+        // The server is restarting, so we expect the request to fail.
+        if (expose == 'false' && last_data && last_data.hasOwnProperty('ingress_url')) {
+          setTimeout(function() {
+            window.top.location.assign(last_data.ingress_url);
+          }, 5000);
+        }
+      }
+    );
+  $('#ingress_upgrade_card').fadeOut(500)
+}
 
 function triggerSync() {
   toast("Syncing now...")
@@ -138,12 +159,12 @@ function confirmDeleteSnapshot(target) {
   $("#delete_ha").attr("onClick", "deleteSnapshot('" + slug + "',false," + inHA + ")");
   $("#delete_both").attr("onClick", "deleteSnapshot('" + slug + "'," + inDrive + "," + inHA + ")");
   if (inDrive && inHA) {
-    $("#delete_text").text("Are you sure you want to delete this snapshot?  It isn't backed up, so it will be gone forever.");
+    $("#delete_text").text("Are you sure you want to delete this snapshot?  You can delete it in Drive, Home assistant, or both.");
     $("#delete_drive").show();
     $("#delete_ha").show();
     $("#delete_both").show();
   } else if (inDrive && !inHA) {
-    $("#delete_text").text("Are you sure you want to delete this snapshot form Google Drive?  It isn't stored in Home Assistant, so it will be gone forever.");
+    $("#delete_text").text("Are you sure you want to delete this snapshot from Google Drive?  It isn't stored in Home Assistant, so it will be gone forever.");
     $("#delete_drive").show();
     $("#delete_ha").hide();
     $("#delete_both").hide();
@@ -228,8 +249,35 @@ function errorToast(error) {
   return isError;
 }
 
-errorToasted = false
+errorToasted = false;
 
+last_cred_version = -1;
+function reloadForNewCreds() {
+  var jqxhr = $.get("getstatus", function (data) {
+    if (data.hasOwnProperty("cred_version")) {
+      if (last_cred_version == -1) {
+        last_cred_version = data.cred_version;
+      } else if (last_cred_version != data.cred_version) {
+        //reload
+        window.location.assign(getWindowRootUri())
+      } else {
+        last_cred_version = data.cred_version;
+      }
+    }
+  })
+}
+
+function getWindowRootUri() {
+  var loc = window.location;
+  path = loc.pathname.replace("\\", "/");
+  path = path.replace("/reauthenticate", "/");
+  path = path.replace("/reauthenticate/", "/");
+  path = path + "/";
+  path = path.replace("//", "/");
+  return loc.protocol + "//" + loc.hostname + ":" + loc.port + path;
+}
+
+last_data = null;
 // Refreshes the display with stats from the server.
 function refreshstats() {
   var jqxhr = $.get("getstatus", function (data) {
@@ -237,7 +285,7 @@ function refreshstats() {
     $('#drive_snapshots').empty().append(data.drive_snapshots);
     $('#last_snapshot').empty().append(data.last_snapshot);
     $('#next_snapshot').empty().append(data.next_snapshot);
-    $('#drive_button').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
+    $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
     snapshot_div = $('#snapshots')
     slugs = []
     var count = 0;
@@ -305,7 +353,7 @@ function refreshstats() {
         if (isNew) {
           template.appendTo(snapshot_div);
           var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
-          var instances = M.Dropdown.init(elems, { 'alignment': 'top', 'constrainWidth': false });
+          var instances = M.Dropdown.init(elems, {'constrainWidth': false });
         }
 
         if (snapshot.inHA || snapshot.inDrive) {
@@ -326,7 +374,7 @@ function refreshstats() {
 
         // Set up context menu
         $("#delete_link" + snapshot.slug).data('snapshot', snapshot);
-        $("#restore_link" + snapshot.slug).attr('href', data.restore_link.replace("{host}", window.location.hostname));
+        $("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
         $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
         $("#download_link" + snapshot.slug).data('snapshot', snapshot);
       }
@@ -341,8 +389,9 @@ function refreshstats() {
 
 
     if (count == 0) {
-      if (data.firstSync) {
+      if (!data.firstSync) {
         $("#no_snapshots_block").show();
+        $("#snapshots_loading").hide();
       } else {
         $("#snapshots_loading").show();
         $("#no_snapshots_block").hide();
@@ -393,7 +442,18 @@ function refreshstats() {
 
     if (data.ask_error_reports) {
       $('#error_reports_card').fadeIn(500);
+    } else {
+      $('#error_reports_card').hide();
     }
+
+    if (data.warn_ingress_upgrade && !hideIngress) {
+      $('#ingress_upgrade_card').fadeIn(500);
+    } else {
+      $('#ingress_upgrade_card').hide();
+    }
+
+    last_data = data;
+
     $('.tooltipped').tooltip({ "exitDelay": 1000 });
     if (errorToasted) {
       errorToasted = false;
@@ -405,7 +465,7 @@ function refreshstats() {
       console.log(e);
       $("#snapshots_loading").show();
       if (!errorToasted) {
-        errorToasted = true;
+        errorToasted = true;  
         M.toast({ html: 'Lost connection to add-on, will keep trying to connect...', displayLength: 9999999 })
       }
     }
@@ -413,14 +473,14 @@ function refreshstats() {
 }
 
 function simulateError() {
-  $.get("/simerror?error=This%20is%20a%20fake%20error.%20Select%20'Stop%20Simulated%20Error'%20from%20the%20menu%20to%20stop%20it.",
+  $.get("simerror?error=This%20is%20a%20fake%20error.%20Select%20'Stop%20Simulated%20Error'%20from%20the%20menu%20to%20stop%20it.",
     function (data) {
       triggerSync()
     })
 }
 
 function stopSimulateError() {
-  $.get("/simerror?error=",
+  $.get("simerror?error=",
     function (data) {
       triggerSync()
     })
@@ -449,3 +509,13 @@ function newSnapshotClick() {
 
     return false;
 }
+
+$(document).ready(function () {
+  if (window.top.location == window.location) {
+    // We're in a standard webpage, onyl show the header
+    $(".ingress-only").hide();
+  } else {
+    // We're in an ingress iframe.
+    $(".non-ingress").hide();
+  }
+});

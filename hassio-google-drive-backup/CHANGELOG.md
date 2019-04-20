@@ -1,4 +1,5 @@
 ## [0.9] - 2019-04-19
+## When updating, press CTRL+F5 on the add-on Web UI to ensure your browser sees the latest version of the add-ons scripts and style.  Otherwise the UI may render incorrectly.  This will be fixed in the next version.
 ### Added
 - Future support for ingress has been implemented but is currently disabled for compatibility reasons.  See [this issue](https://github.com/sabeechen/hassio-google-drive-backup/issues/19) for details. 
 - Added a help menu item.

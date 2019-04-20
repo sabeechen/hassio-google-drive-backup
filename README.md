@@ -3,20 +3,13 @@
 ## About
 A complete and easy to configure solution for backing up your snapshots to Google Drive
 * Automatically creates new snapshots on a configurable schedule.
-* Uploads any snapshots it finds to Google Drive.
+* Automatically uploads snapshot to Drive, even the ones it didn't create.
 * Automatically cleans up old snapshots in Home Assistant and Google drive so you don't run out of space.
 * Lets you upload snapshots directly from Google Drive, which makes [restoring from a fresh install](#how-do-i-restore-a-snapshot) very easy.
 * Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
+* Simple UI focused on clarity, usability and getting out of your way because you have more important things to worry about.  
 
-This is for you if you want to quickly set up a backup strategy without having to do much work.
-
-Particularly, most of the existing solutions for back I've found for Hass.io:
-* Provide no mechanism for taking action when they fail
-* Provide no mechanism for seeing what they're actually doing
-* Don't come with an easy way to clean up old snapshots
-* Require truly <i>arcane</i> knowledge of of the Google Drive, Hass.io or Dropbox API 
-
-I made this to avoid these complications.  Install the add-on, click the button that authenticates with Google Drive, and you're backed up from then on.   If you don't have a Google account already, its pretty easy to [create one](https://www.google.com/intl/en/drive/) and Google gives you 15GB of free storage (at the time of writing), which should be enough for as many backups as you want. 
+This is for you if you want to quickly set up a backup strategy without much fuss.  It doesn't require much familiarity with Hass.io, its architectire, or Google Drive.  Detailed install instrctions are provided below but you can just add the repo, click install and open the Web UI.  It will tell you what to do and only takes a few simple clicks.
 
 ## Installation
 The add-on is installed like any other.
@@ -28,8 +21,8 @@ The add-on is installed like any other.
      ![Repo Screenshot](images/repo_ss.png)
 3.   Click "Install" and give it a few minutes to finish downloading.
 4.   Take note of the default configuration options.  For most people the default settings are sufficient:
-     *   **max_snapshots_in_hassio**: is the number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.  
-     *   **max_snapshots_in_google_drive**: is the number of snapshots the add-on will keep in Google Drive before old ones are deleted.
+     *   **max_snapshots_in_hassio**: is the number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.
+     *   **max_snapshots_in_google_drive**: is the number of snapshots the add-on will keep in Google Drive before old ones are deleted.  Google Drive gives you 15GB of free storage (at the time of writing) so plan accordingly if you know how big your snapshots are.
      *   **days_between_snapshots**: How often a new snapshot should be scheduled, eg "1" for daily and "7" for weekly.
      *   **use_ssl**: determines if the add-on's webpage should only expose its interface over ssl.  If you use the [Duck DNS Add-on](https://www.home-assistant.io/addons/duckdns/) with the default settings then `"use_ssl": true`setting this to true should just work, if not [see below](#configuration-options).
      
@@ -204,13 +197,13 @@ If you set '`"days_between_snapshots": 0`', then the add-on won't try to create 
 
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
-* You can opt-in to sending error reports form the add-on sent to a database maintained by me.  This includes the full text of the error's stack trace, the error message, and the version of the add-on you're running.  This helps notice problems with new releases but leaving it off (the default unless you turn it on) doesn't affect the functionality of the add-on in any way.
+* You can opt-in to sending error reports from the add-on sent to a database maintained by me.  This includes the full text of the error's stack trace, the error message, and the version of the add-on you're running.  This helps notice problems with new releases but leaving it off (the default unless you turn it on) doesn't affect the functionality of the add-on in any way.
 * Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance.  This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive.  Your password is never seen by me or the add-on.
 * The add-on has access to the files in Google Drive it created, which is the 'Hass.io Snapshots' folder and any snapshots it uploads.  See the https://www.googleapis.com/auth/drive.file scope in the [Drive REST API v3 Documentation](https://developers.google.com/drive/api/v3/about-auth) for details, this is the only scope the add-on requests for your account.
 * Google stores a history of information about the number of requests, number of errors, and latency of requests made by this Add-on and makes a graph of that visible to me.  This is needed because Google only gives me a certain quota for requests shared between all users of the add-on, so I need to be aware if someone is abusing it.
 * The Add-on is distributed as a Docker container hosted on Docker Hub, which his how almost all add-ons work.  Docker keeps track of how many people have requested an image and makes that information publicly visible.
 
-This invariably means that I have a very limited ability to see how many people are using the add-on or if it is functioning well.  If you do like it, feel free to shoot me an email at [sabeechen@gmail.com](mailto:sabeechen@gmail.com) or star this repo on GitHub, it really helps keep me motivated.  If you run into problems or think a new feature would be nice, file an issue on GitHub.
+This invariably means that I have a very limited ability to see how many people are using the add-on or if it is functioning well.  If you do like it, feel free to shoot me an email at [stephen@beechens.com](mailto:stephen@beechens.com) or star this repo on GitHub, it really helps keep me motivated.  If you run into problems or think a new feature would be nice, file an issue on GitHub.
 
 ### Can I permanently save a snapshot so it doesn't get cleaned up?
 The Add-on will only ever look at snapshots in the folder in Google Drive it created.  If you move the snapshots anywhere else in Google Drive, they will be ignored.  Just don't move them back in accidentally since they'll get "cleaned up" like any old snapshot after a while :)
@@ -229,7 +222,7 @@ You'll need tot take care to ensure you don't configure this to blow up your Goo
 *   If you use the Google Drive Desktop sync client, you'll porbably want to tell it not to sync this folder (its available in the options).
 
 ### I want my snapshots to sync to my Desktop computer too
-Thats not a question but you can use [Google Drive Backup & Sync]([https://www.google.com/drive/download/) to download anything in your Google Drive to your desktop computer.
+Thats not a question but you can use [Google Drive Backup & Sync]([https://www.google.com/drive/download/) to download anything in your Google Drive to your desktop/laptop automatically.
 
 ### I configured this to only keep 4 snapshots in Drive and Hass.io, but sometimes I can see there are 5?
 The add-on will only delete an old snapshot if a new one exists to replace it, so it will create a 5th one before deleting the first.  This is a reliability/disk usage compromise that favors reliability, because otherwise it would have to delete an old snapshot (leaving only 3) before it could guarantee the 4th one actually exists.

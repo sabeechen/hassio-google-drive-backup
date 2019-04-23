@@ -1,3 +1,11 @@
+## [0.91] - 2019-04-21
+
+### Changes
+- Snapshots now present the newest up top (ie. reverse chronologically).
+- A warning icon shows up on a snapshot if its the next to be deleted when a new snapshot is created.
+- Settings menu asks for confirmation if you try to leave it after making unsaved changes.
+- "Getting Started" screen now tells you what is going to do after you authenticate with Google Drive with your configured settings, eg delete N old snapshots and backup M newest snapshots.  Also changed up the page's formatting to be more readable.
+
 ## [0.9] - 2019-04-19
 ### Added
 - Future support for ingress has been implemented but is currently disabled for compatibility reasons.  See [this issue](https://github.com/sabeechen/hassio-google-drive-backup/issues/19) for details. 

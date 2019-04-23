@@ -7,6 +7,7 @@
 - "Getting Started" screen now tells you what is going to do after you authenticate with Google Drive with your configured settings, eg delete N old snapshots and backup M newest snapshots.  Also changed up the page's formatting to be more readable.
 
 ## [0.9] - 2019-04-19
+## When updating, press CTRL+F5 on the add-on Web UI to ensure your browser sees the latest version of the add-ons scripts and style.  Otherwise the UI may render incorrectly.  This will be fixed in the next version.
 ### Added
 - Future support for ingress has been implemented but is currently disabled for compatibility reasons.  See [this issue](https://github.com/sabeechen/hassio-google-drive-backup/issues/19) for details. 
 - Added a help menu item.

@@ -58,7 +58,7 @@ class Engine(LogBase):
         self.one_shot: bool = False
         self.snapshots_stale: bool = False
         self.last_error_reported = False
-        self.firstSync = False
+        self.firstSync = True
         self.cred_version = 0
 
     def getDeleteScheme(self):
@@ -67,7 +67,7 @@ class Engine(LogBase):
             return GenerationalScheme(self.time, gen_config)
         else:
             return OldestScheme()
-    
+
     def credentialsVersion(self):
         return self.cred_version
 
@@ -223,6 +223,7 @@ class Engine(LogBase):
                     self.drive.deleteSnapshot(snapshot)
                 if snapshot.isDeleted():
                     self.snapshots.remove(snapshot)
+                self._updateFreshness()
                 return
         raise Exception("Couldn't find this snapshot")
 
@@ -233,6 +234,7 @@ class Engine(LogBase):
                 raise SnapshotInProgress()
         snapshot = self.hassio.newSnapshot()
         self.snapshots.append(snapshot)
+        self._updateFreshness()
         return snapshot
 
     def _syncSnapshots(self) -> None:
@@ -284,7 +286,7 @@ class Engine(LogBase):
         if (self.config.verbose()):
             self.debug("Final Snapshots:")
             self.debug(pformat(self.snapshots))
-        self.firstSync = True
+        self.firstSync = False
 
     def _purgeDriveBackups(self) -> None:
         while self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() > self.config.maxSnapshotsInGoogleDrive():
@@ -292,6 +294,7 @@ class Engine(LogBase):
             self.drive.deleteSnapshot(oldest)
             if oldest.isDeleted():
                 self.snapshots.remove(oldest)
+        self._updateFreshness()
 
     def _purgeHaSnapshots(self) -> None:
         while self.config.maxSnapshotsInHassio() > 0 and self.haSnapshotCount() > self.config.maxSnapshotsInHassio():
@@ -299,6 +302,7 @@ class Engine(LogBase):
             self.hassio.deleteSnapshot(oldest_hassio)
             if not oldest_hassio.isInDrive():
                 self.snapshots.remove(oldest_hassio)
+        self._updateFreshness()
 
     def _checkForBackup(self) -> None:
         # Get the local and remote snapshots available
@@ -357,3 +361,17 @@ class Engine(LogBase):
         if self.notified:
             self.hassio.dismissNotification()
             self.notified = False
+
+    def _updateFreshness(self) -> None:
+        deleteFromDrive = None
+        deleteFromHa = None
+        scheme = self.getDeleteScheme()
+        if self.config.maxSnapshotsInHassio() > 0 and self.haSnapshotCount() >= self.config.maxSnapshotsInHassio():
+            deleteFromHa = scheme.getOldest(filter(HA_LAMBDA, self.snapshots))
+        if self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() >= self.config.maxSnapshotsInGoogleDrive():
+            deleteFromDrive = self.getDeleteScheme().getOldest(filter(DRIVE_LAMBDA, self.snapshots))
+        
+        for snapshot in self.snapshots:
+            snapshot.deleteNextFromDrive = (snapshot == deleteFromDrive)
+            snapshot.deleteNextFromHa = (snapshot == deleteFromHa)
+            

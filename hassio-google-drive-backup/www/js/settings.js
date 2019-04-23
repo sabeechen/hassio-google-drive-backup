@@ -1,5 +1,6 @@
 
   all_folder_slugs = ['ssl', "addons/local", "homeassistant", "share"];
+  settingsChanged = false;
 
   function idToSlug(id) {
     if (id == "folder_addons") {
@@ -27,6 +28,34 @@ function slugToId(id) {
     } else {
         return id;
     }
+}
+
+
+$(document).ready(function () {
+  // handle "escape" when settings dialog is presented
+  $(document).keyup(function(e) {
+    if (e.keyCode === 27) { // 27==escape
+      if (M.Modal.getInstance(document.querySelector('#settings_modal')).isOpen) {
+        handleCloseSettings();
+      }
+    }
+  });
+
+  var settingsDialog = $("#settings_modal");
+  $('#settings_modal :input').change(function(){
+    settingsChanged = true;
+  });
+});
+
+function handleCloseSettings() {
+  // determine is the settings hanve changed.
+  if (settingsChanged) {
+    if (confirm("Discard changes?")) {
+      M.Modal.getInstance(document.getElementById("settings_modal")).close();
+    }
+  } else {
+    M.Modal.getInstance(document.getElementById("settings_modal")).close();
+  }
 }
   
 
@@ -119,8 +148,11 @@ function loadSettings() {
         $("#generational_enabled").trigger("change");
         $("#partial_snapshots").trigger("change");
         $("#expose_extra_server").trigger("change");
+        settingsChanged = false;
         M.Modal.getInstance(document.querySelector('#settings_modal')).open();
       }, "json")
+
+      
   }
 
   function saveSettings() {
@@ -141,7 +173,7 @@ function loadSettings() {
     });
     excluded_folders = excluded_folders.replace(/(^,)|(,$)/g, "")
     if (!document.getElementById('settings_form').checkValidity()) {
-      $("#settings_error").show();
+      $("#settings_error").fadeIn(400);
       return;
     }
   

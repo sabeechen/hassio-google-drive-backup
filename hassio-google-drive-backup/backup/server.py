@@ -71,7 +71,9 @@ class Server(LogBase):
                 'isPending': snapshot.isPending(),
                 'protected': snapshot.protected(),
                 'type': snapshot.version(),
-                'details': details
+                'details': details,
+                'deleteNextDrive': snapshot.deleteNextFromDrive,
+                'deleteNextHa': snapshot.deleteNextFromHa,
             })
         status['ask_error_reports'] = (self.config.sendErrorReports() is None)
         status['drive_snapshots'] = self.engine.driveSnapshotCount()
@@ -96,6 +98,8 @@ class Server(LogBase):
 
         status['last_error'] = self.getError()
         status["firstSync"] = self.engine.firstSync
+        status["maxSnapshotsInHasssio"] = self.config.maxSnapshotsInHassio()
+        status["maxSnapshotsInDrive"] = self.config.maxSnapshotsInGoogleDrive()
         return status
 
     def getRestoreLink(self):
@@ -254,6 +258,14 @@ class Server(LogBase):
             return open("www/index.html")
         else:
             return open("www/working.html")
+
+    @cherrypy.expose
+    def pp(self):
+        return open("www/privacy_policy.html")
+
+    @cherrypy.expose
+    def tos(self):
+        return open("www/terms_of_service.html")
 
     @cherrypy.expose  # type: ignore
     def reauthenticate(self) -> Any:

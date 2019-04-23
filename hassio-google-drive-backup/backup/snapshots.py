@@ -146,6 +146,24 @@ class Snapshot(object):
         self.pendingHasFailed: bool = False
         self.will_backup: bool = True
         self.restoring = None
+        self._deleteNextFromDrive = None
+        self._deleteNextFromHa = None
+
+    @property
+    def deleteNextFromDrive(self):
+        return self._deleteNextFromDrive
+
+    @deleteNextFromDrive.setter
+    def deleteNextFromDrive(self, delete):
+        self._deleteNextFromDrive = delete
+
+    @property
+    def deleteNextFromHa(self):
+        return self._deleteNextFromHa
+
+    @deleteNextFromHa.setter
+    def deleteNextFromHa(self, delete):
+        self._deleteNextFromHa = delete
 
     def setPending(self, name: str, date: datetime) -> None:
         self.pending_name = name

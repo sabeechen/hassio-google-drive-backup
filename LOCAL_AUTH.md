@@ -38,5 +38,5 @@ This should have opened a dialog titled "Create OAuth client ID".
 ![](images/step4.png)
 
 ## Step 6 - Copy your credentials
-This should have opened a new dialog with your generated client ID and client secret.  Take these back to the Add-on, and paste them into the appropriate fields of the add-on web UI under "Option 2", and follow the instructions from there.
+This should have opened a new dialog with your generated client ID and client secret.  Take these back to the Add-on, and paste them into the appropriate fields of the add-on web, and follow the instructions from there.
 ![](images/step5.png)

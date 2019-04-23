@@ -264,6 +264,45 @@ function reloadForNewCreds() {
         last_cred_version = data.cred_version;
       }
     }
+
+    if (!data.firstSync) {
+      snapshots = data.ha_snapshots;
+      hasSnapshots = data.ha_snapshots > 0;
+      maxConfigured = data.maxSnapshotsInHasssio
+      toDelete = Math.max(0, data.ha_snapshots - data.maxSnapshotsInHasssio);
+      if (data.maxSnapshotsInHasssio == 0) {
+        toDelete = 0;
+      }
+      willSnapshot = data.next_snapshot != "Disabled";
+      willUpload = data.maxSnapshotsInDrive > 0;
+      toUpload = Math.min(data.maxSnapshotsInDrive, snapshots - toDelete);
+      text = "";
+      if (!hasSnapshots && !willSnapshot) {
+        text = "You have no snapshots in Home Assistant and you've configured this add-on not to create any."
+      } else if (hasSnapshots && toDelete > 0) {
+        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toDelete + " oldest snapshots(s) will be deleted</b>";
+        if (toUpload > 0) {
+          text += " and the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
+        } else {
+          text += "."
+        }
+      } else if (hasSnapshots && toUpload > 0) {
+        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest snapshot(s) will get backed up</b>." 
+      } else if (!hasSnapshots) {
+        text = "You have <b>no snapshots in Home Assistant</b>";
+        if (willUpload) {
+          text += ", authenticate with Google Drive to start automatically creating and backing them up."
+        } else {
+          text += ", authenticate with Google Drive to start automatically creating them."
+        }
+      } else if (willSnapshot) {
+        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already, Authenticate with Google Drive to start creating new ones on a schedule."
+      } else {
+        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already but you haven't configured this add-on to do anything with them or create new ones."
+      }
+      $("#what_do_next_now_please_text").html(text);
+      $("#what_do_next_now_please").show();
+    }
   })
 }
 
@@ -331,6 +370,19 @@ function refreshstats() {
           $(".icon-protected", template).hide();
         }
 
+        if (snapshot.deleteNextDrive && snapshot.deleteNextHa) {
+          $(".icon-warn-delete", template).show();
+          $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive and Home Assistant when a new snapshot is created.");
+        } else if (snapshot.deleteNextDrive) {
+          $(".icon-warn-delete", template).show();
+          $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive when a new snapshot is created.");
+        } else if (snapshot.deleteNextHa) {
+          $(".icon-warn-delete", template).show();
+          $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Home Assistant when a new snapshot is created.");
+        } else {
+          $(".icon-warn-delete", template).hide();
+        }
+
         tip = "Help unavailable";
 
         if (snapshot.status.includes("Drive")) {
@@ -351,7 +403,7 @@ function refreshstats() {
         $("#status-help", template).attr("data-tooltip", tip);
 
         if (isNew) {
-          template.appendTo(snapshot_div);
+          snapshot_div.prepend(template);
           var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
           var instances = M.Dropdown.init(elems, {'constrainWidth': false });
         }

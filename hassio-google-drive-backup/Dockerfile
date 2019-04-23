@@ -4,7 +4,8 @@ FROM $BUILD_FROM
 RUN apk add --no-cache python3
 WORKDIR /app
 COPY . /app
-RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
-EXPOSE 1627
 RUN ["chmod", "+x", "run.py"]
+RUN  pip3 install --trusted-host pypi.python.org -r requirements.txt
+EXPOSE 1627
+EXPOSE 8099
 ENTRYPOINT /app/run.py

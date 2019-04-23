@@ -6,21 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
   <title>Hass.io Google Drive Backup</title>
 
-  <link href="css/icons.css" rel="stylesheet">
-  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/icons.css?version=0.91" rel="stylesheet">
+  <link href="css/materialize.css?version=0.91" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.91" type="text/css" rel="stylesheet" media="screen,projection" />
   <link rel="icon" type="image/png" href="images/favicon.png">
-  <script src="js/jquery.js"></script>
-  <script src="js/materialize.js"></script>
-  <script src="js/init.js"></script>
-  <script src="js/scripts.js"></script>
-  <script src="js/settings.js"></script>
-  <script src="js/restore.js"></script>
+  <script src="js/jquery.js?version=0.91"></script>
+  <script src="js/materialize.js?version=0.91"></script>
+  <script src="js/init.js?version=0.91"></script>
+  <script src="js/scripts.js?version=0.91"></script>
+  <script src="js/settings.js?version=0.91"></script>
+  <script src="js/restore.js?version=0.91"></script>
 </head>
 
 <body>
 
-  <div id="settings_modal" class="modal">
+  <div id="settings_modal" class="modal modal-fixed-footer">
     <div class="modal-content">
       <h4>Add-on Settings</h4>
       <p>Settings take effect right after saving them. If you enable or disable SSL, you may need to go to a different
@@ -30,7 +30,7 @@
       <div class="row">
         <form class="col s12" method="get" id="settings_form">
           <div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col m6 s12">
               <i class="material-icons prefix">computer</i>
               <input type="number" id="max_snapshots_in_hassio" name="max_snapshots_in_hassio" min="0"
                 class="validate" />
@@ -38,7 +38,7 @@
               <span class="helper-text">The maximum number of snapshots to keep locally in Home Assistant, or 0 to
                 disable cleanup of old snapshots entirely.</span>
             </div>
-            <div class="input-field col s6">
+            <div class="input-field col m6 s12">
               <i class="material-icons prefix">cloud_upload</i>
               <input type="number" id="max_snapshots_in_google_drive" name="max_snapshots_in_google_drive" min="0"
                 class="validate" />
@@ -48,14 +48,14 @@
             </div>
           </div>
           <div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col m6 s12">
               <i class="material-icons prefix">date_range</i>
               <input type="number" id="days_between_snapshots" name="days_between_snapshots" min="0" class="validate" />
               <label for="days_between_snapshots">Days between snapshots</label>
               <span class="helper-text">The number of days between snapshots, or 0 to disable automatic snapshot
                 creation.</span>
             </div>
-            <div class="input-field col s6">
+            <div class="input-field col m6 s12">
               <i class="material-icons prefix">alarm_on</i>
               <input type="text" id="snapshot_time_of_day" name="snapshot_time_of_day" pattern="^[0-2]\d:[0-5]\d$"
                 class="validate" />
@@ -65,7 +65,7 @@
             </div>
           </div>
           <div class="row">
-            <div class="input-field col s6">
+            <div class="input-field col m6 s12">
               <i class="material-icons prefix">vpn_key</i>
               <input type="password" autocomplete="new-password" id="snapshot_password" name="snapshot_password"
                 class="validate" />
@@ -75,7 +75,7 @@
             </div>
           </div>
           <div class="row">
-            <div class="col s6">
+            <div class="col m6 s12">
               <label>
                 <input type="checkbox" name="notify_for_stale_snapshots" id="notify_for_stale_snapshots"
                   class="filled-in checkbox-ha" />
@@ -85,7 +85,7 @@
                   the Home Assistant interface.</span>
               </label>
             </div>
-            <div class="col s6">
+            <div class="col m6 s12">
               <label>
                 <input type="checkbox" name="enable_snapshot_stale_sensor" id="enable_snapshot_stale_sensor"
                   class="filled-in checkbox-ha" />
@@ -97,7 +97,7 @@
             </div>
           </div>
           <div class="row">
-            <div class="col s6">
+            <div class="col m6 s12">
               <label>
                 <input type="checkbox" name="enable_snapshot_state_sensor" id="enable_snapshot_state_sensor"
                   class="filled-in checkbox-ha" />
@@ -107,7 +107,7 @@
                   snapshots.</span>
               </label>
             </div>
-            <div class="col s6">
+            <div class="col m6 s12">
               <label>
                 <input type="checkbox" name="send_error_reports" id="send_error_reports"
                   class="filled-in checkbox-ha" />
@@ -191,7 +191,7 @@
             <div class="row" id="settings_gen_details" style="display: none">
               <div class="col s11 offset-s1">
                 <div class="row">
-                  <div class="input-field col s6">
+                  <div class="input-field col m6 s12">
                     <i class="material-icons prefix">date_range</i>
                     <input type="number" id="generational_days" name="generational_days" min="0" class="validate" />
                     <label for="generational_days">Days</label>
@@ -199,13 +199,13 @@
                   </div>
                 </div>
                 <div class="row">
-                  <div class="input-field col s6">
+                  <div class="input-field col m6 s12">
                     <i class="material-icons prefix">date_range</i>
                     <input type="number" id="generational_weeks" name="generational_weeks" min="0" class="validate" />
                     <label for="generational_weeks">Weeks</label>
                     <span class="helper-text">The number of weeks of snapshots to keep.</span>
                   </div>
-                  <div class="input-field col s6">
+                  <div class="input-field col m6 s12">
                     <select class="browser-default" name="generational_day_of_week" id="generational_day_of_week">
                       <option value="mon" selected>Monday</option>
                       <option value="tue">Tuesday</option>
@@ -219,13 +219,13 @@
                   </div>
                 </div>
                 <div class="row">
-                  <div class="input-field col s6">
+                  <div class="input-field col m6 s12">
                     <i class="material-icons prefix">date_range</i>
                     <input type="number" id="generational_months" name="generational_months" min="0" class="validate" />
                     <label for="generational_months">Months</label>
                     <span class="helper-text">The number of months of snapshots to keep.</span>
                   </div>
-                  <div class="input-field col s6">
+                  <div class="input-field col m6 s12">
                     <input type="number" id="generational_day_of_month" value=1 name="generational_day_of_month" min="1"
                       max="31" class="validate" />
                     <label for="generational_day_of_month">Day of Month</label>
@@ -233,13 +233,13 @@
                   </div>
                 </div>
                 <div class="row">
-                  <div class="input-field col s6">
+                  <div class="input-field col m6 s12">
                     <i class="material-icons prefix">date_range</i>
                     <input type="number" id="generational_years" name="generational_years" min="0" class="validate" />
                     <label for="generational_years">Years</label>
                     <span class="helper-text">The number of years of snapshots to keep.</span>
                   </div>
-                  <div class="input-field col s6">
+                  <div class="input-field col m6 s12">
                     <input type="number" id="generational_day_of_year" value=1 name="generational_day_of_year" min="1"
                       max="365" class="validate" />
                     <label for="generational_day_of_year">Day of Year</label>
@@ -333,18 +333,17 @@
               </div>
             </div>
           </div>
-          <div class="row red darken-4 white-text">
-            <div class="col s12">
-              <p id="settings_error">Some configuration values are invalid. Please check the entries above to ensure
-                they're in the correct format, problematic entries show up in red.</p>
-            </div>
-          </div>
         </form>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="min-height: 56px; height: auto;">
+      <div id="settings_error" class="left valign-wrapper red darken-4 white-text default-hidden"
+        style="margin: 6px; padding-left: 16px; padding-right: 16px; min-height: 36px; vertical-align: middle">
+        Some configuration is invalid, check for red errors up above.
+      </div>
+
       <a href="#!" class="waves-effect waves-light btn-flat" id="save_settings" onClick="saveSettings()">Save</a>
-      <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="save_cancel">Cancel</a>
+      <a href="#!" class="waves-effect waves-light btn-flat" onclick="handleCloseSettings()" id="save_cancel">Cancel</a>
     </div>
   </div>
   <div id="help_modal" class="modal">
@@ -497,29 +496,42 @@
 
         </div>
         <div class="row center">
-          <h6 class="header col s12 light">*Note: this will <i>only</i> have access to the files and folders it creates.
-            The Add-on can't see any of the other files you've added to Google Drive.</h6>
+          <div class="col s12 m6 offset-m3">
+            <ul>
+              <li>
+                <h6 class="header col s12 light">*Note: this will <i>only</i> have access to the files and folders it
+                  creates.
+                  The Add-on can't see any of the other files you've added to Google Drive.</h6>
+              </li>
+              <li>
+                <h6 id="what_do_next_now_please" style="display: none;" class="header light">
+                  <span id="what_do_next_now_please_text"></span>
+                  Change your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                      style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>settings</a>
+                  to alter the add-on's behavior if that isn't what you want.
+                </h6>
+              </li>
+            </ul>
+          </div>
         </div>
         <div class="row center">
-          <div id="option1" class="col s12 center center-align">
-            <div>
-              <span class="helper-text">This logs you in through an <a
-                  href="http://philosophyofpen.com/hassiodrivebackup">external
-                  domain</a> configured to
-                authenticate this add-on. You'll be routed back to this page after you're finished and your credentials
-                only
-                get stored locally within your Home Assistant instance.</span>
-            </div>
+          <div id="option1" class="col s12 m6 offset-m3 center center-align">
             <a target="_blank" id="authenticate-button" style="margin: 10px"
               class="btn-large waves-effect waves-light btn">Authenticate
               with Google Drive</a>
+            <div>
+              <span class="helper-text">This logs you in through an <a
+                  href="http://philosophyofpen.com/hassiodrivebackup">external domain</a> configured to
+                authenticate this add-on. You'll be routed back to this page after you're finished and your credentials
+                only get stored locally within your Home Assistant instance.  By doing this, you agree to our <a href="pp">Privacy Policy</a> and <a href="tos">Terms of Service</a></span>
+            </div>
             <br />
             Having trouble with this or looking to generate your own credentials without going through an external
             domain?
             <a href="#" onclick="$('#option2').show();$('#option1').hide();">Click here.</a>
 
           </div>
-          <div id="option2" class="col s12 default-hidden">
+          <div id="option2" class="col s12 m6 offset-m3 default-hidden">
             Follow the <a target="_blank"
               href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md">instructions
               here</a> to get your own client ID and client secret from Google. This is a much more complicated and time
@@ -624,8 +636,6 @@
 
 
   <!--  Scripts-->
-  <script src="js/materialize.js"></script>
-  <script src="js/init.js"></script>
   <script type="text/javascript">
     document.getElementById("authenticate-button").href =
       "https://philosophyofpen.com/login/backup.py?redirectbacktoken=" + encodeURIComponent(getWindowRootUri() + "token");

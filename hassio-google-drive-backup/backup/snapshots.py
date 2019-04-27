@@ -10,6 +10,7 @@ PROP_KEY_NAME = "snapshot_name"
 PROP_TYPE = "type"
 PROP_VERSION = "version"
 PROP_PROTECTED = "protected"
+PROP_RETAINED = "retained"
 
 
 class AbstractSnapshot(ABC):
@@ -36,6 +37,7 @@ class DriveSnapshot(AbstractSnapshot):
     """
     def __init__(self, source: Dict[Any, Any]):
         self.source = source.copy()
+        self._date = parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE])
 
     def id(self) -> str:
         return str(self.source.get('id'))
@@ -50,7 +52,7 @@ class DriveSnapshot(AbstractSnapshot):
         return self.source.get('size')  # type: ignore
 
     def date(self) -> datetime:
-        return parseDateTime(self.source.get('appProperties')[PROP_KEY_DATE])  # type: ignore
+        return self._date
 
     def snapshotType(self) -> str:
         props = self.source.get('appProperties')
@@ -70,6 +72,15 @@ class DriveSnapshot(AbstractSnapshot):
             return props[PROP_PROTECTED] == "true" or props[PROP_PROTECTED] == "True"
         return False
 
+    def retained(self) -> bool:
+        props = self.source.get('appProperties')
+        if PROP_RETAINED in props:
+            return props[PROP_RETAINED] == "true" or props[PROP_RETAINED] == "True"
+        return False
+
+    def setRetain(self, retain):
+        self.source.get('appProperties')[PROP_RETAINED] = str(retain)
+
     def __str__(self) -> str:
         return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id())
 
@@ -84,8 +95,10 @@ class HASnapshot(AbstractSnapshot):
     """
     Represents a Hass.io snapshot stored locally in Home Assistant
     """
-    def __init__(self, source: Dict[str, Any]):
+    def __init__(self, source: Dict[str, Any], retained=False):
         self.source: Dict[str, Any] = source.copy()
+        self._retained = retained
+        self._date = parseDateTime(self.source['date'])
 
     def name(self) -> str:
         return str(self.source['name'])
@@ -97,7 +110,7 @@ class HASnapshot(AbstractSnapshot):
         return int(self.source['size']) * 1024 * 1024
 
     def date(self) -> datetime:
-        return parseDateTime(self.source['date'])
+        return self._date
 
     def snapshotType(self) -> str:
         return str(self.source['type'])
@@ -107,6 +120,9 @@ class HASnapshot(AbstractSnapshot):
 
     def protected(self) -> bool:
         return bool(self.source['protected'])
+
+    def retained(self) -> bool:
+        return self._retained
 
     def __str__(self) -> str:
         return "<HA: {0} Name: {1} {2}>".format(self.slug(), self.name(), self.date().isoformat())
@@ -338,6 +354,12 @@ class Snapshot(object):
 
     def uploading(self, percent: int) -> None:
         self.uploading_pct = percent
+
+    def driveRetained(self):
+        return self.isInDrive() and self.driveitem.retained()
+
+    def haRetained(self):
+        return self.isInHA() and self.ha.retained()
 
     def __str__(self) -> str:
         return "<Slug: {0} Ha: {1} Drive: {2} Pending: {3} {4}>".format(self.slug(), self.ha, self.driveitem, self.pending, self.date().isoformat())

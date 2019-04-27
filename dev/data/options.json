@@ -1,7 +1,8 @@
 {
-    "max_snapshots_in_hassio": 19,
-    "max_snapshots_in_google_drive": 18,
-    "days_between_snapshots": 3,
+    "send_error_reports": true,
+    "max_snapshots_in_hassio": 3,
+    "max_snapshots_in_google_drive": 3,
+    "days_between_snapshots": 10,
     "use_ssl": false,
-    "send_error_reports": false
+    "snapshot_password": "boopadoop"
 }

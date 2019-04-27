@@ -61,6 +61,34 @@ function doUpload(slug, name) {
     )
 }
 
+function retainSnapshot(target) {
+  var slug = $(target).data('snapshot').slug;
+
+  setInputValue("retain_drive", $(target).data('snapshot').driveRetain);
+  setInputValue("retain_ha", $(target).data('snapshot').haRetain);
+  $("#do_retain_button").attr("onClick", "doRetain('" + slug + "')");
+  M.Modal.getInstance(document.querySelector('#retainmodal')).open();
+}
+
+function doRetain(slug) {
+  var drive = $("#retain_drive").prop('checked');
+  var ha = $("#retain_ha").prop('checked');
+  var url = "retain?slug=" + encodeURIComponent(slug) + "&drive=" + drive + "&ha=" + ha;
+  M.toast({ html: "Updating snapshot... ", displayLength: 9999999 });
+  $.get(url,
+    function (data) {
+      M.Toast.dismissAll();
+      errorToast(data)
+      refreshstats();
+    }, "json")
+    .fail(
+      function (e) {
+        M.Toast.dismissAll();
+        errorToast(e)
+      }
+    )
+}
+
 function showDetails(target) {
   var snapshot = $(target).data('snapshot');
   var details = snapshot.details;
@@ -350,10 +378,12 @@ function refreshstats() {
           $("#restore_link", template).attr('id', "restore_link" + snapshot.slug);
           $("#upload_link", template).attr('id', "upload_link" + snapshot.slug);
           $("#download_link", template).attr('id', "download_link" + snapshot.slug);
+          $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
           $("#delete_option", template).attr('id', "delete_option" + snapshot.slug);
           $("#restore_option", template).attr('id', "restore_option" + snapshot.slug);
           $("#upload_option", template).attr('id', "upload_option" + snapshot.slug);
           $("#download_option", template).attr('id', "download_option" + snapshot.slug);
+          $("#retain_option", template).attr('id', "retain_option" + snapshot.slug);
           isNew = true;
         }
 
@@ -381,6 +411,12 @@ function refreshstats() {
           $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Home Assistant when a new snapshot is created.");
         } else {
           $(".icon-warn-delete", template).hide();
+        }
+
+        if (snapshot.driveRetain || snapshot.haRetain) {
+          $(".icon-retain", template).show();
+        } else {
+          $(".icon-retain", template).hide();
         }
 
         tip = "Help unavailable";
@@ -429,6 +465,7 @@ function refreshstats() {
         $("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
         $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
         $("#download_link" + snapshot.slug).data('snapshot', snapshot);
+        $("#retain_link" + snapshot.slug).data('snapshot', snapshot);
       }
     }
 
@@ -458,16 +495,25 @@ function refreshstats() {
       $('#drive_full_card').hide();
       $('#creds_bad_card').fadeIn(400);
       $('#cant_reach_google').hide();
+      $('#google_timeout').hide();
     } else if (data.last_error == "drive_full") {
       $('#error_card').hide();
       $('#drive_full_card').fadeIn(400);
       $('#creds_bad_card').hide();
       $('#cant_reach_google').hide();
+      $('#google_timeout').hide();
+    } else if (data.last_error == "google_timeout") {
+      $('#error_card').hide();
+      $('#drive_full_card').hide();
+      $('#creds_bad_card').hide();
+      $('#cant_reach_google').hide();
+      $('#google_timeout').fadeIn(400);
     } else if (data.last_error == "cant_reach_google") {
       $('#error_card').hide();
       $('#drive_full_card').hide();
       $('#creds_bad_card').hide();
       $('#cant_reach_google').fadeIn(400);
+      $('#google_timeout').hide();
     } else if (data.last_error != "") {
       $('#error_paragraph').text(data.last_error);
       desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and including that here.  :\n\n" + data.last_error;
@@ -490,6 +536,7 @@ function refreshstats() {
       $('#drive_full_card').hide();
       $('#creds_bad_card').hide();
       $('#cant_reach_google').hide();
+      $('#google_timeout').hide();
     }
 
     if (data.ask_error_reports) {
@@ -502,6 +549,20 @@ function refreshstats() {
       $('#ingress_upgrade_card').fadeIn(500);
     } else {
       $('#ingress_upgrade_card').hide();
+    }
+
+    if (data.retainDrive > 0) {
+      $(".drive_retain_count").html(data.retainDrive)
+      $(".drive_retain_label").show()
+    } else {
+      $(".drive_retain_label").hide()
+    }
+
+    if (data.retainHa > 0) {
+      $(".ha_retain_count").html(data.retainHa)
+      $(".ha_retain_label").show()
+    } else {
+      $(".ha_retain_label").hide()
     }
 
     last_data = data;

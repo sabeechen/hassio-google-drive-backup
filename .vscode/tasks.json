@@ -26,13 +26,13 @@
             "problemMatcher": []
         },
         {
-            "label": "RUN: Add-on in Docker Instance",
+            "label": "RUN: Add-on in Docker locally",
             "type": "shell",
             "command": "./run_local_docker.py",
             "problemMatcher": []
         },
         {
-            "label": "STOP: Add-on in docker",
+            "label": "STOP: Add-on in docker locally",
             "type": "shell",
             "command": "docker kill $(docker ps -q --filter \"label=run-from-vscode=1\")",
             "problemMatcher": []
@@ -40,25 +40,13 @@
         {
             "label": "PUBLISH: New version to Docker Hub",
             "type": "shell",
-            "command": "./deploy.py",
-            "problemMatcher": []
-        },
-        {
-            "label": "DEPLOY: Add-on to local hassio",
-            "type": "shell",
-            "command": "./deploy_local_addon.py /run/user/1000/gvfs/smb-share:server=192.168.1.144,share=addons",
-            "problemMatcher": []
-        },
-        {
-            "label": "DEPLOY: Add-on to local hassio (docker image)",
-            "type": "shell",
-            "command": "./deploy_local_addon.py /run/user/1000/gvfs/smb-share:server=192.168.1.144,share=addons --docker",
+            "command": "./deploy.sh",
             "problemMatcher": []
         },
         {
             "label": "DEPLOY: Dev docker image",
             "type": "shell",
-            "command": "./build_dev_docker.py",
+            "command": "./deploy_dev.sh",
             "problemMatcher": []
         }
 

@@ -20,13 +20,15 @@ NOTIFICATION_ID = "backup_broken"
 
 class SnapshotInProgress(KnownError):
     def __init__(self):
-        super(SnapshotInProgress, self).__init__("A snapshot is already in progress")
+        super(SnapshotInProgress, self).__init__(
+            "A snapshot is already in progress")
 
 
 class Hassio(LogBase):
     """
     Stores logic for interacting with the Hass.io add-on API
     """
+
     def __init__(self, config: Config):
         self.config: Config = config
         self.snapshot_thread: Thread = Thread(target=self._getSnapshot)
@@ -37,6 +39,7 @@ class Hassio(LogBase):
         self.host_info = None
         self.ha_info = None
         self.lock: Lock = Lock()
+        self.has_offline = False
 
     def loadInfo(self) -> None:
         self.self_info = self.readAddonInfo()
@@ -116,11 +119,13 @@ class Hassio(LogBase):
 
             if isPartial:
                 # partial snapshot
-                url = "{0}snapshots/new/partial".format(self.config.hassioBaseUrl())
+                url = "{0}snapshots/new/partial".format(
+                    self.config.hassioBaseUrl())
                 return_info = self._postHassioData(url, request_info)
             else:
                 # full snapshot
-                url = "{0}snapshots/new/full".format(self.config.hassioBaseUrl())
+                url = "{0}snapshots/new/full".format(
+                    self.config.hassioBaseUrl())
                 return_info = self._postHassioData(url, request_info)
 
             try:
@@ -148,7 +153,8 @@ class Hassio(LogBase):
             self.lock.release()
 
     def auth(self, user: str, password: str) -> None:
-        self._postHassioData("{}auth".format(self.config.hassioBaseUrl()), {"username": user, "password": password})
+        self._postHassioData("{}auth".format(self.config.hassioBaseUrl()), {
+                             "username": user, "password": password})
 
     def newSnapshot(self) -> Snapshot:
         try:
@@ -172,25 +178,29 @@ class Hassio(LogBase):
             elif self.pending_snapshot is not None:
                 return self.pending_snapshot
             else:
-                raise KnownError("Unexpected circumstances, pending snapshot is null")
+                raise KnownError(
+                    "Unexpected circumstances, pending snapshot is null")
         finally:
             self.lock.release()
 
     def uploadSnapshot(self, file, name=""):
-        url: str = "{0}snapshots/new/upload".format(self.config.hassioBaseUrl())
+        url: str = "{0}snapshots/new/upload".format(
+            self.config.hassioBaseUrl())
         return self._postHassioData(url, file=file, name=name)
 
     def deleteSnapshot(self, snapshot: Snapshot) -> None:
-        delete_url: str = "{0}snapshots/{1}/remove".format(self.config.hassioBaseUrl(), snapshot.slug())
+        delete_url: str = "{0}snapshots/{1}/remove".format(
+            self.config.hassioBaseUrl(), snapshot.slug())
         self._postHassioData(delete_url, {})
         snapshot.ha = None
 
     def get(self, slug):
-        return HASnapshot(self._getHassioData("{0}snapshots/{1}/info".format(self.config.hassioBaseUrl(), slug)))
+        return HASnapshot(self._getHassioData("{0}snapshots/{1}/info".format(self.config.hassioBaseUrl(), slug)), self.config.isRetained(slug))
 
     def readSnapshots(self) -> List[HASnapshot]:
         snapshots: List[HASnapshot] = []
-        snapshot_list: Dict[str, List[Dict[str, Any]]] = self._getHassioData(self.config.hassioBaseUrl() + "snapshots")
+        snapshot_list: Dict[str, List[Dict[str, Any]]] = self._getHassioData(
+            self.config.hassioBaseUrl() + "snapshots")
         for snapshot in snapshot_list['snapshots']:
             snapshots.append(self.get(snapshot['slug']))
 
@@ -227,7 +237,8 @@ class Hassio(LogBase):
     def restoreSnapshot(self, slug: str, password: str = None, snapshot: Snapshot = None) -> None:
         snapshot.restoring = True
         try:
-            url: str = "{0}snapshots/{1}/restore/full".format(self.config.hassioBaseUrl(), slug)
+            url: str = "{0}snapshots/{1}/restore/full".format(
+                self.config.hassioBaseUrl(), slug)
             if password:
                 self._postHassioData(url, {'password': password})
             else:
@@ -245,8 +256,10 @@ class Hassio(LogBase):
                 # Hass.io seems to return http 400 when snapshot is already in progress, which is
                 # great because there is no way to differentiate it from a malformed error.
                 raise SnapshotInProgress()
-            self.debug("Hass.io responded with: {0} {1}".format(resp, resp.text))
-            raise Exception('Request to Hassio failed, HTTP error: {0} Message: {1}'.format(resp, resp.text))
+            self.debug(
+                "Hass.io responded with: {0} {1}".format(resp, resp.text))
+            raise Exception(
+                'Request to Hassio failed, HTTP error: {0} Message: {1}'.format(resp, resp.text))
         details: Dict[str, Any] = resp.json()
         self.debug("Hassio said: ")
         self.debug(pformat(details))
@@ -254,7 +267,8 @@ class Hassio(LogBase):
             if "result" in details:
                 raise Exception("Hassio said: " + details["result"])
             else:
-                raise Exception("Malformed response from Hassio: " + str(details))
+                raise Exception(
+                    "Malformed response from Hassio: " + str(details))
 
         if "data" not in details:
             return None
@@ -275,6 +289,16 @@ class Hassio(LogBase):
     def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
         try:
             requests.post(self.config.haBaseUrl() + path, headers=self.config.getHaHeaders(), json=data).raise_for_status()
+            if self.has_offline:
+                self.info("Home Assistant came back.")
+                self.has_offline = False
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 502:
+                if not self.has_offline:
+                    self.error("Unable to reach Home Assistant.  Is it restarting?")
+                    self.has_offline = True
+            else:
+                self.error(formatException(e))
         except Exception as e:
             self.error(formatException(e))
 

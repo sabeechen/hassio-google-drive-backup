@@ -8,5 +8,6 @@
     "credentials_file_path": "../dev/data/credentials.dat",
     "ingress_upgrade_file": "../dev/data/ingress_upgrade",
     "certfile": "../dev/ssl/fullchain.pem",
-    "keyfile": "../dev/ssl/privkey.pem"
+    "keyfile": "../dev/ssl/privkey.pem",
+    "retained_file": "../dev/data/retained.json"
 }

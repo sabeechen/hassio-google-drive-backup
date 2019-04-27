@@ -1,10 +1,10 @@
 {
-    "python.unitTest.pyTestArgs": [
+    "python.testing.pyTestArgs": [
         "hassio-google-drive-backup"
     ],
-    "python.unitTest.unittestEnabled": false,
-    "python.unitTest.nosetestsEnabled": false,
-    "python.unitTest.pyTestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pyTestEnabled": true,
     "python.pythonPath": "/usr/bin/python3.7",
     "python.linting.flake8Enabled": true,
     "python.linting.pylintEnabled": false,

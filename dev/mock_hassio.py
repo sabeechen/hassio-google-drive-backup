@@ -306,6 +306,7 @@ def setBackupState() -> str:
 @app.route("/homeassistant/api/states/binary_sensor.snapshots_stale", methods=['POST'])
 def setBinarySensorState() -> str:
     print("Updated snapshot stale sensor with: {}".format(request.get_json()))
+    return "", status.HTTP_502_BAD_GATEWAY
     return ""
 
 

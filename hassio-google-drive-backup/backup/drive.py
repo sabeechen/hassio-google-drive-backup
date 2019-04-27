@@ -19,6 +19,7 @@ from .snapshots import PROP_KEY_NAME
 from .snapshots import PROP_TYPE
 from .snapshots import PROP_VERSION
 from .snapshots import PROP_PROTECTED
+from .snapshots import PROP_RETAINED
 from typing import List, Dict, TypeVar, Any
 from .config import Config
 from .responsestream import IteratorByteStream
@@ -272,6 +273,15 @@ class Drive(LogBase):
 
     def download(self, id):
         return IteratorByteStream(self._download(id))
+
+    def setRetain(self, snapshot, retain):
+        file_metadata: Dict[str, str] = {
+            'appProperties': {
+                PROP_RETAINED: str(retain),
+            },
+        }
+        self._drive().files().update(fileId=snapshot.driveitem.id(), body=file_metadata).execute()
+        snapshot.driveitem.setRetain(retain)
 
     def _download(self, id):
         request = self._drive().files().get_media(fileId=id)

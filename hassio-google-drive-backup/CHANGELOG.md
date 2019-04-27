@@ -1,3 +1,9 @@
+## [0.92] - 2019-04-26
+### Added
+- Ability to save snapshots indefinitely (ie protect from automatic cleanup), try it from the "ACTIONS" menu.
+### Changes
+- Better messaging for most common errors (Home Assistant offline, Google servers unavailable, etc)
+
 ## [0.91] - 2019-04-21
 
 ### Changes

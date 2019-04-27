@@ -145,52 +145,52 @@ def test_expose_extra_server(mocker) -> None:
     config: Config = Config()
 
     # Test strange version
-    config.setIngressInfo({'homeassistant': 'badversion'})
+    config.setIngressInfo({'homeassistant': 'badversion'}, force_enable=True)
     assert config.useIngress() is False
     assert config.warnIngress() is True
 
     # Test empty version
-    config.setIngressInfo({'homeassistant': ''})
+    config.setIngressInfo({'homeassistant': ''}, force_enable=True)
     assert config.useIngress() is False
     assert config.warnIngress() is True
 
     # Test null version
-    config.setIngressInfo({})
+    config.setIngressInfo({}, force_enable=True)
     assert config.useIngress() is False
     assert config.warnIngress() is True
 
     # Test weird minimum version
-    config.setIngressInfo({'homeassistant': '0.91.3.otherinfo'})
+    config.setIngressInfo({'homeassistant': '0.91.3.otherinfo'}, force_enable=True)
     assert config.useIngress() is True
     assert config.warnIngress() is False
 
     # Test older
-    config.setIngressInfo({'homeassistant': '0.91.2'})
+    config.setIngressInfo({'homeassistant': '0.91.2'}, force_enable=True)
     assert config.useIngress() is False
     assert config.warnIngress() is True
 
     # Test older
-    config.setIngressInfo({'homeassistant': '0.90.3'})
+    config.setIngressInfo({'homeassistant': '0.90.3'}, force_enable=True)
     assert config.useIngress() is False
     assert config.warnIngress() is True
 
     # Test minimum version
-    config.setIngressInfo({'homeassistant': '0.91.3'})
+    config.setIngressInfo({'homeassistant': '0.91.3'}, force_enable=True)
     assert config.useIngress() is True
     assert config.warnIngress() is False
 
     # Test newer version
-    config.setIngressInfo({'homeassistant': '0.91.4'})
+    config.setIngressInfo({'homeassistant': '0.91.4'}, force_enable=True)
     assert config.useIngress() is True
     assert config.warnIngress() is False
 
     # Test newer version
-    config.setIngressInfo({'homeassistant': '0.92.3'})
+    config.setIngressInfo({'homeassistant': '0.92.3'}, force_enable=True)
     assert config.useIngress() is True
     assert config.warnIngress() is False
 
     # Test newer version
-    config.setIngressInfo({'homeassistant': '1.91.3'})
+    config.setIngressInfo({'homeassistant': '1.91.3'}, force_enable=True)
     assert config.useIngress() is True
     assert config.warnIngress() is False
 

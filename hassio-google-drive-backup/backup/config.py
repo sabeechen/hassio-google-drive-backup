@@ -41,7 +41,8 @@ DEFAULTS = {
     "exclude_folders": "",
     "exclude_addons": "",
     "expose_extra_server": False,
-    "ingress_upgrade_file": "/data/upgrade_ingress"
+    "ingress_upgrade_file": "/data/upgrade_ingress",
+    "retained_file": "/data/retained.json"
 }
 
 
@@ -85,6 +86,8 @@ class Config(LogBase):
         # True if we should watnt he user to disable their exposed Web UI
         self.warn_expose_server = False
 
+        self.retained = self._loadRetained()
+
     def setSendErrorReports(self, handler, send: bool) -> None:
         self.config['send_error_reports'] = send
 
@@ -113,7 +116,7 @@ class Config(LogBase):
             with open(self.ingressUpgradeFile(), 'x'):
                 pass
 
-    def setIngressInfo(self, host_info):
+    def setIngressInfo(self, host_info, force_enable=False):
         # check if the add-on has ingress enabled
         try:
             with open(ADDON_OPTIONS_FILE) as handle:
@@ -123,7 +126,7 @@ class Config(LogBase):
             self.error(formatException(e))
             supports_ingress = False
 
-        if not supports_ingress:
+        if not supports_ingress and not force_enable:
             self.ingress_enabled = False
             self.warn_ingress = False
             self.warn_expose_server = False
@@ -148,7 +151,7 @@ class Config(LogBase):
                 # we've upgraded, so warn about ingress but expose the additional server.
                 self.warn_expose_server = True
                 self.config['expose_extra_server'] = True
-            else:
+            elif not force_enable:
                 # its a new install, so just default to using ingress in the future.
                 with open(self.ingressUpgradeFile(), 'x'):
                     pass
@@ -179,6 +182,9 @@ class Config(LogBase):
         except ValueError:
             self.error("Unable to parse Hoem Assistant version string: " + version)
             return False
+
+    def retainedFile(self) -> str:
+        return str(self.config['retained_file'])
 
     def excludeFolders(self) -> str:
         return str(self.config['exclude_folders'])
@@ -458,3 +464,19 @@ class Config(LogBase):
 
         self.config = self.default.copy()
         self.config.update(old_config)
+
+    def _loadRetained(self) -> List[str]:
+        if os.path.exists(self.retainedFile()):
+            with open(self.retainedFile()) as f:
+                return json.load(f)['retained']
+        return []
+
+    def saveRetained(self, list) -> None:
+        with open(self.retainedFile(), "w") as f:
+            json.dump({
+                'retained': list
+            }, f)
+        self.retained = self._loadRetained()
+
+    def isRetained(self, slug):
+        return slug in self.retained

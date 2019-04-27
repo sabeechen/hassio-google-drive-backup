@@ -7,16 +7,16 @@
   <title>Hassio Google Drive Backup</title>
 
   <!-- CSS  -->
-  <link href="css/icons.css?version=0.91" rel="stylesheet">
-  <link href="css/materialize.css?version=0.91" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.91" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.91">
-  <script src="js/jquery.js?version=0.91"></script>
-  <script src="js/materialize.js?version=0.91"></script>
-  <script src="js/init.js?version=0.91"></script>
-  <script src="js/scripts.js?version=0.91"></script>
-  <script src="js/settings.js?version=0.91"></script>
-  <script src="js/restore.js?version=0.91"></script>
+  <link href="css/icons.css?version=0.92" rel="stylesheet">
+  <link href="css/materialize.css?version=0.92" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.92" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="images/favicon.png?version=0.92">
+  <script src="js/jquery.js?version=0.92"></script>
+  <script src="js/materialize.js?version=0.92"></script>
+  <script src="js/init.js?version=0.92"></script>
+  <script src="js/scripts.js?version=0.92"></script>
+  <script src="js/settings.js?version=0.92"></script>
+  <script src="js/restore.js?version=0.92"></script>
   <script type="text/javascript">
     $(document).ready(function () {
       // Needed to make modal dialogs work.
@@ -24,6 +24,7 @@
       $('#uploadmodal').modal();
       $('#deletemodal').modal();
       $('#restoremodal').modal();
+      $('#retainmodal').modal();
       $('#settings_modal').modal({
         dismissible: false
       });
@@ -58,11 +59,39 @@
       <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="delete_cancel">Cancel</a>
     </div>
   </div>
+  <div id="retainmodal" class="modal">
+    <div class="modal-content">
+      <h4>Keep this snapshot around indefinitely?</h4>
+      <p id="retain_text">
+        Select where you'd like the snapshots kept indefinitely. It won't get deleted automatically and won't count
+        toward the maximum number of snapshots you've configured to keep in Google Drive or Home Assistant. To delete it
+        you'll either need to select "Delete" from the snapshot's menu or come back to this dialog and unckeck the
+        options below to let it get automatically cleaned up (after a few minutes).
+      </p>
+      <form>
+        <label>
+          <input type="checkbox" name="notify_for_stale_snapshots" id="retain_drive" class="filled-in checkbox-ha" />
+          <span>Keep indefinitely in Google Drive</span>
+        </label>
+        <br/>
+        <label>
+          <input type="checkbox" name="notify_for_stale_snapshots" id="retain_ha" class="filled-in checkbox-ha" />
+          <span>Keep indefinitely in Home Assistant</span>
+        </label>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="danger-button modal-close waves-effect waves-light btn"
+        id="do_retain_button">Save</a>
+      <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="delete_cancel">Cancel</a>
+    </div>
+  </div>
   <div id="uploadmodal" class="modal">
     <div class="modal-content">
       <h4>Upload this snapshot to Hass.io</h4>
       <p>Are you sure you'd like to upload this snapshot back to Hass.io? The snapshot will be downloaded from Google
         Drive, and after that you'll be able to restore it.</p>
+      <p><b>Note:</b> The snapshot you upload from Google Drive will be kept indefinitely in Home Assistant until you delete it manually.  You can thange this by selecting "Never Delete" and unckecking "Keep indefinitely in Home Assistant" from the snapshot's action menu after its uploaded.</p>
     </div>
     <div class="modal-footer">
       <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="do_upload_button">Upload Snapshot</a>
@@ -206,10 +235,13 @@
             <br />
             <a href="#" onclick="showDetails(this);return false;" id="status-details"><i class="material-icons left"
                 style="margin-right: 3px; font-size: 15px;">info</i></a>
-              <i class="material-icons left icon-protected tooltipped" data-position="right"
-                data-tooltip="This snapshot is password protected" style="margin-right: 3px; font-size: 15px;">vpn_key</i>
-              <i class="material-icons left tooltipped icon-warn-delete yellow-text text-darken-4" data-position="right"
-                data-tooltip="" style="margin-right: 3px; font-size: 15px;">warning</i>
+            <i class="material-icons left icon-protected tooltipped" data-position="right"
+              data-tooltip="This snapshot is password protected" style="margin-right: 3px; font-size: 15px;">vpn_key</i>
+            <i class="material-icons left icon-retain tooltipped" data-position="right"
+              data-tooltip="This snapshot will be kept indefinitely until you delete it."
+              style="margin-right: 3px; font-size: 15px;">lock</i>
+            <i class="material-icons left tooltipped icon-warn-delete yellow-text text-darken-4" data-position="right"
+              data-tooltip="" style="margin-right: 3px; font-size: 15px;">warning</i>
           </div>
           <ul id='action_dropdown' class='dropdown-content'>
             <li id="delete_option">
@@ -239,6 +271,13 @@
                 data-tooltip="Upload the snapshot from Google Drive to Hass.io.  <br/>You'll need to do this if you want to restore the snapshot."
                 onClick="uploadSnapshot(this);return false;">
                 <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
+              </a>
+            </li>
+            <li id="retain_option">
+              <a href="#!" id="retain_link" class="tooltipped" data-position="left"
+                data-tooltip="Keep this snapshot indefinitely until you manually delete it."
+                onClick="retainSnapshot(this);return false;">
+                <i class="material-icons left" style="font-size: 25px">lock</i>Never Delete
               </a>
             </li>
           </ul>
@@ -353,7 +392,8 @@
                   onchange="toggleSlide(this, 'settings_server_details');" />
                 <span id="expose_extra_server_label">Expose another server on port 1627</span>
                 <br />
-                <span class="helper-text" id="expose_extra_server_help">Expose another server on port 1627 with optional SSL and username authentication.</span>
+                <span class="helper-text" id="expose_extra_server_help">Expose another server on port 1627 with optional
+                  SSL and username authentication.</span>
               </label>
             </div>
           </div>
@@ -564,9 +604,10 @@
       </div>
     </div>
     <div class="modal-footer" style="min-height: 56px; height: auto;">
-      <div id="settings_error" class="left valign-wrapper red darken-4 white-text default-hidden" style="margin: 6px; padding-left: 16px; padding-right: 16px; min-height: 36px; vertical-align: middle">
+      <div id="settings_error" class="left valign-wrapper red darken-4 white-text default-hidden"
+        style="margin: 6px; padding-left: 16px; padding-right: 16px; min-height: 36px; vertical-align: middle">
         Some configuration is invalid, check for red errors up above.
-    </div>
+      </div>
 
       <a href="#!" class="waves-effect waves-light btn-flat" id="save_settings" onClick="saveSettings()">Save</a>
       <a href="#!" class="waves-effect waves-light btn-flat" onclick="handleCloseSettings()" id="save_cancel">Cancel</a>
@@ -823,9 +864,8 @@
                 <p>To resolve this you can:</p>
                 <ul class="browser-default">
                   <li>Free up space in Google Drive, GMail, or Google Photos by deleting things.</li>
-                  <li>Store fewer snapshots by setting "max_snapshots_in_google_dirve" to something smaller in your
-                    add-on
-                    configuration.</li>
+                  <li>Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                    style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on settings</a> to store fewer snapshots in Google Drive</li>
                   <li><a href="https://drive.google.com/settings/storage">Buy more storage</a> from Google</li>
                   <li>Make your snapshots smaller (see <a
                       href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this
@@ -866,15 +906,39 @@
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
                   <span style="vertical-align: top;">Couldn't Reach Google Drive</span>
                 </span>
-                <p>The add-on couldn't find Google Drive's servers at www.googleapis.com. Snapshots can't be backed up
-                  without beaing able to reach this address.</p>
+                <p>The add-on couldn't find Google Drive's servers. Snapshots can't be backed up
+                  without being able to reach Google Drive.</p>
                 <p>Please ensure:</p>
                 <ul class="browser-default">
                   <li>The internet is working.</li>
-                  <li>The server www.googleapis.com is reachable from your Home Assistant machine. Some ad-blocking and
-                    firewall software can block this address.</li>
+                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant machine. Some ad-blocking and
+                    firewall software can block these addresses.</li>
                 </ul>
                 <p>You can also try restarting this add-on, Hass.io, or Home Assistant.</p>
+                <div class="card-action white-text">
+                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden" id="google_timeout">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
+                  <span style="vertical-align: top;">Connection Timeout</span>
+                </span>
+                <p>The connection to Google timed out while trying to back up your snapshots. Snapshots can't be backed up
+                  without being able to reach Google Drive.</p>
+                <p>Please ensure:</p>
+                <ul class="browser-default">
+                  <li>The internet is working.</li>
+                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant machine. Some ad-blocking and
+                    firewall software can block or throttle traffic to these addresses.</li>
+                </ul>
+                <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
                 </div>
@@ -920,16 +984,20 @@
                 <p>It looks like you've upgraded to a version of Home Assistant that supports <a target="_blank"
                     href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>. Ingress allows
                   this web interface to be embeeded inside of Home Assistant, which is usually more secure because it
-                  delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and username/password).  In the future, almost all add-ons that expose a web interface are expected to expose it using ingress.</p>
-                  <br/>
-                  <p><b>Select no</b> to continue exposing a web interface on port 1627 with the SSL and authentication
+                  delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and
+                  username/password). In the future, almost all add-ons that expose a web interface are expected to
+                  expose it using ingress.</p>
+                <br />
+                <p><b>Select no</b> to continue exposing a web interface on port 1627 with the SSL and authentication
                   settings you choose.</p>
-                  <p><b>Select yes</b> to disable the server on port 1627 and use ingress only. You'll be redirected to
-                    the ingress page automatically and in the future you can access this page securely from the add-on "WEB UI" button.</p>
-                    <br/>
-                    <p>You can change this option any time from the settings menu.  No matter which you choose, the interface will be available over ingress.</p>
-                    <br/>
-                    <span class="helper-text">
+                <p><b>Select yes</b> to disable the server on port 1627 and use ingress only. You'll be redirected to
+                  the ingress page automatically and in the future you can access this page securely from the add-on
+                  "WEB UI" button.</p>
+                <br />
+                <p>You can change this option any time from the settings menu. No matter which you choose, the interface
+                  will be available over ingress.</p>
+                <br />
+                <span class="helper-text">
                   <p>Note: If you already embed this interface in Home Assistant using the panel_iframe component, you
                     can still do that using ingress by following <a target="_blank"
                       href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-put-a-link-to-the-web-ui-in-home-assistant">these
@@ -946,13 +1014,19 @@
         <div class="row">
           <div class="col m3">
             <div class="left container" style="margin-left: 15px">
-              <h6>In Hass.io:</h6>
+              <h6>In Home Assistant:</h6>
+            </div>
+            <div class="left container ha_retain_label" style="margin-left: 15px">
+                <h7 class="left"><span class="ha_retain_count"></span> saved indefinitely</h7>
             </div>
             <div class="right container">
               <h5 class="right " id="ha_snapshots"></h5>
             </div>
             <div class="left container" style="margin-left: 15px">
               <h6>In Google Drive:</h6>
+            </div>
+            <div class="left container drive_retain_label" style="margin-left: 15px">
+                <h7 class="left"><span class="drive_retain_count"></span> saved indefinitely</h7>
             </div>
             <div class="right container">
               <h5 class="right " id="drive_snapshots"></h5>

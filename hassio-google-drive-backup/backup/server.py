@@ -4,7 +4,6 @@ import cherrypy
 from datetime import timedelta
 from datetime import datetime
 from oauth2client.client import OAuth2WebServerFlow
-from oauth2client.client import HttpAccessTokenRefreshError
 from oauth2client.client import OAuth2Credentials
 from .helpers import nowutc
 from .helpers import formatTimeSince
@@ -21,8 +20,6 @@ from pathlib import Path
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
 MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
-DRIVE_FULL_MESSAGE = "The user's Drive storage quota has been exceeded"
-CANT_REACH_GOOGLE_MESSAGE = "Unable to find the server at www.googleapis.com"
 
 
 class Server(LogBase):
@@ -74,6 +71,8 @@ class Server(LogBase):
                 'details': details,
                 'deleteNextDrive': snapshot.deleteNextFromDrive,
                 'deleteNextHa': snapshot.deleteNextFromHa,
+                'driveRetain': snapshot.driveRetained(),
+                'haRetain': snapshot.haRetained()
             })
         status['ask_error_reports'] = (self.config.sendErrorReports() is None)
         status['drive_snapshots'] = self.engine.driveSnapshotCount()
@@ -96,10 +95,12 @@ class Server(LogBase):
         else:
             status['last_snapshot'] = "Never"
 
-        status['last_error'] = self.getError()
+        status['last_error'] = self.engine.getError()
         status["firstSync"] = self.engine.firstSync
         status["maxSnapshotsInHasssio"] = self.config.maxSnapshotsInHassio()
         status["maxSnapshotsInDrive"] = self.config.maxSnapshotsInGoogleDrive()
+        status["retainDrive"] = self.engine.driveSnapshotCount() - self.engine.driveDeletableSnapshotCount()
+        status["retainHa"] = self.engine.haSnapshotCount() - self.engine.haDeletableSnapshotCount()
         return status
 
     def getRestoreLink(self):
@@ -113,24 +114,6 @@ class Server(LogBase):
             url = "http://"
         url = url + "{host}:" + str(self.engine.hassio.ha_info['port']) + "/hassio/snapshots"
         return url
-
-    def getError(self) -> str:
-        if self.engine.last_error is not None:
-            if isinstance(self.engine.last_error, HttpAccessTokenRefreshError):
-                return "creds_bad"
-            if isinstance(self.engine.last_error, KnownError):
-                return self.engine.last_error.message
-            elif isinstance(self.engine.last_error, Exception):
-                formatted = formatException(self.engine.last_error)
-                if DRIVE_FULL_MESSAGE in formatted:
-                    return "drive_full"
-                elif CANT_REACH_GOOGLE_MESSAGE in formatted:
-                    return "cant_reach_google"
-                return formatted
-            else:
-                return str(self.engine.last_error)
-        else:
-            return ""
 
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()
@@ -167,7 +150,7 @@ class Server(LogBase):
                     }
             except Exception as e:
                 return {
-                    'error': "Couldn't create authorizatin URL, Google said:" + str(e)
+                    'error': "Couldn't create authorization URL, Google said:" + str(e)
                 }
             raise cherrypy.HTTPError()
 
@@ -197,8 +180,8 @@ class Server(LogBase):
         except Exception as e:
             return {"error": formatException(e)}
 
-    @cherrypy.expose  # type: ignore
-    @cherrypy.tools.json_out()  # type: ignore
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def deleteSnapshot(self, slug: str, drive: str, ha: str) -> Dict[Any, Any]:
         delete_drive: bool = (drive == "true")
         delete_ha: bool = (ha == "true")
@@ -211,7 +194,36 @@ class Server(LogBase):
             self.error(formatException(e))
             return {"message": "{}".format(e), "error_details": formatException(e)}
 
-    @cherrypy.expose  # type: ignore
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def retain(self, slug, drive, ha):
+        try:
+            found: Optional[Snapshot] = None
+            for snapshot in self.engine.snapshots:
+                if snapshot.slug() == slug:
+                    found = snapshot
+                    break
+
+            if not found:
+                return {
+                    'message': 'Snapshot couldn\'t be found',
+                    'error_details': 'Snapshot couldn\'t be found'
+                }
+            self.engine.setRetention(found, self.strToBool(drive), self.strToBool(ha))
+            return {
+                'message': "Updated the snapshot's settings"
+            }
+        except Exception as e:
+            self.error(formatException(e))
+            return {
+                'message': 'Failed to update snapshot\'s settings',
+                'error_details': formatException(e)
+            }
+
+    def strToBool(self, value) -> bool:
+        return str(value).lower() in ['true', 't', 'yes', 'y', '1']
+
+    @cherrypy.expose
     def log(self, format="download", catchup=False) -> Any:
         if not catchup:
             self.last_log_index = 0
@@ -361,8 +373,13 @@ class Server(LogBase):
     @cherrypy.tools.json_in()
     def saveconfig(self, **kwargs) -> Any:
         try:
+            use_ssl = self.config.useSsl()
+            use_password = self.config.requireLogin()
+            cert_file = self.config.certFile()
+            key_file = self.config.keyFile()
             self.config.update(self.engine.hassio.updateConfig, **kwargs)
-            self.run()
+            if use_ssl != self.config.useSsl() or use_password != self.config.requireLogin() or cert_file != self.config.certFile() or key_file != self.config.keyFile():
+                self.run()
             return {'message': 'Settings saved'}
         except Exception as e:
             return {
@@ -386,10 +403,7 @@ class Server(LogBase):
             if found.isDownloading():
                 return {'message': "Snapshot is already being uploaded."}
 
-            path = os.path.join(self.config.backupDirectory(), found.slug() + ".tar")
-            self.engine.drive.downloadToFile(found.driveitem.id(), path, found)
-            self.engine.hassio.refreshSnapshots()
-            self.engine.doBackupWorkflow()
+            self.engine.doUpload(found)
 
             if not found.isInHA():
                 {'message': "Soemthing wen't wrong, Hass.io didn't recognize the snapshot.  Please check the supervisor logs."}

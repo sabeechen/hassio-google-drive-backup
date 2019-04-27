@@ -7,6 +7,7 @@ from .helpers import take
 from .helpers import formatException
 from .drive import Drive
 from .hassio import Hassio, SnapshotInProgress
+from oauth2client.client import HttpAccessTokenRefreshError
 from .watcher import Watcher
 from .config import Config
 from .time import Time
@@ -15,15 +16,22 @@ from dateutil.relativedelta import relativedelta
 from threading import Lock
 from datetime import timedelta
 from datetime import datetime
-from typing import Dict, List, Optional, Callable, Any
-from oauth2client.client import Credentials  # type: ignore
+from typing import Dict, List, Optional, Callable
+from oauth2client.client import Credentials
 from .backupscheme import GenerationalScheme, OldestScheme
 from .logbase import LogBase
 from .knownerror import KnownError
 from urllib.parse import quote
 from requests import get
+import os
 
 BAD_TOKEN_ERROR_MESSAGE: str = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
+DRIVE_FULL_MESSAGE = "The user's Drive storage quota has been exceeded"
+CANT_REACH_GOOGLE_MESSAGE = "Unable to find the server at www.googleapis.com"
+CANT_REACH_GOOGLE_AUTH_MESSAGE = "Unable to find the server at oauth2.googleapis.com"
+CANT_REACH_GOOGLE_UNAVAILABLE_MESSAGE = "OSError: [Errno 99] Address not available"
+GOOGLE_TIMEOUT_1_MESSAGE = "socket.timeout: The read operation timed out"
+GOOGLE_TIMEOUT_2_MESSAGE = "socket.timeout: timed out"
 
 DATE_LAMBDA: Callable[[Snapshot], datetime] = lambda s: s.date()
 HA_LAMBDA: Callable[[Snapshot], bool] = lambda s: s.isInHA()
@@ -32,6 +40,10 @@ NOT_DRIVE_LAMBDA: Callable[[Snapshot], bool] = lambda s: not s.isInDrive()
 SLUG_LAMBDA: Callable[[Snapshot], str] = lambda s: s.slug()
 DRIVE_SLUG_LAMBDA: Callable[[DriveSnapshot], str] = lambda s: s.slug()
 HA_SLUG_LAMBDA: Callable[[HASnapshot], str] = lambda s: s.slug()
+RETAINED_LAMBDA: Callable[[HASnapshot], str] = lambda s: s.ha.retained()
+
+DRIVE_DELETABLE_LAMBDA: Callable[[Snapshot], str] = lambda s: s.isInDrive() and not s.driveRetained()
+HA_DELETABLE_LAMBDA: Callable[[Snapshot], str] = lambda s: s.isInHA() and not s.haRetained()
 
 ERROR_BACKOFF_MIN_SECS = 10
 ERROR_BACKOFF_MAX_SECS = 60 * 60
@@ -88,6 +100,35 @@ class Engine(LogBase):
     def haSnapshotCount(self) -> int:
         return count(self.snapshots, HA_LAMBDA)
 
+    def driveDeletableSnapshotCount(self) -> int:
+        return count(self.snapshots, DRIVE_DELETABLE_LAMBDA)
+
+    def haDeletableSnapshotCount(self) -> int:
+        return count(self.snapshots, HA_DELETABLE_LAMBDA)
+
+    def setRetention(self, snapshot: Snapshot, retainDrive: bool, retainHa: bool) -> None:
+        if snapshot.isInDrive() and snapshot.driveitem.retained() != retainDrive and self.driveEnabled():
+            self.drive.setRetain(snapshot, retainDrive)
+        if snapshot.isInHA() and snapshot.ha.retained() != retainHa:
+            snapshot.ha._retained = retainHa
+            self._saveHaRetention()
+        self._updateFreshness()
+
+    def doUpload(self, snapshot: Snapshot):
+        path = os.path.join(self.config.backupDirectory(), snapshot.slug() + ".tar")
+        self.drive.downloadToFile(snapshot.driveitem.id(), path, snapshot)
+        self.hassio.refreshSnapshots()
+        self.doBackupWorkflow()
+
+        if snapshot.isInHA() and not snapshot.ha.retained():
+            snapshot.ha._retained = True
+            self.config.saveRetained(list(map(HA_SLUG_LAMBDA, filter(RETAINED_LAMBDA, filter(HA_LAMBDA, self.snapshots)))))
+            self._saveHaRetention()
+        self._updateFreshness()
+
+    def _saveHaRetention(self):
+        self.config.saveRetained(list(map(HA_SLUG_LAMBDA, filter(RETAINED_LAMBDA, filter(HA_LAMBDA, self.snapshots)))))
+
     def doBackupWorkflow(self) -> None:
         self.last_refresh = self.time.now()
         try:
@@ -113,17 +154,13 @@ class Engine(LogBase):
             if not self.last_error_reported:
                 self.last_error_reported = True
                 if self.config.sendErrorReports():
-                    self.sendErrorReport(e)
+                    self.sendErrorReport()
             self.maybeSendStalenessNotifications()
         finally:
             self.lock.release()
 
-    def sendErrorReport(self, e: Any) -> None:
-        message = ""
-        if isinstance(e, Exception):
-            message = formatException(e)
-        else:
-            message = str(e)
+    def sendErrorReport(self) -> None:
+        message = self.getError()
         self.info("Sending error report (see settings to disable)")
         version = "unknown"
         if 'version' in self.hassio.self_info:
@@ -289,16 +326,16 @@ class Engine(LogBase):
         self.firstSync = False
 
     def _purgeDriveBackups(self) -> None:
-        while self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() > self.config.maxSnapshotsInGoogleDrive():
-            oldest: Snapshot = self.getDeleteScheme().getOldest(filter(DRIVE_LAMBDA, self.snapshots))
+        while self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveDeletableSnapshotCount() > self.config.maxSnapshotsInGoogleDrive():
+            oldest: Snapshot = self.getDeleteScheme().getOldest(filter(DRIVE_DELETABLE_LAMBDA, self.snapshots))
             self.drive.deleteSnapshot(oldest)
             if oldest.isDeleted():
                 self.snapshots.remove(oldest)
         self._updateFreshness()
 
     def _purgeHaSnapshots(self) -> None:
-        while self.config.maxSnapshotsInHassio() > 0 and self.haSnapshotCount() > self.config.maxSnapshotsInHassio():
-            oldest_hassio: Snapshot = self.getDeleteScheme().getOldest(filter(HA_LAMBDA, self.snapshots))
+        while self.config.maxSnapshotsInHassio() > 0 and self.haDeletableSnapshotCount() > self.config.maxSnapshotsInHassio():
+            oldest_hassio: Snapshot = self.getDeleteScheme().getOldest(filter(HA_DELETABLE_LAMBDA, self.snapshots))
             self.hassio.deleteSnapshot(oldest_hassio)
             if not oldest_hassio.isInDrive():
                 self.snapshots.remove(oldest_hassio)
@@ -366,12 +403,35 @@ class Engine(LogBase):
         deleteFromDrive = None
         deleteFromHa = None
         scheme = self.getDeleteScheme()
-        if self.config.maxSnapshotsInHassio() > 0 and self.haSnapshotCount() >= self.config.maxSnapshotsInHassio():
-            deleteFromHa = scheme.getOldest(filter(HA_LAMBDA, self.snapshots))
-        if self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveSnapshotCount() >= self.config.maxSnapshotsInGoogleDrive():
-            deleteFromDrive = self.getDeleteScheme().getOldest(filter(DRIVE_LAMBDA, self.snapshots))
-        
+        if self.config.maxSnapshotsInHassio() > 0 and self.haDeletableSnapshotCount() >= self.config.maxSnapshotsInHassio():
+            deleteFromHa = scheme.getOldest(filter(HA_DELETABLE_LAMBDA, self.snapshots))
+        if self.drive.enabled() and self.config.maxSnapshotsInGoogleDrive() > 0 and self.driveDeletableSnapshotCount() >= self.config.maxSnapshotsInGoogleDrive():
+            deleteFromDrive = self.getDeleteScheme().getOldest(filter(DRIVE_DELETABLE_LAMBDA, self.snapshots))
+
         for snapshot in self.snapshots:
             snapshot.deleteNextFromDrive = (snapshot == deleteFromDrive)
             snapshot.deleteNextFromHa = (snapshot == deleteFromHa)
-            
+
+    def getError(self) -> str:
+        if self.last_error is not None:
+            if isinstance(self.last_error, HttpAccessTokenRefreshError):
+                return "creds_bad"
+            elif isinstance(self.last_error, Exception):
+                formatted = formatException(self.last_error)
+                if DRIVE_FULL_MESSAGE in formatted:
+                    return "drive_full"
+                elif CANT_REACH_GOOGLE_MESSAGE in formatted:
+                    return "cant_reach_google"
+                elif CANT_REACH_GOOGLE_AUTH_MESSAGE in formatted:
+                    return "cant_reach_google"
+                elif CANT_REACH_GOOGLE_UNAVAILABLE_MESSAGE in formatted:
+                    return "cant_reach_google"
+                elif GOOGLE_TIMEOUT_1_MESSAGE in formatted:
+                    return "google_timeout"
+                elif GOOGLE_TIMEOUT_2_MESSAGE in formatted:
+                    return "google_timeout"
+                return formatted
+            else:
+                return str(self.engine.last_error)
+        else:
+            return ""

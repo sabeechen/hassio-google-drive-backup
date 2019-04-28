@@ -96,11 +96,13 @@ class Server(LogBase):
             status['last_snapshot'] = "Never"
 
         status['last_error'] = self.engine.getError()
+        status['last_exception'] = self.engine.getExceptionInfo()
         status["firstSync"] = self.engine.firstSync
         status["maxSnapshotsInHasssio"] = self.config.maxSnapshotsInHassio()
         status["maxSnapshotsInDrive"] = self.config.maxSnapshotsInGoogleDrive()
         status["retainDrive"] = self.engine.driveSnapshotCount() - self.engine.driveDeletableSnapshotCount()
         status["retainHa"] = self.engine.haSnapshotCount() - self.engine.haDeletableSnapshotCount()
+        status["snapshot_name_template"] = self.config.snapshotName()
         return status
 
     def getRestoreLink(self):
@@ -167,13 +169,15 @@ class Server(LogBase):
 
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()  # type: ignore
-    def triggerbackup(self) -> Dict[Any, Any]:
+    def triggerbackup(self, custom_name=None, retain_drive=False, retain_ha=False) -> Dict[Any, Any]:
+        retain_drive = self.strToBool(retain_drive)
+        retain_ha = self.strToBool(retain_ha)
         try:
             for snapshot in self.engine.snapshots:
                 if snapshot.isPending():
                     return {"error": "A snapshot is already in progress"}
 
-            snapshot = self.engine.startSnapshot()
+            snapshot = self.engine.startSnapshot(custom_name=custom_name, retain_drive=retain_drive, retain_ha=retain_ha)
             return {"name": snapshot.name()}
         except KnownError as e:
             return {"error": e.message, "detail": e.detail}
@@ -221,7 +225,7 @@ class Server(LogBase):
             }
 
     def strToBool(self, value) -> bool:
-        return str(value).lower() in ['true', 't', 'yes', 'y', '1']
+        return str(value).lower() in ['true', 't', 'yes', 'y', '1', 'hai', 'si', 'omgyesplease']
 
     @cherrypy.expose
     def log(self, format="download", catchup=False) -> Any:

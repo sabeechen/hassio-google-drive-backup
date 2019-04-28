@@ -164,6 +164,8 @@ class Snapshot(object):
         self.restoring = None
         self._deleteNextFromDrive = None
         self._deleteNextFromHa = None
+        self._pending_retain_drive = False
+        self._pending_retain_ha = False
 
     @property
     def deleteNextFromDrive(self):
@@ -181,11 +183,13 @@ class Snapshot(object):
     def deleteNextFromHa(self, delete):
         self._deleteNextFromHa = delete
 
-    def setPending(self, name: str, date: datetime) -> None:
+    def setPending(self, name: str, date: datetime, retain_drive: bool, retain_ha: bool) -> None:
         self.pending_name = name
         self.pending_date = date
         self.pending_slug = "PENDING"
         self.pending = True
+        self._pending_retain_drive = retain_drive
+        self._pending_retain_ha = retain_ha
 
     def endPending(self, slug: str) -> None:
         self.pending_slug = slug
@@ -356,10 +360,10 @@ class Snapshot(object):
         self.uploading_pct = percent
 
     def driveRetained(self):
-        return self.isInDrive() and self.driveitem.retained()
+        return self.isInDrive() and (self.driveitem.retained() or self._pending_retain_drive)
 
     def haRetained(self):
-        return self.isInHA() and self.ha.retained()
+        return self.isInHA() and (self.ha.retained() or self._pending_retain_ha)
 
     def __str__(self) -> str:
         return "<Slug: {0} Ha: {1} Drive: {2} Pending: {3} {4}>".format(self.slug(), self.ha, self.driveitem, self.pending, self.date().isoformat())

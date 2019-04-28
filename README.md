@@ -50,6 +50,11 @@ You can modify the add-ons setting by changing its config json file (like any ad
     > ```json
     > "snapshot_password": "super_secret"
     > ```
+*   **snapshot_name** (default: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}"):  Sets the name for new snapshots.  Variable parameters of the form "{variable_name}" can be used to modify the name to your liking.  A list of available variables are given [here](#can-i-give-snapshots-a-different-name).
+    > #### Example: Create snapshot names like 'Full Snapshot HA 0.92.0'
+    > ```json
+    > "snapshot_name": "{type} Snapshot {version_ha}"
+    > ```
 *   **send_error_reports** (default: False):  When true, the text of unexpected errors will be sent to database maintained by the developer.  This helps idenfity problems with new releases and provide better context messages when errors come up.
     > #### Example: Allow sending error reports
     > ```json
@@ -193,7 +198,33 @@ The add-on can be configured to keep [generational backups](https://en.wikipedia
  * Once this option is enabled, it may take several days or weeks to see older snapshots get cleaned up.  Old snapshots will only get deleted when the number present exceeds `max_snapshots_in_drive` or `max_snapshots_in_hassio`
  
 ### I already have something that creates snapshots on a schedule.  Can I use this just to backup to Google Drive?
-If you set '`"days_between_snapshots": 0`', then the add-on won't try to create new snapshots but will still back up any it finds to Google Drive and clean up old snapshots in both Home Assistant and Google Drive.  This can be useful if you already  have for example an automation that creates snapshots on a schedule. 
+If you set '`"days_between_snapshots": 0`', then the add-on won't try to create new snapshots but will still back up any it finds to Google Drive and clean up old snapshots in both Home Assistant and Google Drive.  This can be useful if you already  have for example an automation that creates snapshots on a schedule.
+
+### Can I give snapshots a different name?
+The config option `snapshot_name` can be changed to give snapshots a different name or with a date format of your choosing.  The default is `{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes snapshots with a name like `Full Snapshot 2019-04-28 14:00:00`.  Using the settings menu in the Web UI, you can see a preview of what a snapshot name will look like but you cna also set it in the add-on's options.  Below is the list of variables you can add to modify the name to your liking.
+* `{type}`: The type of snapshot, either 'Full' or 'Partial'
+* `{year}`: Year in 4 digit format (eg 2019)
+* `{year_short}`: Year in 4 digit format (eg 19)
+* `{weekday}`: Long day of the week (eg Monday, ..., Sunday)
+* `{weekday_short}`: Short day of week (eg Mon, ... Sun)
+* `{month}`: 2 digit month (eg 01, ... 12)
+* `{month_long}`: Month long name (January, ... , December)
+* `{month_short}`: Month long name (Jan, ... , Dec)
+* `{ms}`: Milliseconds (001, ..., 999)
+* `{day}`: Day of the month (01, ..., 31)
+* `{hr24}`: 2 digit hour of the day (0, ..., 24)
+* `{hr12}`: 2 digit hour of the day (0, ..., 12)
+* `{min}`: 2 digit minute of the hour (0, ..., 59)
+* `{sec}`: 2 digit second of the minute (0, ..., 59)
+* `{ampm}`: am or pm, depending on the time of day
+* `{version_ha}`, Home Assistant version string (eg 0.91.3)
+* `{version_hassos}`: HassOS version string (eg 0.2.15)
+* `{version_super}`: , Supervisor version string (eg 1.2.19)
+* `{date}`: Locale aware date (eg 2019/01/01).
+* `{time}`: Locale aware time (eg 02:03:04 am)
+* `{datetime}`: Locale-aware datetime string
+* `{isotime}`: Date and time in ISO format 
+        
 
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:

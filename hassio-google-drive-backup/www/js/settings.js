@@ -16,6 +16,46 @@
     }
 }
 
+function exampleSnapshotName(snapshot_type, template) {
+  if (template.length == 0) {
+    template = last_data.snapshot_name_template;
+  }
+  var now = moment();
+  template = template.replace("{type}", snapshot_type);
+  template = template.replace("{year}", now.format("YYYY"));
+  template = template.replace("{year_short}", now.format("YY"));
+  template = template.replace("{weekday}", now.format("dddd"));
+  template = template.replace("{weekday_short}", now.format("ddd"));
+  template = template.replace("{month}", now.format("MM"));
+  template = template.replace("{month_long}", now.format("MMMM"));
+  template = template.replace("{month_short}", now.format("MMM"));
+  template = template.replace("{ms}", now.format("SSS"));
+  template = template.replace("{day}", now.format("DD"));
+  template = template.replace("{hr24}", now.format("HH"));
+  template = template.replace("{hr12}", now.format("hh"));
+  template = template.replace("{min}", now.format("mm"));
+  template = template.replace("{sec}", now.format("ss"));
+  template = template.replace("{ampm}", now.format("a"));
+
+  template = template.replace("{version_ha}", "0.91.3");
+  template = template.replace("{version_hassos}", "0.26.3");
+  template = template.replace("{version_super}", "0.5.3");
+
+  template = template.replace("{date}", now.format("L"));
+  template = template.replace("{time}", now.format("LT"));
+  template = template.replace("{datetime}", now.format("LLL"));
+  template = template.replace("{isotime}", now.format());
+  return template;
+}
+
+function snapshotNameExample() {
+  $("#snapshot_example").html(exampleSnapshotName("Full", $("#snapshot_name").val()));
+}
+
+function snapshotNameOneOffExample() {
+  $("#snapshot_name_example_one_off").html(exampleSnapshotName("Full", $("#snapshot_name_one_off").val()));
+}
+
 function slugToId(id) {
     if (id == "addons/local") {
         return "folder_addons";
@@ -86,6 +126,7 @@ function loadSettings() {
         setInputValue("generational_day_of_month", data.generational_day_of_month);
         setInputValue("generational_day_of_year", data.generational_day_of_year);
         setInputValue("generational_day_of_week", data.generational_day_of_week);
+        setInputValue("snapshot_name", data.snapshot_name);
         setInputValue("expose_extra_server", data.expose_extra_server); 
 
         setInputValue("snapshot_password", data.snapshot_password);
@@ -149,6 +190,7 @@ function loadSettings() {
         $("#partial_snapshots").trigger("change");
         $("#expose_extra_server").trigger("change");
         settingsChanged = false;
+        snapshotNameExample();
         M.Modal.getInstance(document.querySelector('#settings_modal')).open();
       }, "json")
 

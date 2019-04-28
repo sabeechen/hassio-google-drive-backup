@@ -8,6 +8,7 @@ from typing import Dict, List, Any, Optional
 HASSIO_OPTIONS_FILE = '/data/options.json'
 MIN_INGRESS_VERSION = [0, 91, 3]
 ADDON_OPTIONS_FILE = 'config.json'
+SNAPSHOT_NAME_DEFALT = "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}"
 DEFAULTS = {
     "max_snapshots_in_hassio": 4,
     "max_snapshots_in_google_drive": 4,
@@ -42,7 +43,8 @@ DEFAULTS = {
     "exclude_addons": "",
     "expose_extra_server": False,
     "ingress_upgrade_file": "/data/upgrade_ingress",
-    "retained_file": "/data/retained.json"
+    "retained_file": "/data/retained.json",
+    "snapshot_name": SNAPSHOT_NAME_DEFALT
 }
 
 
@@ -281,6 +283,9 @@ class Config(LogBase):
         else:
             return {'Authorization': 'Bearer ' + str(os.environ.get("HASSIO_TOKEN"))}
 
+    def snapshotName(self) -> str:
+        return self.config["snapshot_name"]
+
     def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
         if 'generational_days' not in self.config and 'generational_weeks' not in self.config and 'generational_months' not in self.config and 'generational_years' not in self.config:
             return None
@@ -339,6 +344,12 @@ class Config(LogBase):
                 old_config['snapshot_password'] = kwargs['snapshot_password']
             elif 'snapshot_password' in old_config:
                 del old_config['snapshot_password']
+        
+        if 'snapshot_name' in kwargs:
+            if len(kwargs['snapshot_name']) > 0 and kwargs['snapshot_password'] != SNAPSHOT_NAME_DEFALT:
+                old_config['snapshot_name'] = kwargs['snapshot_name']
+            elif 'snapshot_name' in old_config:
+                del old_config['snapshot_name']
 
         if 'use_ssl' in kwargs and kwargs['use_ssl'] == 'on':
             old_config['use_ssl'] = True
@@ -472,11 +483,12 @@ class Config(LogBase):
         return []
 
     def saveRetained(self, list) -> None:
-        with open(self.retainedFile(), "w") as f:
-            json.dump({
-                'retained': list
-            }, f)
-        self.retained = self._loadRetained()
+        if list != self.retained:
+            with open(self.retainedFile(), "w") as f:
+                json.dump({
+                    'retained': list
+                }, f)
+            self.retained = self._loadRetained()
 
     def isRetained(self, slug):
         return slug in self.retained

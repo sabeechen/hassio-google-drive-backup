@@ -7,6 +7,16 @@ from .helpers import formatException
 from typing import Dict
 
 
+class WrappedException(Exception):
+    """
+    A weird error exists in httplib2 where if the underlying stream returns certain exception types, it produces
+    an index out of bounds error while handling it and just eats the error.  This wraps the error in an exception of 
+    a different type so so we can actually surface it.  Hacky, yes, but it works.
+    """
+    def __init__(self, innerException):
+        self.innerException = innerException
+
+
 class SeekableRequest(IOBase, LogBase):
     def __init__(self, url, headers: Dict[str, str], chunk_size=1024 * 1024 * 10):
         self.url: str = url
@@ -80,21 +90,25 @@ class SeekableRequest(IOBase, LogBase):
         return self.offset
 
     def _getContentLength(self):
-        req: Request = Request(self.url)
-        for header in self.headers:
-            req.headers[header] = self.headers[header]
-        f = urlopen(req)
-        if 'Content-length' not in f.headers:
-            raise Exception('Not content length provided')
-        return int(f.headers["Content-length"])
+        try:
+            req: Request = Request(self.url)
+            for header in self.headers:
+                req.headers[header] = self.headers[header]
+            f = urlopen(req)
+            if 'Content-length' not in f.headers:
+                raise Exception('Not content length provided')
+            return int(f.headers["Content-length"])
+        except Exception as e:
+            self.error(formatException(e))
+            raise WrappedException(e)
 
     def _getByteRange(self, start, end):
-        req: Request = Request(self.url)
-        for header in self.headers:
-            req.headers[header] = self.headers[header]
-        req.headers.update(self.headers)
-        req.headers['range'] = "bytes=%s-%s" % (self.offset, end)
         try:
+            req: Request = Request(self.url)
+            for header in self.headers:
+                req.headers[header] = self.headers[header]
+            req.headers.update(self.headers)
+            req.headers['range'] = "bytes=%s-%s" % (self.offset, end)
             f = urlopen(req)
             data = f.read()
             if len(data) != (end - start + 1):
@@ -102,4 +116,4 @@ class SeekableRequest(IOBase, LogBase):
             return data
         except Exception as e:
             self.error(formatException(e))
-            raise e
+            raise WrappedException(e)

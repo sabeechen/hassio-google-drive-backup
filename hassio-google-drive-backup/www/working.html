@@ -7,16 +7,17 @@
   <title>Hassio Google Drive Backup</title>
 
   <!-- CSS  -->
-  <link href="css/icons.css?version=0.92" rel="stylesheet">
-  <link href="css/materialize.css?version=0.92" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.92" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.92">
-  <script src="js/jquery.js?version=0.92"></script>
-  <script src="js/materialize.js?version=0.92"></script>
-  <script src="js/init.js?version=0.92"></script>
-  <script src="js/scripts.js?version=0.92"></script>
-  <script src="js/settings.js?version=0.92"></script>
-  <script src="js/restore.js?version=0.92"></script>
+  <link href="css/icons.css?version=0.93" rel="stylesheet">
+  <link href="css/materialize.css?version=0.93" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.93" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="images/favicon.png?version=0.93">
+  <script src="js/jquery.js?version=0.93"></script>
+  <script src="js/materialize.js?version=0.93"></script>
+  <script src="js/init.js?version=0.93"></script>
+  <script src="js/scripts.js?version=0.93"></script>
+  <script src="js/settings.js?version=0.93"></script>
+  <script src="js/restore.js?version=0.93"></script>
+  <script src="js/moment.js?version=0.93"></script>
   <script type="text/javascript">
     $(document).ready(function () {
       // Needed to make modal dialogs work.
@@ -25,6 +26,7 @@
       $('#deletemodal').modal();
       $('#restoremodal').modal();
       $('#retainmodal').modal();
+      $('#snapshotmodal').modal();
       $('#settings_modal').modal({
         dismissible: false
       });
@@ -59,6 +61,51 @@
       <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="delete_cancel">Cancel</a>
     </div>
   </div>
+  <div id="snapshotmodal" class="modal">
+    <div class="modal-content">
+      <h4>New Snapshot</h4>
+      <p>Create a new snapshot immediately, using the settings you've configured for snapshots (eg full vs partial,
+        password protection, etc). Optionally, you can set the name you'd like to use for this snapshot and indicate if
+        you'd
+        like it to be kept indefinitely in Home Assistant or Google Drive. These options will only apply to this one-off
+        snapshot.</p>
+      <form>
+        <div class="row">
+          <div class="input-field col s12">
+            <i class="material-icons prefix">label_outline</i>
+            <input type="text" id="snapshot_name_one_off" name="snapshot_name_one_off" class="validate"
+              onkeyup="snapshotNameOneOffExample()" />
+            <label for="snapshot_name_one_off">Snapshot Name</label>
+            <span class="helper-text">The name to use for this snapshot, or leave it blank to use the default naming
+              scheme. Optionally you can use template variables,<a target="_blank"
+                href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">see
+                here</a> for a list of all
+              available options. Your snapshots name will look something like: <br /><span
+                id="snapshot_name_example_one_off"></span>
+          </div>
+        </div>
+        <div class="row" style="margin-left: 20px;">
+          <div class="col s12">
+            <label>
+              <input type="checkbox" name="retain_drive_one_off" id="retain_drive_one_off"
+                class="filled-in checkbox-ha" />
+              <span>Keep indefinitely in Google Drive</span>
+            </label>
+            <br />
+            <label>
+              <input type="checkbox" name="retain_ha_one_off" id="retain_ha_one_off" class="filled-in checkbox-ha" />
+              <span>Keep indefinitely in Home Assistant</span>
+            </label>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="create_snapshot_button"
+        onclick="doNewSnapshot(); return false;">Create Snapshot</a>
+      <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="cancel_snapshot">Cancel</a>
+    </div>
+  </div>
   <div id="retainmodal" class="modal">
     <div class="modal-content">
       <h4>Keep this snapshot around indefinitely?</h4>
@@ -73,7 +120,7 @@
           <input type="checkbox" name="notify_for_stale_snapshots" id="retain_drive" class="filled-in checkbox-ha" />
           <span>Keep indefinitely in Google Drive</span>
         </label>
-        <br/>
+        <br />
         <label>
           <input type="checkbox" name="notify_for_stale_snapshots" id="retain_ha" class="filled-in checkbox-ha" />
           <span>Keep indefinitely in Home Assistant</span>
@@ -81,8 +128,7 @@
       </form>
     </div>
     <div class="modal-footer">
-      <a href="#!" class="danger-button modal-close waves-effect waves-light btn"
-        id="do_retain_button">Save</a>
+      <a href="#!" class="danger-button modal-close waves-effect waves-light btn" id="do_retain_button">Save</a>
       <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="delete_cancel">Cancel</a>
     </div>
   </div>
@@ -91,7 +137,9 @@
       <h4>Upload this snapshot to Hass.io</h4>
       <p>Are you sure you'd like to upload this snapshot back to Hass.io? The snapshot will be downloaded from Google
         Drive, and after that you'll be able to restore it.</p>
-      <p><b>Note:</b> The snapshot you upload from Google Drive will be kept indefinitely in Home Assistant until you delete it manually.  You can thange this by selecting "Never Delete" and unckecking "Keep indefinitely in Home Assistant" from the snapshot's action menu after its uploaded.</p>
+      <p><b>Note:</b> The snapshot you upload from Google Drive will be kept indefinitely in Home Assistant until you
+        delete it manually. You can thange this by selecting "Never Delete" and unckecking "Keep indefinitely in Home
+        Assistant" from the snapshot's action menu after its uploaded.</p>
     </div>
     <div class="modal-footer">
       <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="do_upload_button">Upload Snapshot</a>
@@ -339,6 +387,19 @@
               <label for="snapshot_password">Password</label>
               <span class="helper-text">When set, creates snapshots protected by a password. This password will be
                 required by Hass.io when restoring the snapshot. Leave blank to require no password.</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="input-field col s12">
+              <i class="material-icons prefix">label_outline</i>
+              <input type="text" id="snapshot_name" name="snapshot_name" class="validate"
+                onkeyup="snapshotNameExample()" />
+              <label for="snapshot_name">Snapshot Name Template</label>
+              <span class="helper-text">The template to use for naming new snapshot.  <a target="_blank"
+                  href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">See
+                  here</a> for a list of all
+                available options, your snapshots names will look something like: <br /><span
+                  id="snapshot_example"></span>
             </div>
           </div>
           <div class="row">
@@ -744,10 +805,12 @@
     </ul>
     <nav class="non-ingress ha-blue" role="navigation">
       <div class="nav-wrapper container">
-        <a id="logo-container" class="brand-logo">
-          <img style="vertical-align: middle" src="images/logo.png" width=40 height=40 />
-          <span>Hass.io Google Drive Backup</span>
-        </a>
+        <div style="overflow: hidden;">
+          <a id="logo-container" class="brand-logo">
+            <img style="vertical-align: middle;" src="images/logo.png" width=40 height=40 />
+            <span>Hass.io Google Drive Backup</span>
+          </a>
+        </div>
         <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
         <ul class="right hide-on-med-and-down">
           <li>
@@ -815,7 +878,7 @@
   <main>
     <div class="container">
       <div class="section">
-        <div class="row default-hidden" id="error_card">
+        <div class="row default-hidden error_card default_error" id="error_card">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -844,7 +907,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden" id="drive_full_card">
+        <div class="row default-hidden error_card drive_full" id="drive_full_card">
           <div class="col s12 m9">
             <div class="card red darken-4 white-text">
               <div class="card-content white-text">
@@ -865,7 +928,8 @@
                 <ul class="browser-default">
                   <li>Free up space in Google Drive, GMail, or Google Photos by deleting things.</li>
                   <li>Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-                    style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on settings</a> to store fewer snapshots in Google Drive</li>
+                        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                      settings</a> to store fewer snapshots in Google Drive</li>
                   <li><a href="https://drive.google.com/settings/storage">Buy more storage</a> from Google</li>
                   <li>Make your snapshots smaller (see <a
                       href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this
@@ -875,7 +939,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden" id="creds_bad_card">
+        <div class="row default-hidden error_card creds_bad" id="creds_bad_card">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -898,7 +962,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden" id="cant_reach_google">
+        <div class="row default-hidden error_card cant_reach_google" id="cant_reach_google">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -911,7 +975,8 @@
                 <p>Please ensure:</p>
                 <ul class="browser-default">
                   <li>The internet is working.</li>
-                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant machine. Some ad-blocking and
+                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant
+                    machine. Some ad-blocking and
                     firewall software can block these addresses.</li>
                 </ul>
                 <p>You can also try restarting this add-on, Hass.io, or Home Assistant.</p>
@@ -922,7 +987,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden" id="google_timeout">
+        <div class="row default-hidden error_card google_timeout" id="google_timeout">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -930,15 +995,85 @@
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
                   <span style="vertical-align: top;">Connection Timeout</span>
                 </span>
-                <p>The connection to Google timed out while trying to back up your snapshots. Snapshots can't be backed up
+                <p>The connection to Google timed out while trying to back up your snapshots. Snapshots can't be backed
+                  up
                   without being able to reach Google Drive.</p>
                 <p>Please ensure:</p>
                 <ul class="browser-default">
                   <li>The internet is working.</li>
-                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant machine. Some ad-blocking and
+                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant
+                    machine. Some ad-blocking and
                     firewall software can block or throttle traffic to these addresses.</li>
                 </ul>
                 <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
+                <div class="card-action white-text">
+                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card google_server_error" id="google_server_error">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
+                  <span style="vertical-align: top;">Google Server Error</span>
+                </span>
+                <p>Google returned a server error (HTTP code 500) while trying to backup your snapshots.</p>
+                <p>This happens sometimes for reasons beyond anyone's control and almost always the problem goes away on
+                  its own. The add-on will attempt uploading again soon, but you can also click "Try Syncing Again"
+                  below to make it retry now.</p>
+                <p>If this error keeps sticking around, you can try:</p>
+                <ul class="browser-default">
+                  <li>Making sure the internet is working fine.</li>
+                  <li>Making sure you're able to log into your <a href="https://drive.google.com">Google Drive
+                      account</a> and upload files without problems.</li>
+                  <li>Reauthenting the add-on with Google Drive (click "ACTIONS" -> "Reauthorize Google Drive" up top)
+                  </li>
+                  <li>Restarting the add-on, Home Assistant, or Hass.io.</li>
+                  <li>Reinstalling the add-on.</li>
+                </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card google_session_expired" id="google_session_expired">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
+                  <span style="vertical-align: top;">Google Session Expired</span>
+                </span>
+                <p>Google returned a server error (HTTP code 404) while trying to upload your snapshots.</p>
+                <p>In most cases, this indicates that your upload took too long to upload. According to Google's
+                  documentation if an upload takes longer than a week then it will be forcibly cancelled and return this
+                  error. This can happen if your internet is very slow or your snapshots are very large, however I (your
+                  friendly developer) suspect this can happen in more common circumstances. If the below options don't
+                  help, please file an issue on <a target="_blank"
+                    href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new">GitHub</a> with as much
+                  detail as you can stomach to help me look into it.
+                </p>
+                <p>If this error keeps sticking around, you can try:</p>
+                <ul class="browser-default">
+                  <li>Syncing again (if it hasn't already started) by clicking "Try Syncing Again" below.</li>
+                  <li>Making sure you're able to log into your <a target="_blank" href="https://drive.google.com">Google
+                      Drive
+                      account</a> and upload files without problems.</li>
+                  <li>Ensuring your internet connection is reasonably fast by doing a <a target="_blank"
+                      href="https://www.google.com/search?q=speed+test">speed test</a></li>
+                  <li>Making your snapshots smaller. Usually snapshots are large because of a huge sensor database. You
+                    can keep a smaller history by setting up the <a target="_blank"
+                      href="https://www.home-assistant.io/components/recorder/">recorder component</a> purge settings in
+                    Home Assistant</li>
+                  <li>Restarting the add-on, Home Assistant, or Hass.io.</li>
+                  <li>Reinstalling the add-on.</li>
+                </ul>
                 <div class="card-action white-text">
                   <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
                 </div>
@@ -1017,7 +1152,7 @@
               <h6>In Home Assistant:</h6>
             </div>
             <div class="left container ha_retain_label" style="margin-left: 15px">
-                <h7 class="left"><span class="ha_retain_count"></span> saved indefinitely</h7>
+              <h7 class="left"><span class="ha_retain_count"></span> saved indefinitely</h7>
             </div>
             <div class="right container">
               <h5 class="right " id="ha_snapshots"></h5>
@@ -1026,7 +1161,7 @@
               <h6>In Google Drive:</h6>
             </div>
             <div class="left container drive_retain_label" style="margin-left: 15px">
-                <h7 class="left"><span class="drive_retain_count"></span> saved indefinitely</h7>
+              <h7 class="left"><span class="drive_retain_count"></span> saved indefinitely</h7>
             </div>
             <div class="right container">
               <h5 class="right " id="drive_snapshots"></h5>

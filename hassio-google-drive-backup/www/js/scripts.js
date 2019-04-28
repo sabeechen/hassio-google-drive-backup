@@ -135,7 +135,7 @@ function showDetails(target) {
 }
 
 
-function triggerBackup() {
+function backupNow() {
   var jqxhr = $.get("backupnow",
     function (data) {
       refreshstats();
@@ -539,6 +539,36 @@ function refreshstats() {
       $('#google_timeout').hide();
     }
 
+    // Show an error card if applicable
+    $('.error_card:hidden').each(function(i) {
+      var item = $(this);
+      if (data.last_error.length > 0 && item.hasClass(data.last_error)) {
+        item.fadeIn(400);
+      }
+    });
+    $('.error_card:visible').each(function(i) {
+      var item = $(this);
+      if (data.last_error.length == 0 || !item.hasClass(data.last_error)) {
+        item.hide();
+      }
+    });
+
+    if (data.last_exception.length > 0) {
+      // set up the appropriate links
+      $('#error_paragraph').text(data.last_exception);
+      desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and including that here.  :\n\n" + data.last_exception;
+      parts = data.last_exception.split('\n');
+      var title = "Unknown"
+      for (var i = parts.length - 1; i >= 0; i--) {
+        if (parts[i].trim() != "") {
+          title = parts[i].trim();
+          break;
+        }
+      }
+      $('#error_github_link').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title=" + encodeURIComponent(title) + "&assignee=sabeechen&body=" + encodeURIComponent(desc));
+      $('#error_github_search').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + title.replace("\"", "\\\"") + "\""));
+    }
+
     if (data.ask_error_reports) {
       $('#error_reports_card').fadeIn(500);
     } else {
@@ -600,10 +630,23 @@ function stopSimulateError() {
 }
 
 function newSnapshotClick() {
+    setInputValue("retain_drive_one_off", false);
+    setInputValue("retain_ha_one_off", false);
+    setInputValue("snapshot_name_one_off", "");
+    snapshotNameOneOffExample();
+    M.Modal.getInstance(document.querySelector('#snapshotmodal')).open();
+}
+
+function doNewSnapshot() {
     toast("Requesting snapshot (takes a few seconds)...");
 
+    var drive = $("#retain_drive_one_off").prop('checked');
+    var ha = $("#retain_ha_one_off").prop('checked');
+    var name = $("#snapshot_name_one_off").val()
+    var url = "triggerbackup?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
+
     // request the snapshot
-    var jqxhr = $.get("triggerbackup",
+    var jqxhr = $.get(url,
       function (data) {
         console.log(data);
         if (!data.hasOwnProperty("name")) {
@@ -611,7 +654,7 @@ function newSnapshotClick() {
         } else {
           toast("Requested new snapshot '" + data.name + "'");
           refreshstats();
-          triggerBackup();
+          backupNow();
         }
       }, "json")
       .fail(

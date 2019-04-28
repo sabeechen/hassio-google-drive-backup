@@ -40,6 +40,9 @@ class Hassio(LogBase):
         self.ha_info = None
         self.lock: Lock = Lock()
         self.has_offline = False
+        self._retain_drive = False
+        self._retain_ha = False
+        self._customName = self.config.snapshotName()
 
     def loadInfo(self) -> None:
         self.self_info = self.readAddonInfo()
@@ -97,23 +100,15 @@ class Hassio(LogBase):
                 del request_info['addons']
                 snapshot_type = "Full"
 
-            now_local: datetime = datetime.now()
             now_utc: datetime = nowutc()
-            backup_name: str = "{6} Snapshot {0}-{1:02d}-{2:02d} {3:02d}:{4:02d}:{5:02d}".format(
-                now_local.year,
-                now_local.month,
-                now_local.day,
-                now_local.hour,
-                now_local.minute,
-                now_local.second,
-                snapshot_type)
+            backup_name: str = self.getSnapshotName(snapshot_type, self._custom_name)
 
             request_info['name'] = backup_name
 
             try:
                 self.lock.acquire()
                 self.pending_snapshot = Snapshot(None)
-                self.pending_snapshot.setPending(backup_name, now_utc)
+                self.pending_snapshot.setPending(backup_name, now_utc, self._retain_drive, self._retain_ha)
             finally:
                 self.lock.release()
 
@@ -144,6 +139,32 @@ class Hassio(LogBase):
             finally:
                 self.lock.release()
 
+    def getSnapshotName(self, snapshot_type: str, template: str) -> str:
+        now_local: datetime = datetime.now()
+        template = template.replace("{type}", snapshot_type)
+        template = template.replace("{year}", now_local.strftime("%Y"))
+        template = template.replace("{year_short}", now_local.strftime("%y"))
+        template = template.replace("{weekday}", now_local.strftime("%A"))
+        template = template.replace("{weekday_short}", now_local.strftime("%a"))
+        template = template.replace("{month}", now_local.strftime("%m"))
+        template = template.replace("{month_long}", now_local.strftime("%B"))
+        template = template.replace("{month_short}", now_local.strftime("%b"))
+        template = template.replace("{ms}", now_local.strftime("%f"))
+        template = template.replace("{day}", now_local.strftime("%d"))
+        template = template.replace("{hr24}", now_local.strftime("%H"))
+        template = template.replace("{hr12}", now_local.strftime("%I"))
+        template = template.replace("{min}", now_local.strftime("%M"))
+        template = template.replace("{sec}", now_local.strftime("%S"))
+        template = template.replace("{ampm}", now_local.strftime("%p"))
+        template = template.replace("{version_ha}", self.host_info.get('homeassistant', ''))
+        template = template.replace("{version_hassos}", self.host_info.get('hassos', ''))
+        template = template.replace("{version_super}", self.host_info.get('supervisor', ''))
+        template = template.replace("{date}", now_local.strftime("%x"))
+        template = template.replace("{time}", now_local.strftime("%X"))
+        template = template.replace("{datetime}", now_local.strftime("%c"))
+        template = template.replace("{isotime}", now_local.isoformat())
+        return template
+
     def killPending(self) -> None:
         try:
             self.lock.acquire()
@@ -156,11 +177,17 @@ class Hassio(LogBase):
         self._postHassioData("{}auth".format(self.config.hassioBaseUrl()), {
                              "username": user, "password": password})
 
-    def newSnapshot(self) -> Snapshot:
+    def newSnapshot(self, retain_drive=False, retain_ha=False, custom_name=None) -> Snapshot:
         try:
             self.lock.acquire()
             if self.snapshot_thread is not None and self.snapshot_thread.is_alive():
                 raise SnapshotInProgress()
+            self._retain_drive = retain_drive
+            self._retain_ha = retain_ha
+            if custom_name and len(custom_name) > 0:
+                self._custom_name = custom_name
+            else:
+                self._custom_name = self.config.snapshotName()
             self.snapshot_thread = Thread(target=self._getSnapshot)
             self.snapshot_thread.start()
         finally:
@@ -288,7 +315,7 @@ class Hassio(LogBase):
 
     def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
         try:
-            requests.post(self.config.haBaseUrl() + path, headers=self.config.getHaHeaders(), json=data).raise_for_status()
+            resp = requests.post(self.config.haBaseUrl() + path, headers=self.config.getHaHeaders(), json=data).raise_for_status()
             if self.has_offline:
                 self.info("Home Assistant came back.")
                 self.has_offline = False
@@ -348,8 +375,8 @@ class Hassio(LogBase):
             "attributes": {
                 "friendly_name": "Snapshot State",
                 "last_snapshot": last,  # type: ignore
-                "spanshots_in_google_drive": len(list(filter(lambda s: s.isInDrive(), snapshots))),
-                "spanshots_in_hassio": len(list(filter(lambda s: s.isInHA(), snapshots))),
+                "snapshots_in_google_drive": len(list(filter(lambda s: s.isInDrive(), snapshots))),
+                "snapshots_in_hassio": len(list(filter(lambda s: s.isInHA(), snapshots))),
                 "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date().isoformat()), "state": s.status()}, snapshots))
             }
         }

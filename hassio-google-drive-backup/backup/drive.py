@@ -100,7 +100,8 @@ class Drive(LogBase):
                 PROP_KEY_NAME: str(snapshot.name()),
                 PROP_TYPE: str(snapshot.snapshotType()),
                 PROP_VERSION: str(snapshot.version()),
-                PROP_PROTECTED: str(snapshot.protected())
+                PROP_PROTECTED: str(snapshot.protected()),
+                PROP_RETAINED: str(snapshot._pending_retain_drive)
             },
             'contentHints': {
                 'indexableText': 'Hass.io hassio snapshot backup home assistant',

@@ -5,6 +5,8 @@ from .helpers import makeDict
 from .helpers import count
 from .helpers import take
 from .helpers import formatException
+from .helpers import resolveHostname
+from .helpers import formatTimeSince
 from .drive import Drive
 from .hassio import Hassio, SnapshotInProgress
 from oauth2client.client import HttpAccessTokenRefreshError
@@ -21,9 +23,11 @@ from oauth2client.client import Credentials
 from .backupscheme import GenerationalScheme, OldestScheme
 from .logbase import LogBase
 from .knownerror import KnownError
+from .seekablerequest import WrappedException
 from urllib.parse import quote
 from requests import get
 import os
+import json
 
 BAD_TOKEN_ERROR_MESSAGE: str = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
 DRIVE_FULL_MESSAGE = "The user's Drive storage quota has been exceeded"
@@ -32,6 +36,8 @@ CANT_REACH_GOOGLE_AUTH_MESSAGE = "Unable to find the server at oauth2.googleapis
 CANT_REACH_GOOGLE_UNAVAILABLE_MESSAGE = "OSError: [Errno 99] Address not available"
 GOOGLE_TIMEOUT_1_MESSAGE = "socket.timeout: The read operation timed out"
 GOOGLE_TIMEOUT_2_MESSAGE = "socket.timeout: timed out"
+GOOGLE_SESSION_EXPIRED = "googleapiclient.errors.ResumableUploadError: <HttpError 404"
+GOOGLE_500_ERROR = "urllib.error.HTTPError: HTTP Error 500: Internal Server Error"
 
 DATE_LAMBDA: Callable[[Snapshot], datetime] = lambda s: s.date()
 HA_LAMBDA: Callable[[Snapshot], bool] = lambda s: s.isInHA()
@@ -40,7 +46,7 @@ NOT_DRIVE_LAMBDA: Callable[[Snapshot], bool] = lambda s: not s.isInDrive()
 SLUG_LAMBDA: Callable[[Snapshot], str] = lambda s: s.slug()
 DRIVE_SLUG_LAMBDA: Callable[[DriveSnapshot], str] = lambda s: s.slug()
 HA_SLUG_LAMBDA: Callable[[HASnapshot], str] = lambda s: s.slug()
-RETAINED_LAMBDA: Callable[[HASnapshot], str] = lambda s: s.ha.retained()
+RETAINED_LAMBDA: Callable[[Snapshot], str] = lambda s: s.haRetained()
 
 DRIVE_DELETABLE_LAMBDA: Callable[[Snapshot], str] = lambda s: s.isInDrive() and not s.driveRetained()
 HA_DELETABLE_LAMBDA: Callable[[Snapshot], str] = lambda s: s.isInHA() and not s.haRetained()
@@ -72,6 +78,11 @@ class Engine(LogBase):
         self.last_error_reported = False
         self.firstSync = True
         self.cred_version = 0
+        self.successes = 0
+        self.failures = 0
+        self.uploads = 0
+        self.start_time = self.time.now()
+        self.lastUploadSize = 0
 
     def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
@@ -112,6 +123,9 @@ class Engine(LogBase):
         if snapshot.isInHA() and snapshot.ha.retained() != retainHa:
             snapshot.ha._retained = retainHa
             self._saveHaRetention()
+
+        snapshot._pending_retain_drive = retainDrive
+        snapshot._pending_retain_ha = retainHa
         self._updateFreshness()
 
     def doUpload(self, snapshot: Snapshot):
@@ -143,7 +157,9 @@ class Engine(LogBase):
             self.next_error_rety = self.time.now()
             self.next_error_backoff = ERROR_BACKOFF_MIN_SECS
             self.last_error_reported = False
+            self.successes += 1
         except Exception as e:
+            self.failures += 1
             self.error(formatException(e))
             self.error("A retry will be attempted in {} seconds".format(self.next_error_backoff))
             self.next_error_rety = self.time.now() + relativedelta(seconds=self.next_error_backoff)
@@ -161,10 +177,13 @@ class Engine(LogBase):
 
     def sendErrorReport(self) -> None:
         message = self.getError()
+        if message == "default_error":
+            message = self.getExceptionInfo()
         self.info("Sending error report (see settings to disable)")
-        version = "unknown"
-        if 'version' in self.hassio.self_info:
-            version = self.hassio.self_info['version']
+        try:
+            version = json.dumps(self.getDebugInfo(), indent=4)
+        except Exception as e:
+            version = "Debug info failed: " + str(e)
         url: str = "https://philosophyofpen.com/login/error.py?error={0}&version={1}".format(quote(message), quote(version))
         try:
             get(url, timeout=5)
@@ -264,12 +283,12 @@ class Engine(LogBase):
                 return
         raise Exception("Couldn't find this snapshot")
 
-    def startSnapshot(self) -> Snapshot:
+    def startSnapshot(self, custom_name=None, retain_drive=False, retain_ha=False) -> Snapshot:
         self.info("Creating new snapshot")
         for snapshot in self.snapshots:
             if snapshot.isPending():
                 raise SnapshotInProgress()
-        snapshot = self.hassio.newSnapshot()
+        snapshot = self.hassio.newSnapshot(custom_name=custom_name, retain_drive=retain_drive, retain_ha=retain_ha)
         self.snapshots.append(snapshot)
         self._updateFreshness()
         return snapshot
@@ -299,13 +318,13 @@ class Engine(LogBase):
             else:
                 local_map[snapshot_from_drive.slug()].setDrive(snapshot_from_drive)
 
-        added_from_ha: bool = False
+        added_from_ha: Snapshot = None
         for snapshot_from_ha in ha_snapshots:
             if not snapshot_from_ha.slug() in local_map:
                 ha_snapshot: Snapshot = Snapshot(snapshot_from_ha)
                 self.snapshots.append(ha_snapshot)
                 local_map[ha_snapshot.slug()] = ha_snapshot
-                added_from_ha = True
+                added_from_ha = ha_snapshot
             else:
                 local_map[snapshot_from_ha.slug()].setHA(snapshot_from_ha)
         for snapshot in self.snapshots:
@@ -318,11 +337,14 @@ class Engine(LogBase):
             if added_from_ha and snapshot.isPending():
                 self.snapshots.remove(snapshot)
                 self.hassio.killPending()
+                added_from_ha._pending_retain_drive = snapshot._pending_retain_drive
+                added_from_ha._pending_retain_ha = snapshot._pending_retain_ha
 
         self.snapshots.sort(key=DATE_LAMBDA)
         if (self.config.verbose()):
             self.debug("Final Snapshots:")
             self.debug(pformat(self.snapshots))
+        self._saveHaRetention()
         self.firstSync = False
 
     def _purgeDriveBackups(self) -> None:
@@ -385,7 +407,9 @@ class Engine(LogBase):
                 self.info("Uploading {}".format(to_backup.name()))
                 if not self.folder_id:
                     raise Exception("No folder Id")
+                self.lastUploadSize = to_backup.size()
                 self.drive.saveSnapshot(to_backup, self.hassio.downloadUrl(to_backup), self.folder_id)
+                self.uploads += 1
 
                 # purge backups again, since adding one might have put us over the limit
                 self._purgeDriveBackups()
@@ -412,12 +436,42 @@ class Engine(LogBase):
             snapshot.deleteNextFromDrive = (snapshot == deleteFromDrive)
             snapshot.deleteNextFromHa = (snapshot == deleteFromHa)
 
-    def getError(self) -> str:
-        if self.last_error is not None:
-            if isinstance(self.last_error, HttpAccessTokenRefreshError):
+    def getExceptionInfo(self) -> str:
+        if self.last_error:
+            if isinstance(self.last_error, WrappedException):
+                return formatException(self.last_error.innerException)
+            if isinstance(self.last_error, Exception):
+                return formatException(self.last_error)
+            else:
+                return str(self.last_error)
+        else:
+            return ""
+
+    def getDebugInfo(self):
+        return {
+            'addonVersion': self.hassio.self_info.get('version', 'unknown'),
+            'host': self.hassio.host_info,
+            'www.googleapis.com': resolveHostname('www.googleapis.com'),
+            'oauth2.googleapis.com': resolveHostname('oauth2.googleapis.com'),
+            'successes': self.successes,
+            'failures': self.failures,
+            'uploads': self.uploads,
+            'syncStarted': formatTimeSince(self.last_refresh),
+            'started': formatTimeSince(self.start_time),
+            'driveSnapshots': self.driveSnapshotCount(),
+            'haSnapshots': self.haSnapshotCount()
+        }
+
+    def getError(self, error=None) -> str:
+        if not error:
+            error = self.last_error
+        if error is not None:
+            if isinstance(error, WrappedException):
+                return self.getError(error.innerException)
+            if isinstance(error, HttpAccessTokenRefreshError):
                 return "creds_bad"
-            elif isinstance(self.last_error, Exception):
-                formatted = formatException(self.last_error)
+            elif isinstance(error, Exception):
+                formatted = formatException(error)
                 if DRIVE_FULL_MESSAGE in formatted:
                     return "drive_full"
                 elif CANT_REACH_GOOGLE_MESSAGE in formatted:
@@ -430,8 +484,12 @@ class Engine(LogBase):
                     return "google_timeout"
                 elif GOOGLE_TIMEOUT_2_MESSAGE in formatted:
                     return "google_timeout"
-                return formatted
+                elif GOOGLE_SESSION_EXPIRED in formatted:
+                    return "google_session_expired"
+                elif GOOGLE_500_ERROR in formatted:
+                    return "google_server_error"
+                return "default_error"
             else:
-                return str(self.engine.last_error)
+                return "default_error"
         else:
             return ""

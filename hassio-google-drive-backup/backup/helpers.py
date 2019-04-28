@@ -1,4 +1,5 @@
 import traceback
+import socket
 
 from dateutil.tz import tzutc
 from dateutil.parser import parse
@@ -83,3 +84,10 @@ def formatException(e: Exception) -> str:
         trace = e.__traceback__
     exc = traceback.format_exception(type(e), e, trace, chain=False)
     return'\n%s\n' % ''.join(exc)
+
+
+def resolveHostname(host: str):
+    try:
+        return socket.gethostbyname_ex(host)[2]
+    except Exception as e:
+        return "Failed to resolve: " + str(e)

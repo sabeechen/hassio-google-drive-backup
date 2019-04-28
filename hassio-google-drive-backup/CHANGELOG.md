@@ -1,3 +1,12 @@
+## [0.93] - 2019-04-28
+### Added
+- Ability to choose the name for snapshots along with a bunch of template variables.
+- Added the ability to give one-off snapshots a custom name and choose wether to retain them permanently in Google Drive or Home Assistant at the time of creation.
+- Added some better message for some more common errors (Google Drive server errors and timeouts).
+
+### Changes
+- Error reports now contain Hassio version, Home Assistantversion , Hassos version, metrics about how long an update takes, and information abotu the DNS resolution of Google's Servers.  These are the assist in debugging outstanding issues seen in error reports.  
+
 ## [0.92] - 2019-04-26
 ### Added
 - Ability to save snapshots indefinitely (ie protect from automatic cleanup), try it from the "ACTIONS" menu.

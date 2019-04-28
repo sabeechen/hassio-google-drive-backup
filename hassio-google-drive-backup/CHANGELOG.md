@@ -1,3 +1,7 @@
+## [0.93.1] - 2019-04-28
+### Fixes
+- A python error that shows up when you create a snapshot outside of the add-on and try to create a snapshot from within the add-on.  
+
 ## [0.93] - 2019-04-28
 ### Added
 - Ability to choose the name for snapshots along with a bunch of template variables.

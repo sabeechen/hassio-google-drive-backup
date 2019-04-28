@@ -198,7 +198,7 @@ class Hassio(LogBase):
             if self.pending_snapshot_error is not None and isinstance(self.pending_snapshot_error, SnapshotInProgress) and not self.pending_snapshot:
                 # A snapshot was started "outside" of the add-on, so create a stub that we'll later associate with the pending snapshot once it shows up
                 self.pending_snapshot = Snapshot(None)
-                self.pending_snapshot.setPending("Pending Snapshot", nowutc())
+                self.pending_snapshot.setPending("Pending Snapshot", nowutc(), False, False)
                 return self.pending_snapshot
             if self.pending_snapshot_error is not None:
                 raise self.pending_snapshot_error  # pylint: disable-msg=E0702

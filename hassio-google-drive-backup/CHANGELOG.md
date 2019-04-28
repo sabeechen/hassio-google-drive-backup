@@ -1,3 +1,8 @@
+## [0.93.2] - 2019-04-28
+### Fixes
+- A type error when using custom names for users without hassos installed.  
+
+
 ## [0.93.1] - 2019-04-28
 ### Fixes
 - A python error that shows up when you create a snapshot outside of the add-on and try to create a snapshot from within the add-on.  

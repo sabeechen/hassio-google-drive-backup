@@ -236,6 +236,9 @@ On a matter of principle, I only keep track of and store information necessary f
 
 This invariably means that I have a very limited ability to see how many people are using the add-on or if it is functioning well.  If you do like it, feel free to shoot me an email at [stephen@beechens.com](mailto:stephen@beechens.com) or star this repo on GitHub, it really helps keep me motivated.  If you run into problems or think a new feature would be nice, file an issue on GitHub.
 
+### Can I use my own Google API information to authenticate instead of yours?
+On the first "Getting Started" page of the add-on underneath the "Authenticate with Google Drive" button is a link that lets you enter your own `Client Id` and `Client Sercet` to authenticate with Google Drive.  You can get back to that page by going to "Actions" -> "Reauthorize Google Drive" from the add-on's web UI if you've already connected it previously.   Instructions are also provided for those who are unfamiliar with the process, its tedious to complete but ensures the add-on's communication is only between you and Google Drive.
+
 ### Can I permanently save a snapshot so it doesn't get cleaned up?
 Select "Never Delete" from menu next to a snapshot in the add-on's Web UI.  You can choose to keep it from being deleted in Home Assistant or Google Drive.  When you do this, the snapshots will no lnger count against the maximum number of snapshots allowed in Google Drive or Home Assistant.
 Alternatively, you can move a snapshot in Google Drive out of the snapshot folder.  the add-on will ignore any files that aren't in the snapshot folder.  Just don't move them back in accidentally since they'll get "cleaned up" like any old snapshot after a while :)

@@ -28,6 +28,7 @@ from urllib.parse import quote
 from requests import get
 import os
 import json
+import uuid
 
 BAD_TOKEN_ERROR_MESSAGE: str = "Google rejected the credentials we gave it.  Please use the \"Reauthorize\" button on the right to give the Add-on permission to use Google Drive again.  This can happen if you change your account password, you revoke the add-on's access, your Google Account has been inactive for 6 months, or your system's clock is off."
 DRIVE_FULL_MESSAGE = "The user's Drive storage quota has been exceeded"
@@ -83,6 +84,8 @@ class Engine(LogBase):
         self.uploads = 0
         self.start_time = self.time.now()
         self.lastUploadSize = 0
+        self.failureStartTime = self.time.now()
+        self.error_id = uuid.uuid4()
 
     def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
@@ -156,10 +159,14 @@ class Engine(LogBase):
             self.last_success = self.time.now()
             self.next_error_rety = self.time.now()
             self.next_error_backoff = ERROR_BACKOFF_MIN_SECS
-            self.last_error_reported = False
+            if self.last_error_reported:
+                self.last_error_reported = False
+                if self.config.sendErrorReports():
+                    self.sendErrorFinishedReport()
             self.successes += 1
         except Exception as e:
             self.failures += 1
+            self.failureStartTime = self.time.now()
             self.error(formatException(e))
             self.error("A retry will be attempted in {} seconds".format(self.next_error_backoff))
             self.next_error_rety = self.time.now() + relativedelta(seconds=self.next_error_backoff)
@@ -180,6 +187,19 @@ class Engine(LogBase):
         if message == "default_error":
             message = self.getExceptionInfo()
         self.info("Sending error report (see settings to disable)")
+        try:
+            version = json.dumps(self.getDebugInfo(), indent=4)
+        except Exception as e:
+            version = "Debug info failed: " + str(e)
+        url: str = "https://philosophyofpen.com/login/error.py?error={0}&version={1}".format(quote(message), quote(version))
+        try:
+            get(url, timeout=5)
+        except Exception:
+            # just eat any error
+            pass
+
+    def sendErrorFinishedReport(self) -> None:
+        message = "Resolved after " + formatTimeSince(self.failureStartTime)
         try:
             version = json.dumps(self.getDebugInfo(), indent=4)
         except Exception as e:
@@ -459,7 +479,8 @@ class Engine(LogBase):
             'syncStarted': formatTimeSince(self.last_refresh),
             'started': formatTimeSince(self.start_time),
             'driveSnapshots': self.driveSnapshotCount(),
-            'haSnapshots': self.haSnapshotCount()
+            'haSnapshots': self.haSnapshotCount(),
+            'errorId': str(self.error_id)
         }
 
     def getError(self, error=None) -> str:

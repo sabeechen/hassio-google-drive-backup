@@ -42,6 +42,7 @@ class Hassio(LogBase):
         self._retain_drive = False
         self._retain_ha = False
         self._customName = self.config.snapshotName()
+        self.cache = {}
 
     def loadInfo(self) -> None:
         self.self_info = self.readAddonInfo()
@@ -221,7 +222,12 @@ class Hassio(LogBase):
         snapshot.ha = None
 
     def get(self, slug):
-        return HASnapshot(self._getHassioData("{0}snapshots/{1}/info".format(self.config.hassioBaseUrl(), slug)), self.config.isRetained(slug))
+        if slug in self.cache:
+            info = self.cache[slug]
+        else:
+            info = self._getHassioData("{0}snapshots/{1}/info".format(self.config.hassioBaseUrl(), slug))
+            self.cache[slug] = info
+        return HASnapshot(info, self.config.isRetained(slug))
 
     def readSnapshots(self) -> List[HASnapshot]:
         snapshots: List[HASnapshot] = []

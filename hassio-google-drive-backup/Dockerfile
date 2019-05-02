@@ -2,6 +2,7 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 RUN apk add --no-cache python3
+RUN apk add fping
 WORKDIR /app
 COPY . /app
 RUN ["chmod", "+x", "run.py"]

@@ -12,9 +12,8 @@ from .logbase import LogBase
 from typing import Optional, Any, List, Dict
 from threading import Lock, Thread
 
-# Secodns to wait after starting a snapshot before we consider it successful.
+# Seconds to wait after starting a snapshot before we consider it successful.
 SNAPSHOT_FASTFAIL_SECOND = 10
-
 NOTIFICATION_ID = "backup_broken"
 
 
@@ -315,7 +314,7 @@ class Hassio(LogBase):
 
     def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
         try:
-            resp = requests.post(self.config.haBaseUrl() + path, headers=self.config.getHaHeaders(), json=data).raise_for_status()
+            requests.post(self.config.haBaseUrl() + path, headers=self.config.getHaHeaders(), json=data).raise_for_status()
             if self.has_offline:
                 self.info("Home Assistant came back.")
                 self.has_offline = False

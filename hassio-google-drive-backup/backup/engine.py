@@ -5,7 +5,7 @@ from .helpers import makeDict
 from .helpers import count
 from .helpers import take
 from .helpers import formatException
-from .helpers import resolveHostname
+from .helpers import getPingInfo
 from .helpers import formatTimeSince
 from .drive import Drive
 from .hassio import Hassio, SnapshotInProgress
@@ -86,6 +86,7 @@ class Engine(LogBase):
         self.lastUploadSize = 0
         self.failureStartTime = self.time.now()
         self.error_id = uuid.uuid4()
+        self.debug_info = None
 
     def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
@@ -174,6 +175,7 @@ class Engine(LogBase):
             if self.next_error_backoff > ERROR_BACKOFF_MAX_SECS:
                 self.next_error_backoff = ERROR_BACKOFF_MAX_SECS
             self.last_error = e
+            self.getDebugInfo(refresh=True)
             if not self.last_error_reported:
                 self.last_error_reported = True
                 if self.config.sendErrorReports():
@@ -467,21 +469,27 @@ class Engine(LogBase):
         else:
             return ""
 
-    def getDebugInfo(self):
-        return {
-            'addonVersion': self.hassio.self_info.get('version', 'unknown'),
-            'host': self.hassio.host_info,
-            'www.googleapis.com': resolveHostname('www.googleapis.com'),
-            'oauth2.googleapis.com': resolveHostname('oauth2.googleapis.com'),
-            'successes': self.successes,
-            'failures': self.failures,
-            'uploads': self.uploads,
-            'syncStarted': formatTimeSince(self.last_refresh),
-            'started': formatTimeSince(self.start_time),
-            'driveSnapshots': self.driveSnapshotCount(),
-            'haSnapshots': self.haSnapshotCount(),
-            'errorId': str(self.error_id)
-        }
+    def getDebugInfo(self, refresh=False):
+        if self.debug_info is None or refresh:
+            try:
+                self.debug_info = {
+                    'addonVersion': self.hassio.self_info.get('version', 'unknown'),
+                    'host': self.hassio.host_info,
+                    'servers': getPingInfo(['www.googleapis.com', 'oauth2.googleapis.com']),
+                    'successes': self.successes,
+                    'failures': self.failures,
+                    'uploads': self.uploads,
+                    'syncStarted': formatTimeSince(self.last_refresh),
+                    'started': formatTimeSince(self.start_time),
+                    'driveSnapshots': self.driveSnapshotCount(),
+                    'haSnapshots': self.haSnapshotCount(),
+                    'errorId': str(self.error_id)
+                }
+            except Exception as e:
+                self.debug_info = {
+                    'error': 'Unable to create debug info: ' + str(e)
+                }
+        return self.debug_info
 
     def getError(self, error=None) -> str:
         if not error:
@@ -498,11 +506,11 @@ class Engine(LogBase):
                 elif CANT_REACH_GOOGLE_MESSAGE in formatted:
                     return "cant_reach_google"
                 elif CANT_REACH_GOOGLE_AUTH_MESSAGE in formatted:
-                    return "cant_reach_google"
+                    return "cant_reach_google_auth"
                 elif CANT_REACH_GOOGLE_UNAVAILABLE_MESSAGE in formatted:
-                    return "cant_reach_google"
+                    return "cant_reach_google_unavailable"
                 elif GOOGLE_TIMEOUT_1_MESSAGE in formatted:
-                    return "google_timeout"
+                    return "google_timeout_read"
                 elif GOOGLE_TIMEOUT_2_MESSAGE in formatted:
                     return "google_timeout"
                 elif GOOGLE_SESSION_EXPIRED in formatted:

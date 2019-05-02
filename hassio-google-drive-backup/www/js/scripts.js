@@ -15,6 +15,15 @@ function toggleSlide(checkbox, target) {
   }
 }
 
+function toggleLinkSlide(checkbox, target) {
+  target = $('#' + target);
+  if (target.is(":visible")) {
+    target.slideUp(400);
+  } else {
+    target.slideDown(400);
+  }
+}
+
 function restoreClick(target) {
   window.top.location.replace($(target).data('url'))
 }
@@ -24,7 +33,7 @@ function setInputValue(id, value) {
     // Leave at default
     return;
   }
-  if (typeof(value) == 'boolean') {
+  if (typeof (value) == 'boolean') {
     $('#' + id).prop('checked', value);
   } else {
     $('#' + id).val(value);
@@ -152,10 +161,10 @@ function exposeServer(expose) {
   var jqxhr = $.get("exposeserver?expose=" + expose,
     function (data) {
     }, "json").fail(
-      function() {
+      function () {
         // The server is restarting, so we expect the request to fail.
         if (expose == 'false' && last_data && last_data.hasOwnProperty('ingress_url')) {
-          setTimeout(function() {
+          setTimeout(function () {
             window.top.location.assign(last_data.ingress_url);
           }, 5000);
         }
@@ -315,7 +324,7 @@ function reloadForNewCreds() {
           text += "."
         }
       } else if (hasSnapshots && toUpload > 0) {
-        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest snapshot(s) will get backed up</b>." 
+        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
       } else if (!hasSnapshots) {
         text = "You have <b>no snapshots in Home Assistant</b>";
         if (willUpload) {
@@ -441,7 +450,7 @@ function refreshstats() {
         if (isNew) {
           snapshot_div.prepend(template);
           var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
-          var instances = M.Dropdown.init(elems, {'constrainWidth': false });
+          var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
         }
 
         if (snapshot.inHA || snapshot.inDrive) {
@@ -490,63 +499,40 @@ function refreshstats() {
       $("#snapshots_loading").hide();
     }
 
-    if (data.last_error == "creds_bad") {
-      $('#error_card').hide();
-      $('#drive_full_card').hide();
-      $('#creds_bad_card').fadeIn(400);
-      $('#cant_reach_google').hide();
-      $('#google_timeout').hide();
-    } else if (data.last_error == "drive_full") {
-      $('#error_card').hide();
-      $('#drive_full_card').fadeIn(400);
-      $('#creds_bad_card').hide();
-      $('#cant_reach_google').hide();
-      $('#google_timeout').hide();
-    } else if (data.last_error == "google_timeout") {
-      $('#error_card').hide();
-      $('#drive_full_card').hide();
-      $('#creds_bad_card').hide();
-      $('#cant_reach_google').hide();
-      $('#google_timeout').fadeIn(400);
-    } else if (data.last_error == "cant_reach_google") {
-      $('#error_card').hide();
-      $('#drive_full_card').hide();
-      $('#creds_bad_card').hide();
-      $('#cant_reach_google').fadeIn(400);
-      $('#google_timeout').hide();
-    } else if (data.last_error != "") {
-      $('#error_paragraph').text(data.last_error);
-      desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and including that here.  :\n\n" + data.last_error;
-      parts = data.last_error.split('\n');
-      var title = "Unknown"
-      for (var i = parts.length - 1; i >= 0; i--) {
-        if (parts[i].trim() != "") {
-          title = parts[i].trim();
-          break;
-        }
-      }
-      $('#error_github_link').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title=" + encodeURIComponent(title) + "&assignee=sabeechen&body=" + encodeURIComponent(desc));
-      $('#error_github_search').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + title.replace("\"", "\\\"") + "\""));
-      $('#error_card').fadeIn(400);
-      $('#drive_full_card').hide();
-      $('#creds_bad_card').hide();
-      $('#cant_reach_google').hide();
-    } else {
-      $('#error_card').hide();
-      $('#drive_full_card').hide();
-      $('#creds_bad_card').hide();
-      $('#cant_reach_google').hide();
-      $('#google_timeout').hide();
-    }
-
     // Show an error card if applicable
-    $('.error_card:hidden').each(function(i) {
+    $('.error_card:hidden').each(function (i) {
       var item = $(this);
       if (data.last_error.length > 0 && item.hasClass(data.last_error)) {
         item.fadeIn(400);
+        if (data.hasOwnProperty('debug_info')) {
+          var dns_div = $('.dns_info', item)
+          if (dns_div.length > 0) {
+            if (data.debug_info.hasOwnProperty('servers')) {
+              var html = "";
+              for (var host in data.debug_info.servers) {
+                if (data.debug_info.servers.hasOwnProperty(host)) {
+                  html += "<div class='col s12 m6 row'> <h6>Host: " + host + "</h6>";
+                  var ips = data.debug_info.servers[host];
+                  for (var ip in ips) {
+                    if (ips.hasOwnProperty(ip)) {
+                      result = ips[ip]
+                      html += "<div class='col s7'>" + ip + "</div><div class='col s5'>" + result + "</div>";
+                    }
+                  }
+                  html += "</div>"
+                }
+              }
+              dns_div.html(html)
+            } else if (data.hasOwnProperty('error')) {
+              dns_div.html(JSON.stringify(data.debug_info.error))
+            } else {
+              dns_div.html(JSON.stringify(data.debug_info))
+            }
+          }
+        }
       }
     });
-    $('.error_card:visible').each(function(i) {
+    $('.error_card:visible').each(function (i) {
       var item = $(this);
       if (data.last_error.length == 0 || !item.hasClass(data.last_error)) {
         item.hide();
@@ -608,7 +594,7 @@ function refreshstats() {
       console.log(e);
       $("#snapshots_loading").show();
       if (!errorToasted) {
-        errorToasted = true;  
+        errorToasted = true;
         M.toast({ html: 'Lost connection to add-on, will keep trying to connect...', displayLength: 9999999 })
       }
     }
@@ -630,40 +616,40 @@ function stopSimulateError() {
 }
 
 function newSnapshotClick() {
-    setInputValue("retain_drive_one_off", false);
-    setInputValue("retain_ha_one_off", false);
-    setInputValue("snapshot_name_one_off", "");
-    snapshotNameOneOffExample();
-    M.Modal.getInstance(document.querySelector('#snapshotmodal')).open();
+  setInputValue("retain_drive_one_off", false);
+  setInputValue("retain_ha_one_off", false);
+  setInputValue("snapshot_name_one_off", "");
+  snapshotNameOneOffExample();
+  M.Modal.getInstance(document.querySelector('#snapshotmodal')).open();
 }
 
 function doNewSnapshot() {
-    toast("Requesting snapshot (takes a few seconds)...");
+  toast("Requesting snapshot (takes a few seconds)...");
 
-    var drive = $("#retain_drive_one_off").prop('checked');
-    var ha = $("#retain_ha_one_off").prop('checked');
-    var name = $("#snapshot_name_one_off").val()
-    var url = "triggerbackup?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
+  var drive = $("#retain_drive_one_off").prop('checked');
+  var ha = $("#retain_ha_one_off").prop('checked');
+  var name = $("#snapshot_name_one_off").val()
+  var url = "triggerbackup?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
 
-    // request the snapshot
-    var jqxhr = $.get(url,
-      function (data) {
-        console.log(data);
-        if (!data.hasOwnProperty("name")) {
-          errorToast(data)
-        } else {
-          toast("Requested new snapshot '" + data.name + "'");
-          refreshstats();
-          backupNow();
-        }
-      }, "json")
-      .fail(
-        function (e) {
-          errorToast(e)
-        }
-      )
+  // request the snapshot
+  var jqxhr = $.get(url,
+    function (data) {
+      console.log(data);
+      if (!data.hasOwnProperty("name")) {
+        errorToast(data)
+      } else {
+        toast("Requested new snapshot '" + data.name + "'");
+        refreshstats();
+        backupNow();
+      }
+    }, "json")
+    .fail(
+      function (e) {
+        errorToast(e)
+      }
+    )
 
-    return false;
+  return false;
 }
 
 $(document).ready(function () {

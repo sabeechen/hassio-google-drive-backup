@@ -395,7 +395,7 @@
               <input type="text" id="snapshot_name" name="snapshot_name" class="validate"
                 onkeyup="snapshotNameExample()" />
               <label for="snapshot_name">Snapshot Name Template</label>
-              <span class="helper-text">The template to use for naming new snapshot.  <a target="_blank"
+              <span class="helper-text">The template to use for naming new snapshot. <a target="_blank"
                   href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">See
                   here</a> for a list of all
                 available options, your snapshots names will look something like: <br /><span
@@ -962,7 +962,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden error_card cant_reach_google" id="cant_reach_google">
+        <div class="row default-hidden error_card cant_reach_google cant_reach_google_auth cant_reach_google_unavailable" id="cant_reach_google">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -977,8 +977,18 @@
                   <li>The internet is working.</li>
                   <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant
                     machine. Some ad-blocking and
-                    firewall software can block these addresses.</li>
+                    firewall software can block these addresses.<br/>
+                    <div style='padding: 5px'>
+                      <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns');" href="#!"><i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
+                      <div id="cant_reach_google_dns" class="default-hidden" style="padding-left: 10px">
+                        <p>Below is the list of names and IP Addresses Google's API servers resolve to.  Next to each is the result from an attempt the add-on has made to ping the address.  This may help in determining if something in your network is blocking accesss to one of Google's API servers, or if Google's API servers are having problems.</p>
+                        <div class="dns_info row"></div>
+                        <div class="divider"></div>
+                      </div>
+                    </div>
+                  </li>
                 </ul>
+
                 <p>You can also try restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
@@ -987,7 +997,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden error_card google_timeout" id="google_timeout">
+        <div class="row default-hidden error_card google_timeout google_timeout_read" id="google_timeout">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -1003,7 +1013,16 @@
                   <li>The internet is working.</li>
                   <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant
                     machine. Some ad-blocking and
-                    firewall software can block or throttle traffic to these addresses.</li>
+                    firewall software can block or throttle traffic to these addresses.<br/>
+                    <div style='padding: 5px'>
+                      <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns_timeout');" href="#!"><i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
+                      <div id="cant_reach_google_dns_timeout" class="default-hidden" style="padding-left: 10px">
+                        <p>Below is the list of names and IP Addresses Google's API servers resolve to.  Next to each is the result from an attempt the add-on has made to ping the address.  This may help in determining if something in your network is blocking accesss to one of Google's API servers, or if Google's API servers are having problems.</p>
+                        <div class="dns_info row"></div>
+                        <div class="divider"></div>
+                      </div>
+                    </div>
+                  </li>
                 </ul>
                 <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">

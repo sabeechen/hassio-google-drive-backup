@@ -103,6 +103,8 @@ class Server(LogBase):
         status["retainDrive"] = self.engine.driveSnapshotCount() - self.engine.driveDeletableSnapshotCount()
         status["retainHa"] = self.engine.haSnapshotCount() - self.engine.haDeletableSnapshotCount()
         status["snapshot_name_template"] = self.config.snapshotName()
+        if len(status['last_error']) > 0:
+            status['debug_info'] = self.engine.getDebugInfo()
         return status
 
     def getRestoreLink(self):

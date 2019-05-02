@@ -1,5 +1,6 @@
 import traceback
 import socket
+import subprocess
 
 from dateutil.tz import tzutc
 from dateutil.parser import parse
@@ -91,3 +92,33 @@ def resolveHostname(host: str):
         return socket.gethostbyname_ex(host)[2]
     except Exception as e:
         return "Failed to resolve: " + str(e)
+
+
+def getPingInfo(servers):
+    pings = {}
+    for server in servers:
+        pings[server] = {
+            server: 'Unknown'
+        }
+    ips = servers.copy()
+    for address in pings.keys():
+        for ip in resolveHostname(address):
+            pings[address][ip] = "Unkown"
+            if ip not in ips:
+                ips.append(ip)
+    command = "fping -t 1000 " + " ".join(ips)
+
+    # fping each server
+    output = subprocess.run(command, capture_output=True, text=True, shell=True)
+
+    for line in output.stdout.split("\n") + output.stderr.split("\n"):
+        for host in pings.keys():
+            for address in pings[host].keys():
+                if line.startswith(address):
+                    response = line[len(address):].strip()
+                    if response.startswith(":"):
+                        response = response[2:].strip()
+                    if response.startswith("is"):
+                        response = response[3:].strip()
+                    pings[host][address] = response
+    return pings

@@ -55,10 +55,11 @@ HA_DELETABLE_LAMBDA: Callable[[Snapshot], str] = lambda s: s.isInHA() and not s.
 ERROR_BACKOFF_MIN_SECS = 10
 ERROR_BACKOFF_MAX_SECS = 60 * 60
 ERROR_BACKOFF_EXP_MUL = 2
+UPDATE_SENSORS_SECONDS = 10
 
 
 class Engine(LogBase):
-    def __init__(self, config: Config, drive: Drive, hassio: Hassio, time: Time):
+    def __init__(self, watcher: Watcher, config: Config, drive: Drive, hassio: Hassio, time: Time):
         self.time: Time = time
         self.config: Config = config
         self.folder_id: Optional[str] = None
@@ -67,7 +68,7 @@ class Engine(LogBase):
         self.lock: Lock = Lock()
         self.hassio: Hassio = hassio
         self.last_error: Optional[Exception] = None
-        self.watcher: Watcher = Watcher(config)
+        self.watcher: Watcher = watcher
         self.last_refresh: datetime = self.time.now() + relativedelta(hours=-6)
         self.notified: bool = False
         self.last_success: datetime = self.time.now()
@@ -87,6 +88,7 @@ class Engine(LogBase):
         self.failureStartTime = self.time.now()
         self.error_id = uuid.uuid4()
         self.debug_info = None
+        self.last_sensor_update = self.time.now()
 
     def getDeleteScheme(self):
         gen_config = self.config.getGenerationalConfig()
@@ -264,7 +266,7 @@ class Engine(LogBase):
         if next_snapshot:
             needsRefresh = needsRefresh or (self.time.now() > next_snapshot)
 
-        # Don't refresh if we haven't passed the error bakcoff time.
+        # Don't refresh if we haven't passed the error backoff time.
         if self.time.now() < self.next_error_rety:
             needsRefresh = False
 
@@ -282,7 +284,9 @@ class Engine(LogBase):
             if self.needsRefresh():
                 self.doBackupWorkflow()
             try:
-                self.hassio.updateSnapshotStaleSensor(self.snapshots_stale)
+                if self.time.now() > self.last_sensor_update + timedelta(seconds=UPDATE_SENSORS_SECONDS):
+                    self.last_sensor_update = self.time.now()
+                    self.hassio.updateSnapshotStaleSensor(self.snapshots_stale)
             except Exception:
                 # Just eat the error, we'll keep retrying.
                 pass

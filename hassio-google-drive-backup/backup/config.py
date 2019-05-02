@@ -24,7 +24,7 @@ DEFAULTS = {
     "folder_file_path": "/data/folder.dat",
     "credentials_file_path": "/data/credentials.dat",
     "seconds_between_refreshes": 60 * 60,  # once per hour, refresh everythin regardless
-    "seconds_between_directory_checks": 10,
+    "seconds_between_directory_checks": 1,
     "verbose": False,
     "use_ssl": False,
     "certfile": "/ssl/fullchain.pem",

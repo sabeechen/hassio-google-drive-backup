@@ -6,6 +6,7 @@ requests
 python-dateutil==2.6.1
 CherryPy
 colored
+watchdog
 flask
 flask-api
 pytest

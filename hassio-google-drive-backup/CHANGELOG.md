@@ -1,7 +1,13 @@
 ## [0.93.2] - 2019-04-28
+### Added
+- Google API Server DNS info is displayed in the error dialog when you get timeouts or name reolution errors reaching Google.
+### Fixes
+- New snapshots would sometimes not get noticed in Hassio until an hour after they're created.
+
+
+## [0.93.2] - 2019-04-28
 ### Fixes
 - A type error when using custom names for users without hassos installed.  
-
 
 ## [0.93.1] - 2019-04-28
 ### Fixes

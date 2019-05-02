@@ -109,9 +109,9 @@ def getPingInfo(servers):
     command = "fping -t 1000 " + " ".join(ips)
 
     # fping each server
-    output = subprocess.run(command, capture_output=True, text=True, shell=True)
+    output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, encoding="utf-8")
 
-    for line in output.stdout.split("\n") + output.stderr.split("\n"):
+    for line in output.stdout.split("\n"):
         for host in pings.keys():
             for address in pings[host].keys():
                 if line.startswith(address):

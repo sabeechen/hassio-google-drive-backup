@@ -178,6 +178,7 @@ class Hassio(LogBase):
                              "username": user, "password": password})
 
     def newSnapshot(self, retain_drive=False, retain_ha=False, custom_name=None) -> Snapshot:
+        self.loadInfo()
         try:
             self.lock.acquire()
             if self.snapshot_thread is not None and self.snapshot_thread.is_alive():

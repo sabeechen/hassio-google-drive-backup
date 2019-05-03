@@ -18,10 +18,10 @@ class WrappedException(Exception):
 
 
 class SeekableRequest(IOBase, LogBase):
-    def __init__(self, url, headers: Dict[str, str], chunk_size=1024 * 1024 * 10):
+    def __init__(self, url, headers: Dict[str, str], size: int = -1, chunk_size=1024 * 1024 * 10):
         self.url: str = url
         self.offset: int = 0
-        self._size: int = -1
+        self._size: int = size
         self.headers: Dict[str, str] = headers
         self.buffer: bytearray = bytearray()
         self.bufferStart = 0

@@ -1,4 +1,4 @@
-## [0.93.2] - 2019-04-28
+## [0.94] - 2019-05-02
 ### Added
 - Google API Server DNS info is displayed in the error dialog when you get timeouts or name reolution errors reaching Google.
 ### Fixes

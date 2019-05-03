@@ -23,7 +23,7 @@ app = Flask(__name__)
 app.secret_key = "super secret key"
 
 snapshots: List[Dict[Any, Any]] = []
-NEW_SNAPSHOT_SLEEP_SECONDS = 1
+NEW_SNAPSHOT_SLEEP_SECONDS = 30
 TAR_FILE = "sample_tar.tar"
 BACKUP_DIR = "backup"
 snapshotting = False
@@ -276,9 +276,9 @@ def hostInfo() -> str:
 @app.route('/info', methods=['GET'])
 def selfInfo() -> str:
     return formatDataResponse({
-        "supervisor": "version",
-        "homeassistant": "0.91.3",
-        "hassos": "null|version",
+        "supervisor": None,
+        "homeassistant": None,
+        "hassos": None,
         "hostname": "localhost",
         "machine": "type",
         "arch": "arch",
@@ -306,7 +306,7 @@ def setBackupState() -> str:
 @app.route("/homeassistant/api/states/binary_sensor.snapshots_stale", methods=['POST'])
 def setBinarySensorState() -> str:
     print("Updated snapshot stale sensor with: {}".format(request.get_json()))
-    return "", status.HTTP_502_BAD_GATEWAY
+    #return "", status.HTTP_502_BAD_GATEWAY
     return ""
 
 

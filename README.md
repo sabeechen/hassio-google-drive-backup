@@ -20,17 +20,15 @@ The add-on is installed like any other.
 
      ![Repo Screenshot](images/repo_ss.png)
 3.   Click "Install" and give it a few minutes to finish downloading.
-4.   Take note of the default configuration options.  For most people the default settings are sufficient:
+4.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of people this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).
+5.   The "Getting Started" page will tell you how many snapshots you have and what it will do with them once you connect it to Google Drive.  You can click "Settings" to change those options throught he add-on (takes effect immediately), or update them from the page where you installed the add-on as shown below (restart for them to take effect).
      *   **max_snapshots_in_hassio**: is the number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.
      *   **max_snapshots_in_google_drive**: is the number of snapshots the add-on will keep in Google Drive before old ones are deleted.  Google Drive gives you 15GB of free storage (at the time of writing) so plan accordingly if you know how big your snapshots are.
      *   **days_between_snapshots**: How often a new snapshot should be scheduled, eg "1" for daily and "7" for weekly.
      *   **use_ssl**: determines if the add-on's webpage should only expose its interface over ssl.  If you use the [Duck DNS Add-on](https://www.home-assistant.io/addons/duckdns/) with the default settings then `"use_ssl": true`setting this to true should just work, if not [see below](#configuration-options).
      
      Other less common config options are explained [below](#configuration-options).
-     > Be aware that once you start the Add-on, it will start cleaning up old snapshots immediately.  If you have 5 snapshots and you start the add-on with **max_snapshots_in_hassio**=4 then the oldest one will get deleted.
-5.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of users this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).
-6.   Log in to the webpage with your Home Assistant username and password.
-6.   Follow the instruction on-screen to link the Add-on with your Google Drive account.  Two methods of doing this are provided, since authenticating with Google's servers can be tempermental while this Add-on is still under development.
+6.   Click the "Authenticate with Drive" button to link the add-on with your Google Drive account.  Alternatively, you can generate your [own Google API credentials](#can-i-use-my-own-google-api-information-to-authenticate-instead-of-yours), though the process is not simple.
 7.   You should be redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.  You're done!
 
 ## Configuration Options

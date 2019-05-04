@@ -39,6 +39,8 @@ GOOGLE_TIMEOUT_1_MESSAGE = "socket.timeout: The read operation timed out"
 GOOGLE_TIMEOUT_2_MESSAGE = "socket.timeout: timed out"
 GOOGLE_SESSION_EXPIRED = "googleapiclient.errors.ResumableUploadError: <HttpError 404"
 GOOGLE_500_ERROR = "urllib.error.HTTPError: HTTP Error 500: Internal Server Error"
+DELETE_ERROR_PART_1 = "Request to Hassio failed, HTTP error: <Response [400]> Message:"
+DELETE_ERROR_PART_2 = "in deleteSnapshot"
 
 DATE_LAMBDA: Callable[[Snapshot], datetime] = lambda s: s.date()
 HA_LAMBDA: Callable[[Snapshot], bool] = lambda s: s.isInHA()
@@ -521,6 +523,8 @@ class Engine(LogBase):
                     return "google_session_expired"
                 elif GOOGLE_500_ERROR in formatted:
                     return "google_server_error"
+                elif DELETE_ERROR_PART_1 in formatted and DELETE_ERROR_PART_2 in formatted:
+                    return "delete_error"
                 return "default_error"
             else:
                 return "default_error"

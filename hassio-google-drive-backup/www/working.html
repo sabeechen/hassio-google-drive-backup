@@ -962,6 +962,30 @@
             </div>
           </div>
         </div>
+        <div class="row default-hidden error_card delete_error" id="creds_bad_card">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">delete_forever</i>
+                  <span style="vertical-align: top;">Couldn't delete old snapshots in Hass.io</span>
+                </span>
+                <p>
+                  The add-on ran into an error (HTTP 400) trying to delete your oldest snapshot.  This can happen sometimes (especially if you just installed the add-on) when Hassio's cache of your existing snapshots is out of sync.  The add-on can't continue until this is resolved.
+                </p>
+                <p>To resolve this, you can try:</p>
+                <ul class="browser-default">
+                  <li>Refreshing your snapshots by going to the snapshot page in Hass.io and clicking the refresh icon in the top right.</li>
+                  <li>Restarting the machine Home Assistant runs on.</li>
+                </ul>
+                <p>The add-on will retry periodically to check if the issue is resolved.  To retry now, click "Try Syncing Again" below.  If the above doesn't help, please file an issue on <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new" target="_blank">GitHub</a> to get more help.</p>
+              </div>
+              <div class="card-action white-text">
+                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden error_card cant_reach_google cant_reach_google_auth cant_reach_google_unavailable" id="cant_reach_google">
           <div class="col s12 m9">
             <div class="card red darken-4">

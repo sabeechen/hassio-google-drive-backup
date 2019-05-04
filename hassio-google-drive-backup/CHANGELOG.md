@@ -1,3 +1,10 @@
+## [0.95] - 2019-05-03
+### Added
+- Better help messaging when getting errors deleting old snapshots.
+### Fixes
+- Inaccuracies in the installation readme.
+- Could use a cached (old) Hassio/Ha/Supervisor version number for snapshot names.
+
 ## [0.94] - 2019-05-02
 ### Added
 - Google API Server DNS info is displayed in the error dialog when you get timeouts or name reolution errors reaching Google.

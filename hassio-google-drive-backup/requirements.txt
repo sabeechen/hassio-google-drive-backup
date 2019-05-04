@@ -7,3 +7,4 @@ python-dateutil==2.6.1
 CherryPy
 colored
 watchdog
+pyyaml

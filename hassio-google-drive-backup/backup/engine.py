@@ -412,7 +412,7 @@ class Engine(LogBase):
                 pass
 
         if self.sim_error is not None:
-            raise KnownError(self.sim_error)
+            raise Exception(self.sim_error)
 
         # Get the snapshots that should be backed up, which is at most N of the oldest
         # snapshots in home assistant which aren't in Drive.

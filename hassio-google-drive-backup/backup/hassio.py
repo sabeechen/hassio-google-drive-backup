@@ -11,7 +11,8 @@ from .config import Config
 from .logbase import LogBase
 from typing import Optional, Any, List, Dict
 from threading import Lock, Thread
-
+import yaml
+import os
 # Seconds to wait after starting a snapshot before we consider it successful.
 SNAPSHOT_FASTFAIL_SECOND = 10
 NOTIFICATION_ID = "backup_broken"
@@ -91,7 +92,17 @@ class Hassio(LogBase):
                 else:
                     isPartial = True
             if len(self.config.snapshotPassword()) > 0:
-                request_info['password'] = self.config.snapshotPassword()
+                if self.config.snapshotPassword().startswith("!secret "):
+                    if not os.path.isfile(self.config.secretsFilePath()):
+                        raise KnownError("Couldn't find your secrets file at " + self.config.secretsFilePath())
+                    with open(self.config.secretsFilePath()) as f:
+                        secrets_yaml = yaml.load(f)
+                    key = self.config.snapshotPassword()[len("!secret "):]
+                    if key not in secrets_yaml:
+                        raise KnownError("Couldn't find the key " + key + " in your secrets.yaml")
+                    request_info['password'] = secrets_yaml[key]
+                else:
+                    request_info['password'] = self.config.snapshotPassword()
 
             if isPartial:
                 snapshot_type = "Partial"

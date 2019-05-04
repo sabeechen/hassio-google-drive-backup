@@ -44,7 +44,8 @@ DEFAULTS = {
     "expose_extra_server": False,
     "ingress_upgrade_file": "/data/upgrade_ingress",
     "retained_file": "/data/retained.json",
-    "snapshot_name": SNAPSHOT_NAME_DEFALT
+    "snapshot_name": SNAPSHOT_NAME_DEFALT,
+    "secrets_file_path": "/config/secrets.yaml"
 }
 
 
@@ -211,6 +212,9 @@ class Config(LogBase):
 
     def pathSeparator(self) -> str:
         return str(self.config['path_separator'])
+
+    def secretsFilePath(self) -> str:
+        return str(self.config['secrets_file_path'])
 
     def port(self) -> int:
         return int(self.config['port'])

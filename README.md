@@ -43,10 +43,14 @@ You can modify the add-ons setting by changing its config json file (like any ad
     > ```json
     > "snapshot_stale_minutes": "500"
     > ```
-*   **snapshot_password** (default: None):  When set, snapshots are created witha password.  You'll need to remember this password when restoring snapshots.
+*   **snapshot_password** (default: None):  When set, snapshots are created witha password.  You can use a value from your secrets.yaml by prefixing the password with "!secret". You'll need to remember this password when restoring snapshots.
     > #### Example: Use a password for snapshot archives
     > ```json
     > "snapshot_password": "super_secret"
+    > ```
+    > #### Example: Use a password from secrets.yaml
+    > ```json
+    > "snapshot_password": "!secret snapshot_password"
     > ```
 *   **snapshot_name** (default: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}"):  Sets the name for new snapshots.  Variable parameters of the form "{variable_name}" can be used to modify the name to your liking.  A list of available variables are given [here](#can-i-give-snapshots-a-different-name).
     > #### Example: Create snapshot names like 'Full Snapshot HA 0.92.0'

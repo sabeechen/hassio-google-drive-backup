@@ -56,6 +56,14 @@ function snapshotNameOneOffExample() {
   $("#snapshot_name_example_one_off").html(exampleSnapshotName("Full", $("#snapshot_name_one_off").val()));
 }
 
+function checkForSecret() {
+  if ($("#snapshot_password").val().startsWith("!secret ")) {
+    $("#snapshot_password").attr('type', 'text')
+  } else {
+    $("#snapshot_password").attr('type', 'password')
+  }
+}
+
 function slugToId(id) {
     if (id == "addons/local") {
         return "folder_addons";
@@ -191,6 +199,7 @@ function loadSettings() {
         $("#expose_extra_server").trigger("change");
         settingsChanged = false;
         snapshotNameExample();
+        checkForSecret();
         M.Modal.getInstance(document.querySelector('#settings_modal')).open();
       }, "json")
 

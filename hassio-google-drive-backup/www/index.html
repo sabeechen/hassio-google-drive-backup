@@ -69,10 +69,11 @@
             <div class="input-field col m6 s12">
               <i class="material-icons prefix">vpn_key</i>
               <input type="password" autocomplete="new-password" id="snapshot_password" name="snapshot_password"
-                class="validate" />
+                class="validate" onkeyup="checkForSecret()" />
               <label for="snapshot_password">Password</label>
               <span class="helper-text">When set, creates snapshots protected by a password. This password will be
-                required by Hass.io when restoring the snapshot. Leave blank to require no password.</span>
+                required by Hass.io when restoring the snapshot. Leave blank to require no password. You can specify a
+                password from your secrets.yaml by using the syntax "!secret your_secret_key".</span>
             </div>
           </div>
           <div class="row">
@@ -81,7 +82,7 @@
               <input type="text" id="snapshot_name" name="snapshot_name" class="validate"
                 onkeyup="snapshotNameExample()" />
               <label for="snapshot_name">Snapshot Name Template</label>
-              <span class="helper-text">The template to use for naming new snapshot.  <a target="_blank"
+              <span class="helper-text">The template to use for naming new snapshot. <a target="_blank"
                   href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">See
                   here</a> for a list of all
                 available options, your snapshots names will look something like: <br /><span

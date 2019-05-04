@@ -9,5 +9,6 @@
     "ingress_upgrade_file": "../dev/data/ingress_upgrade",
     "certfile": "../dev/ssl/fullchain.pem",
     "keyfile": "../dev/ssl/privkey.pem",
-    "retained_file": "../dev/data/retained.json"
+    "retained_file": "../dev/data/retained.json",
+    "secrets_file_path": "../dev/data/secrets.yaml"
 }

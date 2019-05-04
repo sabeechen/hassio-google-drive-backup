@@ -91,7 +91,7 @@ def resolveHostname(host: str):
     try:
         return socket.gethostbyname_ex(host)[2]
     except Exception as e:
-        return "Failed to resolve: " + str(e)
+        return []
 
 
 def getPingInfo(servers):

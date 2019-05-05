@@ -412,7 +412,7 @@ class Server(LogBase):
             self.engine.doUpload(found)
 
             if not found.isInHA():
-                {'message': "Soemthing wen't wrong, Hass.io didn't recognize the snapshot.  Please check the supervisor logs."}
+                return {'message': "Something went wrong, Hass.io didn't recognize the snapshot.  Please check the supervisor logs."}
             return {'message': "Snapshot uploaded"}
         except Exception as e:
             return {

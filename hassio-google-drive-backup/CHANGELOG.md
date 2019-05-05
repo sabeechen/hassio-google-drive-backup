@@ -1,3 +1,6 @@
+## [0.96.1] - 2019-05-05
+- Fixed an issue when google credential refreshing in the experimental api
+
 ## [0.96] - 2019-05-05
 ### Added
 - Snapshot password can be set from your secrets file by setting the snapshot password "!sercet snapshot_password"

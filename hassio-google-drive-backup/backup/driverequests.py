@@ -117,6 +117,8 @@ class DriveRequests(LogBase):
         loaded['token_response'] = resp
         with open(self.config.credentialsFilePath(), "w") as f:
             json.dump(loaded, f)
+        self.cred_bearer = loaded['access_token']
+        self.cred_expiration = expiration
         return loaded['access_token']
 
     def get(self, id):

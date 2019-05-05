@@ -274,7 +274,7 @@ class Snapshot(object):
 
     def setDownloading(self, percent):
         self.donwloading = percent
-        self.downloadFailed = False
+        self.donwload_failed = False
 
     def downloadFailed(self):
         self.donwload_failed = True
@@ -285,11 +285,11 @@ class Snapshot(object):
                 return "Restoring"
             else:
                 return "Restore Complete"
-        if self.isDownloading():
+        if self.donwloading >= 0:
             if self.donwload_failed:
                 return "Loading Failed!"
             if self.donwloading == 100:
-                return "Refreshing snapshot".format(self.donwloading)
+                return "Refreshing snapshot"
             return "Loading {0}%".format(self.donwloading)
         if self.isInDrive() and self.isInHA():
             return "Backed Up"
@@ -307,7 +307,7 @@ class Snapshot(object):
         return "Invalid State"
 
     def isDownloading(self):
-        return self.donwloading >= 0
+        return self.donwloading >= 0 and not self.donwload_failed
 
     def isRestoring(self):
         return self.restoring is not None

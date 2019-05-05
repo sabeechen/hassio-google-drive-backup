@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+import socket
 from .logbase import LogBase
 from .helpers import formatException
 from typing import Dict, List, Any, Optional
@@ -45,7 +46,10 @@ DEFAULTS = {
     "ingress_upgrade_file": "/data/upgrade_ingress",
     "retained_file": "/data/retained.json",
     "snapshot_name": SNAPSHOT_NAME_DEFALT,
-    "secrets_file_path": "/config/secrets.yaml"
+    "secrets_file_path": "/config/secrets.yaml",
+    "drive_experimental": False,
+    "drive_ipv4": "",
+    'ignore_ipv6_addresses': False
 }
 
 
@@ -90,6 +94,8 @@ class Config(LogBase):
         self.warn_expose_server = False
 
         self.retained = self._loadRetained()
+        self.old_getaddrinfo = socket.getaddrinfo
+        socket.getaddrinfo = self.new_getaddrinfo
 
     def setSendErrorReports(self, handler, send: bool) -> None:
         self.config['send_error_reports'] = send
@@ -274,6 +280,12 @@ class Config(LogBase):
         if len(str(self.config['snapshot_time_of_day'])) > 0:
             return str(self.config['snapshot_time_of_day'])
         return None
+
+    def driveExperimental(self) -> bool:
+        return bool(self.config['drive_experimental'])
+
+    def driveHost(self) -> str:
+        return str(self.config['drive_ipv4'])
 
     def getHassioHeaders(self):
         if 'hassio_header' in self.config:
@@ -496,3 +508,22 @@ class Config(LogBase):
 
     def isRetained(self, slug):
         return slug in self.retained
+
+    def ignoreIpv6(self) -> bool:
+        return bool(self.config['ignore_ipv6_addresses'])
+
+    def new_getaddrinfo(self, *args, **kwargs):
+        if len(self.driveHost()) > 0 and len(args) > 1 and args[0] == "www.googleapis.com" and args[1] == 443:
+            # Override the google drive host entry with just the single address
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (self.driveHost(), 443))]
+        if len(self.driveHost()) > 0 and len(args) > 1 and args[0] == "oauth.googleapis.com" and args[1] == 443:
+            # Override the google drive host entry with just the single address
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (self.driveHost(), 443))]
+
+        responses = self.old_getaddrinfo(*args, **kwargs)
+        if self.ignoreIpv6():
+            return [response
+                    for response in responses
+                    if response[0] != socket.AF_INET6]
+        else:
+            return responses

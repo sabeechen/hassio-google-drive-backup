@@ -96,7 +96,7 @@ class Hassio(LogBase):
                     if not os.path.isfile(self.config.secretsFilePath()):
                         raise KnownError("Couldn't find your secrets file at " + self.config.secretsFilePath())
                     with open(self.config.secretsFilePath()) as f:
-                        secrets_yaml = yaml.load(f)
+                        secrets_yaml = yaml.load(f, Loader=yaml.SafeLoader)
                     key = self.config.snapshotPassword()[len("!secret "):]
                     if key not in secrets_yaml:
                         raise KnownError("Couldn't find the key " + key + " in your secrets.yaml")

@@ -1,6 +1,6 @@
 {
   "name": "Hass.io Google Drive Backup",
-  "version": "0.95",
+  "version": "0.96",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically back up Hass.io snapshots to Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
@@ -12,7 +12,7 @@
   "hassio_role": "manager",
   "auth_api": true,
   "webui": "[PROTO:use_ssl]://[HOST]:[PORT:1627]/",
-  "map": ["ssl", "backup:rw"],
+  "map": ["ssl", "backup:rw", "config"],
   "options": {
     "max_snapshots_in_hassio": 4,
     "max_snapshots_in_google_drive": 4,
@@ -49,7 +49,10 @@
     "snapshot_password": "str?",
     "exclude_folders": "str?",
     "exclude_addons": "str?",
-    "expose_extra_server": "bool?"
+    "expose_extra_server": "bool?",
+    "drive_experimental": "bool?",
+    "drive_ipv4": "match(^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$)?",
+    "ignore_ipv6_addresses": "bool?"
   },
   "ports": {
     "1627/tcp": 1627

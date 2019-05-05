@@ -89,8 +89,11 @@ def formatException(e: Exception) -> str:
 
 def resolveHostname(host: str):
     try:
-        return socket.gethostbyname_ex(host)[2]
-    except Exception as e:
+        ret = []
+        for info in socket.getaddrinfo(host, 443, 0, 0, socket.IPPROTO_TCP):
+            ret.append(info[4][0])
+        return ret
+    except Exception:
         return []
 
 
@@ -103,7 +106,7 @@ def getPingInfo(servers):
     ips = servers.copy()
     for address in pings.keys():
         for ip in resolveHostname(address):
-            pings[address][ip] = "Unkown"
+            pings[address][ip] = "Unknown"
             if ip not in ips:
                 ips.append(ip)
     command = "fping -t 1000 " + " ".join(ips)

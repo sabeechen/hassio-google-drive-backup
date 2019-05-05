@@ -1,16 +1,9 @@
 import os.path
 import os
-import httplib2
 
 from datetime import datetime
-from googleapiclient.discovery import build
-from googleapiclient.discovery import Resource
-from apiclient.http import MediaIoBaseUpload
-from apiclient.http import MediaIoBaseDownload
 from apiclient.errors import HttpError
 from oauth2client.client import Credentials
-from time import sleep
-from oauth2client.file import Storage
 from .snapshots import DriveSnapshot
 from .snapshots import Snapshot
 from .snapshots import PROP_KEY_DATE
@@ -20,14 +13,16 @@ from .snapshots import PROP_TYPE
 from .snapshots import PROP_VERSION
 from .snapshots import PROP_PROTECTED
 from .snapshots import PROP_RETAINED
-from typing import List, Dict, TypeVar, Any
+from typing import List, Dict, Any
 from .config import Config
-from .responsestream import IteratorByteStream
 from .logbase import LogBase
 from .thumbnail import THUMBNAIL_IMAGE
 from .helpers import parseDateTime
 from .helpers import formatException
 from .seekablerequest import SeekableRequest
+from .drivepython import DrivePython
+from .driverequests import DriveRequests
+from .time import Time
 
 # Defines the retry strategy for calls made to Drive
 # max # of time to retry and call to Drive
@@ -49,45 +44,23 @@ QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
 CREATE_FIELDS = SELECT_FIELDS
 
 
-class Buffer(object):
-    def __init__(self):
-        self.bytes = None
-
-    def write(self, bytes):
-        self.bytes = bytes
-
-    def close(self):
-        pass
-
-
 class Drive(LogBase):
     """
     Stores the logic for making calls to Google Drive and managing credentials necessary to do so.
     """
     def __init__(self, config: Config):
-        self.cred_storage: Storage = Storage(config.credentialsFilePath())
-        self.creds: Credentials = self.cred_storage.get()
-        self.config: Config = config
+        self.config = config
+        if config.driveExperimental():
+            self.drivebackend = DriveRequests(config, Time())
+        else:
+            self.drivebackend = DrivePython(config)
 
     def saveCreds(self, creds: Credentials) -> None:
         self.info("Saving new Google Drive credentials")
-        self.creds = creds
-        self.cred_storage.put(creds)
-
-    def _drive(self) -> Resource:
-        if self.creds is None:
-            raise Exception("Drive isn't enabled, this is a bug")
-        if self.creds.access_token_expired:
-            self.creds.refresh(httplib2.Http())
-            self.cred_storage.put(self.creds)
-        return build(DRIVE_SERVICE, DRIVE_VERSION, credentials=self.creds)
+        self.drivebackend.saveCredentials(creds)
 
     def enabled(self) -> bool:
-        """
-        Drive isn't "enabled" until the user goes through the Google authentication flow in Server, so this
-        is a convenient way to track if that has happened or not.
-        """
-        return self.creds is not None
+        return self.drivebackend.enabled()
 
     def saveSnapshot(self, snapshot: Snapshot, download_url: str, parent_id: str) -> Snapshot:
         file_metadata = {
@@ -114,27 +87,23 @@ class Drive(LogBase):
             'modifiedTime': self._timeToRfc3339String(snapshot.date())
         }
         stream: SeekableRequest = SeekableRequest(download_url, headers=self.config.getHassioHeaders())
-        media: MediaIoBaseUpload = MediaIoBaseUpload(stream, mimetype='application/tar', chunksize=5 * 262144, resumable=True)
         snapshot.uploading(0)
-        request = self._drive().files().create(media_body=media, body=file_metadata, fields=CREATE_FIELDS)
-        drive_response = None
-        last_percent = -1
-        while drive_response is None:
-            status2, drive_response = self._retryDriveServiceCall(request, func=lambda a: a.next_chunk())
-            if status2:
-                new_percent = int(status2.progress() * 100)
-                if last_percent != new_percent:
-                    last_percent = new_percent
-                    snapshot.uploading(last_percent)
-                    self.debug("Uploading {1} {0}%".format(last_percent, snapshot.name()))
+        response = None
+        for progress in self.drivebackend.create(stream, file_metadata, MIME_TYPE):
+            if isinstance(progress, float):
+                new_percent = int(progress * 100)
+                snapshot.uploading(new_percent)
+                self.debug("Uploading {1} {0}%".format(new_percent, snapshot.name()))
+            else:
+                response = progress
         snapshot.uploading(100)
-        snapshot.setDrive(DriveSnapshot(drive_response))
+        snapshot.setDrive(DriveSnapshot(response))
 
     def deleteSnapshot(self, snapshot: Snapshot) -> None:
         self.info("Deleting: {}".format(snapshot.name()))
         if not snapshot.driveitem:
             raise Exception("Drive item was null")
-        self._retryDriveServiceCall(self._drive().files().delete(fileId=snapshot.driveitem.id()))
+        self.drivebackend.delete(snapshot.driveitem.id())
         self.info("Deleted snapshot backup from drive '{}'".format(snapshot.name()))
         snapshot.driveitem = None
 
@@ -143,37 +112,11 @@ class Drive(LogBase):
 
     def readSnapshots(self, parent_id: str) -> List[DriveSnapshot]:
         snapshots: List[DriveSnapshot] = []
-        for child in self._iterateQuery(q="'{}' in parents".format(parent_id)):
+        for child in self.drivebackend.query("'{}' in parents".format(parent_id)):
             properties = child.get('appProperties')
             if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties and not child.get('trashed'):
                 snapshots.append(DriveSnapshot(child))
         return snapshots
-
-    T = TypeVar('T')
-    V = TypeVar('V')
-
-    def _retryDriveServiceCall(self, request: Any, func: Any = None) -> Any:
-        attempts = 0
-        backoff = DRIVE_RETRY_INITIAL_SECONDS
-        while True:
-            try:
-                attempts += 1
-                if func is None:
-                    return request.execute()
-                else:
-                    return func(request)
-            except HttpError as e:
-                if attempts >= DRIVE_MAX_RETRIES:
-                    # fail, too many retries
-                    self.error("Too many calls to Drive failed, so we'll give up for now")
-                    raise e
-                # Only retry 403 and 5XX error, see https://developers.google.com/drive/api/v3/manage-uploads
-                if e.resp.status != 403 and int(e.resp.status / 5) != 5:
-                    self.error("Drive returned non-retryable error code: {0}".format(e.resp.status))
-                    raise e
-                self.error("Drive returned error code: {0}:, we'll retry in {1} seconds".format(e.resp.status, backoff))
-                sleep(backoff)
-                backoff *= DRIVE_EXPONENTIAL_BACKOFF
 
     def getFolderId(self) -> str:
         # First, check if we cached the drive folder
@@ -199,12 +142,12 @@ class Drive(LogBase):
             return self._findDriveFolder()
 
     def _get(self, id):
-        return self._retryDriveServiceCall(self._drive().files().get(fileId=id, fields=SELECT_FIELDS))
+        return self.drivebackend.get(id)
 
     def _findDriveFolder(self) -> str:
         folders = []
 
-        for child in self._iterateQuery(q="mimeType='" + FOLDER_MIME_TYPE + "'"):
+        for child in self.drivebackend.query("mimeType='" + FOLDER_MIME_TYPE + "'"):
             if self._isValidFolder(child):
                 folders.append(child)
 
@@ -213,29 +156,6 @@ class Drive(LogBase):
             self.info("Found " + folders[len(folders) - 1].get('name'))
             return self._saveFolder(folders[len(folders) - 1])
         return self._createDriveFolder()
-
-    def _iterateQuery(self, q=None):
-        token = None
-        while(True):
-            if token:
-                request = self._drive().files().list(
-                    q=q,
-                    fields=QUERY_FIELDS,
-                    pageToken=token,
-                    pageSize=1
-                )
-            else:
-                request = self._drive().files().list(
-                    q=q,
-                    fields=QUERY_FIELDS,
-                    pageSize=1
-                )
-            response = self._retryDriveServiceCall(request)
-            for child in response['files']:
-                yield child
-            if 'nextPageToken' not in response or len(response['nextPageToken']) == 0:
-                break
-            token = response['nextPageToken']
 
     def _isValidFolder(self, folder) -> bool:
         try:
@@ -263,7 +183,7 @@ class Drive(LogBase):
                 "backup_folder": "true",
             },
         }
-        folder = self._retryDriveServiceCall(self._drive().files().create(body=file_metadata, fields=CREATE_FIELDS))
+        folder = self.drivebackend.createFolder(file_metadata)
         return self._saveFolder(folder)
 
     def _saveFolder(self, folder: Any) -> str:
@@ -272,8 +192,8 @@ class Drive(LogBase):
             folder_file.write(folder.get('id'))
         return folder.get('id')
 
-    def download(self, id):
-        return IteratorByteStream(self._download(id))
+    def download(self, id, size):
+        return self.drivebackend.download(id, size)
 
     def setRetain(self, snapshot, retain):
         file_metadata: Dict[str, str] = {
@@ -281,38 +201,27 @@ class Drive(LogBase):
                 PROP_RETAINED: str(retain),
             },
         }
-        self._drive().files().update(fileId=snapshot.driveitem.id(), body=file_metadata).execute()
+        self.drivebackend.update(snapshot.driveitem.id(), file_metadata)
         snapshot.driveitem.setRetain(retain)
 
-    def _download(self, id):
-        request = self._drive().files().get_media(fileId=id)
-        fh = Buffer()
-        downloader = MediaIoBaseDownload(fh, request, chunksize=5 * 1024 * 1024)
-        done = False
-        while done is False:
-            status, done = downloader.next_chunk()
-            self.debug("Downloading {0} {1}%".format(id, int(status.progress() * 100)))
-            yield fh.bytes
-        fh.close()
-
-    def downloadToFile(self, id, path, snapshot: Snapshot = None) -> bool:
+    def downloadToFile(self, id, path, snapshot: Snapshot) -> bool:
         try:
-            request = self._drive().files().get_media(fileId=id)
-            if snapshot:
-                snapshot.setDownloading(0)
+            snapshot.setDownloading(0)
             with open(path, "wb") as fh:
-                downloader = MediaIoBaseDownload(fh, request, chunksize=5 * 1024 * 1024)  # 5Mb chunk
-                done = False
-                while done is False:
-                    status, done = downloader.next_chunk()
-                    self.debug("Uploading '{0}' {1}%".format(id, int(status.progress() * 100)))
-                    if snapshot:
-                        snapshot.setDownloading(int(status.progress() * 100))
-            if snapshot:
-                snapshot.setDownloading(100)
+                written = 0
+                stream = self.download(id, int(snapshot.size()))
+                while True:
+                    data = stream.read(5 * 1024 * 1024)
+                    if len(data) == 0:
+                        break
+                    written += len(data)
+                    fh.write(data)
+                    progress = int(100 * float(written) / float(snapshot.size()))
+                    self.debug("Uploading '{0}' {1}%".format(id, progress))
+                    snapshot.setDownloading(progress)
+            snapshot.setDownloading(100)
             return True
         except Exception as e:
-            if snapshot:
-                snapshot.downloadFailed()
+            snapshot.downloadFailed()
             self.error(formatException(e))
             return False

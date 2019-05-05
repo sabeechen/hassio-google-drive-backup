@@ -138,15 +138,19 @@ class Engine(LogBase):
 
     def doUpload(self, snapshot: Snapshot):
         path = os.path.join(self.config.backupDirectory(), snapshot.slug() + ".tar")
-        self.drive.downloadToFile(snapshot.driveitem.id(), path, snapshot)
-        self.hassio.refreshSnapshots()
-        self.doBackupWorkflow()
+        try:
+            self.drive.downloadToFile(snapshot.driveitem.id(), path, snapshot)
+            self.hassio.refreshSnapshots()
+            self.doBackupWorkflow()
 
-        if snapshot.isInHA() and not snapshot.ha.retained():
-            snapshot.ha._retained = True
-            self.config.saveRetained(list(map(HA_SLUG_LAMBDA, filter(RETAINED_LAMBDA, filter(HA_LAMBDA, self.snapshots)))))
-            self._saveHaRetention()
-        self._updateFreshness()
+            if snapshot.isInHA() and not snapshot.ha.retained():
+                snapshot.ha._retained = True
+                self.config.saveRetained(list(map(HA_SLUG_LAMBDA, filter(RETAINED_LAMBDA, filter(HA_LAMBDA, self.snapshots)))))
+                self._saveHaRetention()
+            self._updateFreshness()
+        finally:
+            if not snapshot.isInHA():
+                snapshot.downloadFailed()
 
     def _saveHaRetention(self):
         self.config.saveRetained(list(map(HA_SLUG_LAMBDA, filter(RETAINED_LAMBDA, filter(HA_LAMBDA, self.snapshots)))))
@@ -477,11 +481,14 @@ class Engine(LogBase):
 
     def getDebugInfo(self, refresh=False):
         if self.debug_info is None or refresh:
+            servers = ['www.googleapis.com', 'oauth2.googleapis.com']
+            if self.config.driveExperimental():
+                servers = ['www.googleapis.com']
             try:
                 self.debug_info = {
                     'addonVersion': self.hassio.self_info.get('version', 'unknown'),
                     'host': self.hassio.host_info,
-                    'servers': getPingInfo(['www.googleapis.com', 'oauth2.googleapis.com']),
+                    'servers': getPingInfo(servers),
                     'successes': self.successes,
                     'failures': self.failures,
                     'uploads': self.uploads,

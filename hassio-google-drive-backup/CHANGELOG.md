@@ -1,3 +1,17 @@
+## [0.96] - 2019-05-05
+### Added
+- Snapshot password can be set from your secrets file by setting the snapshot password "!sercet snapshot_password"
+- Added an experimental drive backed to help resolves DNS resolution problems. See [the bug](https://github.com/sabeechen/hassio-google-drive-backup/issues/15) for details about turning it on if you're running into that problem.
+
+### Changed
+- Log timestamps are more compact now
+- Silenced some underlying library INFO logging
+
+### Fixed
+- A parsing error in DNS debug info
+- Some out of date info in the installation readme
+- Some error handling while downloading snapshots
+
 ## [0.95] - 2019-05-03
 ### Added
 - Better help messaging when getting errors deleting old snapshots.

@@ -445,6 +445,6 @@ class Server(LogBase):
             cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="{}.tar"'.format(found.name())
             cherrypy.response.headers['Content-Length'] = str(found.size())
 
-            return self.engine.drive.download(found.driveitem.id())
+            return self.engine.drive.download(found.driveitem.id(), int(found.size()))
         else:
             raise cherrypy.HTTPError(404)

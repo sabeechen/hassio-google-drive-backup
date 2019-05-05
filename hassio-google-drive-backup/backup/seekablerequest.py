@@ -45,12 +45,12 @@ class SeekableRequest(IOBase, LogBase):
         if self.offset + count >= self.size():
             count = self.size() - self.offset
         if count == 0 or self.offset >= self.size():
-            return bytearray()
+            return bytes()
 
         if self.bufferStart + count < len(self.buffer):
             # read from the internal buffer
             end = self.bufferStart + count
-            data = bytearray(self.buffer[self.bufferStart:end])
+            data = bytes(self.buffer[self.bufferStart:end])
             self.offset = self.offset + count
             self.bufferStart = self.bufferStart + count
             return data
@@ -69,7 +69,7 @@ class SeekableRequest(IOBase, LogBase):
                 data.extend(self.buffer[:take])
                 self.offset += take
                 self.bufferStart += take
-            return data
+            return bytes(data)
 
     def seek(self, offset, whence=0):
         if whence == SEEK_SET:

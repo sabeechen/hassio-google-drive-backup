@@ -1,5 +1,6 @@
 ## [0.96.1] - 2019-05-05
-- Fixed an issue when google credential refreshing in the experimental api
+- Fixed an issue with google credential caching in the experimental api
+- Fixed overlaping top menu entries
 
 ## [0.96] - 2019-05-05
 ### Added

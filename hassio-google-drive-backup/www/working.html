@@ -7,17 +7,17 @@
   <title>Hassio Google Drive Backup</title>
 
   <!-- CSS  -->
-  <link href="css/icons.css?version=0.96.1" rel="stylesheet">
-  <link href="css/materialize.css?version=0.96.1" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.96.1" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.96.1">
-  <script src="js/jquery.js?version=0.96.1"></script>
-  <script src="js/materialize.js?version=0.96.1"></script>
-  <script src="js/init.js?version=0.96.1"></script>
-  <script src="js/scripts.js?version=0.96.1"></script>
-  <script src="js/settings.js?version=0.96.1"></script>
-  <script src="js/restore.js?version=0.96.1"></script>
-  <script src="js/moment.js?version=0.96.1"></script>
+  <link href="css/icons.css?version=0.97" rel="stylesheet">
+  <link href="css/materialize.css?version=0.97" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.97" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="images/favicon.png?version=0.97">
+  <script src="js/jquery.js?version=0.97"></script>
+  <script src="js/materialize.js?version=0.97"></script>
+  <script src="js/init.js?version=0.97"></script>
+  <script src="js/scripts.js?version=0.97"></script>
+  <script src="js/settings.js?version=0.97"></script>
+  <script src="js/restore.js?version=0.97"></script>
+  <script src="js/moment.js?version=0.97"></script>
   <script type="text/javascript">
     $(document).ready(function () {
       // Needed to make modal dialogs work.
@@ -201,8 +201,9 @@
               <ul style="margin-bottom: 0px; margin-top: 0px">
                 <li class="indented-li">
                   <label>
-                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_homeassistant"
-                      id="restore_folder_homeassistant" class="filled-in checkbox-ha" checked />
+                    <input settings_ignore="true" class="restore_folder_checkbox" type="checkbox"
+                      name="restore_folder_homeassistant" id="restore_folder_homeassistant"
+                      class="filled-in checkbox-ha" checked />
                     <span class="checkbox-label">Home Assistant Configuration</span>
                     <br />
                     <span class="helper-text">Restore the files and folders from your Home Assistant config
@@ -386,7 +387,8 @@
                 class="validate" onkeyup="checkForSecret()" />
               <label for="snapshot_password">Password</label>
               <span class="helper-text">When set, creates snapshots protected by a password. This password will be
-                required by Hass.io when restoring the snapshot. Leave blank to require no password.  You can specify a password from your secrets.yaml by using the syntax "!secret your_secret_key".</span>
+                required by Hass.io when restoring the snapshot. Leave blank to require no password. You can specify a
+                password from your secrets.yaml by using the syntax "!secret your_secret_key".</span>
             </div>
           </div>
           <div class="row">
@@ -443,6 +445,19 @@
                 <br />
                 <span class="helper-text">Sends information about errors to a database maintained by developer. This
                   helps him identify problems with new releases and provide better help messages.</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col m12 s12">
+              <label>
+                <input type="checkbox" name="confirm_multiple_deletes" id="confirm_multiple_deletes"
+                  class="filled-in checkbox-ha" />
+                <span>Confirm before large deletes</span>
+                <br />
+                <span class="helper-text">When disabled, the add-on will NOT stop and ask for confirmation before
+                  deleting more than one snapshot. Disabling this is dangerous because accidental misconfiguration can
+                  cause you to lose your backed-up snapshot history.</span>
               </label>
             </div>
           </div>
@@ -506,7 +521,7 @@
           <div class="row">
             <div class="col s12">
               <label>
-                <input type="checkbox" id="generational_enabled" name="generational_enabled"
+                <input type="checkbox" settings_ignore='true' id="generational_enabled" name="generational_enabled"
                   class="filled-in checkbox-ha" onchange="toggleSlide(this, 'settings_gen_details');" />
                 <span>Keep Generational Backups</span>
                 <br />
@@ -580,8 +595,8 @@
           <div class="row">
             <div class="col s12">
               <label>
-                <input type="checkbox" name="partial_snapshots" id="partial_snapshots" class="filled-in checkbox-ha"
-                  onchange="toggleSlide(this, 'settings_partial_details');" />
+                <input type="checkbox" settings_ignore="true" name="partial_snapshots" id="partial_snapshots"
+                  class="filled-in checkbox-ha" onchange="toggleSlide(this, 'settings_partial_details');" />
                 <span>Partial Snapshots</span>
                 <br />
                 <span class="helper-text">Partial snapshots allow you to selectively backup portions of your Home
@@ -594,25 +609,14 @@
           </div>
           <div class="row" id="settings_partial_details" style="display: none">
             <div class="col s11 offset-s1">
-              <div class="row" style="display: none">
-                <div class="input-field col s12">
-                  <label class="checkbox-label">
-                    <input type="checkbox" name="include_homeassistant" id="include_homeassistant"
-                      class="filled-in checkbox-ha" checked />
-                    <span>Home Assistant <span id="homeassistant_version"></span></span>
-                    <br />
-                    <span class="helper-text">Backup Home Assistant</span>
-                  </label>
-                </div>
-              </div>
               <div class="row" style="margin-bottom: 0px">
                 <div class="col s12">
                   <span style="font-weight: bold">Folders</span>
                   <ul>
                     <li class="indented-li">
                       <label>
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_homeassistant"
-                          id="folder_homeassistant" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_homeassistant" id="folder_homeassistant" checked />
                         <span class="checkbox-label">Home Assistant Configuration</span>
                         <br />
                         <span class="helper-text">Backup the files and folders from your Home Assistant config
@@ -621,8 +625,8 @@
                     </li>
                     <li class="indented-li">
                       <label class="checkbox-label">
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_ssl"
-                          id="folder_ssl" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_ssl" id="folder_ssl" checked />
                         <span class="checkbox-label">SSL</span>
                         <br />
                         <span class="helper-text">Backup your "/ssl" directory, where your certfile and keyfile
@@ -631,8 +635,8 @@
                     </li>
                     <li class="indented-li">
                       <label class="checkbox-label">
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_share"
-                          id="folder_share" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_share" id="folder_share" checked />
                         <span class="checkbox-label">Share</span>
                         <br />
                         <span class="helper-text">Backup your "/share" directory.</span>
@@ -640,8 +644,8 @@
                     </li>
                     <li class="indented-li">
                       <label class="checkbox-label">
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_addons"
-                          id="folder_addons" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_addons" id="folder_addons" checked />
                         <span class="checkbox-label">Local Addons</span>
                         <br />
                         <span class="helper-text">Backup your local addons directory. This directory will be empty
@@ -661,13 +665,72 @@
               </div>
             </div>
           </div>
+          <div class="row">
+            <div class="col s12">
+              <label>
+                <span style="font-size: 15px;">Networking Options</span>
+                <br />
+                <span class="helper-text">Configure timeouts and other options about how the add-on reaches Google
+                  Drive</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s11 offset-s1 row">
+              <div class="input-field col m6 s12">
+                <i class="material-icons prefix">timelapse</i>
+                <input type="number" id="google_drive_timeout_seconds" name="google_drive_timeout_seconds" min="1"
+                  class="validate" />
+                <label for="google_drive_timeout_seconds">Google Drive Timeout</label>
+                <span class="helper-text">The number of seconds the add-on should wait when connecting to or reading
+                  from Google Drive's servers.</span>
+              </div>
+              <div class="input-field col m6 s12">
+                <i class="material-icons prefix">cloud</i>
+                <input type="text" id="alternate_dns_servers" name="alternate_dns_servers"
+                  pattern="^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(,[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})*$"
+                  class="validate" />
+                <label for="alternate_dns_servers">Alternate DNS Servers</label>
+                <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
+                  use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
+                  must support TCP DNS lookups. The defaults are Google's public DNS servers.</span>
+              </div>
+            </div>
+            <div class="col s11 offset-s1 row">
+              <div class="col m12 s12">
+                <label>
+                  <input type="checkbox" name="ignore_ipv6_addresses" id="ignore_ipv6_addresses"
+                    class="filled-in checkbox-ha" />
+                  <span>Ignore IPv6 Addresses</span>
+                  <br />
+                  <span class="helper-text">Ignore ipv6 Addresses for the purposes or DNS resolution. Some users have
+                    had problems attempting to connect to Googles IPv6 servers because it is disabled on their
+                    network.</span>
+                </label>
+              </div>
+            </div>
+            <div class="col s11 offset-s1 row">
+              <div class="input-field col m6 s12">
+                <i class="material-icons prefix">cloud_queue</i>
+                <input type="text" id="drive_ipv4" name="drive_ipv4"
+                  pattern="^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$" class="validate" />
+                <label for="drive_ipv4">Google Drive IP Address Override</label>
+                <span class="helper-text">If you're having problems with reaching Google Drive, you can use this to
+                  specify Google Drive's IP address manually and circumvent DNS lookup entirely. You can use a website
+                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this one</a> to lookup
+                  what address will work for www.googleapis.com.</span>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
     </div>
     <div class="modal-footer" style="min-height: 56px; height: auto;">
-      <div id="settings_error" class="left valign-wrapper red darken-4 white-text default-hidden"
+      <div class="left valign-wrapper red darken-4 white-text default-hidden" id="settings_error_div"
         style="margin: 6px; padding-left: 16px; padding-right: 16px; min-height: 36px; vertical-align: middle">
-        Some configuration is invalid, check for red errors up above.
+        <span id="settings_error" style="vertical-align: middle;">
+          Some configuration is invalid, check for red errors up above.
+        </span>
       </div>
 
       <a href="#!" class="waves-effect waves-light btn-flat" id="save_settings" onClick="saveSettings()">Save</a>
@@ -792,14 +855,14 @@
     <ul id="main_menu_dropdown" class="dropdown-content">
       <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a>
       </li>
-      <li><a onclick="triggerSync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+      <li><a onclick="sync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
       <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
       <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
     </ul>
     <ul id="main_menu_dropdown2" class="dropdown-content">
       <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a>
       </li>
-      <li><a onclick="triggerSync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+      <li><a onclick="sync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
       <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
       <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
     </ul>
@@ -845,7 +908,7 @@
       <li><a href="log?format=view" target="_blank"><i class="material-icons">code</i>Logs</a></li>
       <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a>
       </li>
-      <li><a onclick="triggerSync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+      <li><a onclick="sync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
       <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
       <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
       <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a>
@@ -876,7 +939,7 @@
   <main>
     <div class="container">
       <div class="section">
-        <div class="row default-hidden error_card default_error" id="error_card">
+        <div class="row default-hidden" id="error_card">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -891,7 +954,19 @@
                   issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the
                   "Download Logs" link below</p>
                 <br />
-                <p id="error_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
+                <p id="generic_error_title" style="white-space: pre-wrap;font-family: monospace;"></p>
+                <div>
+                  <a onclick="toggleLinkSlide(this, 'generic_error_details');" href="#!"><i class="material-icons"
+                      style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> View Exception
+                    Details</a>
+                  <div id="generic_error_details" class="default-hidden"
+                    style="padding-left: 10px; white-space: pre-wrap;font-family: monospace;">
+                    <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
+                      the result from an attempt the add-on has made to ping the address. This may help in
+                      determining if something in your network is blocking accesss to one of Google's API servers,
+                      or if Google's API servers are having problems.</p>
+                  </div>
+                </div>
                 <div class="card-action white-text">
                   <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
                 </div>
@@ -969,41 +1044,51 @@
                   <span style="vertical-align: top;">Couldn't delete old snapshots in Hass.io</span>
                 </span>
                 <p>
-                  The add-on ran into an error (HTTP 400) trying to delete your oldest snapshot.  This can happen sometimes (especially if you just installed the add-on) when Hassio's cache of your existing snapshots is out of sync.  The add-on can't continue until this is resolved.
+                  The add-on ran into an error (HTTP 400) trying to delete your oldest snapshot. This can happen
+                  sometimes (especially if you just installed the add-on) when Hassio's cache of your existing snapshots
+                  is out of sync. The add-on can't continue until this is resolved.
                 </p>
                 <p>To resolve this, you can try:</p>
                 <ul class="browser-default">
-                  <li>Refreshing your snapshots by going to the snapshot page in Hass.io and clicking the refresh icon in the top right.</li>
+                  <li>Refreshing your snapshots by going to the snapshot page in Hass.io and clicking the refresh icon
+                    in the top right.</li>
                   <li>Restarting the machine Home Assistant runs on.</li>
                 </ul>
-                <p>The add-on will retry periodically to check if the issue is resolved.  To retry now, click "Try Syncing Again" below.  If the above doesn't help, please file an issue on <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new" target="_blank">GitHub</a> to get more help.</p>
+                <p>The add-on will retry periodically to check if the issue is resolved. To retry now, click "Try
+                  Syncing Again" below. If the above doesn't help, please file an issue on <a
+                    href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new" target="_blank">GitHub</a>
+                  to get more help.</p>
               </div>
               <div class="card-action white-text">
-                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
-                </div>
+                <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+              </div>
             </div>
           </div>
         </div>
-        <div class="row default-hidden error_card cant_reach_google cant_reach_google_auth cant_reach_google_unavailable" id="cant_reach_google">
-          <div class="col s12 m9">
+        <div class="row default-hidden error_card google_dns" id="cant_reach_google">
+          <div class="col s12 m12 l10">
             <div class="card red darken-4">
               <div class="card-content white-text">
                 <span class="card-title">
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
-                  <span style="vertical-align: top;">Couldn't Reach Google Drive</span>
+                  <span style="vertical-align: top;">Couldn't Reach Google Drive (DNS error)</span>
                 </span>
-                <p>The add-on couldn't find Google Drive's servers. Snapshots can't be backed up
+                <p>The add-on couldn't resolve Google Drive's server address. Snapshots can't be backed up
                   without being able to reach Google Drive.</p>
                 <p>Please ensure:</p>
                 <ul class="browser-default">
                   <li>The internet is working.</li>
-                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant
-                    machine. Some ad-blocking and
-                    firewall software can block these addresses.<br/>
+                  <li>The server www.googleapis.com is reachable from your Home Assistant
+                    machine. Some ad-blocking and firewall software (eg Ad Guard, Pihole, etc) can block this
+                    addresses.<br />
                     <div style='padding: 5px'>
-                      <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns');" href="#!"><i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
+                      <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns');" href="#!"><i class="material-icons"
+                          style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
                       <div id="cant_reach_google_dns" class="default-hidden" style="padding-left: 10px">
-                        <p>Below is the list of names and IP Addresses Google's API servers resolve to.  Next to each is the result from an attempt the add-on has made to ping the address.  This may help in determining if something in your network is blocking accesss to one of Google's API servers, or if Google's API servers are having problems.</p>
+                        <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
+                          the result from an attempt the add-on has made to ping the address. This may help in
+                          determining if something in your network is blocking accesss to one of Google's API servers,
+                          or if Google's API servers are having problems.</p>
                         <div class="dns_info row"></div>
                         <div class="divider"></div>
                       </div>
@@ -1013,33 +1098,37 @@
 
                 <p>You can also try restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="row default-hidden error_card google_timeout google_timeout_read" id="google_timeout">
-          <div class="col s12 m9">
+        <div class="row default-hidden error_card google_timeout" id="google_timeout">
+          <div class="col s12 m12 l9">
             <div class="card red darken-4">
               <div class="card-content white-text">
                 <span class="card-title">
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
-                  <span style="vertical-align: top;">Connection Timeout</span>
+                  <span style="vertical-align: top;">Google Drive Connection Timeout</span>
                 </span>
-                <p>The connection to Google timed out while trying to back up your snapshots. Snapshots can't be backed
-                  up
-                  without being able to reach Google Drive.</p>
+                <p>The connection timed out while trying to read from or connect to Google Drive. Snapshots can't be
+                  backed up without being able to reach Google Drive.</p>
                 <p>Please ensure:</p>
                 <ul class="browser-default">
                   <li>The internet is working.</li>
-                  <li>The servers oauth2.googleapis.com and www.googleapis.com are reachable from your Home Assistant
+                  <li>The server www.googleapis.com are reachable from your Home Assistant
                     machine. Some ad-blocking and
-                    firewall software can block or throttle traffic to these addresses.<br/>
+                    firewall software (eg Ad Guard, pi-hole, etc) can block or throttle traffic to this address.<br />
                     <div style='padding: 5px'>
-                      <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns_timeout');" href="#!"><i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
+                      <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns_timeout');" href="#!"><i
+                          class="material-icons"
+                          style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
                       <div id="cant_reach_google_dns_timeout" class="default-hidden" style="padding-left: 10px">
-                        <p>Below is the list of names and IP Addresses Google's API servers resolve to.  Next to each is the result from an attempt the add-on has made to ping the address.  This may help in determining if something in your network is blocking accesss to one of Google's API servers, or if Google's API servers are having problems.</p>
+                        <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
+                          the result from an attempt the add-on has made to ping the address. This may help in
+                          determining if something in your network is blocking accesss to one of Google's API servers,
+                          or if Google's API servers are having problems.</p>
                         <div class="dns_info row"></div>
                         <div class="divider"></div>
                       </div>
@@ -1048,7 +1137,101 @@
                 </ul>
                 <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card google_cant_connect">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
+                  <span style="vertical-align: top;">Can't Connect to Google Drive</span>
+                </span>
+                <p>Google Drive refused an attempt to connect with it. Snapshots can't be backed up without being able
+                  to reach Google Drive.</p>
+                <p>Please ensure:</p>
+                <ul class="browser-default">
+                  <li>The internet is working.</li>
+                  <li>The server www.googleapis.com are reachable from your Home Assistant
+                    machine. Some ad-blocking and
+                    firewall software (eg Ad Guard, pi-hole, etc) can block or throttle traffic to this address.<br />
+                    <div style='padding: 5px'>
+                      <a onclick="toggleLinkSlide(this, 'cant_connect_google_dns');" href="#!"><i class="material-icons"
+                          style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
+                      <div id="cant_connect_google_dns" class="default-hidden" style="padding-left: 10px">
+                        <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
+                          the result from an attempt the add-on has made to ping the address. This may help in
+                          determining if something in your network is blocking accesss to one of Google's API servers,
+                          or if Google's API servers are having problems.</p>
+                        <div class="dns_info row"></div>
+                        <div class="divider"></div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+                <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card password_key_invalid">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">vpn_key</i>
+                  <span style="vertical-align: top;">Invalid Snapshot Password</span>
+                </span>
+                <p>The add-on couldn't find your snapshot password in your secrets.yaml file. Snapshots can't be created
+                  until you either configure a valid password or remove it.</p>
+                <p>This can happen if:</p>
+                <ul class="browser-default">
+                  <li>Your secrets.yaml file isn't present in your Home Assistant configuration directory</li>
+                  <li>The password key isn't present in your secrets.yaml file.</li>
+                </ul>
+                <p>Please review your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                      style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                    settings</a>to ensure you've set the snapshot password you intended, then sync again.</p>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card multiple_deletes" id="google_timeout">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">delete_forever</i>
+                  <span style="vertical-align: top;">Attempting to Delete Multiple Snapshots</span>
+                </span>
+                <p>The add-on attempted to delete <span id="data_GoogleDrive">(?)</span> snapshot(s) from Google
+                  Drive and <span id="data_HomeAssistant">(?)</span> snapshot(s) from Home Assistant.
+                  Under normal circumstance, the add-on will only delete one snapshot at a time (the oldest).
+                  This warning is produced to prevent the add-on from accidentally deleting your history of snapshots.
+                  This is normal if you recently lowered the number of snapshots to keep in Google Drive or Home
+                  Assistant.</p>
+                <p>To resolve this you can:</p>
+                <ul class="browser-default">
+                  <li>Review the <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                      settings</a> and increase the number of snapshots you keep.</li>
+                  <li>Click "Allow Deletion" below to permit these deletions to happen this one time.</li>
+                  <li>Click "Never ask again" below to permit the deletes this time and in the future (not recommended)
+                  </li>
+                </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="allowDeletion('false'); return false;">Allow Deletion</a>
+                  <a href="#" onclick="allowDeletion('true'); return false;">Never Ask again</a>
                 </div>
               </div>
             </div>
@@ -1077,7 +1260,7 @@
                   <li>Reinstalling the add-on.</li>
                 </ul>
                 <div class="card-action white-text">
-                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1116,7 +1299,7 @@
                   <li>Reinstalling the add-on.</li>
                 </ul>
                 <div class="card-action white-text">
-                  <a href="#" onclick="triggerSync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>

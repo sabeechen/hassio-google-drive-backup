@@ -1,3 +1,27 @@
+## [0.97] - 2015-05-18
+### Added
+- A confrimation dialog to block backups from continuing when it attempts to delete more than one snapshot at a time.  This will help prevent misconfiguration from deleting snapshot history and can be disabled in the add-on settings.
+- Add-on fails over to known good DNS servers when Google Drive's IP can't be resolved.
+- Network configuration options for a hard coded IP for Google Drive, backup DNS servers, ignoring IPv6 addresses, and a timeout for Google Drive.
+- Better error messages for one-off actions in the WebUI (eg changing retention, deleting snapshots)
+- Better UI messaging when the snapshot password can't be found in secrets.yaml
+
+### Changes
+- Rewrote almost every line of code for the add-on with the goal of adding thorough unit tests.
+- Unit tests for nearly every code path.
+- Add-on now uses a custom library to reach Google Drive.
+- When possible, add-on prints context-relevant log messages instead of raw stack traces.
+- Addon starts a sync every time settings are changed.
+- Settings are refreshed every time snapshot is taken (so you can change them from outside the settings UI)
+- Avoids spamming supervisor logs by backing off attempts to reach Home Assistant when its restarting.
+
+### Fixed
+- A configuration issue that caused settings to be reverted when the addon is restarted.
+- A broken link in pending snapshot
+- Snapshot state sensor wouldn't update for up to an hour after HA is restarted.
+- Numerous race conditions that would come up if snapshost got modified while syncing.
+- A bug in generational snapshot config that could cause sync looping.
+
 ## [0.96.1] - 2019-05-05
 - Fixed an issue with google credential caching in the experimental api
 - Fixed overlaping top menu entries

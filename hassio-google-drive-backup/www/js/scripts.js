@@ -4,8 +4,17 @@ tooltipDriveOnly = "This snapshot is only in Google Drive. Select \"Upload\" fro
 tooltipHassio = "This snapshot is only in Hass.io. Change the number of snapshots you keep in Drive to get it to upload."
 tooltipWaiting = "This snapshot is waiting to upload to Google Drive."
 tooltipLoading = "This snapshot is being downloaded from Google Drive to Hass.io.  Soon it will be available to restore."
-tooltipPending = "This snapshot is being created.  If it takes a long time, see <a href='link/link'>this help.</a>"
+tooltipPending = "This snapshot is being created.  If it takes a long time, see the addon's FAQ on GitHub"
 tooltipUploading = "This snapshot is being uploaded to Google Drive."
+
+var github_bug_desc = `
+Please add some information about your configuration and the problem you ran into here. More info really helps speed up debugging, and if you don't make it clear whats happening you're much more likely to get snarky comment from the dev before he helps.  Remember that its just one guy back here doing all of this and he's not *really* under any obligation to put up with your shit if you're disrespectful.  If english isn't your first language, don't sweat it.  Just try to be clear and I'll do the same for you.  Some things you might consider including:
+ * What were you doing when the problem happened?
+ * A screenshot if its something visual.
+ * What configuration options are you using with the add-on?
+ * What logs is the add-on printing out?  You can see the detailed logs by clicking "Logs" at the top right of the web-UI.
+ * Are there any problematic logs from the Hassio supervisor?  You can get to them from the Home Assistant Interface from "Hass.io" > "System" > "System Log"
+ \n\n`;
 
 function toggleSlide(checkbox, target) {
   if ($(checkbox).is(':checked')) {
@@ -55,19 +64,9 @@ function uploadSnapshot(target) {
 }
 
 function doUpload(slug, name) {
-  M.toast({ html: "Uploading '" + name + "'", displayLength: 9999999 });
-  $.get("upload?slug=" + encodeURIComponent(slug),
-    function (data) {
-      M.Toast.dismissAll();
-      errorToast(data)
-      refreshstats();
-    }, "json")
-    .fail(
-      function (e) {
-        M.Toast.dismissAll();
-        errorToast(e)
-      }
-    )
+  message = "Uploading '" + name + "'";
+  url = "upload?slug=" + encodeURIComponent(slug);
+  postJson(url, {}, refreshstats, null, message);
 }
 
 function retainSnapshot(target) {
@@ -83,19 +82,7 @@ function doRetain(slug) {
   var drive = $("#retain_drive").prop('checked');
   var ha = $("#retain_ha").prop('checked');
   var url = "retain?slug=" + encodeURIComponent(slug) + "&drive=" + drive + "&ha=" + ha;
-  M.toast({ html: "Updating snapshot... ", displayLength: 9999999 });
-  $.get(url,
-    function (data) {
-      M.Toast.dismissAll();
-      errorToast(data)
-      refreshstats();
-    }, "json")
-    .fail(
-      function (e) {
-        M.Toast.dismissAll();
-        errorToast(e)
-      }
-    )
+  postJson(url, {}, refreshstats, null, "Updating snapshot... ");
 }
 
 function showDetails(target) {
@@ -143,14 +130,6 @@ function showDetails(target) {
   M.Modal.getInstance(document.querySelector('#details_modal')).open();
 }
 
-
-function backupNow() {
-  var jqxhr = $.get("backupnow",
-    function (data) {
-      refreshstats();
-    }, "json")
-}
-
 function errorReports(send) {
   var jqxhr = $.get("errorreports?send=" + send)
   $('#error_reports_card').fadeOut(500)
@@ -173,13 +152,8 @@ function exposeServer(expose) {
   $('#ingress_upgrade_card').fadeOut(500)
 }
 
-function triggerSync() {
-  toast("Syncing now...")
-  var jqxhr = $.get("backupnow",
-    function (data) {
-      refreshstats();
-      toast("Done")
-    }, "json")
+function sync() {
+  postJson("sync", {}, refreshstats, null, "Syncing...")
 }
 
 function toast(text) {
@@ -225,68 +199,84 @@ function deleteSnapshot(slug, drive, ha) {
   } else {
     message += "<i>...nowhere?</i>"
   }
-  toast(message);
   // Send the delete request
-  var deleteRequest = $.get("deleteSnapshot?slug=" + slug + "&drive=" + drive + "&ha=" + ha + "",
-    function (data) {
-      if (data.hasOwnProperty("error_details")) {
-        errorToast(data)
-      } else {
-        toast(data.message);
-      }
-      refreshstats();
-    }, "json")
-    .fail(
-      function (e) {
-        errorToast(e)
-      }
-    )
+  url = "deleteSnapshot?slug=" + slug + "&drive=" + drive + "&ha=" + ha;
+  postJson(url, {}, refreshstats, null, message);
 }
 
 function htmlEntities(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace("'", "&#39;");
 }
 
-function errorToast(error) {
-  message = "";
-  details = "";
-  var isError = false;
-  if (error.hasOwnProperty("message") && error.hasOwnProperty("error_details")) {
-    // Its an error messag form the server
-    message = error.message;
-    details = error.error_details;
-    isError = true;
-  } else if (error.hasOwnProperty("status") && error.hasOwnProperty("statusText") && error.hasOwnProperty("responseText")) {
-    // Its an HTTP error, so format appropriately
-    message = "Got unexpected HTTP error " + error.status + ": " + error.statusText;
-    details = error.responseText;
-    isError = true;
-  } else if (error.hasOwnProperty("error")) {
-    message = error.error
-    details = JSON.stringify(error, undefined, 2)
-    isError = true;
-  } else if (error.hasOwnProperty("message")) {
-    message = error.message
-    //details = JSON.stringify(error, undefined, 2)
-    isError = false;
-  } else {
-    message = "Got an unexpected error"
-    details = JSON.stringify(error, undefined, 2)
-    isError = true;
-  }
+errorToasted = false;
 
-  button_text = ""
-  if (details.length > 0) {
-    button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
-    $('#error_details_paragraph').text(details);
+function postJson(path, json, onSuccess, onFail, toastWhile) {
+  if (toastWhile) {
+    M.toast({ html: toastWhile, displayLength: 9999999 });
   }
+  $.post({
+    url: path,
+    data: JSON.stringify(json),
+    success: function (data) {
+      if (toastWhile) {
+        M.Toast.dismissAll();
+      }
+      if (data.hasOwnProperty("message")){
+        toast(data.message);
+      }
+      if (onSuccess) {
+        onSuccess(data);
+      }
+    }, 
+    dataType: "json",
+    contentType: 'application/json'
+  }).fail(
+      function (e) {
+        if (toastWhile) {
+          M.Toast.dismissAll();
+        }
+        var info = parseErrorInfo(e);
+        if (onFail) {
+          onFail(info);
+        } else {
+          button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+          $('#error_details_paragraph').text(info.details);
 
-  console.log(error)
-  toast(message + button_text);
-  return isError;
+          M.toast({ html: info.message + button_text, displayLength: 10000});
+        }
+      }
+    )
 }
 
-errorToasted = false;
+
+function parseErrorInfo(e) {
+  if (e.hasOwnProperty("message") && e.hasOwnProperty("details")) {
+    return {
+      message: e.message,
+      details: e.details
+    }
+  }
+  
+  if (e.hasOwnProperty("responseText")) {
+    try {
+      return JSON.parse(e.responseText)
+    } catch (err) {
+      // Try something else
+    }
+  }
+  
+  if (e.hasOwnProperty("status") && e.hasOwnProperty("statusText") && e.hasOwnProperty("responseText")) {
+    // Its an HTTP error, so format appropriately
+    return {
+      message: "Got unexpected HTTP error " + e.status + ": " + e.statusText,
+      details: e.responseText
+    }
+  }
+  return{
+    message: "Got an unexpected error",
+    details: JSON.stringify(error, undefined, 2)
+  }
+}
 
 last_cred_version = -1;
 function reloadForNewCreds() {
@@ -301,12 +291,13 @@ function reloadForNewCreds() {
         last_cred_version = data.cred_version;
       }
     }
+    document.getElementById("authenticate-button").href = data.authenticate_url + "?redirectbacktoken=" + encodeURIComponent(getWindowRootUri() + "token");
 
     if (!data.firstSync) {
-      snapshots = data.ha_snapshots;
-      hasSnapshots = data.ha_snapshots > 0;
+      snapshots = data.sources.HomeAssistant.snapshots;
+      hasSnapshots = snapshots > 0;
       maxConfigured = data.maxSnapshotsInHasssio
-      toDelete = Math.max(0, data.ha_snapshots - data.maxSnapshotsInHasssio);
+      toDelete = Math.max(0, hasSnapshots - data.maxSnapshotsInHasssio);
       if (data.maxSnapshotsInHasssio == 0) {
         toDelete = 0;
       }
@@ -357,8 +348,8 @@ last_data = null;
 // Refreshes the display with stats from the server.
 function refreshstats() {
   var jqxhr = $.get("getstatus", function (data) {
-    $('#ha_snapshots').empty().append(data.ha_snapshots);
-    $('#drive_snapshots').empty().append(data.drive_snapshots);
+    $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots);
+    $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots);
     $('#last_snapshot').empty().append(data.last_snapshot);
     $('#next_snapshot').empty().append(data.next_snapshot);
     $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
@@ -499,60 +490,45 @@ function refreshstats() {
       $("#snapshots_loading").hide();
     }
 
-    // Show an error card if applicable
-    $('.error_card:hidden').each(function (i) {
+    var found = false;
+    var error = data.last_error;
+    $('.error_card').each(function (i) {
       var item = $(this);
-      if (data.last_error.length > 0 && item.hasClass(data.last_error)) {
-        item.fadeIn(400);
-        if (data.hasOwnProperty('debug_info')) {
+      if (data.last_error == null){
+        if (item.is(":visible")) {
+          item.hide();
+        }
+      } else if(item.hasClass(error.error_type)) {
+        found = true;
+        if (data.hasOwnProperty('dns_info')) {
           var dns_div = $('.dns_info', item)
           if (dns_div.length > 0) {
-            if (data.debug_info.hasOwnProperty('servers')) {
-              var html = "";
-              for (var host in data.debug_info.servers) {
-                if (data.debug_info.servers.hasOwnProperty(host)) {
-                  html += "<div class='col s12 m6 row'> <h6>Host: " + host + "</h6>";
-                  var ips = data.debug_info.servers[host];
-                  for (var ip in ips) {
-                    if (ips.hasOwnProperty(ip)) {
-                      result = ips[ip]
-                      html += "<div class='col s7'>" + ip + "</div><div class='col s5'>" + result + "</div>";
-                    }
-                  }
-                  html += "</div>"
-                }
-              }
-              dns_div.html(html)
-            } else if (data.hasOwnProperty('error')) {
-              dns_div.html(JSON.stringify(data.debug_info.error))
-            } else {
-              dns_div.html(JSON.stringify(data.debug_info))
-            }
+            populateDnsInfo(dns_div, data.dns_info)
           }
         }
-      }
-    });
-    $('.error_card:visible').each(function (i) {
-      var item = $(this);
-      if (data.last_error.length == 0 || !item.hasClass(data.last_error)) {
+        if (error.data != null) {
+          for (key in error.data){
+            if (!error.data.hasOwnProperty(key)) {
+              continue;
+            }
+            var value = error.data[key];
+            $("#data_" + key, item).html(value);
+          }
+        }
+        if (item.is(":hidden")) {
+          item.show()
+        }
+      } else {
         item.hide();
       }
     });
 
-    if (data.last_exception.length > 0) {
-      // set up the appropriate links
-      $('#error_paragraph').text(data.last_exception);
-      desc = "Please add info about your configuration here, along with a brief description of what you were doing and what happened.  Detail is always helpful for investigating an error.  You can enable verbos logging by setting {\"verbose\": true} in your add-on configuration and including that here.  :\n\n" + data.last_exception;
-      parts = data.last_exception.split('\n');
-      var title = "Unknown"
-      for (var i = parts.length - 1; i >= 0; i--) {
-        if (parts[i].trim() != "") {
-          title = parts[i].trim();
-          break;
-        }
-      }
-      $('#error_github_link').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title=" + encodeURIComponent(title) + "&assignee=sabeechen&body=" + encodeURIComponent(desc));
-      $('#error_github_search').attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + title.replace("\"", "\\\"") + "\""));
+    if (data.last_error != null && !found) {
+      var card = $("#error_card")
+      populateGitHubInfo(card, data.last_error);
+      card.fadeIn();
+    } else {
+      $("#error_card").hide();
     }
 
     if (data.ask_error_reports) {
@@ -567,15 +543,15 @@ function refreshstats() {
       $('#ingress_upgrade_card').hide();
     }
 
-    if (data.retainDrive > 0) {
-      $(".drive_retain_count").html(data.retainDrive)
+    if (data.sources.GoogleDrive.retained > 0) {
+      $(".drive_retain_count").html(data.sources.GoogleDrive.retained)
       $(".drive_retain_label").show()
     } else {
       $(".drive_retain_label").hide()
     }
 
-    if (data.retainHa > 0) {
-      $(".ha_retain_count").html(data.retainHa)
+    if (data.sources.HomeAssistant.retained > 0) {
+      $(".ha_retain_count").html(data.sources.HomeAssistant.retained)
       $(".ha_retain_label").show()
     } else {
       $(".ha_retain_label").hide()
@@ -601,17 +577,48 @@ function refreshstats() {
   )
 }
 
+function populateDnsInfo(target, data) {
+  if (data == null){
+    target.html("No DNS info is available")
+  } else if (data.hasOwnProperty('error')) {
+    target.html(JSON.stringify(data.error))
+  } else {
+    var html = "";
+    for (var host in data) {
+      if (data.hasOwnProperty(host)) {
+        html += "<div class='col s12 m6 row'> <h6>Host: " + host + "</h6>";
+        var ips = data[host];
+        for (var ip in ips) {
+          if (ips.hasOwnProperty(ip)) {
+            result = ips[ip];
+            html += "<div class='col s7'>" + ip + "</div><div class='col s5'>" + result + "</div>";
+          }
+        }
+        html += "</div>";
+      }
+    }
+    target.html(html);
+  }
+}
+
+function populateGitHubInfo(target, error){
+  $('#generic_error_title', target).text(error.message);
+  $('#generic_error_details', target).text(error.details);
+  $('#error_github_link', target).attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title=" + encodeURIComponent(error.message) + "&assignee=sabeechen&body=" + encodeURIComponent(github_bug_desc + error.details + "\n" + error.message));
+  $('#error_github_search', target).attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + error.message.replace("\"", "\\\"") + "\""));
+}
+
 function simulateError() {
   $.get("simerror?error=This%20is%20a%20fake%20error.%20Select%20'Stop%20Simulated%20Error'%20from%20the%20menu%20to%20stop%20it.",
     function (data) {
-      triggerSync()
+      sync()
     })
 }
 
 function stopSimulateError() {
   $.get("simerror?error=",
     function (data) {
-      triggerSync()
+      sync()
     })
 }
 
@@ -624,32 +631,18 @@ function newSnapshotClick() {
 }
 
 function doNewSnapshot() {
-  toast("Requesting snapshot (takes a few seconds)...");
-
   var drive = $("#retain_drive_one_off").prop('checked');
   var ha = $("#retain_ha_one_off").prop('checked');
   var name = $("#snapshot_name_one_off").val()
-  var url = "triggerbackup?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
-
-  // request the snapshot
-  var jqxhr = $.get(url,
-    function (data) {
-      console.log(data);
-      if (!data.hasOwnProperty("name")) {
-        errorToast(data)
-      } else {
-        toast("Requested new snapshot '" + data.name + "'");
-        refreshstats();
-        backupNow();
-      }
-    }, "json")
-    .fail(
-      function (e) {
-        errorToast(e)
-      }
-    )
-
+  var url = "snapshot?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
+  postJson(url, {}, refreshstats, null, "Requesting snapshot (takes a few seconds)...");
   return false;
+}
+
+
+function allowDeletion(always) {
+  var url = "confirmdelete?always=" + always;
+  postJson(url, {}, refreshstats, null, "Allowing deletion and syncing...");
 }
 
 $(document).ready(function () {

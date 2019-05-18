@@ -1,15 +1,25 @@
 import json
 import os
+import os.path
+import os
+import re
+import uuid
 import logging
-import socket
-from .logbase import LogBase
-from .helpers import formatException
+import yaml
+
+from os.path import abspath, join
+from .logbase import LogBase, console_handler
 from typing import Dict, List, Any, Optional
+from .exceptions import InvalidConfigurationValue, SnapshotPasswordKeyInvalid
+from .helpers import strToBool
+from .resolver import Resolver
+from datetime import datetime
 
 HASSIO_OPTIONS_FILE = '/data/options.json'
 MIN_INGRESS_VERSION = [0, 91, 3]
 ADDON_OPTIONS_FILE = 'config.json'
 SNAPSHOT_NAME_DEFALT = "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}"
+
 DEFAULTS = {
     "max_snapshots_in_hassio": 4,
     "max_snapshots_in_google_drive": 4,
@@ -42,47 +52,82 @@ DEFAULTS = {
     "send_error_reports": None,
     "exclude_folders": "",
     "exclude_addons": "",
-    "expose_extra_server": False,
+    "generational_days": 0,
+    "generational_weeks": 0,
+    "generational_months": 0,
+    "generational_years": 0,
+    "generational_day_of_week": "mon",
+    "generational_day_of_month": 1,
+    "generational_day_of_year": 1,
+    "expose_extra_server": True,
     "ingress_upgrade_file": "/data/upgrade_ingress",
     "retained_file": "/data/retained.json",
     "snapshot_name": SNAPSHOT_NAME_DEFALT,
     "secrets_file_path": "/config/secrets.yaml",
     "drive_experimental": False,
     "drive_ipv4": "",
-    'ignore_ipv6_addresses': False
+    'ignore_ipv6_addresses': False,
+    "drive_host": "https://www.googleapis.com",
+    "google_drive_timeout_seconds": 180,
+    "google_drive_page_size": 100,
+    "pending_snapshot_timout_seconds": 60 * 60 * 3,
+    "failed_snapshot_timout_seconds": 60 * 30,
+    "new_snapshot_pending_timeout_seconds": 5,
+    "authenticate_url": "https://philosophyofpen.com/login/backup.py",
+    "confirm_multiple_deletes": True,
+    "max_seconds_between_syncs": 60 * 60,
+    "alternate_dns_servers": "8.8.8.8,8.8.4.4"
+}
+
+ALWAYS_KEEP = {
+    "days_between_snapshots",
+    "max_snapshots_in_hassio",
+    "max_snapshots_in_google_drive",
+    "use_ssl"
+}
+
+GENERATIONAL_ON = {
+    "generational_days",
+    "generational_weeks",
+    "generational_months",
+    "generational_years"
+}
+
+SNAPSHOT_NAME_KEYS = {
+    "{type}": lambda snapshot_type, now_local, host_info: snapshot_type,
+    "{year}": lambda snapshot_type, now_local, host_info: now_local.strftime("%Y"),
+    "{year_short}": lambda snapshot_type, now_local, host_info: now_local.strftime("%y"),
+    "{weekday}": lambda snapshot_type, now_local, host_info: now_local.strftime("%A"),
+    "{weekday_short}": lambda snapshot_type, now_local, host_info: now_local.strftime("%a"),
+    "{month}": lambda snapshot_type, now_local, host_info: now_local.strftime("%m"),
+    "{month_long}": lambda snapshot_type, now_local, host_info: now_local.strftime("%B"),
+    "{month_short}": lambda snapshot_type, now_local, host_info: now_local.strftime("%b"),
+    "{ms}": lambda snapshot_type, now_local, host_info: now_local.strftime("%f"),
+    "{day}": lambda snapshot_type, now_local, host_info: now_local.strftime("%d"),
+    "{hr24}": lambda snapshot_type, now_local, host_info: now_local.strftime("%H"),
+    "{hr12}": lambda snapshot_type, now_local, host_info: now_local.strftime("%I"),
+    "{min}": lambda snapshot_type, now_local, host_info: now_local.strftime("%M"),
+    "{sec}": lambda snapshot_type, now_local, host_info: now_local.strftime("%S"),
+    "{ampm}": lambda snapshot_type, now_local, host_info: now_local.strftime("%p"),
+    "{version_ha}": lambda snapshot_type, now_local, host_info: str(host_info.get('homeassistant', 'None')),
+    "{version_hassos}": lambda snapshot_type, now_local, host_info: str(host_info.get('hassos', 'None')),
+    "{version_super}": lambda snapshot_type, now_local, host_info: str(host_info.get('supervisor', 'None')),
+    "{date}": lambda snapshot_type, now_local, host_info: now_local.strftime("%x"),
+    "{time}": lambda snapshot_type, now_local, host_info: now_local.strftime("%X"),
+    "{datetime}": lambda snapshot_type, now_local, host_info: now_local.strftime("%c"),
+    "{isotime}": lambda snapshot_type, now_local, host_info: now_local.isoformat()
 }
 
 
 class Config(LogBase):
-    def __init__(self, file_paths: List[str] = [], extra_config: Dict[str, any] = {}):
-        self.config_path = ""
+    def __init__(self, extra_config: Dict[str, any] = {}, resolver: Resolver = None):
+        self.extra_config = extra_config
         self.config: Dict[str, Any] = DEFAULTS.copy()
-        for config_file in file_paths:
-            with open(config_file) as file_handle:
-                self.info("Loading config from " + config_file)
-                self.config_path = config_file
-                self.config.update(json.load(file_handle))
-
-        self.default: Dict[str, Any] = DEFAULTS.copy()
-        for config_file in file_paths[:-1]:
-            with open(config_file) as file_handle:
-                self.default.update(json.load(file_handle))
-
-        if self.verbose():
-            self.setConsoleLevel(logging.DEBUG)
-        else:
-            self.setConsoleLevel(logging.INFO)
-
-        self.config.update(extra_config)
-        self.debug("Loaded config:")
-        self.debug(json.dumps(self.config, sort_keys=True, indent=4))
-
-        gen_config = self.getGenerationalConfig()
-        if gen_config:
-            self.debug("Generationl backup config:")
-            self.debug(json.dumps(gen_config, sort_keys=True, indent=4))
-
+        self.config.update(self.extra_config)
         self.ha_version = "unknown"
+        self._clientIdentifier = uuid.uuid4()
+        self.resolver = resolver
+        console_handler.setLevel(logging.DEBUG if self.verbose() else logging.INFO)
 
         # True when support for ingress urls is enabled.
         self.ingress_enabled = False
@@ -90,12 +135,152 @@ class Config(LogBase):
         # True if we shoudl wanr the user about upgradint othe lastest verison for ingress support.
         self.warn_ingress = False
 
-        # True if we should watnt he user to disable their exposed Web UI
+        # True if we should watn the user to disable their exposed Web UI
         self.warn_expose_server = False
 
         self.retained = self._loadRetained()
-        self.old_getaddrinfo = socket.getaddrinfo
-        socket.getaddrinfo = self.new_getaddrinfo
+        self._gen_config_cache = self.getGenerationalConfig()
+        self.setIngressInfo()
+
+        # set up resolver
+        if self.resolver is not None:
+            if len(self.driveIpv4()) > 0:
+                self.resolver.addOverride("www.googleapis.com", [self.driveIpv4()])
+            self.resolver.addResolveAddress("www.googleapis.com")
+            self.resolver.setIgnoreIpv6(self.ignoreIpv6())
+            self.resolver.setDnsServers(self.alternateDnsServers().split(","))
+
+    def validateUpdate(self, additions):
+        new_config = self.config.copy()
+        new_config.update(additions)
+        return self.validate(new_config)
+
+    def resolvePassword(self, password=None):
+        if password is None:
+            password = self.snapshotPassword()
+        if len(password) == 0:
+            return None
+        if password.startswith("!secret "):
+            if not os.path.isfile(self.secretsFilePath()):
+                raise SnapshotPasswordKeyInvalid()
+            with open(self.secretsFilePath()) as f:
+                secrets_yaml = yaml.load(f, Loader=yaml.SafeLoader)
+            key = password[len("!secret "):]
+            if key not in secrets_yaml:
+                raise SnapshotPasswordKeyInvalid()
+            return str(secrets_yaml[key])
+        else:
+            return self.snapshotPassword()
+
+    def resolveSnapshotName(self, snapshot_type: str, template: str, now_local: datetime, host_info) -> str:
+        for key in SNAPSHOT_NAME_KEYS:
+            template = template.replace(key, SNAPSHOT_NAME_KEYS[key](snapshot_type, now_local, host_info))
+        return template
+
+    def validate(self, new_config) -> Dict[str, Any]:
+        defaults = DEFAULTS.copy()
+        defaults.update(self.extra_config)
+        # read the add-on configuration file
+        path = abspath(join(__file__, "..", "..", "config.json"))
+        with open(path) as f:
+            addon_config = json.load(f)
+        addon_config.copy()
+        final_config = {}
+
+        # validate each item
+        for key in new_config:
+            if key not in addon_config["schema"]:
+                # its not in the schema, just ignore it
+                pass
+            else:
+                schema = addon_config["schema"][key]
+                final_config[key] = self._validateConfig(key, schema, new_config[key])
+
+        # remove defaulted items
+        for key in list(final_config.keys()):
+            if final_config[key] == defaults[key]:
+                del final_config[key]
+
+        # add defaults
+        for key in ALWAYS_KEEP:
+            if key not in final_config:
+                final_config[key] = defaults[key]
+
+        if not final_config.get('use_ssl', False):
+            for key in ['certfile', 'keyfile']:
+                if key in final_config:
+                    del final_config[key]
+        if not final_config.get('send_error_reports', False):
+            final_config['send_error_reports'] = False
+
+        if len(final_config.get('snapshot_password', "")) > 0:
+            self.resolvePassword(final_config['snapshot_password'])
+        return final_config
+
+    def update(self, new_config):
+        self.config: Dict[str, Any] = DEFAULTS.copy()
+        self.config.update(self.extra_config)
+        self.config.update(new_config)
+        self._gen_config_cache = self.getGenerationalConfig()
+        self.setIngressInfo()
+        console_handler.setLevel(logging.DEBUG if self.verbose() else logging.INFO)
+        if self.resolver is not None:
+            if len(self.driveIpv4()) > 0:
+                self.resolver.addOverride("www.googleapis.com", [self.driveIpv4()])
+            else:
+                self.resolver.clearOverrides()
+            self.resolver.addResolveAddress("www.googleapis.com")
+            self.resolver.setIgnoreIpv6(self.ignoreIpv6())
+            self.resolver.setDnsServers(self.alternateDnsServers().split(","))
+
+    def _validateConfig(self, key, schema: str, value):
+        if schema.endswith("?"):
+            if len(str(value)) == 0 or value is None:
+                return value
+            schema = schema[:-1]
+        if schema.startswith("int("):
+            # its a int
+            parts = schema[4:-1]
+            minimum = -100000000
+            maximum = 1000000000
+            if parts.endswith(","):
+                minimum = int(parts[0:-1])
+            elif parts.startswith(","):
+                maximum = int(parts[1:])
+            else:
+                digits = parts.split(",")
+                minimum = int(digits[0])
+                maximum = int(digits[1])
+            if int(value) > maximum or int(value) < minimum:
+                raise InvalidConfigurationValue(key, value)
+            return int(value)
+        elif schema.startswith("float("):
+            # its a float
+            parts = schema[6:-1]
+            minimum = -100000000
+            maximum = 1000000000
+            if parts.endswith(","):
+                minimum = float(parts[0:-1])
+            elif parts.startswith(","):
+                maximum = float(parts[1:])
+            else:
+                digits = parts.split(",")
+                minimum = float(digits[0])
+                maximum = float(digits[1])
+            if float(value) > maximum or float(value) < minimum:
+                raise InvalidConfigurationValue(key, value)
+            return float(value)
+        elif schema.startswith("bool"):
+            # its a bool
+            return strToBool(value)
+        elif schema.startswith("str") or schema.startswith("url"):
+            # its a url (treat it just like any string)
+            return str(value)
+        elif schema.startswith("match("):
+            pattern = schema[6:-1]
+            if not re.match(pattern, str(value)):
+                raise InvalidConfigurationValue(key, value)
+            return str(value)
 
     def setSendErrorReports(self, handler, send: bool) -> None:
         self.config['send_error_reports'] = send
@@ -125,22 +310,13 @@ class Config(LogBase):
             with open(self.ingressUpgradeFile(), 'x'):
                 pass
 
-    def setIngressInfo(self, host_info, force_enable=False):
+    def setIngressInfo(self, host_info=None, force_enable=False):
         # check if the add-on has ingress enabled
-        try:
-            with open(ADDON_OPTIONS_FILE) as handle:
-                addon_config = json.load(handle)
-                supports_ingress = "ingress" in addon_config and addon_config['ingress']
-        except Exception as e:
-            self.error(formatException(e))
-            supports_ingress = False
-
-        if not supports_ingress and not force_enable:
-            self.ingress_enabled = False
-            self.warn_ingress = False
-            self.warn_expose_server = False
-            self.config['expose_extra_server'] = True
-            return
+        self.ingress_enabled = False
+        self.warn_ingress = False
+        self.warn_expose_server = False
+        self.config['expose_extra_server'] = True
+        return
 
         self.warn_expose_server = False
         if 'homeassistant' in host_info:
@@ -189,8 +365,29 @@ class Config(LogBase):
             # Version string is longer than the min verison, so we'll just assume its newer
             return True
         except ValueError:
-            self.error("Unable to parse Hoem Assistant version string: " + version)
+            self.error("Unable to parse Home Assistant version string: " + version)
             return False
+
+    def driveHost(self) -> str:
+        return str(self.config['drive_host'])
+
+    def alternateDnsServers(self) -> str:
+        return str(self.config['alternate_dns_servers'])
+
+    def googleDriveTimeoutSeconds(self) -> float:
+        return float(self.config["google_drive_timeout_seconds"])
+
+    def googleDrivePageSize(self) -> int:
+        return int(self.config["google_drive_page_size"])
+
+    def pendingSnapshotTimeoutSeconds(self) -> float:
+        return float(self.config["pending_snapshot_timout_seconds"])
+
+    def failedSnapshotTimeoutSeconds(self) -> float:
+        return float(self.config["failed_snapshot_timout_seconds"])
+
+    def newSnapshotTimeoutSeconds(self) -> float:
+        return float(self.config["new_snapshot_pending_timeout_seconds"])
 
     def retainedFile(self) -> str:
         return str(self.config['retained_file'])
@@ -200,6 +397,12 @@ class Config(LogBase):
 
     def excludeAddons(self) -> str:
         return str(self.config['exclude_addons'])
+
+    def confirmMultipleDeletes(self) -> bool:
+        return bool(self.config['confirm_multiple_deletes'])
+
+    def maxSecondsBetweenSyncs(self) -> bool:
+        return int(self.config["max_seconds_between_syncs"])
 
     def snapshotPassword(self) -> str:
         return str(self.config['snapshot_password'])
@@ -212,6 +415,9 @@ class Config(LogBase):
 
     def hassioBaseUrl(self) -> str:
         return str(self.config['hassio_base_url'])
+
+    def authenticateUrl(self) -> str:
+        return str(self.config['authenticate_url'])
 
     def haBaseUrl(self) -> str:
         return str(self.config['ha_base_url'])
@@ -284,26 +490,41 @@ class Config(LogBase):
     def driveExperimental(self) -> bool:
         return bool(self.config['drive_experimental'])
 
-    def driveHost(self) -> str:
+    def driveIpv4(self) -> str:
         return str(self.config['drive_ipv4'])
+
+    def clientIdentifier(self) -> str:
+        return str(self._clientIdentifier)
 
     def getHassioHeaders(self):
         if 'hassio_header' in self.config:
-            return {"X-HASSIO-KEY": self.config['hassio_header']}
+            return {
+                "X-HASSIO-KEY": self.config['hassio_header'],
+                'Client-Identifier': self.clientIdentifier()
+            }
         else:
-            return {"X-HASSIO-KEY": os.environ.get("HASSIO_TOKEN")}
+            return {
+                "X-HASSIO-KEY": os.environ.get("HASSIO_TOKEN"),
+                'Client-Identifier': self.clientIdentifier()
+            }
 
     def getHaHeaders(self):
         if 'hassio_header' in self.config:
-            return {'Authorization': 'Bearer ' + self.config['hassio_header']}
+            return {
+                'Authorization': 'Bearer ' + self.config['hassio_header'],
+                'Client-Identifier': self.clientIdentifier()
+            }
         else:
-            return {'Authorization': 'Bearer ' + str(os.environ.get("HASSIO_TOKEN"))}
+            return {
+                'Authorization': 'Bearer ' + str(os.environ.get("HASSIO_TOKEN")),
+                'Client-Identifier': self.clientIdentifier()
+            }
 
     def snapshotName(self) -> str:
         return self.config["snapshot_name"]
 
     def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
-        if 'generational_days' not in self.config and 'generational_weeks' not in self.config and 'generational_months' not in self.config and 'generational_years' not in self.config:
+        if self.config['generational_days'] == 0 and self.config['generational_weeks'] == 0 and self.config['generational_months'] == 0 and self.config['generational_years'] == 0:
             return None
         base = {
             'days': 0,
@@ -328,6 +549,10 @@ class Config(LogBase):
             base['day_of_month'] = self.config['generational_day_of_month']
         if 'generational_day_of_year' in self.config:
             base['day_of_year'] = self.config['generational_day_of_year']
+
+        if base['days'] <= 1:
+            # must always be >= 1, otherwise we'll just create and delete snapshots constantly.
+            base['days'] = 1
         return base
 
     def notifyForStaleSnapshots(self) -> bool:
@@ -339,191 +564,32 @@ class Config(LogBase):
     def enableSnapshotStateSensor(self) -> bool:
         return self.config["enable_snapshot_state_sensor"]
 
-    def update(self, handler, **kwargs: Dict[str, Any]) -> None:
-        # load the existing config
-        old_config: Dict[str, Any] = None
-        with open(self.config_path) as file_handle:
-            old_config = json.load(file_handle)
-
-        # Required options
-        if 'max_snapshots_in_hassio' in kwargs and len(kwargs['max_snapshots_in_hassio']) > 0:
-            old_config['max_snapshots_in_hassio'] = int(kwargs['max_snapshots_in_hassio'])
-
-        if 'max_snapshots_in_google_drive' in kwargs and len(kwargs['max_snapshots_in_google_drive']) > 0:
-            old_config['max_snapshots_in_google_drive'] = int(kwargs['max_snapshots_in_google_drive'])
-
-        if 'days_between_snapshots' in kwargs and len(kwargs['days_between_snapshots']) > 0:
-            old_config['days_between_snapshots'] = int(kwargs['days_between_snapshots'])
-
-        if 'snapshot_password' in kwargs:
-            if len(kwargs['snapshot_password']) > 0:
-                old_config['snapshot_password'] = kwargs['snapshot_password']
-            elif 'snapshot_password' in old_config:
-                del old_config['snapshot_password']
-        
-        if 'snapshot_name' in kwargs:
-            if len(kwargs['snapshot_name']) > 0 and kwargs['snapshot_password'] != SNAPSHOT_NAME_DEFALT:
-                old_config['snapshot_name'] = kwargs['snapshot_name']
-            elif 'snapshot_name' in old_config:
-                del old_config['snapshot_name']
-
-        if 'use_ssl' in kwargs and kwargs['use_ssl'] == 'on':
-            old_config['use_ssl'] = True
-            if 'certfile' in kwargs and len(kwargs['certfile']) > 0:
-                old_config['certfile'] = kwargs['certfile']
-            if 'keyfile' in kwargs and len(kwargs['keyfile']) > 0:
-                old_config['keyfile'] = kwargs['keyfile']
-        else:
-            old_config['use_ssl'] = False
-            if 'certfile' in old_config:
-                del old_config['certfile']
-            if 'keyfile' in old_config:
-                del old_config['keyfile']
-
-        if 'send_error_reports' in kwargs and kwargs['send_error_reports'] == 'on':
-            old_config['send_error_reports'] = True
-        else:
-            old_config['send_error_reports'] = False
-
-        if 'verbose' in kwargs and kwargs['verbose'] == 'on':
-            old_config['verbose'] = True
-        elif 'verbose' in old_config:
-            del old_config['verbose']
-
-        # optional boolean config
-        if 'require_login' in kwargs and kwargs['require_login'] == 'on':
-            old_config['require_login'] = True
-        elif 'require_login' in old_config:
-            del old_config['require_login']
-
-        if 'notify_for_stale_snapshots' not in kwargs:
-            old_config['notify_for_stale_snapshots'] = False
-        elif 'notify_for_stale_snapshots' in old_config:
-            del old_config['notify_for_stale_snapshots']
-
-        if 'enable_snapshot_stale_sensor' not in kwargs:
-            old_config['enable_snapshot_stale_sensor'] = False
-        elif 'enable_snapshot_stale_sensor' in old_config:
-            del old_config['enable_snapshot_stale_sensor']
-
-        if 'enable_snapshot_state_sensor' not in kwargs:
-            old_config['enable_snapshot_state_sensor'] = False
-        elif 'enable_snapshot_state_sensor' in old_config:
-            del old_config['enable_snapshot_state_sensor']
-
-        if 'expose_extra_server' in kwargs:
-            old_config['expose_extra_server'] = True
-        elif 'expose_extra_server' in old_config:
-            del old_config['expose_extra_server']
-
-        if 'snapshot_time_of_day' in kwargs and len(kwargs['snapshot_time_of_day']) > 0:
-            old_config['snapshot_time_of_day'] = kwargs['snapshot_time_of_day']
-        elif 'snapshot_time_of_day' in old_config:
-            del old_config['snapshot_time_of_day']
-
-        if 'partial_snapshots' not in kwargs or kwargs['partial_snapshots'] == 'off':
-            if 'exclude_folders' in old_config:
-                del old_config['exclude_folders']
-            if 'exclude_addons' in old_config:
-                del old_config['exclude_addons']
-            if 'exclude_homeassistant' in old_config:
-                del old_config['exclude_homeassistant']
-        else:
-            if 'exclude_folders' in kwargs and len(kwargs['exclude_folders']) > 0:
-                old_config['exclude_folders'] = kwargs['exclude_folders']
-            elif 'exclude_folders' in old_config:
-                del old_config['exclude_folders']
-
-            if 'exclude_addons' in kwargs and len(kwargs['exclude_addons']) > 0:
-                old_config['exclude_addons'] = kwargs['exclude_addons']
-            elif 'exclude_addons' in old_config:
-                del old_config['exclude_addons']
-
-        if 'generational_enabled' not in kwargs or kwargs['generational_enabled'] == 'off':
-            if 'generational_days' in old_config:
-                del old_config['generational_days']
-            if 'generational_weeks' in old_config:
-                del old_config['generational_weeks']
-            if 'generational_months' in old_config:
-                del old_config['generational_months']
-            if 'generational_years' in old_config:
-                del old_config['generational_years']
-        else:
-            if 'generational_days' in kwargs and len(kwargs['generational_days']) > 0:
-                old_config['generational_days'] = int(kwargs['generational_days'])
-            else:
-                old_config['generational_weeks'] = 0
-
-            if 'generational_weeks' in kwargs and len(kwargs['generational_weeks']) > 0:
-                old_config['generational_weeks'] = int(kwargs['generational_weeks'])
-            else:
-                old_config['generational_weeks'] = 0
-
-            if 'generational_months' in kwargs and len(kwargs['generational_months']) > 0:
-                old_config['generational_months'] = int(kwargs['generational_months'])
-            else:
-                old_config['generational_months'] = 0
-
-            if 'generational_years' in kwargs and len(kwargs['generational_years']) > 0:
-                old_config['generational_years'] = int(kwargs['generational_years'])
-            else:
-                old_config['generational_years'] = 0
-
-        if 'generational_day_of_week' in kwargs and len(kwargs['generational_day_of_week']) > 0:
-            old_config['generational_day_of_week'] = kwargs['generational_day_of_week']
-
-        if 'generational_day_of_week' in old_config and old_config['generational_day_of_week'] == "mon":
-            del old_config['generational_day_of_week']
-
-        if 'generational_day_of_month' in kwargs and len(kwargs['generational_day_of_month']) > 0:
-            old_config['generational_day_of_month'] = int(kwargs['generational_day_of_month'])
-
-        if 'generational_day_of_month' in old_config and old_config['generational_day_of_month'] == 1:
-            del old_config['generational_day_of_month']
-
-        if 'generational_day_of_year' in kwargs and len(kwargs['generational_day_of_year']) > 0:
-            old_config['generational_day_of_year'] = int(kwargs['generational_day_of_year'])
-
-        if 'generational_day_of_year' in old_config and old_config['generational_day_of_year'] == 1:
-            del old_config['generational_day_of_year']
-
-        handler(old_config)
-
-        self.config = self.default.copy()
-        self.config.update(old_config)
-
     def _loadRetained(self) -> List[str]:
         if os.path.exists(self.retainedFile()):
             with open(self.retainedFile()) as f:
-                return json.load(f)['retained']
+                try:
+                    return json.load(f)['retained']
+                except json.JSONDecodeError:
+                    self.error("Unable to parse retained snapshot settings")
+                    return []
         return []
-
-    def saveRetained(self, list) -> None:
-        if list != self.retained:
-            with open(self.retainedFile(), "w") as f:
-                json.dump({
-                    'retained': list
-                }, f)
-            self.retained = self._loadRetained()
 
     def isRetained(self, slug):
         return slug in self.retained
 
+    def setRetained(self, slug, retain):
+        if retain and slug not in self.retained:
+            self.retained.append(slug)
+            with open(self.retainedFile(), "w") as f:
+                json.dump({
+                    'retained': self.retained
+                }, f)
+        elif not retain and slug in self.retained:
+            self.retained.remove(slug)
+            with open(self.retainedFile(), "w") as f:
+                json.dump({
+                    'retained': self.retained
+                }, f)
+
     def ignoreIpv6(self) -> bool:
         return bool(self.config['ignore_ipv6_addresses'])
-
-    def new_getaddrinfo(self, *args, **kwargs):
-        if len(self.driveHost()) > 0 and len(args) > 1 and args[0] == "www.googleapis.com" and args[1] == 443:
-            # Override the google drive host entry with just the single address
-            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (self.driveHost(), 443))]
-        if len(self.driveHost()) > 0 and len(args) > 1 and args[0] == "oauth.googleapis.com" and args[1] == 443:
-            # Override the google drive host entry with just the single address
-            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (self.driveHost(), 443))]
-
-        responses = self.old_getaddrinfo(*args, **kwargs)
-        if self.ignoreIpv6():
-            return [response
-                    for response in responses
-                    if response[0] != socket.AF_INET6]
-        else:
-            return responses

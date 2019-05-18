@@ -1,6 +1,6 @@
 from ..time import Time
 from ..backupscheme import GenerationalScheme
-from ..snapshots import HASnapshot, Snapshot
+from ..snapshots import Snapshot, DummySnapshot
 from datetime import datetime, timedelta, timezone
 from dateutil.tz import gettz
 from dateutil.tz import tzutc
@@ -25,10 +25,10 @@ def test_trivial(mocker) -> None:
         'years': 0
     }
 
-    scheme = GenerationalScheme(time, config)
+    scheme = GenerationalScheme(time, config, count=0)
 
     snapshots = [
-        makeHASnapshot("single", datetime(1928, 12, 6).astimezone(test_tz))
+        makeSnapshot("single", datetime(1928, 12, 6).astimezone(test_tz))
     ]
 
     assert scheme.getOldest(snapshots).date() == datetime(1928, 12, 6).astimezone(test_tz)
@@ -42,12 +42,12 @@ def test_trivial_oldest(mocker) -> None:
         'months': 0,
         'years': 0
     }
-    scheme = GenerationalScheme(time, config)
+    scheme = GenerationalScheme(time, config, count=0)
 
     snapshots = [
-        makeHASnapshot("test", datetime(1985, 12, 6, 10).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 6, 12).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 6, 13).astimezone(test_tz))
+        makeSnapshot("test", datetime(1985, 12, 6, 10).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 6, 12).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 6, 13).astimezone(test_tz))
     ]
     assert getRemovalOrder(scheme, snapshots) == [
         datetime(1985, 12, 6, 10).astimezone(test_tz),
@@ -66,13 +66,13 @@ def test_duplicate_weeks(mocker) -> None:
         'years': 0
     }
 
-    scheme = GenerationalScheme(time, config)
+    scheme = GenerationalScheme(time, config, count=0)
 
     snapshots = [
-        makeHASnapshot("test", datetime(1985, 12, 5).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 4).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 1).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 2).astimezone(test_tz))
+        makeSnapshot("test", datetime(1985, 12, 5).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 4).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 1).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 2).astimezone(test_tz))
     ]
     assert getRemovalOrder(scheme, snapshots) == [
         datetime(1985, 12, 1).astimezone(test_tz),
@@ -92,13 +92,13 @@ def test_duplicate_months(mocker) -> None:
         'years': 0
     }
 
-    scheme = GenerationalScheme(time, config)
+    scheme = GenerationalScheme(time, config, count=0)
 
     snapshots = [
-        makeHASnapshot("test", datetime(1985, 12, 6).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 2).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 11, 20).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 11, 1).astimezone(test_tz))
+        makeSnapshot("test", datetime(1985, 12, 6).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 2).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 11, 20).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 11, 1).astimezone(test_tz))
     ]
     assert getRemovalOrder(scheme, snapshots) == [
         datetime(1985, 11, 1).astimezone(test_tz),
@@ -118,13 +118,13 @@ def test_duplicate_years(mocker) -> None:
         'day_of_year': 1
     }
 
-    scheme = GenerationalScheme(time, config)
+    scheme = GenerationalScheme(time, config, count=0)
 
     snapshots = [
-        makeHASnapshot("test", datetime(1985, 12, 31).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 1, 1).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1984, 12, 31).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1984, 1, 1).astimezone(test_tz))
+        makeSnapshot("test", datetime(1985, 12, 31).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 1, 1).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1984, 12, 31).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1984, 1, 1).astimezone(test_tz))
     ]
     assert getRemovalOrder(scheme, snapshots) == [
         datetime(1984, 12, 31).astimezone(test_tz),
@@ -149,33 +149,33 @@ def test_removal_order(mocker) -> None:
         'day_of_year': 1
     }
 
-    scheme = GenerationalScheme(time, config)
+    scheme = GenerationalScheme(time, config, count=0)
 
     snapshots = [
         # 5 days, week 1
-        makeHASnapshot("test", datetime(1985, 12, 7).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 6).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 5).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 4).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 12, 3).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 7).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 6).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 5).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 4).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 12, 3).astimezone(test_tz)),
 
         # week 2
-        makeHASnapshot("test", datetime(1985, 12, 1).astimezone(test_tz)),  # sun, first to go
-        makeHASnapshot("test", datetime(1985, 11, 25).astimezone(test_tz)),  # mon
+        makeSnapshot("test", datetime(1985, 12, 1).astimezone(test_tz)),  # sun, first to go
+        makeSnapshot("test", datetime(1985, 11, 25).astimezone(test_tz)),  # mon
 
         # month2
-        makeHASnapshot("test", datetime(1985, 11, 15).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 11, 15).astimezone(test_tz)),
 
         # year 1
-        makeHASnapshot("test", datetime(1985, 1, 1).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1985, 1, 2).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 1, 1).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1985, 1, 2).astimezone(test_tz)),
 
         # year 2
-        makeHASnapshot("test", datetime(1984, 6, 1).astimezone(test_tz)),
-        makeHASnapshot("test", datetime(1984, 7, 1).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1984, 6, 1).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1984, 7, 1).astimezone(test_tz)),
 
         # year 3
-        makeHASnapshot("test", datetime(1983, 1, 1).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1983, 1, 1).astimezone(test_tz)),
     ]
     assert getRemovalOrder(scheme, snapshots) == [
         datetime(1983, 1, 1).astimezone(test_tz),
@@ -206,12 +206,12 @@ def test_simulate_daily_backup_for_4_years(mocker) -> None:
         'day_of_year': 1
     }
 
-    scheme = GenerationalScheme(time, config)
+    scheme = GenerationalScheme(time, config, count=0)
     num_snapshots = 16
     today = datetime(2019, 1, 1).astimezone(test_tz)
     snapshots = []
     while today < datetime(2023, 1, 1).astimezone(test_tz):
-        snapshots.append(makeHASnapshot("test", today))
+        snapshots.append(makeSnapshot("test", today))
         while len(snapshots) > num_snapshots:
             snapshots.remove(scheme.getOldest(snapshots))
         today = today + timedelta(days=1)
@@ -243,11 +243,34 @@ def test_simulate_daily_backup_for_4_years(mocker) -> None:
     ]
 
 
+def test_count_limit(mocker):
+    time: Time = getMockTime(mocker, base_date)
+    config = {
+        'days': 0,
+        'weeks': 0,
+        'months': 0,
+        'years': 2,
+        'day_of_year': 1
+    }
+
+    scheme = GenerationalScheme(time, config, count=1)
+
+    snapshots = [
+        makeSnapshot("test", datetime(1985, 1, 1).astimezone(test_tz)),
+        makeSnapshot("test", datetime(1984, 1, 1).astimezone(test_tz))
+    ]
+    assert getRemovalOrder(scheme, snapshots) == [
+        datetime(1984, 1, 1).astimezone(test_tz)
+    ]
+
+
 def getRemovalOrder(scheme, toCheck):
     snapshots = list(toCheck)
     removed = []
-    while len(snapshots) > 0:
+    while True:
         oldest = scheme.getOldest(snapshots)
+        if not oldest:
+            break
         removed.append(oldest.date().astimezone(test_tz))
         snapshots.remove(oldest)
     return removed
@@ -263,7 +286,7 @@ def getMockTime(mocker, mock_time=datetime.now()):
     return time
 
 
-def makeHASnapshot(slug, date, name=None) -> HASnapshot:
+def makeSnapshot(slug, date, name=None) -> Snapshot:
     if not name:
         name = slug
-    return Snapshot(HASnapshot({"slug": slug, "date": str(date.astimezone(tzutc())), "name": name}))
+    return DummySnapshot(name, date.astimezone(tzutc()), "src", slug)

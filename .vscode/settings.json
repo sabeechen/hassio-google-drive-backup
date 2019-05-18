@@ -1,5 +1,6 @@
 {
     "python.testing.pyTestArgs": [
+        "-s",
         "hassio-google-drive-backup"
     ],
     "python.testing.unittestEnabled": false,
@@ -8,7 +9,7 @@
     "python.pythonPath": "/usr/bin/python3.7",
     "python.linting.flake8Enabled": true,
     "python.linting.pylintEnabled": false,
-    "python.linting.mypyEnabled": true,
-    "python.linting.mypyArgs": ["--strict", "--python-version", "3.7"],
+    "python.linting.mypyEnabled": false,
+    "python.linting.mypyArgs": ["--python-version", "3.6"],
     "python.linting.flake8Args": ["--ignore=E501,E731", "--verbose"]
 }

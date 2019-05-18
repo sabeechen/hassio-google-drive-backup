@@ -7,12 +7,14 @@ from watchdog.events import FileSystemEventHandler
 from datetime import timedelta
 from datetime import datetime
 from threading import Lock
+from .trigger import Trigger
 
 REPORT_DELAY_SECONDS = 5
 
 
-class Watcher(LogBase, FileSystemEventHandler):
+class Watcher(Trigger, LogBase, FileSystemEventHandler):
     def __init__(self, time: Time, config: Config):
+        super().__init__()
         self.time = time
         self.last_list: Optional[List[str]] = None
         self.config: Config = config
@@ -23,6 +25,9 @@ class Watcher(LogBase, FileSystemEventHandler):
         self.lock: Lock = Lock()
         self.observer.schedule(self, self.config.backupDirectory(), recursive=False)
         self.observer.start()
+
+    def name(self):
+        return "Backup Directory Watcher"
 
     def on_any_event(self, event):
         """
@@ -50,7 +55,13 @@ class Watcher(LogBase, FileSystemEventHandler):
             return False
         finally:
             self.lock.release()
-    
+
+    def check(self):
+        if self.haveFilesChanged():
+            return True
+        else:
+            return super().check()
+
     def stop(self):
         self.observer.stop()
         self.observer.join()

@@ -4,9 +4,8 @@ RUN apk add python3
 RUN apk add fping
 WORKDIR /app
 COPY . /app
-RUN ["chmod", "+x", "run.py"]
 RUN pip3 install --upgrade pip
 RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
 EXPOSE 1627
 EXPOSE 8099
-ENTRYPOINT /app/run.py
+ENTRYPOINT ["python3", "-m", "backup"]

@@ -6,50 +6,30 @@
     "configurations": [
 
         {
-            "name": "Python: run.py",
+            "name": "Run Addon (Dev Backends)",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/hassio-google-drive-backup/run.py",
-            "args" : [
-                "${workspaceFolder}/dev/data/dev_options.json",
-                "${workspaceFolder}/dev/data/options.json"
-            ],
+            "pythonPath": "/usr/bin/python3.7",
+            "module": "backup",
+            "cwd": "${workspaceFolder}/hassio-google-drive-backup",
+            "args": ["dev"]
+        },
+        {
+            "name": "Run Addon (Real Google Drive)",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "/usr/bin/python3.7",
+            "module": "backup",
+            "cwd": "${workspaceFolder}/hassio-google-drive-backup",
+            "args": ["drive"]
+        },
+        {
+            "name": "Run Mock Backend Server",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "/usr/bin/python3.7",
+            "module": "backup.dev.flaskserver",
             "cwd": "${workspaceFolder}/hassio-google-drive-backup"
-        },
-        {
-            "name": "Python: Mock Hass.io",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/dev/mock_hassio.py",
-            "args" : [],
-            "cwd": "${workspaceFolder}/dev"
-        },
-        {
-            "name": "Python: Current File (Integrated Terminal)",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Remote Attach",
-            "type": "python",
-            "request": "attach",
-            "port": 5678,
-            "host": "localhost",
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}",
-                    "remoteRoot": "."
-                }
-            ]
-        },
-        {
-            "name": "Python: Module",
-            "type": "python",
-            "request": "launch",
-            "module": "enter-your-module-name-here",
-            "console": "integratedTerminal"
         },
         {
             "name": "Python: Current File (External Terminal)",

@@ -1,0 +1,218 @@
+import os
+import pytest
+import tempfile
+import requests
+
+from .faketime import FakeTime
+from ..config import Config
+from oauth2client.client import OAuth2Credentials
+from ..drivesource import DriveSource
+from ..hasource import HaSource
+from ..harequests import HaRequests
+from ..driverequests import DriveRequests
+from ..dev.flaskserver import app, cleanupInstance, getInstance, initInstance
+from threading import Thread
+from ..coordinator import Coordinator
+from ..globalinfo import GlobalInfo
+from ..model import Model
+from ..haupdater import HaUpdater
+from .helpers import TestSource, LockBlocker
+from ..dev.testbackend import TestBackend
+from ..resolver import Resolver
+
+
+class ServerThread():
+    def __init__(self):
+        self.base = "http://localhost:1234"
+        self.thread: Thread = Thread(target=run_server, name="server thread")
+        self.thread.setDaemon(True)
+
+    def startServer(self):
+        self.thread.start()
+        while True:
+            if self._ping():
+                break
+
+    def _ping(self):
+        try:
+            requests.get(self.base, timeout=0.5)
+            return True
+        except requests.exceptions.ReadTimeout:
+            return False
+        except requests.exceptions.ConnectionError:
+            return False
+
+
+class ServerInstance():
+    def __init__(self, id, time):
+        self.base = "http://localhost:1234"
+        self.id = id
+        initInstance(id, time)
+
+    def reset(self, config={"update": "true"}):
+        self.getServer().reset()
+        self.update(config)
+
+    def getServer(self) -> TestBackend:
+        return getInstance(self.id)
+
+    def update(self, config):
+        self.getServer().update(config)
+
+    def blockSnapshots(self):
+        return LockBlocker().block(self.getServer()._snapshot_lock)
+
+    def getClient(self):
+        return requests
+
+    def cleanup(self):
+        cleanupInstance(self.id)
+
+
+@pytest.fixture
+def snapshot(coord, source, dest):
+    coord.sync()
+    assert len(coord.snapshots()) == 1
+    return coord.snapshots()[0]
+
+
+@pytest.fixture
+def model(source, dest, time, simple_config, global_info):
+    return Model(simple_config, time, source, dest, global_info)
+
+
+@pytest.fixture
+def source():
+    return TestSource("Source")
+
+
+@pytest.fixture
+def dest():
+    return TestSource("Dest")
+
+
+@pytest.fixture
+def simple_config():
+    config = Config()
+    config.setIngressInfo()
+    return config
+
+
+@pytest.fixture
+def blocker():
+    return LockBlocker()
+
+
+@pytest.fixture
+def global_info(time):
+    return GlobalInfo(time)
+
+
+@pytest.fixture
+def coord(model, time, simple_config, global_info):
+    updater = HaUpdater(None, simple_config, time, global_info)
+    return Coordinator(model, time, simple_config, global_info, updater)
+
+
+@pytest.fixture()
+def updater(time, config, global_info, ha_requests):
+    return HaUpdater(ha_requests, config, time, global_info)
+
+
+@pytest.fixture()
+def cleandir():
+    newpath = tempfile.mkdtemp()
+    os.chdir(newpath)
+    return newpath
+
+
+@pytest.fixture
+def time():
+    return FakeTime()
+
+
+@pytest.fixture
+def config(cleandir, drive_creds: OAuth2Credentials):
+    with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
+        f.write("for_unit_tests: \"password value\"\n")
+
+    with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
+        f.write(drive_creds.to_json())
+
+    config = Config({
+        "drive_host": "http://localhost:1234",
+        "secrets_file_path": "secrets.yaml",
+        "credentials_file_path": "credentials.dat",
+        "folder_file_path": "folder.dat",
+        "hassio_base_url": "http://localhost:1234/",
+        "ha_base_url": "http://localhost:1234/homeassistant/api/",
+        "hassio_header": "test_header",
+        "retained_file": "retained.json",
+        "authenticate_url": "http://localhost:1234/external/drivecreds/"
+    })
+    config.setIngressInfo()
+    return config
+
+
+@pytest.fixture
+def drive_creds():
+    return OAuth2Credentials("", "test_client_id", "test_client_secret", refresh_token="test_Refresh_token", token_expiry="", token_uri="", user_agent="")
+
+
+@pytest.fixture
+def drive(time, config, drive_creds, drive_requests, global_info):
+    return DriveSource(config, time, drive_requests, global_info)
+
+
+@pytest.fixture
+def ha(time, config, ha_requests, global_info):
+    return HaSource(config, time, ha_requests, global_info)
+
+
+@pytest.fixture
+def ha_requests(config, request_client):
+    return HaRequests(config, request_client)
+
+
+@pytest.fixture
+def drive_requests(config, time, request_client, resolver):
+    return DriveRequests(config, time, request_client, resolver)
+
+
+@pytest.fixture
+def resolver(time):
+    return Resolver(time)
+
+
+@pytest.fixture
+def request_client(server):
+    return server.getClient()
+
+
+@pytest.fixture
+def client_identifier(config: Config):
+    return config.clientIdentifier()
+
+
+@pytest.fixture
+def server(drive_creds: OAuth2Credentials, webserver_raw, client_identifier, time):
+    instance = ServerInstance(client_identifier, time)
+    instance.reset({
+        "drive_refresh_token": drive_creds.refresh_token,
+        "drive_client_id": drive_creds.client_id,
+        "drive_client_secret": drive_creds.client_secret,
+        "hassio_header": "test_header"
+    })
+    yield instance
+    instance.cleanup()
+
+
+@pytest.fixture(scope="session")
+def webserver_raw():
+    server = ServerThread()
+    server.startServer()
+    return server
+
+
+def run_server():
+    app.run(debug=False, host='0.0.0.0', threaded=True, port=1234)

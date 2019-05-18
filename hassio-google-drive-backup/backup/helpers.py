@@ -14,6 +14,10 @@ T = TypeVar('T')
 V = TypeVar('V')
 
 
+def strToBool(value) -> bool:
+    return str(value).lower() in ['true', 't', 'on', 'yes', 'y', '1', 'hai', 'si', 'omgyesplease']
+
+
 def parseDateTime(text: str) -> datetime:
     return parse(text, tzinfos=tzutc)
 
@@ -47,14 +51,17 @@ def take(iterable: Sequence[T], count: int) -> Generator[T, None, None]:
             break
 
 
-def formatTimeSince(time: datetime) -> str:
+def formatTimeSince(time: datetime, now=None) -> str:
+    if not now:
+        now = now
+
     delta: relativedelta = None
     flavor = ""
-    if time < nowutc():
-        delta = relativedelta(nowutc(), time)
+    if time < now:
+        delta = relativedelta(now, time)
         flavor = " ago"
     else:
-        delta = relativedelta(time, nowutc())
+        delta = relativedelta(time, now)
         flavor = ""
     if delta.years > 0:
         return "{0} years{1}".format(delta.years, flavor)

@@ -17,7 +17,12 @@ class BackupScheme(ABC):
 
 
 class OldestScheme(BackupScheme):
+    def __init__(self, count=0):
+        self.count = count
+
     def getOldest(self, snapshots: Sequence[Snapshot]) -> Optional[Snapshot]:
+        if len(snapshots) <= self.count:
+            return None
         return min(snapshots, default=None, key=lambda s: s.date())
 
 
@@ -36,16 +41,18 @@ class Partition(object):
 
 
 class GenerationalScheme(BackupScheme):
-    def __init__(self, time: Time, partitions: Dict[str, int]):
+    def __init__(self, time: Time, partitions: Dict[str, int], count=0):
+        self.count = count
         self.time: Time = time
         self.partitions: Dict[str, Any] = partitions
         pass
 
     def getOldest(self, to_segment: Sequence[Snapshot]) -> Optional[Snapshot]:
+        if len(to_segment) <= self.count:
+            return None
         snapshots: List[Snapshot] = list(to_segment)
 
         # build the list of dates we should partition by
-
         if len(snapshots) == 0:
             return None
 

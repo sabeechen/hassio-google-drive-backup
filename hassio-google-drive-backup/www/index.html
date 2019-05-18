@@ -6,21 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
   <title>Hass.io Google Drive Backup</title>
 
-  <link href="css/icons.css?version=0.96.1" rel="stylesheet">
-  <link href="css/materialize.css?version=0.96.1" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.96.1" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.96.1">
-  <script src="js/jquery.js?version=0.96.1"></script>
-  <script src="js/materialize.js?version=0.96.1"></script>
-  <script src="js/init.js?version=0.96.1"></script>
-  <script src="js/scripts.js?version=0.96.1"></script>
-  <script src="js/settings.js?version=0.96.1"></script>
-  <script src="js/restore.js?version=0.96.1"></script>
-  <script src="js/moment.js?version=0.96.1"></script>
+  <link href="css/icons.css?version=0.97" rel="stylesheet">
+  <link href="css/materialize.css?version=0.97" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.97" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="images/favicon.png?version=0.97">
+  <script src="js/jquery.js?version=0.97"></script>
+  <script src="js/materialize.js?version=0.97"></script>
+  <script src="js/init.js?version=0.97"></script>
+  <script src="js/scripts.js?version=0.97"></script>
+  <script src="js/settings.js?version=0.97"></script>
+  <script src="js/restore.js?version=0.97"></script>
+  <script src="js/moment.js?version=0.97"></script>
 </head>
 
 <body>
-
   <div id="settings_modal" class="modal modal-fixed-footer">
     <div class="modal-content">
       <h4>Add-on Settings</h4>
@@ -134,6 +133,19 @@
             </div>
           </div>
           <div class="row">
+            <div class="col m12 s12">
+              <label>
+                <input type="checkbox" name="confirm_multiple_deletes" id="confirm_multiple_deletes"
+                  class="filled-in checkbox-ha" />
+                <span>Confirm before large deletes</span>
+                <br />
+                <span class="helper-text">When disabled, the add-on will NOT stop and ask for confirmation before
+                  deleting more than one snapshot. Disabling this is dangerous because accidental misconfiguration can
+                  cause you to lose your backed-up snapshot history.</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
             <div class="col s12">
               <label>
                 <input type="checkbox" name="expose_extra_server" id="expose_extra_server" class="filled-in checkbox-ha"
@@ -166,7 +178,7 @@
                     <span>Use SSL</span>
                     <br />
                     <span class="helper-text">Require SSL to acces this web interface. You must already have SSL keys
-                      configured to use this. Note that once this setting is changed, you'll need to navigate to the
+                      configured to use this. Note that once this setting is chnaged, you'll need to navigate to the
                       new url
                       to continue using this webpage.</span>
                   </label>
@@ -193,7 +205,7 @@
           <div class="row">
             <div class="col s12">
               <label>
-                <input type="checkbox" id="generational_enabled" name="generational_enabled"
+                <input type="checkbox" settings_ignore='true' id="generational_enabled" name="generational_enabled"
                   class="filled-in checkbox-ha" onchange="toggleSlide(this, 'settings_gen_details');" />
                 <span>Keep Generational Backups</span>
                 <br />
@@ -267,8 +279,8 @@
           <div class="row">
             <div class="col s12">
               <label>
-                <input type="checkbox" name="partial_snapshots" id="partial_snapshots" class="filled-in checkbox-ha"
-                  onchange="toggleSlide(this, 'settings_partial_details');" />
+                <input type="checkbox" settings_ignore="true" name="partial_snapshots" id="partial_snapshots"
+                  class="filled-in checkbox-ha" onchange="toggleSlide(this, 'settings_partial_details');" />
                 <span>Partial Snapshots</span>
                 <br />
                 <span class="helper-text">Partial snapshots allow you to selectively backup portions of your Home
@@ -281,25 +293,14 @@
           </div>
           <div class="row" id="settings_partial_details" style="display: none">
             <div class="col s11 offset-s1">
-              <div class="row" style="display: none">
-                <div class="input-field col s12">
-                  <label class="checkbox-label">
-                    <input type="checkbox" name="include_homeassistant" id="include_homeassistant"
-                      class="filled-in checkbox-ha" checked />
-                    <span>Home Assistant <span id="homeassistant_version"></span></span>
-                    <br />
-                    <span class="helper-text">Backup Home Assistant</span>
-                  </label>
-                </div>
-              </div>
               <div class="row" style="margin-bottom: 0px">
                 <div class="col s12">
                   <span style="font-weight: bold">Folders</span>
                   <ul>
                     <li class="indented-li">
                       <label>
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_homeassistant"
-                          id="folder_homeassistant" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_homeassistant" id="folder_homeassistant" checked />
                         <span class="checkbox-label">Home Assistant Configuration</span>
                         <br />
                         <span class="helper-text">Backup the files and folders from your Home Assistant config
@@ -308,8 +309,8 @@
                     </li>
                     <li class="indented-li">
                       <label class="checkbox-label">
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_ssl"
-                          id="folder_ssl" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_ssl" id="folder_ssl" checked />
                         <span class="checkbox-label">SSL</span>
                         <br />
                         <span class="helper-text">Backup your "/ssl" directory, where your certfile and keyfile
@@ -318,8 +319,8 @@
                     </li>
                     <li class="indented-li">
                       <label class="checkbox-label">
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_share"
-                          id="folder_share" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_share" id="folder_share" checked />
                         <span class="checkbox-label">Share</span>
                         <br />
                         <span class="helper-text">Backup your "/share" directory.</span>
@@ -327,8 +328,8 @@
                     </li>
                     <li class="indented-li">
                       <label class="checkbox-label">
-                        <input class="filled-in settings_folder_checkbox" type="checkbox" name="folder_addons"
-                          id="folder_addons" checked />
+                        <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
+                          name="folder_addons" id="folder_addons" checked />
                         <span class="checkbox-label">Local Addons</span>
                         <br />
                         <span class="helper-text">Backup your local addons directory. This directory will be empty
@@ -348,13 +349,73 @@
               </div>
             </div>
           </div>
+          <div class="row">
+            <div class="col s12">
+              <label>
+                <span style="font-size: 15px;">Networking Options</span>
+                <br />
+                <span class="helper-text">Configure timeouts and other options about how the add-on reaches Google
+                  Drive</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s11 offset-s1 row">
+              <div class="input-field col m6 s12">
+                <i class="material-icons prefix">timelapse</i>
+                <input type="number" id="google_drive_timeout_seconds" name="google_drive_timeout_seconds" min="1"
+                  class="validate" />
+                <label for="google_drive_timeout_seconds">Google Drive Timeout</label>
+                <span class="helper-text">The number of seconds the add-on should wait when connecting to or reading
+                  from Google Drive's servers.</span>
+              </div>
+              <div class="input-field col m6 s12">
+                <i class="material-icons prefix">cloud</i>
+                <input type="text" id="alternate_dns_servers" name="alternate_dns_servers"
+                  pattern="^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(,[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})*$"
+                  class="validate" />
+                <label for="alternate_dns_servers">Alternate DNS Servers</label>
+                <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
+                  use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
+                  must support TCP DNS lookups. The defaults are Google's public DNS servers.</span>
+              </div>
+            </div>
+            <div class="col s11 offset-s1 row">
+              <div class="col m12 s12">
+                <label>
+                  <input type="checkbox" name="ignore_ipv6_addresses" id="ignore_ipv6_addresses"
+                    class="filled-in checkbox-ha" />
+                  <span>Ignore IPv6 Addresses</span>
+                  <br />
+                  <span class="helper-text">Ignore ipv6 Addresses for the purposes or DNS resolution. Some users have
+                    had problems attempting to connect to Googles IPv6 servers because it is disabled on their
+                    network.</span>
+                </label>
+              </div>
+            </div>
+            <div class="col s11 offset-s1 row">
+              <div class="input-field col m6 s12">
+                <i class="material-icons prefix">cloud_queue</i>
+                <input type="text" id="drive_ipv4" name="drive_ipv4"
+                  pattern="^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$" class="validate" />
+                <label for="drive_ipv4">Google Drive IP Address Override</label>
+                <span class="helper-text">If you're having problems with reaching Google Drive, you can use this to
+                  specify Google Drive's IP address manually and circumvent DNS lookup entirely. You can use a website
+                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
+                    one</a> to lookup
+                  what address will work for www.googleapis.com.</span>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
     </div>
     <div class="modal-footer" style="min-height: 56px; height: auto;">
-      <div id="settings_error" class="left valign-wrapper red darken-4 white-text default-hidden"
+      <div class="left valign-wrapper red darken-4 white-text default-hidden" id="settings_error_div"
         style="margin: 6px; padding-left: 16px; padding-right: 16px; min-height: 36px; vertical-align: middle">
-        Some configuration is invalid, check for red errors up above.
+        <span id="settings_error" style="vertical-align: middle;">
+          Some configuration is invalid, check for red errors up above.
+        </span>
       </div>
 
       <a href="#!" class="waves-effect waves-light btn-flat" id="save_settings" onClick="saveSettings()">Save</a>
@@ -445,11 +506,10 @@
   </div>
   <header>
     <nav class="non-ingress ha-blue" role="navigation">
-        <div class="nav-wrapper">
-          <a class="brand-logo"
-            <img style="vertical-align: middle;" src="images/logo.png" width=40 height=40 />
-            <span>Hass.io Google Drive Backup</span>
-          </a>
+      <div class="nav-wrapper">
+        <a class="brand-logo" <img style="vertical-align: middle;" src="images/logo.png" width=40 height=40 />
+        <span>Hass.io Google Drive Backup</span>
+        </a>
         <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
         <ul class="right hide-on-med-and-down">
           <li>
@@ -646,7 +706,6 @@
       <div class="container left">
         © 2019 Stephen Beechen
       </div>
-
     </div>
   </footer>
 

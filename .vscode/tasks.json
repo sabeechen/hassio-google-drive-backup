@@ -26,6 +26,15 @@
             "problemMatcher": []
         },
         {
+            "label": "RUN: Mock Drive/Hass.io Server",
+            "type": "shell",
+            "command": "./mock_server.py",
+            "options": {
+                "cwd": "${workspaceFolder}/dev"
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "RUN: Add-on in Docker locally",
             "type": "shell",
             "command": "./run_local_docker.py",

@@ -8,15 +8,15 @@
 
     <!-- CSS  -->
     <link href="css/icons.css3" rel="stylesheet">
-    <link href="css/materialize.css?version=0.96.1" type="text/css" rel="stylesheet" media="screen,projection" />
-    <link href="css/style.css?version=0.96.1" type="text/css" rel="stylesheet" media="screen,projection" />
-    <link rel="icon" type="image/png" href="/images/favicon.png?version=0.96.1">
-    <script src="js/jquery.js?version=0.96.1"></script>
-    <script src="js/materialize.js?version=0.96.1"></script>
-    <script src="js/init.js?version=0.96.1"></script>
-    <script src="js/scripts.js?version=0.96.1"></script>
-    <script src="js/settings.js?version=0.96.1"></script>
-    <script src="js/restore.js?version=0.96.1"></script>
+    <link href="css/materialize.css?version=0.97" type="text/css" rel="stylesheet" media="screen,projection" />
+    <link href="css/style.css?version=0.97" type="text/css" rel="stylesheet" media="screen,projection" />
+    <link rel="icon" type="image/png" href="/images/favicon.png?version=0.97">
+    <script src="js/jquery.js?version=0.97"></script>
+    <script src="js/materialize.js?version=0.97"></script>
+    <script src="js/init.js?version=0.97"></script>
+    <script src="js/scripts.js?version=0.97"></script>
+    <script src="js/settings.js?version=0.97"></script>
+    <script src="js/restore.js?version=0.97"></script>
     <style type="text/css">
         html,
         body {
@@ -101,6 +101,44 @@
                 )
             window.setInterval(refreshLogs, 2000);
         });
+
+    function errorToast(error) {
+        message = "";
+        details = "";
+        var isError = false;
+        if (error.hasOwnProperty("message") && error.hasOwnProperty("error_details")) {
+            // Its an error messag form the server
+            message = error.message;
+            details = error.error_details;
+            isError = true;
+        } else if (error.hasOwnProperty("status") && error.hasOwnProperty("statusText") && error.hasOwnProperty("responseText")) {
+            // Its an HTTP error, so format appropriately
+            message = "Got unexpected HTTP error " + error.status + ": " + error.statusText;
+            details = error.responseText;
+            isError = true;
+        } else if (error.hasOwnProperty("error")) {
+            message = error.error
+            details = JSON.stringify(error, undefined, 2);
+            isError = true;
+        } else if (error.hasOwnProperty("message")) {
+            message = error.message
+            isError = false;
+        } else {
+            message = "Got an unexpected error"
+            details = JSON.stringify(error, undefined, 2);
+            isError = true;
+        }
+
+        button_text = ""
+        if (details.length > 0) {
+            button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+            $('#error_details_paragraph').text(details);
+        }
+
+        console.log(error)
+        toast(message + button_text);
+        return isError;
+    }
     </script>
 </head>
 

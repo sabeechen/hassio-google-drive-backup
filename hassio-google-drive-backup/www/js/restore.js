@@ -43,26 +43,7 @@ function restoreSnapshot(target) {
     if (password.length > 0) {
       url = url + "&password=" + encodeURIComponent(password)
     }
-    $.get(url,
-      function (data) {
-        errorToast(data)
-        refreshstats();
-      }, "json")
-      .fail(
-        function (e) {
-          if (e.hasOwnProperty("readyState")
-            && e.hasOwnProperty("status")
-            && e.hasOwnProperty("statusText")
-            && e.readyState == 0
-            && e.status == 0
-            && e.statusText == "error") {
-            // For some reason, this is what jquery responds with when the server
-            // shuts down because of a snapshot so, just continue.
-            toast("Resotre has started.  Please wait a while for Home Assistant to come back online.");
-            return;
-          }
-          errorToast(e)
-        }
-      )
+    message = "Restoring '" + name + "'";
+    postJson(url, {}, refreshstats, null, message);
     M.Modal.getInstance(document.getElementById("restoremodal")).close();
   }

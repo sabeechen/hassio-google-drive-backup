@@ -26,3 +26,6 @@ class Time(object):
 
     def sleep(self, seconds: float) -> None:
         sleep(seconds)
+
+    def local(self, year, month, day, hour=0, minute=0, second=0, ms=0):
+        return datetime(year, month, day, hour, minute, second, ms, tzinfo=self.local_tz)

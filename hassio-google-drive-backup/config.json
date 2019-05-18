@@ -1,6 +1,6 @@
 {
   "name": "Hass.io Google Drive Backup",
-  "version": "0.96.1",
+  "version": "0.97",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically back up Hass.io snapshots to Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
@@ -33,6 +33,7 @@
     "certfile": "str?",
     "keyfile": "str?",
     "require_login": "bool?",
+    "snapshot_name": "str?",
     "snapshot_stale_minutes": "float(0,)?",
     "snapshot_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
     "generational_days": "int(0,)?",
@@ -52,7 +53,11 @@
     "expose_extra_server": "bool?",
     "drive_experimental": "bool?",
     "drive_ipv4": "match(^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$)?",
-    "ignore_ipv6_addresses": "bool?"
+    "ignore_ipv6_addresses": "bool?",
+    "confirm_multiple_deletes": "bool?",
+    "google_drive_timeout_seconds": "float(1,)?",
+    "google_drive_page_size": "int(1,)?",
+    "alternate_dns_servers": "match(^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})(,[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})*$)?"
   },
   "ports": {
     "1627/tcp": 1627

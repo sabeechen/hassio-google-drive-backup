@@ -8,3 +8,4 @@ CherryPy
 colored
 watchdog
 pyyaml
+dnspython

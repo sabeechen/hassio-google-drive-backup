@@ -74,6 +74,13 @@
                 required by Hass.io when restoring the snapshot. Leave blank to require no password. You can specify a
                 password from your secrets.yaml by using the syntax "!secret your_secret_key".</span>
             </div>
+            <div class="input-field col m6 s12" id="password_renter_block">
+              <i class="material-icons prefix">vpn_key</i>
+              <input type="password" autocomplete="new-password" id="snapshot_password_reenter" name="snapshot_password_reenter" settings_ignore='true' 
+                class="validate" onkeyup="checkForSecret()" />
+              <label for="snapshot_password_reenter">Re-enter password</label>
+              <span class="helper-text">Re-enter your new password to ensure it matches.</span>
+            </div>
           </div>
           <div class="row">
             <div class="input-field col s12">
@@ -394,15 +401,14 @@
               </div>
             </div>
             <div class="col s11 offset-s1 row">
-              <div class="input-field col m6 s12">
+              <div class="input-field col s12 m12 s12">
                 <i class="material-icons prefix">cloud_queue</i>
                 <input type="text" id="drive_ipv4" name="drive_ipv4"
                   pattern="^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$" class="validate" />
                 <label for="drive_ipv4">Google Drive IP Address Override</label>
                 <span class="helper-text">If you're having problems with reaching Google Drive, you can use this to
                   specify Google Drive's IP address manually and circumvent DNS lookup entirely. You can use a website
-                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
-                    one</a> to lookup
+                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this one</a> to lookup
                   what address will work for www.googleapis.com.</span>
               </div>
             </div>
@@ -417,7 +423,6 @@
           Some configuration is invalid, check for red errors up above.
         </span>
       </div>
-
       <a href="#!" class="waves-effect waves-light btn-flat" id="save_settings" onClick="saveSettings()">Save</a>
       <a href="#!" class="waves-effect waves-light btn-flat" onclick="handleCloseSettings()" id="save_cancel">Cancel</a>
     </div>

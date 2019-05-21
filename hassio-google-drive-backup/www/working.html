@@ -390,6 +390,13 @@
                 required by Hass.io when restoring the snapshot. Leave blank to require no password. You can specify a
                 password from your secrets.yaml by using the syntax "!secret your_secret_key".</span>
             </div>
+            <div class="input-field col m6 s12" id="password_renter_block">
+              <i class="material-icons prefix">vpn_key</i>
+              <input type="password" autocomplete="new-password" id="snapshot_password_reenter" name="snapshot_password_reenter" settings_ignore='true' 
+                class="validate" onkeyup="checkForSecret()" />
+              <label for="snapshot_password_reenter">Re-enter password</label>
+              <span class="helper-text">Re-enter your new password to ensure it matches.</span>
+            </div>
           </div>
           <div class="row">
             <div class="input-field col s12">

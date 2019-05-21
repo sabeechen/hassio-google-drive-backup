@@ -35,10 +35,30 @@ function snapshotNameOneOffExample() {
 }
 
 function checkForSecret() {
-  if ($("#snapshot_password").val().startsWith("!secret ")) {
-    $("#snapshot_password").attr('type', 'text')
+  var password = $("#snapshot_password");
+  var password2 = $("#snapshot_password_reenter");
+  var block = $("#password_renter_block");
+  var new_password = password.val();
+  var old_password = password.data('old_password');
+  if (password.val().startsWith("!secret ")) {
+    password.attr('type', 'text');
+    block.fadeOut();
+    return true;
   } else {
-    $("#snapshot_password").attr('type', 'password')
+    password.attr('type', 'password');
+    if (new_password.length > 0 && old_password != new_password) {
+      block.fadeIn();
+      if (new_password == password2.val()) {
+        password2.removeClass("invalid");
+        return true;
+      } else {
+        password2.addClass("invalid");
+        return false;
+      }
+    } else {
+      block.fadeOut();
+      return true;
+    }
   }
 }
 
@@ -158,6 +178,13 @@ function loadSettings() {
       $("#expose_extra_server").trigger("change");
       settingsChanged = false;
       snapshotNameExample();
+
+      if (config.hasOwnProperty("snapshot_password")) {
+        $("#snapshot_password").data("old_password", config.snapshot_password);
+      } else {
+        $("#snapshot_password").data("old_password", "");
+      }
+      $("#snapshot_password_reenter").val("");
       checkForSecret();
       M.Modal.getInstance(document.querySelector('#settings_modal')).open();
     }, "json")
@@ -166,6 +193,11 @@ function loadSettings() {
 function saveSettings() {
   if (!document.getElementById('settings_form').checkValidity()) {
     showSettingError({message: "Some configuration is invalid, check for red errors up above."})
+    return;
+  }
+
+  if (!checkForSecret()) {
+    showSettingError({message: "New snapshots passwords don't match"})
     return;
   }
   toast("Saving...")

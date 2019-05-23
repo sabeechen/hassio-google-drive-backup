@@ -1,3 +1,11 @@
+## [0.97.1] - 2015-05-22
+### Added
+- Better logging when the addon can't configure itself on startup
+- Settings menau makes you confirm the password when you change it
+
+### Fixes
+- Some small UI glitches
+
 ## [0.97] - 2015-05-18
 ### Added
 - A confrimation dialog to block backups from continuing when it attempts to delete more than one snapshot at a time.  This will help prevent misconfiguration from deleting snapshot history and can be disabled in the add-on settings.

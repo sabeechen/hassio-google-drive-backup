@@ -1,3 +1,6 @@
+## [0.97.3] - 2019-05-22
+- Fixes a regression in drive_ipv4 override option.
+
 ## [0.97.2] - 2019-05-22
 - Fixes a bug where "null" hostnames would prevent add-on startup
 

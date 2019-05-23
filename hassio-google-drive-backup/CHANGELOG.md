@@ -1,3 +1,6 @@
+## [0.97.2] - 2019-05-22
+- Fixes a bug where "null" hostnames would prevent add-on startup
+
 ## [0.97.1] - 2019-05-22
 ### Added
 - Better logging when the addon can't configure itself on startup

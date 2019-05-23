@@ -36,8 +36,8 @@ class Config(LogBase):
 
     def _refreshResolver(self):
         if self.resolver is not None:
-            if len(self.get(Setting.DRIVE_URL)) > 0:
-                self.resolver.addOverride("www.googleapis.com", [self.get(Setting.DRIVE_URL)])
+            if len(self.get(Setting.DRIVE_IPV4)) > 0:
+                self.resolver.addOverride("www.googleapis.com", [self.get(Setting.DRIVE_IPV4)])
             else:
                 self.resolver.clearOverrides()
             self.resolver.addResolveAddress("www.googleapis.com")

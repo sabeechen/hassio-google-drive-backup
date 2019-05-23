@@ -2,6 +2,8 @@ from pytest import raises
 from ..exceptions import InvalidConfigurationValue
 from ..config import Config
 from ..settings import Setting
+from ..resolver import Resolver
+import socket
 
 
 def test_validate_empty():
@@ -132,6 +134,36 @@ def test_GenerationalConfig(mocker) -> None:
     assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").getGenerationalConfig() == getGenConfig({"day_of_week": "tue"})
 
     assert Config().override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").override(Setting.GENERATIONAL_DAY_OF_YEAR, "4").getGenerationalConfig() is None
+
+
+def test_resolver(time):
+    host = "www.googleapis.com"
+    with Resolver(time) as resolver:
+        config = Config(resolver)
+        assert config.resolver is not None
+        assert len(socket.getaddrinfo(host, 443)) > 1
+
+        # override shoudl just return the drive ipv4 value
+        config.update({Setting.DRIVE_IPV4: "1.1.1.1"})
+        assert socket.getaddrinfo(host, 443) == [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ("1.1.1.1", 443))]
+        assert len(socket.getaddrinfo(host, 443)) == 1
+
+        # default options should clear the override
+        config.update({})
+        assert len(socket.getaddrinfo(host, 443)) > 1
+
+        # override should ignore alternate dns
+        config.update({Setting.DRIVE_IPV4: "1.1.1.1", Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8"})
+        resolver.toggle()
+        assert socket.getaddrinfo(host, 443) == [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ("1.1.1.1", 443))]
+        assert len(socket.getaddrinfo(host, 443)) == 1
+
+        # test using alternate dns
+        assert resolver.cache[host] is None
+        config.update({Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8"})
+        assert len(socket.getaddrinfo(host, 443)) > 1
+        assert len(resolver.cache[host][0]) > 1
+        assert len(resolver.cache[host][0]) == len(socket.getaddrinfo(host, 443))
 
 
 def getGenConfig(update):

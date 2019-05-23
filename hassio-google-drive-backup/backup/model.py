@@ -6,6 +6,7 @@ from .backupscheme import GenerationalScheme, OldestScheme
 from .trigger import Trigger
 from .exceptions import DeleteMutlipleSnapshotsError, SimulatedError
 from .globalinfo import GlobalInfo
+from .settings import Setting
 
 from datetime import datetime, timedelta
 from typing import TypeVar, Generic, List, Dict, Optional, Tuple
@@ -76,7 +77,7 @@ class Model(LogBase):
         return self._time_of_day
 
     def _nextSnapshot(self, now: datetime, last_snapshot: Optional[datetime]) -> Optional[datetime]:
-        if self.config.daysBetweenSnapshots() <= 0:
+        if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
             return None
         if not last_snapshot:
             if self.dest.enabled():
@@ -86,7 +87,7 @@ class Model(LogBase):
 
         timeofDay = self.getTimeOfDay()
         if not timeofDay:
-            return last_snapshot + timedelta(days=self.config.daysBetweenSnapshots())
+            return last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS))
 
         newest_local: datetime = self.time.toLocal(last_snapshot)
         time_that_day_local = datetime(newest_local.year, newest_local.month, newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
@@ -95,7 +96,7 @@ class Model(LogBase):
             next = self.time.toUtc(time_that_day_local)
         else:
             # return the next snapshot after the delta
-            next = self.time.toUtc(time_that_day_local + timedelta(days=self.config.daysBetweenSnapshots()))
+            next = self.time.toUtc(time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
         if next < now:
             return now
         else:
@@ -121,7 +122,7 @@ class Model(LogBase):
 
         next_snapshot = self.nextSnapshot(now)
         if next_snapshot and now >= next_snapshot and self.source.enabled() and self.dest.enabled():
-            self.createSnapshot(CreateOptions(now, self.config.snapshotName()))
+            self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
             self._purge(self.source)
 
         if self.dest.enabled():
@@ -166,9 +167,10 @@ class Model(LogBase):
         return purges
 
     def _parseTimeOfDay(self) -> Optional[Tuple[int, int]]:
-        if not self.config.snapshotTimeOfDay():
+        from_config = self.config.get(Setting.SNAPSHOT_TIME_OF_DAY)
+        if len(from_config) == 0:
             return None
-        parts = self.config.snapshotTimeOfDay().split(":")
+        parts = from_config.split(":")
         if len(parts) != 2:
             return None
         try:
@@ -227,7 +229,7 @@ class Model(LogBase):
             purge = self._getPurgeList(source)
             if len(purge) <= 0:
                 return
-            if len(purge) > 1 and (self.config.confirmMultipleDeletes() and not self.info.isPermitMultipleDeletes()):
+            if len(purge) > 1 and (self.config.get(Setting.CONFIRM_MULTIPLE_DELETES) and not self.info.isPermitMultipleDeletes()):
                 raise DeleteMutlipleSnapshotsError(self._getPurgeStats())
             self.deleteSnapshot(purge[0], source)
 

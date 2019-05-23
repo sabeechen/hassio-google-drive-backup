@@ -26,6 +26,7 @@ from .time import Time
 from .exceptions import LogicError
 from .globalinfo import GlobalInfo
 from .const import SOURCE_GOOGLE_DRIVE
+from .settings import Setting
 
 MIME_TYPE = "application/tar"
 THUMBNAIL_MIME_TYPE = "image/png"
@@ -54,7 +55,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         return SOURCE_GOOGLE_DRIVE
 
     def maxCount(self) -> None:
-        return self.config.maxSnapshotsInGoogleDrive()
+        return self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
 
     def enabled(self) -> bool:
         return self.drivebackend.enabled()
@@ -151,8 +152,8 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
 
     def _validateFolderId(self) -> str:
         # First, check if we cached the drive folder
-        if os.path.exists(self.config.folderFilePath()):
-            with open(self.config.folderFilePath(), "r") as folder_file:
+        if os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
+            with open(self.config.get(Setting.FOLDER_FILE_PATH), "r") as folder_file:
                 folder_id: str = folder_file.readline()
 
                 # Query drive for the folder to make sure it still exists and we have the right permission on it.
@@ -219,6 +220,6 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
 
     def _saveFolder(self, folder: Any) -> str:
         self.info("Saving snapshot folder: " + folder.get('id'))
-        with open(self.config.folderFilePath(), "w") as folder_file:
+        with open(self.config.get(Setting.FOLDER_FILE_PATH), "w") as folder_file:
             folder_file.write(folder.get('id'))
         return folder.get('id')

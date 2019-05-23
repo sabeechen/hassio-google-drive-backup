@@ -13,6 +13,7 @@ from .helpers import formatException
 from .haupdater import HaUpdater
 from .backoff import Backoff
 from datetime import timedelta
+from .settings import Setting
 
 
 class Coordinator(Trigger, LogBase):
@@ -63,7 +64,7 @@ class Coordinator(Trigger, LogBase):
             if scheduled is None:
                 scheduled = self._time.now() - timedelta(minutes=1)
             else:
-                scheduled += timedelta(seconds=self._config.maxSecondsBetweenSyncs())
+                scheduled += timedelta(seconds=self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS))
             next_snapshot = self.nextSnapshotTime()
             if next_snapshot is None:
                 return scheduled

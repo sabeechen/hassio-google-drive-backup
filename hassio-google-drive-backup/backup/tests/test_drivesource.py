@@ -9,6 +9,7 @@ from .helpers import createSnapshotTar
 from .conftest import ServerInstance
 from ..config import Config
 from .faketime import FakeTime
+from ..settings import Setting
 
 RETRY_EXHAUSTION_SLEEPS = [2, 4, 8, 16, 32]
 
@@ -85,7 +86,7 @@ def test_folder_creation(drive, time, config):
 
     # sync again, assert the folder is reused
     time.advanceDay()
-    os.remove(config.folderFilePath())
+    os.remove(config.get(Setting.FOLDER_FILE_PATH))
     assert len(drive.get()) == 0
     assert drive.getFolderId() == folderId
 
@@ -135,18 +136,14 @@ def test_out_of_space():
 
 
 def test_drive_dns_resolution_error(drive: DriveSource, server: ServerInstance, config: Config, time):
-    config.config.update({
-        "drive_host": "http://fsdfsdasdasdf.saasdsdfsdfsd.com:2567"
-    })
+    config.override(Setting.DRIVE_URL, "http://fsdfsdasdasdf.saasdsdfsdfsd.com:2567")
     with pytest.raises(GoogleDnsFailure):
         drive.get()
     assert time.sleeps == []
 
 
 def test_drive_connect_error(drive: DriveSource, server: ServerInstance, config: Config, time):
-    config.config.update({
-        "drive_host": "http://localhost:1034"
-    })
+    config.override(Setting.DRIVE_URL, "http://localhost:1034")
     with pytest.raises(GoogleCantConnect):
         drive.get()
     assert time.sleeps == []
@@ -162,9 +159,7 @@ def test_upload_session_expired(drive, time, server: ServerInstance):
 
 
 def test_drive_timeout(drive, config, time: FakeTime):
-    config.config.update({
-        "google_drive_timeout_seconds": 0.00001
-    })
+    config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 0.000001)
     with pytest.raises(GoogleTimeoutError):
         drive.get()
     assert time.sleeps == []

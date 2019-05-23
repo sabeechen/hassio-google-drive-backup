@@ -19,6 +19,7 @@ from ..haupdater import HaUpdater
 from .helpers import TestSource, LockBlocker
 from ..dev.testbackend import TestBackend
 from ..resolver import Resolver
+from ..settings import Setting
 
 
 class ServerThread():
@@ -94,7 +95,6 @@ def dest():
 @pytest.fixture
 def simple_config():
     config = Config()
-    config.setIngressInfo()
     return config
 
 
@@ -139,18 +139,17 @@ def config(cleandir, drive_creds: OAuth2Credentials):
     with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
         f.write(drive_creds.to_json())
 
-    config = Config({
-        "drive_host": "http://localhost:1234",
-        "secrets_file_path": "secrets.yaml",
-        "credentials_file_path": "credentials.dat",
-        "folder_file_path": "folder.dat",
-        "hassio_base_url": "http://localhost:1234/",
-        "ha_base_url": "http://localhost:1234/homeassistant/api/",
-        "hassio_header": "test_header",
-        "retained_file": "retained.json",
-        "authenticate_url": "http://localhost:1234/external/drivecreds/"
-    })
-    config.setIngressInfo()
+    config = Config()
+    config.override(Setting.DRIVE_URL, "http://localhost:1234")
+    config.override(Setting.HASSIO_URL, "http://localhost:1234/")
+    config.override(Setting.HOME_ASSISTANT_URL, "http://localhost:1234/homeassistant/api/")
+    config.override(Setting.AUTHENTICATE_URL, "http://localhost:1234/external/drivecreds/")
+    config.override(Setting.HASSIO_TOKEN, "test_header")
+    config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
+    config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")
+    config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
+    config.override(Setting.RETAINED_FILE_PATH, "retained.json")
+
     return config
 
 

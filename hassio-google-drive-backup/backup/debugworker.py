@@ -5,6 +5,7 @@ from .worker import Worker
 from .time import Time
 from .globalinfo import GlobalInfo
 from .config import Config
+from .settings import Setting
 from datetime import timedelta, datetime
 from .helpers import getPingInfo, formatException
 from .exceptions import KnownError
@@ -27,7 +28,7 @@ class DebugWorker(Worker):
     def doWork(self):
         if not self.last_dns_update or self.time.now() > self.last_dns_update + timedelta(hours=12):
             self.updateDns()
-        if self.config.sendErrorReports():
+        if self.config.get(Setting.SEND_ERROR_REPORTS):
             try:
                 self.maybeSendErrorReport()
             except Exception as e:

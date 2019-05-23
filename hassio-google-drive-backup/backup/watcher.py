@@ -8,6 +8,7 @@ from datetime import timedelta
 from datetime import datetime
 from threading import Lock
 from .trigger import Trigger
+from .settings import Setting
 
 REPORT_DELAY_SECONDS = 5
 
@@ -23,7 +24,7 @@ class Watcher(Trigger, LogBase, FileSystemEventHandler):
         self.report: bool = False
         self.report_debug: bool = True
         self.lock: Lock = Lock()
-        self.observer.schedule(self, self.config.backupDirectory(), recursive=False)
+        self.observer.schedule(self, self.config.get(Setting.BACKUP_DIRECTORY_PATH), recursive=False)
         self.observer.start()
 
     def name(self):

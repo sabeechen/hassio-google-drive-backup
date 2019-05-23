@@ -1,4 +1,3 @@
-from datetime import datetime
 from .snapshots import HASnapshot, Snapshot, AbstractSnapshot
 from .config import Config
 from .time import Time
@@ -14,6 +13,9 @@ from .const import SOURCE_HA
 from datetime import timedelta
 from io import IOBase
 from requests import HTTPError
+from .settings import Setting
+from .password import Password
+from .snapshotname import SnapshotName
 
 
 class PendingSnapshot(AbstractSnapshot):
@@ -93,10 +95,10 @@ class HaSource(SnapshotSource[HASnapshot]):
         pending = self.pending_snapshot
         if pending is not None:
             if self.snapshot_thread is None or not self.snapshot_thread.is_alive():
-                if self.time.now() > pending.startTime() + timedelta(seconds=self.config.pendingSnapshotTimeoutSeconds()):
+                if self.time.now() > pending.startTime() + timedelta(seconds=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS)):
                     self._killPending()
                     self.trigger()
-            if pending.isFailed() and self.time.now() >= pending.getFailureTime() + timedelta(seconds=self.config.failedSnapshotTimeoutSeconds()):
+            if pending.isFailed() and self.time.now() >= pending.getFailureTime() + timedelta(seconds=self.config.get(Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS)):
                 self._killPending()
                 self.trigger()
             if pending.isComplete():
@@ -108,15 +110,15 @@ class HaSource(SnapshotSource[HASnapshot]):
         return SOURCE_HA
 
     def maxCount(self) -> None:
-        return self.config.maxSnapshotsInHassio()
+        return self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
 
     def enabled(self) -> bool:
         return True
 
     def create(self, options: CreateOptions) -> HASnapshot:
         self._refreshInfo()
-        if len(options.name_template) == 0:
-            options.name_template = self.config.snapshotName()
+        if options.name_template is None or len(options.name_template) == 0:
+            options.name_template = self.config.get(Setting.SNAPSHOT_NAME)
         self.info("Requesting a new snapshot")
         data = self._buildSnapshotInfo(options)
         with self.lock:
@@ -133,7 +135,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             self.snapshot_thread.setDaemon(True)
             self.snapshot_thread.start()
 
-        self.snapshot_thread.join(timeout=self.config.newSnapshotTimeoutSeconds())
+        self.snapshot_thread.join(timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
 
         with self.lock:
             if self.pending_snapshot_error is not None:
@@ -224,7 +226,6 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.host_info = self.harequests.info()
         self.ha_info = self.harequests.haInfo()
         self.super_info = self.harequests.supervisorInfo()
-        self.config.setIngressInfo(self.host_info)
         self.config.update(ensureKey("options", self.self_info, "addon metdata"))
 
         self._info.ha_port = ensureKey("port", self.ha_info, "Home Assistant metadata")
@@ -292,12 +293,12 @@ class HaSource(SnapshotSource[HASnapshot]):
         folders = ["ssl", "share", "homeassistant", "addons/local"]
         type_name = "Full"
         for folder in folders:
-            if folder not in self.config.excludeFolders():
+            if folder not in self.config.get(Setting.EXCLUDE_FOLDERS):
                 request_info['folders'].append(folder)
             else:
                 type_name = "Partial"
         for addon in addons:
-            if addon not in self.config.excludeAddons():
+            if addon not in self.config.get(Setting.EXCLUDE_ADDONS):
                 request_info['addons'].append(addon)
             else:
                 type_name = "Partial"
@@ -305,21 +306,15 @@ class HaSource(SnapshotSource[HASnapshot]):
             del request_info['addons']
             del request_info['folders']
         protected = False
-        password = self.config.resolvePassword()
+        password = Password(self.config).resolve()
         if password:
             request_info['password'] = password
-        name = self._resolveName(type_name, options.name_template, self.time.toLocal(options.when))
+        name = SnapshotName().resolve(type_name, options.name_template, self.time.toLocal(options.when), self.host_info)
         request_info['name'] = name
         return (request_info, options, type_name, protected)
-
-    def _resolveName(self, snapshot_type: str, template: str, now_local: datetime) -> str:
-        return self.config.resolveSnapshotName(snapshot_type, template, now_local, self.host_info)
 
     def _killPending(self) -> None:
         with self.lock:
             self.pending_snapshot_error = None
             self.pending_snapshot_slug = None
             self.pending_snapshot = None
-
-    def updateConfig(self, config) -> None:
-        return self._postHassioData("{0}addons/self/options".format(self.config.hassioBaseUrl()), {'options': config})

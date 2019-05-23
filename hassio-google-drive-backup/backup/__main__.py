@@ -9,6 +9,7 @@ from .drivesource import DriveSource
 from .driverequests import DriveRequests
 from .globalinfo import GlobalInfo
 from .uiserver import UIServer
+from .settings import _LOOKUP
 from .coordinator import Coordinator
 from .time import Time
 from .model import Model
@@ -19,15 +20,19 @@ from .haupdater import HaUpdater
 from .watcher import Watcher
 from .debugworker import DebugWorker
 from .resolver import Resolver
+from .exceptions import KnownError
 
 
 def getConfig(resolver):
     if len(sys.argv) > 1:
         with open("backup/dev/data/{0}_options.json".format(sys.argv[1])) as f:
-            dev_config = json.load(f)
-        return Config(dev_config, resolver)
+            overrides = json.load(f)
+        config = Config(resolver)
+        for override in overrides:
+            config.override(_LOOKUP[override], overrides[override])
+        return config
     else:
-        return Config({}, resolver)
+        return Config(resolver)
 
 
 def main():
@@ -51,8 +56,12 @@ def main():
                 ha_source.init()
                 break
             except Exception as e:
-                LogBase().critical("Unable to reach Hassio supervisor.  Please ensure the supervisor is running.")
-                LogBase().debug(formatException(e))
+                if isinstance(e, KnownError):
+                    LogBase().critical("Unable to reach Hassio supervisor.")
+                    LogBase().critical(e.message())
+                else:
+                    LogBase().critical("Unable to reach Hassio supervisor.")
+                    LogBase().critical(formatException(e))
                 time.sleep(10)
 
         drive_requests = DriveRequests(config, time, requests, resolver)

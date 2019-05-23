@@ -8,6 +8,7 @@ from .globalinfo import GlobalInfo
 from .helpers import formatException
 from .backoff import Backoff
 from .worker import Worker
+from .settings import Setting
 from datetime import timedelta
 
 NOTIFICATION_TITLE = "Hass.io Google Drive Backup is Having Trouble"
@@ -33,12 +34,12 @@ class HaUpdater(Worker, LogBase):
 
     def update(self):
         try:
-            if self._config.enableSnapshotStaleSensor():
+            if self._config.get(Setting.ENABLE_SNAPSHOT_STALE_SENSOR):
                 self._requests.updateSnapshotStaleSensor(self._stale())
-            if self._config.enableSnapshotStateSensor() and self._snapshots_stale:
+            if self._config.get(Setting.ENABLE_SNAPSHOT_STATE_SENSOR) and self._snapshots_stale:
                 self._requests.updateSnapshotsSensor(self._state(), self._cache)
                 self._snapshots_stale = False
-            if self._config.notifyForStaleSnapshots():
+            if self._config.get(Setting.NOTIFY_FOR_STALE_SNAPSHOTS):
                 if self._stale() and not self._notified:
                     if self._info.url is None or len(self._info.url) == 0:
                         message = NOTIFICATION_DESC_STATIC
@@ -77,7 +78,7 @@ class HaUpdater(Worker, LogBase):
             return False
         if not self._info._last_error:
             return False
-        return self._time.now() > self._info._last_failure_time + timedelta(minutes=self._config.snapshotStaleMinutes())
+        return self._time.now() > self._info._last_failure_time + timedelta(seconds=self._config.get(Setting.SNAPSHOT_STALE_SECONDS))
 
     def _state(self):
         if self._stale():

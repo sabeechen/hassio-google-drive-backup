@@ -4,33 +4,11 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "RUN: Add-on",
+            "label": "RUN: Mock Backend Server",
             "type": "shell",
-            "command": "python3.7 run.py ../dev/data/dev_options.json ../dev/data/options.json",
+            "command": "python3.7 -m backup.dev.flaskserver",
             "options": {
                 "cwd": "${workspaceFolder}/hassio-google-drive-backup"
-            },
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "RUN: Mock Hass.io Server",
-            "type": "shell",
-            "command": "./mock_hassio.py",
-            "options": {
-                "cwd": "${workspaceFolder}/dev"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "RUN: Mock Drive/Hass.io Server",
-            "type": "shell",
-            "command": "./mock_server.py",
-            "options": {
-                "cwd": "${workspaceFolder}/dev"
             },
             "problemMatcher": []
         },

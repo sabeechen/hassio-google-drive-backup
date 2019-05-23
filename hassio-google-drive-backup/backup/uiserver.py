@@ -10,7 +10,8 @@ from .helpers import formatTimeSince
 from .helpers import formatException
 from .helpers import strToBool
 from .exceptions import ensureKey
-from .config import Config, SNAPSHOT_NAME_KEYS
+from .config import Config
+from .snapshotname import SNAPSHOT_NAME_KEYS
 from .exceptions import KnownError
 from .logbase import LogBase
 from typing import Dict, Any
@@ -23,7 +24,9 @@ from .harequests import HaRequests
 from .hasource import PendingSnapshot, HaSource
 from .snapshots import Snapshot
 from .globalinfo import GlobalInfo
+from .password import Password
 from .trigger import Trigger
+from .settings import Setting
 from os.path import join, abspath
 
 # Used to Google's oauth verification
@@ -65,7 +68,8 @@ class UIServer(Trigger, LogBase):
             status['snapshots'].append(self.getSnapshotDetails(snapshot))
         status['restore_link'] = self.getRestoreLink()
         status['drive_enabled'] = self._coord.enabled()
-        status['ask_error_reports'] = self.config.sendErrorReports() is None
+        # TODO: This doesn't check for key existence, won't work
+        status['ask_error_reports'] = not self.config.isExplicit(Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = self.config.warnExposeIngressUpgrade()
         status['cred_version'] = self._global_info.credVersion
         next = self._coord.nextSnapshotTime()
@@ -85,11 +89,11 @@ class UIServer(Trigger, LogBase):
         if self._global_info._last_error is not None:
             status['last_error'] = self.processError(self._global_info._last_error)
         status["firstSync"] = self._global_info._first_sync
-        status["maxSnapshotsInHasssio"] = self.config.maxSnapshotsInHassio()
-        status["maxSnapshotsInDrive"] = self.config.maxSnapshotsInGoogleDrive()
-        status["snapshot_name_template"] = self.config.snapshotName()
+        status["maxSnapshotsInHasssio"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
+        status["maxSnapshotsInDrive"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
+        status["snapshot_name_template"] = self.config.get(Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
-        status['authenticate_url'] = self.config.authenticateUrl()
+        status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
         status['dns_info'] = self._global_info.getDnsInfo()
         return status
 
@@ -208,7 +212,7 @@ class UIServer(Trigger, LogBase):
         snapshot: Snapshot = self._coord.getSnapshot(slug)
 
         # override create options for future uploads
-        options = CreateOptions(self._time.now(), self.config.snapshotName(), {
+        options = CreateOptions(self._time.now(), self.config.get(Setting.SNAPSHOT_NAME), {
             SOURCE_GOOGLE_DRIVE: strToBool(drive),
             SOURCE_HA: strToBool(ha)
         })
@@ -320,8 +324,11 @@ class UIServer(Trigger, LogBase):
         name_keys = {}
         for key in SNAPSHOT_NAME_KEYS:
             name_keys[key] = SNAPSHOT_NAME_KEYS[key]("Full", self._time.now(), self._ha_source.host_info)
+        current_config = {}
+        for setting in Setting:
+            current_config[setting.key()] = self.config.get(setting)
         return {
-            'config': self.config.config.copy(),
+            'config': current_config,
             'addons': self._global_info.addons,
             'support_ingress': self.config.useIngress(),
             'name_keys': name_keys
@@ -360,14 +367,22 @@ class UIServer(Trigger, LogBase):
         return self.handleError(lambda: self._saveconfig())
 
     def _saveconfig(self) -> Any:
-        config = ensureKey("config", cherrypy.request.json, "the confgiuration update request")
-        validated = self.config.validate(config)
+        update = ensureKey("config", cherrypy.request.json, "the confgiuration update request")
+
+        # validate the snapshot password
+        Password(self.config.getConfigFor(update)).resolve()
+
+        validated = self.config.validate(update)
         self._updateConfiguration(validated)
         return {'message': 'Settings saved'}
 
     def _updateConfiguration(self, new_config):
         server_config_before = self._getServerOptions()
-        self._harequests.updateConfig(new_config)
+
+        update = {}
+        for key in new_config:
+            update[key.key()] = new_config[key]
+        self._harequests.updateConfig(update)
         self.config.update(new_config)
         server_config_after = self._getServerOptions()
         if server_config_before != server_config_after:
@@ -377,11 +392,11 @@ class UIServer(Trigger, LogBase):
 
     def _getServerOptions(self):
         return {
-            "ssl": self.config.useSsl(),
-            "login": self.config.requireLogin(),
-            "certfile": self.config.certFile(),
-            "keyfile": self.config.keyFile(),
-            "extra_server": self.config.exposeExtraServer(),
+            "ssl": self.config.get(Setting.USE_SSL),
+            "login": self.config.get(Setting.REQUIRE_LOGIN),
+            "certfile": self.config.get(Setting.CERTFILE),
+            "keyfile": self.config.get(Setting.KEYFILE),
+            "extra_server": self.config.get(Setting.EXPOSE_EXTRA_SERVER),
             "ingress": self.config.useIngress()
         }
 
@@ -423,7 +438,7 @@ class UIServer(Trigger, LogBase):
 
         conf: Dict[Any, Any] = {
             'global': {
-                'server.socket_port': self.config.ingressPort(),
+                'server.socket_port': self.config.get(Setting.INGRESS_PORT),
                 'server.socket_host': '0.0.0.0',
                 'engine.autoreload.on': False,
                 'log.access_file': '',
@@ -434,26 +449,26 @@ class UIServer(Trigger, LogBase):
             "/": {
                 'tools.staticdir.on': True,
                 'tools.staticdir.dir': os.path.join(os.getcwd(), "www"),
-                'tools.auth_basic.on': self.config.requireLogin(),
+                'tools.auth_basic.on': self.config.get(Setting.REQUIRE_LOGIN),
                 'tools.auth_basic.realm': 'localhost',
                 'tools.auth_basic.checkpassword': self.auth,
                 'tools.auth_basic.accept_charset': 'UTF-8'
             }
         }
 
-        self.info("Starting server on port {}".format(self.config.ingressPort()))
+        self.info("Starting server on port {}".format(self.config.get(Setting.INGRESS_PORT)))
 
         cherrypy.config.update(conf)
 
-        if self.config.exposeExtraServer():
-            self.info("Starting server on port {}".format(self.config.port()))
+        if self.config.get(Setting.EXPOSE_EXTRA_SERVER):
+            self.info("Starting server on port {}".format(self.config.get(Setting.PORT)))
             self.host_server = cherrypy._cpserver.Server()
-            self.host_server.socket_port = self.config.port()
+            self.host_server.socket_port = self.config.get(Setting.PORT)
             self.host_server._socket_host = "0.0.0.0"
             self.host_server.subscribe()
-            if self.config.useSsl():
-                self.host_server.ssl_certificate = self.config.certFile()
-                self.host_server.ssl_private_key = self.config.keyFile()
+            if self.config.get(Setting.USE_SSL):
+                self.host_server.ssl_certificate = self.config.get(Setting.CERTFILE)
+                self.host_server.ssl_private_key = self.config.get(Setting.KEYFILE)
 
         cherrypy.tree.mount(self, "/", conf)
         logging.getLogger("cherrypy.error").setLevel(logging.WARNING)

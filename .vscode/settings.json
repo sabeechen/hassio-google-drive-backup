@@ -1,6 +1,7 @@
 {
     "python.testing.pyTestArgs": [
         "-s",
+        "--disable-warnings",
         "hassio-google-drive-backup"
     ],
     "python.testing.unittestEnabled": false,

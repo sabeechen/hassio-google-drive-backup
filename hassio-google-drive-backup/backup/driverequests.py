@@ -3,6 +3,7 @@ from .seekablerequest import SeekableRequest
 from .config import Config
 from .time import Time
 from .resolver import Resolver
+from .settings import Setting
 from .exceptions import LogicError, GoogleCredentialsExpired, ProtocolError, ensureKey, GoogleInternalError, DriveQuotaExceeded, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError, GoogleSessionError
 from datetime import timedelta
 from requests.exceptions import HTTPError, ConnectionError, Timeout, ConnectTimeout
@@ -80,9 +81,9 @@ class DriveRequests(LogBase):
             raise LogicError("Attempt to use Google Drive before credentials are configured")
 
     def tryLoadCredentials(self):
-        if os.path.isfile(self.config.credentialsFilePath()):
+        if os.path.isfile(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
             try:
-                with open(self.config.credentialsFilePath()) as f:
+                with open(self.config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
                     loaded = json.load(f)
                     self.cred_bearer = loaded['access_token']
                     self.cred_refresh = loaded['refresh_token']
@@ -104,7 +105,7 @@ class DriveRequests(LogBase):
 
     def saveCredentials(self, creds: Credentials):
         parsed = json.loads(creds.to_json())
-        with open(self.config.credentialsFilePath(), "w") as f:
+        with open(self.config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
             json.dump(parsed, f)
         self.tryLoadCredentials()
 
@@ -135,7 +136,7 @@ class DriveRequests(LogBase):
         return self.retryRequest("GET", URL_FILES + id + "/?" + urlencode(q), is_json=True)
 
     def download(self, id):
-        return SeekableRequest(self.config.driveHost() + URL_FILES + id + "/?alt=media", self._getHeaders()).prepare()
+        return SeekableRequest(self.config.get(Setting.DRIVE_URL) + URL_FILES + id + "/?alt=media", self._getHeaders()).prepare()
 
     def query(self, query):
         # SOMEDAY: Add a test for page size, test server support is needed too for continuation tokens
@@ -144,7 +145,7 @@ class DriveRequests(LogBase):
             q = {
                 "q": query,
                 "fields": QUERY_FIELDS,
-                "pageSize": self.config.googleDrivePageSize()
+                "pageSize": self.config.get(Setting.GOOGLE_DRIVE_PAGE_SIZE)
             }
             if continuation:
                 q["pageToken"] = continuation
@@ -213,7 +214,7 @@ class DriveRequests(LogBase):
         attempts = 0
         refresh_token = False
         if patch_url:
-            url = self.config.driveHost() + url
+            url = self.config.get(Setting.DRIVE_URL) + url
         while True:
             if auth_headers is not None:
                 send_headers = auth_headers.copy()
@@ -226,7 +227,7 @@ class DriveRequests(LogBase):
 
             self.debug("Making Google Drive request: " + url)
             try:
-                response = self._request_client.request(method, url, headers=send_headers, json=json, timeout=self.config.googleDriveTimeoutSeconds(), data=data, stream=stream)
+                response = self._request_client.request(method, url, headers=send_headers, json=json, timeout=self.config.get(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS), data=data, stream=stream)
             except ConnectionError as e:
                 if self.resolver is not None:
                     self.debug("Ran into trouble reaching Google Drive's servers.  We'll use alternate DNS servers on the next attempt.")

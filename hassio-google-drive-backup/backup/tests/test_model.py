@@ -5,6 +5,7 @@ from ..snapshots import Snapshot, DummySnapshotSource
 from ..exceptions import DeleteMutlipleSnapshotsError
 from ..config import Config
 from ..globalinfo import GlobalInfo
+from ..settings import Setting
 from .faketime import FakeTime
 from datetime import datetime, timedelta, timezone
 from dateutil.tz import gettz
@@ -19,47 +20,47 @@ def test_timeOfDay(mocker) -> None:
     time: FakeTime = FakeTime()
     info = GlobalInfo(time)
 
-    config: Config = Config([])
+    config: Config = Config()
     model: Model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': '00:00'})
+    config = Config().override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() == (0, 0)
 
-    config = Config({'snapshot_time_of_day': '23:59'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '23:59')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() == (23, 59)
 
-    config = Config({'snapshot_time_of_day': '24:59'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:59')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': '24:60'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:60')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': '-1:60'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '-1:60')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': '24:-1'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:-1')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': 'boop:60'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, 'boop:60')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': '24:boop'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:boop')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': '24:10:22'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:10:22')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
-    config = Config({'snapshot_time_of_day': '10'})
+    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '10')
     model = Model(config, time, default_source, default_source, info)
     assert model.getTimeOfDay() is None
 
@@ -69,12 +70,12 @@ def test_next_time():
     info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
 
-    config: Config = Config({'days_between_snapshots': 0})
+    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
     model: Model = Model(config, time, default_source, default_source, info)
     assert model._nextSnapshot(now=now, last_snapshot=None) is None
     assert model._nextSnapshot(now=now, last_snapshot=now) is None
 
-    config: Config = Config({'days_between_snapshots': 1})
+    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
     model: Model = Model(config, time, default_source, default_source, info)
     assert model._nextSnapshot(now=now, last_snapshot=None) == now - timedelta(minutes=1)
     assert model._nextSnapshot(now=now, last_snapshot=now) == now + timedelta(days=1)
@@ -88,7 +89,7 @@ def test_next_time_of_day():
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
     assert now == datetime(1985, 12, 6, 3, 0, tzinfo=test_tz)
 
-    config: Config = Config({'days_between_snapshots': 1, 'snapshot_time_of_day': '08:00'})
+    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source, default_source, info)
 
     assert model._nextSnapshot(now=now, last_snapshot=None) == now - timedelta(minutes=1)

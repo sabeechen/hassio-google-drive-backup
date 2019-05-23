@@ -10,6 +10,7 @@ from ..coordinator import Coordinator
 from ..globalinfo import GlobalInfo
 from ..hasource import HaSource
 from ..model import CreateOptions
+from ..settings import Setting
 from .conftest import ServerInstance
 from .test_config import defaultAnd
 from urllib.parse import quote
@@ -62,11 +63,11 @@ def test_getstatus(ui_server, config: Config, ha):
     assert data['folder_id'] is None
     assert data['last_error'] is None
     assert data['last_snapshot'] == "Never"
-    assert data['maxSnapshotsInDrive'] == config.maxSnapshotsInGoogleDrive()
-    assert data['maxSnapshotsInHasssio'] == config.maxSnapshotsInHassio()
+    assert data['maxSnapshotsInDrive'] == config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
+    assert data['maxSnapshotsInHasssio'] == config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
     assert data['next_snapshot'] == "right now"
     assert data['restore_link'] == "http://{host}:1337/hassio/snapshots"
-    assert data['snapshot_name_template'] == config.snapshotName()
+    assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
     assert data['warn_ingress_upgrade'] is False
     assert len(data['snapshots']) == 0
     assert data['sources'][SOURCE_GOOGLE_DRIVE] == {
@@ -242,17 +243,17 @@ def test_config(ui_server, config: Config, server: ServerInstance):
     }
     assert ui_server._starts == 1
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
-    assert config.daysBetweenSnapshots() == 20
-    assert server.getServer()._options == defaultAnd({'days_between_snapshots': 20})
+    assert config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) == 20
+    assert server.getServer()._options["days_between_snapshots"] == 20
     assert ui_server._starts == 1
 
 
 def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
     update = {"config": {"require_login": True}}
     assert ui_server._starts == 1
-    assert not config.requireLogin()
+    assert not config.get(Setting.REQUIRE_LOGIN)
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
-    assert config.requireLogin()
+    assert config.get(Setting.REQUIRE_LOGIN)
     assert server.getServer()._options['require_login']
     assert ui_server._starts == 2
 
@@ -271,17 +272,21 @@ def test_update_ingress(ui_server):
 
 
 def test_update_error_reports_true(ui_server, config: Config, server: ServerInstance):
-    assert config.sendErrorReports() is None
+    assert config.get(Setting.SEND_ERROR_REPORTS) is False
+    assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
     assert getjson("errorreports?send=true") == {'message': 'Configuration updated'}
-    assert config.sendErrorReports() is True
-    assert server.getServer()._options == defaultAnd({"send_error_reports": True})
+    assert config.get(Setting.SEND_ERROR_REPORTS) is True
+    assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
+    assert server.getServer()._options["send_error_reports"] is True
 
 
 def test_update_error_reports_false(ui_server, config: Config, server: ServerInstance):
-    assert config.sendErrorReports() is None
+    assert config.get(Setting.SEND_ERROR_REPORTS) is False
+    assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
     assert getjson("errorreports?send=false") == {'message': 'Configuration updated'}
-    assert config.sendErrorReports() is False
-    assert server.getServer()._options == defaultAnd()
+    assert config.get(Setting.SEND_ERROR_REPORTS) is False
+    assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
+    assert server.getServer()._options["send_error_reports"] is False
 
 
 def test_drive_cred_generation(ui_server, snapshot, server: ServerInstance, config: Config, global_info: GlobalInfo):
@@ -299,7 +304,7 @@ def test_drive_cred_generation(ui_server, snapshot, server: ServerInstance, conf
     assert status["last_error"]["error_type"] == "creds_bad"
 
     # simulate the user going through the Drive authentication workflow
-    requests.get(config.authenticateUrl() + "?redirectbacktoken=" + quote(URL + "token")).raise_for_status()
+    requests.get(config.get(Setting.AUTHENTICATE_URL) + "?redirectbacktoken=" + quote(URL + "token")).raise_for_status()
     status = getjson("sync")["last_error"] is ERROR_CREDS_EXPIRED
     assert global_info.credVersion == 1
 
@@ -307,7 +312,8 @@ def test_drive_cred_generation(ui_server, snapshot, server: ServerInstance, conf
 def test_confirm_multiple_deletes(ui_server, server: ServerInstance, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
     server.getServer()._options.update({"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
-    config.config.update({"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
+    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
+    config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
 
     # create three snapshots
     ha.create(CreateOptions(time.now(), "Name1"))
@@ -327,7 +333,7 @@ def test_confirm_multiple_deletes(ui_server, server: ServerInstance, config: Con
     assert getjson("confirmdelete?always=false") == {
         'message': 'Snapshots deleted this one time'
     }
-    assert config.confirmMultipleDeletes()
+    assert config.get(Setting.CONFIRM_MULTIPLE_DELETES)
 
     # backup, verify the deletes go through
     status = getjson("sync")
@@ -356,7 +362,7 @@ def test_update_multiple_deletes_setting(ui_server, server: ServerInstance, conf
     assert getjson("confirmdelete?always=true") == {
         'message': 'Configuration updated, I\'ll never ask again'
     }
-    assert not config.confirmMultipleDeletes()
+    assert not config.get(Setting.CONFIRM_MULTIPLE_DELETES)
 
 
 def getjson(path, status=200, json=None, auth=None):

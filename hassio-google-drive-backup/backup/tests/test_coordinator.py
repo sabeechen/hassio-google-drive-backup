@@ -7,6 +7,7 @@ from ..model import CreateOptions
 from .helpers import TestSource
 from ..snapshots import Snapshot
 from ..config import Config
+from ..settings import Setting
 from datetime import timedelta
 
 
@@ -215,10 +216,9 @@ def test_download(coord: Coordinator, source, dest, snapshot):
 
 def test_backoff(coord: Coordinator, model, source: TestSource, dest: TestSource, snapshot, time: FakeTime, simple_config: Config):
     assert coord.check()
-    simple_config.config.update({
-        "days_between_snapshots": 1,
-        "max_seconds_between_syncs": 60 * 60 * 6
-    })
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)
+
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
     assert not coord.check()
     error = Exception("BOOM")
@@ -245,7 +245,7 @@ def test_backoff(coord: Coordinator, model, source: TestSource, dest: TestSource
     assert not coord.check()
 
     # if the next snapshot is less that 6 hours from the last one, that that shoudl be when we sync
-    simple_config.config.update({"days_between_snapshots": 1.0 / 24.0})
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1.0 / 24.0)
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=1)
     assert not coord.check()
 

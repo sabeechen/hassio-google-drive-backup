@@ -1,8 +1,7 @@
 from pytest import raises
 from ..exceptions import InvalidConfigurationValue
-from ..config import Config, DEFAULTS
-from os.path import abspath, join
-import json
+from ..config import Config
+from ..settings import Setting
 
 
 def test_validate_empty():
@@ -11,89 +10,92 @@ def test_validate_empty():
 
 
 def test_validate_int():
-    assert Config().validate({'max_snapshots_in_hassio': 5}) == defaultAnd({'max_snapshots_in_hassio': 5})
-    assert Config().validate({'max_snapshots_in_hassio': 5.0}) == defaultAnd({'max_snapshots_in_hassio': 5})
-    assert Config().validate({'max_snapshots_in_hassio': "5"}) == defaultAnd({'max_snapshots_in_hassio': 5})
+    assert Config().validate({'max_snapshots_in_hassio': 5}) == defaultAnd({Setting.MAX_SNAPSHOTS_IN_HASSIO: 5})
+    assert Config().validate({'max_snapshots_in_hassio': 5.0}) == defaultAnd({Setting.MAX_SNAPSHOTS_IN_HASSIO: 5})
+    assert Config().validate({'max_snapshots_in_hassio': "5"}) == defaultAnd({Setting.MAX_SNAPSHOTS_IN_HASSIO: 5})
 
     with raises(InvalidConfigurationValue):
         Config().validate({'max_snapshots_in_hassio': -1})
 
 
 def test_validate_float():
-    assert Config().validate({'days_between_snapshots': 5}) == defaultAnd({'days_between_snapshots': 5})
-    assert Config().validate({'days_between_snapshots': 5.0}) == defaultAnd({'days_between_snapshots': 5})
-    assert Config().validate({'days_between_snapshots': "5"}) == defaultAnd({'days_between_snapshots': 5})
+    setting = Setting.DAYS_BETWEEN_SNAPSHOTS
+    assert Config().validate({setting: 5}) == defaultAnd({setting: 5})
+    assert Config().validate({setting.key(): 5}) == defaultAnd({setting: 5})
+    assert Config().validate({setting: 5.0}) == defaultAnd({setting: 5})
+    assert Config().validate({setting: "5"}) == defaultAnd({setting: 5})
 
     with raises(InvalidConfigurationValue):
         Config().validate({'days_between_snapshots': -1})
 
 
 def test_validate_bool():
-    assert Config().validate({'send_error_reports': True}) == defaultAnd({'send_error_reports': True})
-    assert Config().validate({'send_error_reports': False}) == defaultAnd({'send_error_reports': False})
-    assert Config().validate({'send_error_reports': "true"}) == defaultAnd({'send_error_reports': True})
-    assert Config().validate({'send_error_reports': "false"}) == defaultAnd({'send_error_reports': False})
-    assert Config().validate({'send_error_reports': "1"}) == defaultAnd({'send_error_reports': True})
-    assert Config().validate({'send_error_reports': "0"}) == defaultAnd({'send_error_reports': False})
-    assert Config().validate({'send_error_reports': "yes"}) == defaultAnd({'send_error_reports': True})
-    assert Config().validate({'send_error_reports': "no"}) == defaultAnd({'send_error_reports': False})
-    assert Config().validate({'send_error_reports': "on"}) == defaultAnd({'send_error_reports': True})
-    assert Config().validate({'send_error_reports': "off"}) == defaultAnd({'send_error_reports': False})
+    setting = Setting.SEND_ERROR_REPORTS
+    assert Config().validate({setting: True}) == defaultAnd({setting: True})
+    assert Config().validate({setting: False}) == defaultAnd({setting: False})
+    assert Config().validate({setting: "true"}) == defaultAnd({setting: True})
+    assert Config().validate({setting: "false"}) == defaultAnd({setting: False})
+    assert Config().validate({setting: "1"}) == defaultAnd({setting: True})
+    assert Config().validate({setting: "0"}) == defaultAnd({setting: False})
+    assert Config().validate({setting: "yes"}) == defaultAnd({setting: True})
+    assert Config().validate({setting: "no"}) == defaultAnd({setting: False})
+    assert Config().validate({setting: "on"}) == defaultAnd({setting: True})
+    assert Config().validate({setting: "off"}) == defaultAnd({setting: False})
 
 
 def test_validate_string():
-    assert Config().validate({'snapshot_name': True}) == defaultAnd({'snapshot_name': "True"})
-    assert Config().validate({'snapshot_name': False}) == defaultAnd({'snapshot_name': "False"})
-    assert Config().validate({'snapshot_name': "true"}) == defaultAnd({'snapshot_name': "true"})
-    assert Config().validate({'snapshot_name': "false"}) == defaultAnd({'snapshot_name': "false"})
-    assert Config().validate({'snapshot_name': "1"}) == defaultAnd({'snapshot_name': "1"})
-    assert Config().validate({'snapshot_name': "0"}) == defaultAnd({'snapshot_name': "0"})
-    assert Config().validate({'snapshot_name': "yes"}) == defaultAnd({'snapshot_name': "yes"})
-    assert Config().validate({'snapshot_name': "no"}) == defaultAnd({'snapshot_name': "no"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: True}) == defaultAnd({Setting.SNAPSHOT_NAME: "True"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: False}) == defaultAnd({Setting.SNAPSHOT_NAME: "False"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "true"}) == defaultAnd({Setting.SNAPSHOT_NAME: "true"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "false"}) == defaultAnd({Setting.SNAPSHOT_NAME: "false"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "1"}) == defaultAnd({Setting.SNAPSHOT_NAME: "1"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "0"}) == defaultAnd({Setting.SNAPSHOT_NAME: "0"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "yes"}) == defaultAnd({Setting.SNAPSHOT_NAME: "yes"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "no"}) == defaultAnd({Setting.SNAPSHOT_NAME: "no"})
 
 
 def test_validate_url():
-    assert Config().validate({'hassio_base_url': True}) == defaultAnd({'hassio_base_url': "True"})
-    assert Config().validate({'hassio_base_url': False}) == defaultAnd({'hassio_base_url': "False"})
-    assert Config().validate({'hassio_base_url': "true"}) == defaultAnd({'hassio_base_url': "true"})
-    assert Config().validate({'hassio_base_url': "false"}) == defaultAnd({'hassio_base_url': "false"})
-    assert Config().validate({'hassio_base_url': "1"}) == defaultAnd({'hassio_base_url': "1"})
-    assert Config().validate({'hassio_base_url': "0"}) == defaultAnd({'hassio_base_url': "0"})
-    assert Config().validate({'hassio_base_url': "yes"}) == defaultAnd({'hassio_base_url': "yes"})
-    assert Config().validate({'hassio_base_url': "no"}) == defaultAnd({'hassio_base_url': "no"})
+    assert Config().validate({Setting.HASSIO_URL: True}) == defaultAnd({Setting.HASSIO_URL: "True"})
+    assert Config().validate({Setting.HASSIO_URL: False}) == defaultAnd({Setting.HASSIO_URL: "False"})
+    assert Config().validate({Setting.HASSIO_URL: "true"}) == defaultAnd({Setting.HASSIO_URL: "true"})
+    assert Config().validate({Setting.HASSIO_URL: "false"}) == defaultAnd({Setting.HASSIO_URL: "false"})
+    assert Config().validate({Setting.HASSIO_URL: "1"}) == defaultAnd({Setting.HASSIO_URL: "1"})
+    assert Config().validate({Setting.HASSIO_URL: "0"}) == defaultAnd({Setting.HASSIO_URL: "0"})
+    assert Config().validate({Setting.HASSIO_URL: "yes"}) == defaultAnd({Setting.HASSIO_URL: "yes"})
+    assert Config().validate({Setting.HASSIO_URL: "no"}) == defaultAnd({Setting.HASSIO_URL: "no"})
 
 
 def test_validate_regex():
-    assert Config().validate({'drive_ipv4': "192.168.1.1"}) == defaultAnd({'drive_ipv4': "192.168.1.1"})
+    assert Config().validate({Setting.DRIVE_IPV4: "192.168.1.1"}) == defaultAnd({Setting.DRIVE_IPV4: "192.168.1.1"})
     with raises(InvalidConfigurationValue):
-        Config().validate({'drive_ipv4': -1})
+        Config().validate({Setting.DRIVE_IPV4: -1})
     with raises(InvalidConfigurationValue):
-        Config().validate({'drive_ipv4': "192.168.1"})
+        Config().validate({Setting.DRIVE_IPV4: "192.168.1"})
 
 
 def test_remove_ssl():
-    assert Config().validate({'use_ssl': True}) == defaultAnd({'use_ssl': True})
-    assert Config().validate({'use_ssl': False}) == defaultAnd({'use_ssl': False})
+    assert Config().validate({Setting.USE_SSL: True}) == defaultAnd({Setting.USE_SSL: True})
+    assert Config().validate({Setting.USE_SSL: False}) == defaultAnd({Setting.USE_SSL: False})
     assert Config().validate({
-        'use_ssl': False,
-        'certfile': "removed",
-        'keyfile': 'removed'
-    }) == defaultAnd({'use_ssl': False})
+        Setting.USE_SSL: False,
+        Setting.CERTFILE: "removed",
+        Setting.KEYFILE: 'removed'
+    }) == defaultAnd({Setting.USE_SSL: False})
     assert Config().validate({
-        'use_ssl': True,
-        'certfile': "kept",
-        'keyfile': 'kept'
+        Setting.USE_SSL: True,
+        Setting.CERTFILE: "kept",
+        Setting.KEYFILE: 'kept'
     }) == defaultAnd({
-        'use_ssl': True,
-        'certfile': "kept",
-        'keyfile': 'kept'
+        Setting.USE_SSL: True,
+        Setting.CERTFILE: "kept",
+        Setting.KEYFILE: 'kept'
     })
 
 
 def test_send_error_reports():
-    assert Config().validate({'send_error_reports': False}) == defaultAnd()
-    assert Config().validate({'send_error_reports': True}) == defaultAnd({'send_error_reports': True})
-    assert Config().validate({'send_error_reports': None}) == defaultAnd({'send_error_reports': False})
+    assert Config().validate({Setting.SEND_ERROR_REPORTS: False}) == defaultAnd({Setting.SEND_ERROR_REPORTS: False})
+    assert Config().validate({Setting.SEND_ERROR_REPORTS: True}) == defaultAnd({Setting.SEND_ERROR_REPORTS: True})
+    assert Config().validate({Setting.SEND_ERROR_REPORTS: None}) == defaultAnd()
 
 
 def test_unrecognized_values_filter():
@@ -101,139 +103,35 @@ def test_unrecognized_values_filter():
 
 
 def test_removes_defaults():
-    assert Config().validate({'snapshot_time_of_day': ""}) == defaultAnd()
-
-
-def test_all_defaults_valid():
-    path = abspath(join(__file__, "..", "..", "..", "config.json"))
-    with open(path) as f:
-        addon_config = json.load(f)
-    config = Config()
-    for key in DEFAULTS:
-        if key in addon_config['schema']:
-            # The key should have a default value
-            assert key in DEFAULTS
-
-            # The default should be valid
-            assert config._validateConfig(key, addon_config['schema'][key], DEFAULTS[key]) == DEFAULTS[key]
-    # validate that all of the defaults are present and valid
-    pass
+    assert Config().validate({Setting.SNAPSHOT_TIME_OF_DAY: ""}) == defaultAnd()
 
 
 def defaultAnd(config={}):
     ret = {
-        'days_between_snapshots': 3,
-        'max_snapshots_in_hassio': 4,
-        'max_snapshots_in_google_drive': 4,
-        'use_ssl': False,
-        'send_error_reports': False
+        Setting.DAYS_BETWEEN_SNAPSHOTS: 3,
+        Setting.MAX_SNAPSHOTS_IN_HASSIO: 4,
+        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: 4,
+        Setting.USE_SSL: False
     }
     ret.update(config)
     return ret
 
 
-# INGRESS: Rewrite this test
-"""
-def test_expose_extra_server(mocker) -> None:
-    assertConfigValue(
-        method=Config.exposeExtraServer,
-        default=False,
-        param_name="expose_extra_server",
-        html_name="expose_extra_server",
-        override=True,
-        default_removes=True)
-
-    assert Config({"expose_extra_server": True}).exposeExtraServer() is True
-    assert Config({"expose_extra_server": True}).useIngress() is False
-    assert Config({"expose_extra_server": True}).warnIngress() is False
-
-    config: Config = Config()
-
-    # Test strange version
-    config.setIngressInfo({'homeassistant': 'badversion'}, force_enable=True)
-    assert config.useIngress() is False
-    assert config.warnIngress() is True
-
-    # Test empty version
-    config.setIngressInfo({'homeassistant': ''}, force_enable=True)
-    assert config.useIngress() is False
-    assert config.warnIngress() is True
-
-    # Test null version
-    config.setIngressInfo({}, force_enable=True)
-    assert config.useIngress() is False
-    assert config.warnIngress() is True
-
-    # Test weird minimum version
-    config.setIngressInfo({'homeassistant': '0.91.3.otherinfo'}, force_enable=True)
-    assert config.useIngress() is True
-    assert config.warnIngress() is False
-
-    # Test older
-    config.setIngressInfo({'homeassistant': '0.91.2'}, force_enable=True)
-    assert config.useIngress() is False
-    assert config.warnIngress() is True
-
-    # Test older
-    config.setIngressInfo({'homeassistant': '0.90.3'}, force_enable=True)
-    assert config.useIngress() is False
-    assert config.warnIngress() is True
-
-    # Test minimum version
-    config.setIngressInfo({'homeassistant': '0.91.3'}, force_enable=True)
-    assert config.useIngress() is True
-    assert config.warnIngress() is False
-
-    # Test newer version
-    config.setIngressInfo({'homeassistant': '0.91.4'}, force_enable=True)
-    assert config.useIngress() is True
-    assert config.warnIngress() is False
-
-    # Test newer version
-    config.setIngressInfo({'homeassistant': '0.92.3'}, force_enable=True)
-    assert config.useIngress() is True
-    assert config.warnIngress() is False
-
-    # Test newer version
-    config.setIngressInfo({'homeassistant': '1.91.3'}, force_enable=True)
-    assert config.useIngress() is True
-    assert config.warnIngress() is False
-"""
-
-
 def test_GenerationalConfig(mocker) -> None:
     assert Config().getGenerationalConfig() is None
-    assert Config({"generational_days": 3}).getGenerationalConfig() == getGenConfig({"days": 3})
-    assert Config({"generational_weeks": 3}).getGenerationalConfig() == getGenConfig({"weeks": 3})
-    assert Config({"generational_months": 3}).getGenerationalConfig() == getGenConfig({"months": 3})
-    assert Config({"generational_years": 3}).getGenerationalConfig() == getGenConfig({"years": 3})
-    assert Config({
-        "generational_days": 1,
-        "generational_day_of_year": 3
-    }).getGenerationalConfig() == getGenConfig(
-        {
-            "day_of_year": 3
-        })
-    assert Config({
-        "generational_days": 1,
-        "generational_day_of_month": 3
-    }).getGenerationalConfig() == getGenConfig(
-        {
-            "day_of_month": 3
-        })
-    assert Config({
-        "generational_days": 1,
-        "generational_day_of_week": "tue"
-    }).getGenerationalConfig() == getGenConfig(
-        {
-            "day_of_week": "tue"
-        })
+    assert Config().override(Setting.GENERATIONAL_DAYS, 3).getGenerationalConfig() == getGenConfig({"days": 3})
+    assert Config().override(Setting.GENERATIONAL_WEEKS, 3).getGenerationalConfig() == getGenConfig({"weeks": 3})
+    assert Config().override(Setting.GENERATIONAL_MONTHS, 3).getGenerationalConfig() == getGenConfig({"months": 3})
+    assert Config().override(Setting.GENERATIONAL_YEARS, 3).getGenerationalConfig() == getGenConfig({"years": 3})
+    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_YEAR, 3).getGenerationalConfig() == getGenConfig({
+        "day_of_year": 3
+    })
+    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).getGenerationalConfig() == getGenConfig({
+        "day_of_month": 3
+    })
+    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").getGenerationalConfig() == getGenConfig({"day_of_week": "tue"})
 
-    assert Config({
-        "generational_day_of_month": 3,
-        "generational_day_of_week": "tue",
-        "generational_day_of_year": "4"
-    }).getGenerationalConfig() is None
+    assert Config().override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").override(Setting.GENERATIONAL_DAY_OF_YEAR, "4").getGenerationalConfig() is None
 
 
 def getGenConfig(update):

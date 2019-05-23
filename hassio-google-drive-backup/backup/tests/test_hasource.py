@@ -9,6 +9,8 @@ from ..config import Config
 from .helpers import createSnapshotTar, getTestStream, all_folders, all_addons
 from .conftest import ServerInstance
 from ..const import SOURCE_HA
+from ..settings import Setting
+from ..password import Password
 
 
 def test_sync_empty(ha) -> None:
@@ -16,7 +18,7 @@ def test_sync_empty(ha) -> None:
 
 
 def test_CRUD(ha, time, server: ServerInstance) -> None:
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 100})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 100})
     snapshot: HASnapshot = ha.create(CreateOptions(time.now(), "Test Name"))
 
     assert snapshot.name() == "Test Name"
@@ -67,7 +69,7 @@ def test_CRUD(ha, time, server: ServerInstance) -> None:
 
 def test_pending_snapshot_nowait(ha, time, server):
     server.update({"snapshot_wait_time": 5})
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 0})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 0})
     snapshot_immediate: PendingSnapshot = ha.create(CreateOptions(time.now(), "Test Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     snapshot_pending: HASnapshot = ha.get()['pending']
@@ -85,7 +87,7 @@ def test_pending_snapshot_nowait(ha, time, server):
 
 
 def test_pending_snapshot_already_in_progress(ha, time, server):
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 100})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 100})
     with server.blockSnapshots():
         with pytest.raises(SnapshotInProgress):
             ha.create(CreateOptions(time.now(), "Test Name"))
@@ -111,7 +113,7 @@ def test_pending_snapshot_already_in_progress(ha, time, server):
 
 
 def test_partial_snapshot(ha, time, server: ServerInstance, config: Config):
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 100})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 100})
     for folder in all_folders:
         server.getServer()._options.update({'exclude_folders': folder})
         snapshot: HASnapshot = ha.create(CreateOptions(time.now(), "Test Name"))
@@ -143,7 +145,7 @@ def test_partial_snapshot(ha, time, server: ServerInstance, config: Config):
 
 
 def test_snapshot_password(ha: HaSource, config, time, server: ServerInstance):
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 100})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 100})
     snapshot: HASnapshot = ha.create(CreateOptions(time.now(), "Test Name"))
     assert not snapshot.protected()
 
@@ -151,27 +153,24 @@ def test_snapshot_password(ha: HaSource, config, time, server: ServerInstance):
     snapshot = ha.create(CreateOptions(time.now(), "Test Name"))
     assert snapshot.protected()
 
-    server.getServer()._options.update({'snapshot_password': 'test'})
-    ha.init()
-    assert ha.config.resolvePassword() == 'test'
+    ha.config.override(Setting.SNAPSHOT_PASSWORD, 'test')
+    assert Password(ha.config).resolve() == 'test'
 
-    server.getServer()._options.update({'snapshot_password': '!secret for_unit_tests'})
-    ha.init()
-    assert ha.config.resolvePassword() == 'password value'
+    ha.config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
+    assert Password(ha.config).resolve() == 'password value'
 
-    server.getServer()._options.update({'snapshot_password': '!secret bad_key'})
-    ha.init()
+    ha.config.override(Setting.SNAPSHOT_PASSWORD, '!secret bad_key')
     try:
-        ha.config.resolvePassword()
+        Password(ha.config).resolve()
         assert False
     except SnapshotPasswordKeyInvalid:
         # expected
         pass
 
-    server.getServer()._options.update({'snapshot_password': '!secret for_unit_tests', 'secrets_file_path': "/bad/file/path"})
-    ha.init()
+    ha.config.override(Setting.SECRETS_FILE_PATH, "/bad/file/path")
+    ha.config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
     try:
-        ha.config.resolvePassword()
+        Password(ha.config).resolve()
         assert False
     except SnapshotPasswordKeyInvalid:
         # expected
@@ -209,9 +208,14 @@ def assertName(ha: HaSource, time, template: str, expected: str):
     assert snapshot.name() == expected
 
 
+def test_default_name(time: FakeTime, ha, server):
+    snapshot = ha.create(CreateOptions(time.now(), ""))
+    assert snapshot.name() == "Full Snapshot 1985-12-06 02:00:00"
+
+
 def test_pending_snapshot_timeout(time: FakeTime, ha, server):
     server.update({"snapshot_wait_time": 5})
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 0})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 0})
     snapshot_immediate: PendingSnapshot = ha.create(CreateOptions(time.now(), "Test Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Test Name"
@@ -226,7 +230,7 @@ def test_pending_snapshot_timeout(time: FakeTime, ha, server):
 
 def test_pending_snapshot_timeout_external(time, ha: HaSource, server: ServerInstance):
     # now configure a snapshto to start outside of the addon
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 100})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 100})
     with server.blockSnapshots():
         with pytest.raises(SnapshotInProgress):
             ha.create(CreateOptions(time.now(), "Ignored"))
@@ -245,7 +249,7 @@ def test_pending_snapshot_timeout_external(time, ha: HaSource, server: ServerIns
 
 def test_pending_snapshot_replaces_original(time, ha: HaSource, server: ServerInstance):
     # now configure a snapshto to start outside of the addon
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 100})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 100})
     with server.blockSnapshots():
         with pytest.raises(SnapshotInProgress):
             ha.create(CreateOptions(time.now(), "Ignored"))
@@ -274,7 +278,7 @@ def test_retained_on_finish(ha: HaSource, server: ServerInstance, time):
     with server.blockSnapshots():
         server.update({'always_hard_lock': True})
         retention = {ha.name(): True}
-        server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 0})
+        server.getServer()._options.update({"new_snapshot_timeout_seconds": 0})
         pending = ha.create(CreateOptions(time.now(), "Test Name", retention))
         results = ha.get()
         assert pending.name() == "Test Name"
@@ -328,7 +332,7 @@ def test_upload_wrong_slug(time, ha):
 def test_failed_snapshot(time, ha: HaSource, server: ServerInstance):
     # create a blocking snapshot
     server.update({"hassio_snapshot_error": 524, 'always_hard_lock': True})
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 0})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 0})
     with server.blockSnapshots():
         snapshot_immediate = ha.create(CreateOptions(time.now(), "Some Name"))
         assert isinstance(snapshot_immediate, PendingSnapshot)
@@ -356,7 +360,7 @@ def test_failed_snapshot(time, ha: HaSource, server: ServerInstance):
 def test_failed_snapshot_retry(ha: HaSource, server: ServerInstance, time: FakeTime, config: Config):
     # create a blocking snapshot
     server.update({"hassio_snapshot_error": 524, 'always_hard_lock': True})
-    server.getServer()._options.update({"new_snapshot_pending_timeout_seconds": 0})
+    server.getServer()._options.update({"new_snapshot_timeout_seconds": 0})
     with server.blockSnapshots():
         snapshot_immediate = ha.create(CreateOptions(time.now(), "Some Name"))
         assert isinstance(snapshot_immediate, PendingSnapshot)
@@ -372,7 +376,7 @@ def test_failed_snapshot_retry(ha: HaSource, server: ServerInstance, time: FakeT
     assert snapshot_immediate._exception.response.status_code == 524
 
     assert not ha.check()
-    time.advance(seconds=config.failedSnapshotTimeoutSeconds())
+    time.advance(seconds=config.get(Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS))
 
     # should trigger a sync after the failed snapshot timeout
     assert ha.check()

@@ -11,6 +11,7 @@ from .conftest import ServerInstance
 from ..const import SOURCE_HA
 from ..settings import Setting
 from ..password import Password
+from ..globalinfo import GlobalInfo
 
 
 def test_sync_empty(ha) -> None:
@@ -404,3 +405,13 @@ def test_delete_error(time, ha: HaSource, server: ServerInstance):
 
     server.update({"hassio_error": None})
     ha.delete(full)
+
+
+def test_hostname(time, ha: HaSource, server: ServerInstance, global_info: GlobalInfo):
+    server.getServer().update({"hostname": "testme", "web_ui": "http://[HOST]:12345/"})
+    ha.init()
+    assert global_info.url == "http://testme.local:12345/"
+
+    server.getServer().update({"hostname": None})
+    ha.init()
+    assert global_info.url is None

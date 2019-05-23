@@ -232,7 +232,11 @@ class HaSource(SnapshotSource[HASnapshot]):
         self._info.ha_ssl = ensureKey("ssl", self.ha_info, "Home Assistant metadata")
         self._info.addons = ensureKey("addons", self.super_info, "Supervisor metadata")
         self._info.slug = ensureKey("slug", self.self_info, "addon metdata")
-        self._info.url = ensureKey("webui", self.self_info, "addon metdata").replace("[HOST]", ensureKey("hostname", self.host_info, "host metadata") + ".local")
+        hostname = ensureKey("hostname", self.host_info, "host metadata")
+        if hostname is not None:
+            self._info.url = ensureKey("webui", self.self_info, "addon metdata").replace("[HOST]", hostname + ".local")
+        else:
+            self._info.url = None
 
         self._info.addDebugInfo("self_info", self.self_info)
         self._info.addDebugInfo("host_info", self.host_info)

@@ -1,9 +1,6 @@
 from ..settings import Setting
 
 
-# TODO: need a test to verify we ask for error reports when it isn't set
-
-
 def test_defaults():
     # all settings should have a default
     for setting in Setting:

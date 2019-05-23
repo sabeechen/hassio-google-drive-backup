@@ -68,7 +68,6 @@ class UIServer(Trigger, LogBase):
             status['snapshots'].append(self.getSnapshotDetails(snapshot))
         status['restore_link'] = self.getRestoreLink()
         status['drive_enabled'] = self._coord.enabled()
-        # TODO: This doesn't check for key existence, won't work
         status['ask_error_reports'] = not self.config.isExplicit(Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = self.config.warnExposeIngressUpgrade()
         status['cred_version'] = self._global_info.credVersion

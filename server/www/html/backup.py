@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import cgi;
-import cgitb;
-cgitb.enable()
-from oauth2client.client import OAuth2WebServerFlow
-from pprint import pformat
+import cgi
+import cgitb
 import urllib
+from oauth2client.client import OAuth2WebServerFlow
+
+cgitb.enable()
 
 SCOPE = 'https://www.googleapis.com/auth/drive.file'
 AUTHORIZED_REDIRECT = "https://philosophyofpen.com/login/backup.py"
@@ -38,9 +38,9 @@ elif 'state' in args and 'code' in args:
             prompt='consent',
             access_type='offline',
             state=args.getvalue('state'))
-    
+
         creds = flow.step2_exchange(args.getvalue('code'))
-    
+
         # Redirect to "state" address with serialized creentials"
         print("Status: 303 See other")
         print("Location: " + urllib.parse.unquote(args.getvalue('state')) + "?creds=" + urllib.parse.quote(creds.to_json()))

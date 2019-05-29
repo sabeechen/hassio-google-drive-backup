@@ -3,7 +3,7 @@ from .model import SnapshotSource, Model, CreateOptions
 from .snapshots import Snapshot, DummySnapshotSource
 from typing import Dict
 from io import IOBase
-from datetime import datetime, timedelta
+from datetime import datetime
 from const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from settings import Setting
 from .time import Time, FakeTime
@@ -103,7 +103,7 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
 
 
 class Simulation(LogBase):
-    def __init(self, config, time):
+    def __init(self, config, time: Time):
         self.config = config
         self.real_time = time
 
@@ -125,3 +125,8 @@ class Simulation(LogBase):
         model = Model(self.config, fake_time, source, dest, GlobalInfo(fake_time))
         while fake_time.now() <= until:
             model.sync()
+            next = model.nextSnapshot(fake_time.now())
+            if not next or next <= fake_time.now():
+                break
+            else:
+                fake_time.setNow(next)

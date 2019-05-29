@@ -278,7 +278,7 @@ class Snapshot(object):
 
 
 class DummySnapshotSource(AbstractSnapshot):
-    def __init__(self, name, date, source, slug):
+    def __init__(self, name, date, source, slug, retain=False):
         super().__init__(
             name=name,
             slug=slug,
@@ -288,7 +288,7 @@ class DummySnapshotSource(AbstractSnapshot):
             snapshotType="dummy",
             version="dummy_version",
             protected=True,
-            retained=False,
+            retained=retain,
             uploadable=True,
             details={})
 

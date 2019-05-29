@@ -78,7 +78,7 @@ class Resolver(LogBase):
             return None
         if not self.enabled:
             return None
-        
+
         entry = self.cache.get(host)
         if entry is not None and entry[1] > self.time.now():
             return entry[0]

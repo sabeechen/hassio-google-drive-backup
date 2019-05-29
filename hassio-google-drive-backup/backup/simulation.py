@@ -4,8 +4,8 @@ from .snapshots import Snapshot, DummySnapshotSource
 from typing import Dict
 from io import IOBase
 from datetime import datetime
-from const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
-from settings import Setting
+from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
+from .settings import Setting
 from .time import Time, FakeTime
 from .globalinfo import GlobalInfo
 from .snapshotname import SnapshotName

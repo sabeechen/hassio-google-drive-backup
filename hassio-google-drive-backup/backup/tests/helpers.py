@@ -3,6 +3,7 @@ from io import BytesIO
 from typing import Dict
 from ..snapshots import Snapshot, DummySnapshotSource
 from ..model import CreateOptions, SnapshotSource
+from ..simulation import SimulatedSource
 from threading import Thread, Event
 from io import IOBase
 import tarfile
@@ -148,38 +149,9 @@ class LockBlocker():
         self._event.clear()
 
 
-class TestSource(SnapshotSource[DummySnapshotSource]):
+class TestSource(SimulatedSource):
     def __init__(self, name):
-        self._name = name
-        self.current: Dict[str, DummySnapshotSource] = {}
-        self.saved = []
-        self.deleted = []
-        self.created = []
-        self._enabled = True
-        self.index = 0
-        self.max = 0
-
-    def setEnabled(self, value):
-        self._enabled = value
-        return self
-
-    def setMax(self, count):
-        self.max = count
-        return self
-
-    def maxCount(self) -> None:
-        return self.max
-
-    def insert(self, name, date, slug=None):
-        if slug is None:
-            slug = name
-        new_snapshot = DummySnapshotSource(
-            name,
-            date,
-            self._name,
-            slug)
-        self.current[new_snapshot.slug()] = new_snapshot
-        return new_snapshot
+        super().__init__(name)
 
     def reset(self):
         self.saved = []
@@ -196,52 +168,3 @@ class TestSource(SnapshotSource[DummySnapshotSource]):
     def assertUnchanged(self):
         self.assertThat(current=len(self.current))
         return self
-
-    def name(self) -> str:
-        return self._name
-
-    def enabled(self) -> bool:
-        return self._enabled
-
-    def create(self, options: CreateOptions) -> DummySnapshotSource:
-        assert self.enabled
-        new_snapshot = DummySnapshotSource(
-            options.name_template,
-            options.when,
-            self._name,
-            "{0}slug{1}".format(self._name, self.index))
-        self.index += 1
-        self.current[new_snapshot.slug()] = new_snapshot
-        self.created.append(new_snapshot)
-        return new_snapshot
-
-    def get(self) -> Dict[str, DummySnapshotSource]:
-        assert self.enabled
-        return self.current
-
-    def delete(self, snapshot: Snapshot):
-        assert self.enabled
-        assert snapshot.getSource(self._name) is not None
-        assert snapshot.getSource(self._name).source() is self._name
-        assert snapshot.slug() in self.current
-        slug = snapshot.slug()
-        self.deleted.append(snapshot.getSource(self._name))
-        snapshot.removeSource(self._name)
-        del self.current[slug]
-
-    def save(self, snapshot: Snapshot, bytes: IOBase = None) -> DummySnapshotSource:
-        assert self.enabled
-        assert snapshot.slug() not in self.current
-        new_snapshot = DummySnapshotSource(snapshot.name(), snapshot.date(), self._name, snapshot.slug())
-        snapshot.addSource(new_snapshot)
-        self.current[new_snapshot.slug()] = new_snapshot
-        self.saved.append(new_snapshot)
-        return new_snapshot
-
-    def read(self, snapshot: DummySnapshotSource) -> IOBase:
-        assert self.enabled
-        return None
-
-    def retain(self, snapshot: DummySnapshotSource, retain: bool) -> None:
-        assert self.enabled
-        snapshot.getSource(self.name()).setRetained(retain)

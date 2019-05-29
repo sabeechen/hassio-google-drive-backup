@@ -278,7 +278,7 @@ class UIServer(Trigger, LogBase):
             return self.redirect("/")
 
     @cherrypy.expose
-    def error(self, error: str = "") -> None:
+    def simerror(self, error: str = "") -> None:
         if len(error) == 0:
             self._coord._model.simulate_error = None
         else:

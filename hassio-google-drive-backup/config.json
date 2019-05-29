@@ -1,6 +1,6 @@
 {
   "name": "Hass.io Google Drive Backup",
-  "version": "0.97.3",
+  "version": "0.97.4",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically back up Hass.io snapshots to Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],

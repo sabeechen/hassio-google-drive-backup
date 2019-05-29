@@ -1,3 +1,6 @@
+## [0.97.4] - 2019-05-29
+- Fixes an issue where failed logins caused sync to fail.
+
 ## [0.97.3] - 2019-05-22
 - Fixes a regression in drive_ipv4 override option.
 

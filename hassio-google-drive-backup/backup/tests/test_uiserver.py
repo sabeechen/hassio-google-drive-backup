@@ -258,12 +258,12 @@ def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
     assert ui_server._starts == 2
 
     get("getstatus", status=401)
+    get("getstatus", auth=("user", "badpassword"), status=401)
     get("getstatus", auth=("user", "pass"))
+    status = getjson("sync", auth=("user", "pass"))
 
-
-def test_sync_error():
-    # TODO: write this test
-    pass
+    # verify a the sync succeeded (no errors)
+    assert status["last_error"] is None
 
 
 def test_update_ingress(ui_server):

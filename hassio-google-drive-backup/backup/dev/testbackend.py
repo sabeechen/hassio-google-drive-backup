@@ -548,6 +548,9 @@ class TestBackend(object):
 
     def hassioAuthenticate(self, context: Context) -> Any:
         self._verifyHassioHeader(context)
+        input_json = context.json()
+        if input_json.get("username") != self._username or input_json.get("password") != self._password:
+            return HTTP_400_BAD_REQUEST
         return self.formatDataResponse({})
 
     def haStateUpdate(self, context, entity: str) -> Any:

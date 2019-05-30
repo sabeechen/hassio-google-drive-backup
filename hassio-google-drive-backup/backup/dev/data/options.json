@@ -1,6 +1,6 @@
 {
     "send_error_reports": true,
-    "max_snapshots_in_hassio": 3,
+    "max_snapshots_in_hassio": 4,
     "max_snapshots_in_google_drive": 3,
     "days_between_snapshots": 10,
     "use_ssl": false,

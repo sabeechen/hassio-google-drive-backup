@@ -345,6 +345,21 @@ def test_dont_upload_deletable(time, model, source, dest):
     assertSnapshot(model, [old])
 
 
+def test_dont_upload_when_disabled(time, model, source, dest):
+    now = time.now()
+
+    # Make an enabled destination but with upload diabled.
+    dest.setMax(1)
+    dest.setUpload(False)
+
+    model.sync(now)
+
+    # Verify the snapshot was created at the source but not uploaded.
+    source.assertThat(current=1, created=1)
+    dest.assertUnchanged()
+    assert len(model.snapshots) == 1
+
+
 def test_dont_delete_purgable(time, model, source, dest, simple_config):
     now = time.now()
 

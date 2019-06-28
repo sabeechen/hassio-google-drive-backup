@@ -57,6 +57,9 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
     def maxCount(self) -> None:
         return self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
 
+    def upload(self) -> bool:
+        return self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
+
     def enabled(self) -> bool:
         return self.drivebackend.enabled()
 
@@ -198,7 +201,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 return False
             elif not caps['canListChildren']:
                 return False
-            elif not caps['canRemoveChildren']:
+            elif not caps.get('canDeleteChildren', False) and not caps.get('canRemoveChildren', False):
                 return False
             elif folder.get("mimeType") != FOLDER_MIME_TYPE:
                 return False

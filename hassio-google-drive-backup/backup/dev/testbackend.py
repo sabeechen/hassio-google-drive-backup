@@ -593,7 +593,7 @@ class TestBackend(object):
 
     def formatItem(self, base, id):
         base['capabilities'] = {'canAddChildren': True,
-                                'canListChildren': True, 'canRemoveChildren': True}
+                                'canListChildren': True, 'canDeleteChildren': True}
         base['trashed'] = False
         base['id'] = id
         base['modifiedTime'] = self.timeToRfc3339String(self._time.now())

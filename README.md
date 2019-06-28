@@ -245,11 +245,6 @@ On the first "Getting Started" page of the add-on underneath the "Authenticate w
 Select "Never Delete" from menu next to a snapshot in the add-on's Web UI.  You can choose to keep it from being deleted in Home Assistant or Google Drive.  When you do this, the snapshots will no lnger count against the maximum number of snapshots allowed in Google Drive or Home Assistant.
 Alternatively, you can move a snapshot in Google Drive out of the snapshot folder.  the add-on will ignore any files that aren't in the snapshot folder.  Just don't move them back in accidentally since they'll get "cleaned up" like any old snapshot after a while :)
 
-### I already have something that backs up my snapshots.  Can I just use this to trigger new ones?
-Yes, though I'll point out that Google Gives you a lot of free storage, 15GB at the time of this writing, and their infrastructure is a lot more resiliant than any of your hard drives.  If you set the configuration option:
-`"max_snapshots_in_google_drive": 0`
-Then it won't try to upload anything to Google Drive.
-
 ### What do I do if I've found an error?
 If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage.  This should include a link to pre-populate a new issue in github, which I'd encourage you to do.  Additioanlly you can set the add-on config option `"verbose": true` to get information from the add-on's logs to help me with debugging.
 

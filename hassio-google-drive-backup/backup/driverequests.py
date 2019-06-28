@@ -27,7 +27,7 @@ THUMBNAIL_MIME_TYPE = "image/png"
 QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
 CREATE_FIELDS = SELECT_FIELDS
 URL_FILES = "/drive/v3/files/"
-URL_UPLOAD = "/upload/drive/v3/files/?uploadType=resumable"
+URL_UPLOAD = "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true"
 URL_AUTH = "/oauth2/v4/token"
 PAGE_SIZE = 100
 CHUNK_SIZE = 5 * 262144
@@ -131,12 +131,13 @@ class DriveRequests(LogBase):
 
     def get(self, id):
         q = {
-            "fields": SELECT_FIELDS
+            "fields": SELECT_FIELDS,
+            "supportsAllDrives": "true"
         }
         return self.retryRequest("GET", URL_FILES + id + "/?" + urlencode(q), is_json=True)
 
     def download(self, id):
-        return SeekableRequest(self.config.get(Setting.DRIVE_URL) + URL_FILES + id + "/?alt=media", self._getHeaders()).prepare()
+        return SeekableRequest(self.config.get(Setting.DRIVE_URL) + URL_FILES + id + "/?alt=media&supportsAllDrives=true", self._getHeaders()).prepare()
 
     def query(self, query):
         # SOMEDAY: Add a test for page size, test server support is needed too for continuation tokens
@@ -145,7 +146,10 @@ class DriveRequests(LogBase):
             q = {
                 "q": query,
                 "fields": QUERY_FIELDS,
-                "pageSize": self.config.get(Setting.GOOGLE_DRIVE_PAGE_SIZE)
+                "pageSize": self.config.get(Setting.GOOGLE_DRIVE_PAGE_SIZE),
+                "supportsAllDrives": "true",
+                "includeItemsFromAllDrives": "true",
+                "corpora": "allDrives"
             }
             if continuation:
                 q["pageToken"] = continuation
@@ -158,10 +162,10 @@ class DriveRequests(LogBase):
                 continuation = response['nextPageToken']
 
     def update(self, id, update_metadata):
-        self.retryRequest("PATCH", URL_FILES + id + "/", json=update_metadata)
+        self.retryRequest("PATCH", URL_FILES + id + "/?supportsAllDrives=true", json=update_metadata)
 
     def delete(self, id):
-        self.retryRequest("DELETE", URL_FILES + id + "/")
+        self.retryRequest("DELETE", URL_FILES + id + "/?supportsAllDrives=true")
 
     def create(self, stream, metadata, mime_type):
         # Upload logic is complicated. See https://developers.google.com/drive/api/v3/manage-uploads
@@ -207,7 +211,7 @@ class DriveRequests(LogBase):
                 partial.raise_for_status()
 
     def createFolder(self, metadata):
-        return self.retryRequest("POST", URL_FILES, is_json=True, json=metadata)
+        return self.retryRequest("POST", URL_FILES + "?supportsAllDrives=true", is_json=True, json=metadata)
 
     def retryRequest(self, method, url, auth_headers: Optional[Dict[str, str]] = None, headers: Optional[Dict[str, str]] = None, json: Optional[Dict[str, Any]] = None, data: Any = None, is_json: bool = False, stream: bool = False, cred_retry: bool = True, patch_url: bool = True) -> Any:
         backoff = DRIVE_RETRY_INITIAL_SECONDS

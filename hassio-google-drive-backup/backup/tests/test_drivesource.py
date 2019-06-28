@@ -182,3 +182,9 @@ def test_check_time(drive: DriveSource, drive_creds):
     assert not drive.check()
     drive.saveCreds(drive_creds)
     assert drive.check()
+
+
+def test_disable_upload(drive: DriveSource, config: Config):
+    assert drive.upload()
+    config.override(Setting.ENABLE_DRIVE_UPLOAD, False)
+    assert not drive.upload()

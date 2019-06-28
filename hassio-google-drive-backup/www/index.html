@@ -140,7 +140,7 @@
             </div>
           </div>
           <div class="row">
-            <div class="col m12 s12">
+            <div class="col m6 s12">
               <label>
                 <input type="checkbox" name="confirm_multiple_deletes" id="confirm_multiple_deletes"
                   class="filled-in checkbox-ha" />
@@ -149,6 +149,15 @@
                 <span class="helper-text">When disabled, the add-on will NOT stop and ask for confirmation before
                   deleting more than one snapshot. Disabling this is dangerous because accidental misconfiguration can
                   cause you to lose your backed-up snapshot history.</span>
+              </label>
+            </div>
+            <div class="col m6 s12">
+              <label>
+                <input type="checkbox" name="enable_drive_upload" id="enable_drive_upload"
+                  class="filled-in checkbox-ha" />
+                <span>Enable Google Drive Upload</span>
+                <br />
+                <span class="helper-text">When disabled, new snapshots will still be created in Home Assistant but will not be uploaded to Google Drive.</span>
               </label>
             </div>
           </div>
@@ -184,8 +193,8 @@
                       onchange="toggleSlide(this, 'settings_ssl_details');" />
                     <span>Use SSL</span>
                     <br />
-                    <span class="helper-text">Require SSL to acces this web interface. You must already have SSL keys
-                      configured to use this. Note that once this setting is chnaged, you'll need to navigate to the
+                    <span class="helper-text">Require SSL to access this web interface. You must already have SSL keys
+                      configured to use this. Note that once this setting is changed, you'll need to navigate to the
                       new url
                       to continue using this webpage.</span>
                   </label>
@@ -423,6 +432,7 @@
           Some configuration is invalid, check for red errors up above.
         </span>
       </div>
+
       <a href="#!" class="waves-effect waves-light btn-flat" id="save_settings" onClick="saveSettings()">Save</a>
       <a href="#!" class="waves-effect waves-light btn-flat" onclick="handleCloseSettings()" id="save_cancel">Cancel</a>
     </div>

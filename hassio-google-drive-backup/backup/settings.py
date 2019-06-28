@@ -44,6 +44,7 @@ class Setting(Enum):
     ENABLE_SNAPSHOT_STATE_SENSOR = "enable_snapshot_state_sensor"
     SEND_ERROR_REPORTS = "send_error_reports"
     CONFIRM_MULTIPLE_DELETES = "confirm_multiple_deletes"
+    ENABLE_DRIVE_UPLOAD = "enable_drive_upload"
 
     # Network and dns stuff
     DRIVE_EXPERIMENTAL = "drive_experimental"
@@ -123,6 +124,7 @@ _DEFAULTS = {
     Setting.SEND_ERROR_REPORTS: False,
     Setting.VERBOSE: False,
     Setting.CONFIRM_MULTIPLE_DELETES: True,
+    Setting.ENABLE_DRIVE_UPLOAD: True,
 
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8,8.8.4.4",

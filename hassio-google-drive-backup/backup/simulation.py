@@ -19,6 +19,7 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
         self.deleted = []
         self.created = []
         self._enabled = True
+        self._upload = True
         self.index = 0
         self.max = 0
         self.snapshot_name = SnapshotName()
@@ -28,6 +29,13 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
     def setEnabled(self, value):
         self._enabled = value
         return self
+
+    def setUpload(self, value):
+        self._upload = value
+        return self
+
+    def upload(self):
+        return self._upload
 
     def setMax(self, count):
         self.max = count

@@ -57,6 +57,9 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
     def maxCount(self) -> None:
         return self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
 
+    def upload(self) -> bool:
+        return self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
+
     def enabled(self) -> bool:
         return self.drivebackend.enabled()
 

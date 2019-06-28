@@ -33,6 +33,9 @@ class SnapshotSource(Trigger, Generic[T]):
     def enabled(self) -> bool:
         return True
 
+    def upload(self) -> bool:
+        return True
+
     def create(self, options: CreateOptions) -> T:
         pass
 
@@ -125,7 +128,7 @@ class Model(LogBase):
             self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
             self._purge(self.source)
 
-        if self.dest.enabled():
+        if self.dest.enabled() and self.dest.upload():
             # get the snapshots we should upload
             uploads = []
             for snapshot in self.snapshots.values():

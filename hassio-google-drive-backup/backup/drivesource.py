@@ -198,7 +198,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 return False
             elif not caps['canListChildren']:
                 return False
-            elif not caps['canRemoveChildren']:
+            elif not caps.get('canDeleteChildren', False) and not caps.get('canRemoveChildren', False):
                 return False
             elif folder.get("mimeType") != FOLDER_MIME_TYPE:
                 return False

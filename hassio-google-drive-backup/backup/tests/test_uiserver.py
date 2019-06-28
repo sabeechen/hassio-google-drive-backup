@@ -12,7 +12,6 @@ from ..hasource import HaSource
 from ..model import CreateOptions
 from ..settings import Setting
 from .conftest import ServerInstance
-from .test_config import defaultAnd
 from urllib.parse import quote
 
 URL = "http://localhost:1627/"

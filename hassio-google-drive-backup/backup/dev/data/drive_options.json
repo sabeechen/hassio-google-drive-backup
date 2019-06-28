@@ -1,11 +1,9 @@
 {
-    "snapshot_stale_minutes": 0.5,
     "hassio_url": "http://localhost:2567/",
     "home_assistant_url": "http://localhost:2567/homeassistant/api/",
     "hassio_header": "test_header",
     "retained_file_path": "backup/dev/data/retained.json",
-    "backup_directory": "backup/dev/backup",
-    "ingress_upgrade_file": "backup/dev/data/ingress_upgrade",
+    "backup_directory_path": "backup/dev/backup",
     "certfile": "backup/dev/ssl/fullchain.pem",
     "keyfile": "backup/dev/ssl/privkey.pem",
     "secrets_file_path": "backup/dev/data/secrets.yaml",

@@ -10,12 +10,11 @@ class GlobalInfo(LogBase):
         self._syncs = 0
         self._failures = 0
         self._last_error = 0
-        self._last_success = None
         self._successes = 0
         self._last_failure_time = None
         self._uploads = 0
         self._last_upload = None
-        self._last_success = None
+        self._last_success = time.now()
         self._start_time = None
         self._last_upload_size = None
         self._last_sync_start = None

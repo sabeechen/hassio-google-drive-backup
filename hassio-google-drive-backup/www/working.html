@@ -7,17 +7,17 @@
   <title>Hassio Google Drive Backup</title>
 
   <!-- CSS  -->
-  <link href="css/icons.css?version=0.97.4"" rel="stylesheet">
-  <link href="css/materialize.css?version=0.97.4"" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.97.4"" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.97.4"">
-  <script src="js/jquery.js?version=0.97.4""></script>
-  <script src="js/materialize.js?version=0.97.4""></script>
-  <script src="js/init.js?version=0.97.4""></script>
-  <script src="js/scripts.js?version=0.97.4""></script>
-  <script src="js/settings.js?version=0.97.4""></script>
-  <script src="js/restore.js?version=0.97.4""></script>
-  <script src="js/moment.js?version=0.97.4""></script>
+  <link href="css/icons.css?version=0.98.1" rel="stylesheet">
+  <link href="css/materialize.css?version=0.98.1" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.98.1" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="images/favicon.png?version=0.98.1">
+  <script src="js/jquery.js?version=0.98.1"></script>
+  <script src="js/materialize.js?version=0.98.1"></script>
+  <script src="js/init.js?version=0.98.1"></script>
+  <script src="js/scripts.js?version=0.98.1"></script>
+  <script src="js/settings.js?version=0.98.1"></script>
+  <script src="js/restore.js?version=0.98.1"></script>
+  <script src="js/moment.js?version=0.98.1"></script>
   <script type="text/javascript">
     $(document).ready(function () {
       // Needed to make modal dialogs work.
@@ -482,14 +482,18 @@
               <label>
                 <input type="checkbox" name="expose_extra_server" id="expose_extra_server" class="filled-in checkbox-ha"
                   onchange="toggleSlide(this, 'settings_server_details');" />
-                <span id="expose_extra_server_label">Expose another server on port 1627</span>
+                <span id="expose_extra_server_label">Expose this web interface on an additional port</span>
                 <br />
-                <span class="helper-text" id="expose_extra_server_help">Expose another server on port 1627 with optional
-                  SSL and username authentication.</span>
+                <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.  This isn't necessary unless you'd like to avoid accessing this web interface through <a target="_blank" href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
               </label>
             </div>
           </div>
           <div class="row" id="settings_server_details" style="display: none">
+            <div class="col s11 offset-s1">
+              <label>
+                <span class="helper-text">Use the options below to configure what kind of SSL and and authentication you'd like to use for this webpage.  By default this server is exposed on port 1627, but that can be changed from the add-on installation page.</span>
+              </label>
+            </div>
             <div class="col s11 offset-s1">
               <div class="row">
                 <div class="col s12">
@@ -497,8 +501,7 @@
                     <input type="checkbox" name="require_login" id="require_login" class="filled-in checkbox-ha" />
                     <span>Require Login</span>
                     <br />
-                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.
-                      Disabling this isn't recommended.</span>
+                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.</span>
                   </label>
                 </div>
               </div>
@@ -709,7 +712,7 @@
                 <label for="alternate_dns_servers">Alternate DNS Servers</label>
                 <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
                   use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
-                  must support TCP DNS lookups. The defaults are Google's public DNS servers.</span>
+                  must support TCP DNS lookups. The defaults are <a href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS servers</a>.</span>
               </div>
             </div>
             <div class="col s11 offset-s1 row">
@@ -1356,31 +1359,26 @@
             <div class="card">
               <div class="card-content">
                 <span class="card-title">Use Ingress instead?</span>
-                <p>It looks like you've upgraded to a version of Home Assistant that supports <a target="_blank"
+                <p>The latest version of this add-on supports <a target="_blank"
                     href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>. Ingress allows
                   this web interface to be embeeded inside of Home Assistant, which is usually more secure because it
                   delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and
-                  username/password). In the future, almost all add-ons that expose a web interface are expected to
-                  expose it using ingress.</p>
+                  username/password). Currently this interface is being served on an additional port outside of 
+                  Home Assistant which is less secure.</p>
                 <br />
-                <p><b>Select no</b> to continue exposing a web interface on port 1627 with the SSL and authentication
-                  settings you choose.</p>
-                <p><b>Select yes</b> to disable the server on port 1627 and use ingress only. You'll be redirected to
-                  the ingress page automatically and in the future you can access this page securely from the add-on
-                  "WEB UI" button.</p>
+                <p><b>Select YES</b> to only use ingress to access this interface.  This is recommended, as ingress is almost always more secure.
+                  In the future you can access this interface by following the "WEB UI" link from the add-on installation page or embedding it in 
+                  your Home Assistant side-bar from the same place.</p>
+                <br />
+                <p><b>Select NO</b> to continue exposing a web interface on an open port with the SSL and authentication
+                  settings you choose.  The port, which defaults to 1627, can be changed form the add-on page in Home Assistant.</p>
                 <br />
                 <p>You can change this option any time from the settings menu. No matter which you choose, the interface
-                  will be available over ingress.</p>
+                  will be available through ingress.</p>
                 <br />
-                <span class="helper-text">
-                  <p>Note: If you already embed this interface in Home Assistant using the panel_iframe component, you
-                    can still do that using ingress by following <a target="_blank"
-                      href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-put-a-link-to-the-web-ui-in-home-assistant">these
-                      directions</a>.</p>
-                </span>
                 <div class="card-action white-text">
-                  <a target="_blank" class="waves-effect waves-light btn" onClick="exposeServer('true');">No</a>
                   <a target="_blank" class="waves-effect waves-light btn" onClick="exposeServer('false');">Yes</a>
+                  <a target="_blank" class="waves-effect waves-light btn" onClick="exposeServer('true');">No</a>
                 </div>
               </div>
             </div>

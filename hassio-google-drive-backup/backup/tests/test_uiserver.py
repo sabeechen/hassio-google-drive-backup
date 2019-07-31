@@ -3,6 +3,7 @@ import requests
 
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, ERROR_NO_SNAPSHOT, ERROR_CREDS_EXPIRED, ERROR_MULTIPLE_DELETES
 from ..uiserver import UIServer
+from ..helpers import touch
 from .faketime import FakeTime
 from ..config import Config
 from ..snapshots import Snapshot
@@ -13,8 +14,10 @@ from ..model import CreateOptions
 from ..settings import Setting
 from .conftest import ServerInstance
 from urllib.parse import quote
+from requests.exceptions import ConnectionError
 
-URL = "http://localhost:1627/"
+URL = "http://localhost:8099/"
+EXTRA_SERVER_URL = "http://localhost:1627/"
 
 
 @pytest.fixture
@@ -53,6 +56,7 @@ def test_uiserver_static_files(ui_server: UIServer):
 
 
 def test_getstatus(ui_server, config: Config, ha):
+    touch(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
     ha.init()
     data = getjson("getstatus")
     assert data['ask_error_reports'] is True
@@ -265,9 +269,93 @@ def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
     assert status["last_error"] is None
 
 
-def test_update_ingress(ui_server):
-    # INGRESS: write this test when ingre
-    pass
+def test_expose_extra_server_option(ui_server: UIServer, config: Config):
+    with pytest.raises(ConnectionError):
+        getjson("sync", url=EXTRA_SERVER_URL)
+    config.override(Setting.EXPOSE_EXTRA_SERVER, True)
+    ui_server.run()
+    getjson("sync", url=EXTRA_SERVER_URL)
+    ui_server.run()
+    getjson("sync", url=EXTRA_SERVER_URL)
+    config.override(Setting.EXPOSE_EXTRA_SERVER, False)
+    ui_server.run()
+    with pytest.raises(ConnectionError):
+        getjson("sync", url=EXTRA_SERVER_URL)
+    getjson("sync")
+
+
+def test_expose_extra_server_override(ui_server: UIServer, config: Config, ha: HaSource):
+    with pytest.raises(ConnectionError):
+        getjson("sync", url=EXTRA_SERVER_URL)
+    ha._temporary_extra_server = True
+    ui_server.run()
+    getjson("sync", url=EXTRA_SERVER_URL)
+    ui_server.run()
+    getjson("sync", url=EXTRA_SERVER_URL)
+    ha._temporary_extra_server = False
+    ui_server.run()
+    with pytest.raises(ConnectionError):
+        getjson("sync", url=EXTRA_SERVER_URL)
+    getjson("sync")
+
+
+def test_update_ingress_true(ui_server: UIServer, ha: HaSource, config: Config):
+    # Simulate a user who upgraded from a non-ingress aware version
+    ha.init()
+    assert ha.runTemporaryServer()
+    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
+    ui_server.run()
+    assert getjson('getstatus')['warn_ingress_upgrade']
+    assert getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+
+    # Expose the extra server, verify its still available
+    assert getjson('exposeserver?expose=true') == {'message': 'Configuration updated', 'redirect': ''}
+    assert config.get(Setting.EXPOSE_EXTRA_SERVER)
+    assert not getjson('getstatus')['warn_ingress_upgrade']
+    assert not getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+
+
+def test_update_ingress_false(ui_server: UIServer, ha: HaSource, config: Config):
+    # Simulate a user who upgraded from a non-ingress aware version
+    ha.init()
+    update = {
+        "config": {
+            "require_login": True,
+            "ues_ssl": True,
+            "expose_extra_server": False
+        }
+    }
+    assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+
+    assert ha.runTemporaryServer()
+    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
+    ui_server.run()
+    assert getjson('getstatus', auth=("user", "pass"))['warn_ingress_upgrade']
+    assert getjson('getstatus', auth=("user", "pass"), url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+
+    # Turn off the extra server, verify its off
+    assert getjson('exposeserver?expose=false', auth=("user", "pass")) == {'message': 'Configuration updated', 'redirect': ''}
+    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
+    assert not config.get(Setting.USE_SSL)
+    assert not config.get(Setting.REQUIRE_LOGIN)
+    assert not getjson('getstatus')['warn_ingress_upgrade']
+    with pytest.raises(ConnectionError):
+        assert not getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+
+
+def test_update_expose_server_redirect(ui_server: UIServer, ha: HaSource, config: Config):
+    ha.init()
+    assert ha.runTemporaryServer()
+    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
+    ui_server.run()
+    assert getjson('getstatus')['warn_ingress_upgrade']
+
+    # Verify the extra server is running
+    assert getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+
+    assert getjson('exposeserver?expose=true', url=EXTRA_SERVER_URL) == {
+        'message': 'Configuration updated', 
+        'redirect': 'http://{host}:1337/hassio/ingress/self_slug'}
 
 
 def test_update_error_reports_true(ui_server, config: Config, server: ServerInstance):
@@ -364,25 +452,31 @@ def test_update_multiple_deletes_setting(ui_server, server: ServerInstance, conf
     assert not config.get(Setting.CONFIRM_MULTIPLE_DELETES)
 
 
-def getjson(path, status=200, json=None, auth=None):
-    resp = requests.get(URL + path, json=json, auth=auth)
+def getjson(path, status=200, json=None, auth=None, url=None):
+    if url is None:
+        url = URL
+    resp = requests.get(url + path, json=json, auth=auth)
     assert resp.status_code == status
     data = resp.json()
     return data
 
 
-def get(path, status=200, json=None, auth=None):
-    resp = requests.get(URL + path, json=json, auth=auth)
+def get(path, status=200, json=None, auth=None, url=None):
+    if url is None:
+        url = URL
+    resp = requests.get(url + path, json=json, auth=auth)
     assert resp.status_code == status
 
 
-def postjson(path, status=200, json=None):
-    resp = requests.post(URL + path, json=json)
+def postjson(path, status=200, json=None, url=None):
+    if url is None:
+        url = URL
+    resp = requests.post(url + path, json=json)
     assert resp.status_code == status
     data = resp.json()
     return data
 
 
-def assertError(path, error_type="generic_error", status=500):
-    data = getjson(path, status=status)
+def assertError(path, error_type="generic_error", status=500, url=None):
+    data = getjson(path, status=status, url=url)
     assert data['error_type'] == error_type

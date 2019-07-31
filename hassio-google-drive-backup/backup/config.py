@@ -93,9 +93,6 @@ class Config(LogBase):
     def warnExposeIngressUpgrade(self):
         return False
 
-    def useIngress(self):
-        return False
-
     def warnIngress(self):
         return False
 

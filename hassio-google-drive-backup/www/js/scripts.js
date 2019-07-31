@@ -136,20 +136,18 @@ function errorReports(send) {
 }
 hideIngress = false;
 function exposeServer(expose) {
-  hideIngress = true;
-  var jqxhr = $.get("exposeserver?expose=" + expose,
-    function (data) {
-    }, "json").fail(
-      function () {
-        // The server is restarting, so we expect the request to fail.
-        if (expose == 'false' && last_data && last_data.hasOwnProperty('ingress_url')) {
-          setTimeout(function () {
-            window.top.location.assign(last_data.ingress_url);
-          }, 5000);
-        }
+  var url = "exposeserver?expose=" + expose;
+  postJson(url, {}, function(data){
+    $('#ingress_upgrade_card').fadeOut(500);
+    if (expose == "true") {
+      refreshstats();
+    } else {
+      if (data.hasOwnProperty("redirect")) {
+        // Reqirect to the url
+        window.location.assign(data.redirect.replace("{host}", window.location.hostname))
       }
-    );
-  $('#ingress_upgrade_card').fadeOut(500)
+    }
+  }, null, "Saving settings...");
 }
 
 function sync() {

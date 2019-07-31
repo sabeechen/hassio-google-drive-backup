@@ -78,7 +78,7 @@ class HaUpdater(Worker, LogBase):
             return False
         if not self._info._last_error:
             return False
-        return self._time.now() > self._info._last_failure_time + timedelta(seconds=self._config.get(Setting.SNAPSHOT_STALE_SECONDS))
+        return self._time.now() > self._info._last_success + timedelta(seconds=self._config.get(Setting.SNAPSHOT_STALE_SECONDS))
 
     def _state(self):
         if self._stale():

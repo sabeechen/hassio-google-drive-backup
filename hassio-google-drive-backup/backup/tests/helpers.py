@@ -1,11 +1,7 @@
 from datetime import datetime
 from io import BytesIO
-from typing import Dict
-from ..snapshots import Snapshot, DummySnapshotSource
-from ..model import CreateOptions, SnapshotSource
 from ..simulation import SimulatedSource
 from threading import Thread, Event
-from io import IOBase
 import tarfile
 import json
 

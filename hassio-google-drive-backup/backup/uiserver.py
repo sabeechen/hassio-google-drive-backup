@@ -9,6 +9,7 @@ from oauth2client.client import OAuth2Credentials
 from .helpers import formatTimeSince
 from .helpers import formatException
 from .helpers import strToBool
+from .helpers import touch
 from .exceptions import ensureKey
 from .config import Config
 from .snapshotname import SNAPSHOT_NAME_KEYS
@@ -66,10 +67,10 @@ class UIServer(Trigger, LogBase):
         snapshots = self._coord.snapshots()
         for snapshot in snapshots:
             status['snapshots'].append(self.getSnapshotDetails(snapshot))
-        status['restore_link'] = self.getRestoreLink()
+        status['restore_link'] = self._ha_source.getFullRestoreLink()
         status['drive_enabled'] = self._coord.enabled()
         status['ask_error_reports'] = not self.config.isExplicit(Setting.SEND_ERROR_REPORTS)
-        status['warn_ingress_upgrade'] = self.config.warnExposeIngressUpgrade()
+        status['warn_ingress_upgrade'] = self._ha_source.runTemporaryServer()
         status['cred_version'] = self._global_info.credVersion
         next = self._coord.nextSnapshotTime()
         if next is None:
@@ -117,13 +118,6 @@ class UIServer(Trigger, LogBase):
             'haRetain': ha.retained() if ha else False
         }
 
-    def getRestoreLink(self):
-        if self._global_info.ha_ssl:
-            protocol = "https://"
-        else:
-            protocol = "http://"
-        return "".join([protocol, "{host}:", str(self._global_info.ha_port), "/hassio/snapshots"])
-
     @cherrypy.expose  # type: ignore
     @cherrypy.tools.json_out()
     def manualauth(self, code: str = "", client_id: str = "", client_secret: str = "") -> None:
@@ -149,14 +143,10 @@ class UIServer(Trigger, LogBase):
         elif code != "":
             try:
                 self._coord.saveCreds(self.oauth_flow_manual.step2_exchange(code))
-                if self.config.useIngress() and 'ingress_url' in self.engine.hassio.self_info:
-                    return {
-                        'auth_url': self.engine.hassio.self_info['ingress_url']
-                    }
-                else:
-                    return {
-                        'auth_url': "/"
-                    }
+                return {
+                    # TODO: this redirects back to the reauth page if user already has drive creds!
+                    'auth_url': "index"
+                }
             except Exception as e:
                 return {
                     'error': "Couldn't create authorization URL, Google said:" + str(e)
@@ -272,10 +262,13 @@ class UIServer(Trigger, LogBase):
         if 'creds' in kwargs:
             creds = OAuth2Credentials.from_json(kwargs['creds'])
             self._coord.saveCreds(creds)
-        if self.config.useIngress():
-            return self.redirect("/hassio/ingress/" + self.engine.hassio.self_info['slug'])
-        else:
-            return self.redirect("/")
+        try:
+            if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
+                return self.redirect(self._ha_source.getAddonUrl())
+        except:  # noqa: E722
+            # eat the error
+            pass
+        return self.redirect("/")
 
     @cherrypy.expose
     def simerror(self, error: str = "") -> None:
@@ -319,7 +312,7 @@ class UIServer(Trigger, LogBase):
         return self.handleError(lambda: self._getconfig())
 
     def _getconfig(self) -> Any:
-        self._ha_source.init()
+        self._ha_source.refresh()
         name_keys = {}
         for key in SNAPSHOT_NAME_KEYS:
             name_keys[key] = SNAPSHOT_NAME_KEYS[key]("Full", self._time.now(), self._ha_source.host_info)
@@ -329,7 +322,6 @@ class UIServer(Trigger, LogBase):
         return {
             'config': current_config,
             'addons': self._global_info.addons,
-            'support_ingress': self.config.useIngress(),
             'name_keys': name_keys
         }
 
@@ -347,17 +339,38 @@ class UIServer(Trigger, LogBase):
         return {'message': 'Configuration updated'}
 
     @cherrypy.expose
+    @cherrypy.tools.json_out()
     def exposeserver(self, expose: str) -> None:
         return self.handleError(lambda: self._exposeserver(expose))
 
     def _exposeserver(self, expose: str) -> None:
         if expose == "true":
-            self.config.setExposeAdditionalServer(self.engine.hassio.updateConfig, True)
+            update = {
+                Setting.EXPOSE_EXTRA_SERVER: True
+            }
         else:
-            self.config.setExposeAdditionalServer(self.engine.hassio.updateConfig, False)
-            # INGRESS: this needs to do something else for ingress
-            raise Exception("Ingress isn't implemented yet")
+            update = {
+                Setting.EXPOSE_EXTRA_SERVER: False,
+                Setting.USE_SSL: False,
+                Setting.REQUIRE_LOGIN: False
+            }
+        validated = self.config.validateUpdate(update)
+        self._updateConfiguration(validated)
+
+        touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+        self._ha_source.init()
         self.run()
+        redirect = ""
+        try:
+            if cherrypy.request.local.port != self.config.get(Setting.INGRESS_PORT):
+                redirect = self._ha_source.getFullAddonUrl()
+        except:  # noqa: E722
+            # eat the error
+            pass
+        return {
+            'message': 'Configuration updated',
+            'redirect': redirect
+        }
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -395,8 +408,7 @@ class UIServer(Trigger, LogBase):
             "login": self.config.get(Setting.REQUIRE_LOGIN),
             "certfile": self.config.get(Setting.CERTFILE),
             "keyfile": self.config.get(Setting.KEYFILE),
-            "extra_server": self.config.get(Setting.EXPOSE_EXTRA_SERVER),
-            "ingress": self.config.useIngress()
+            "extra_server": self.config.get(Setting.EXPOSE_EXTRA_SERVER)
         }
 
     @cherrypy.expose
@@ -459,7 +471,7 @@ class UIServer(Trigger, LogBase):
 
         cherrypy.config.update(conf)
 
-        if self.config.get(Setting.EXPOSE_EXTRA_SERVER):
+        if self.config.get(Setting.EXPOSE_EXTRA_SERVER) or self._ha_source.runTemporaryServer():
             self.info("Starting server on port {}".format(self.config.get(Setting.PORT)))
             self.host_server = cherrypy._cpserver.Server()
             self.host_server.socket_port = self.config.get(Setting.PORT)

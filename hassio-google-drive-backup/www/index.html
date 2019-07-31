@@ -6,17 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
   <title>Hass.io Google Drive Backup</title>
 
-  <link href="css/icons.css?version=0.97.4"" rel="stylesheet">
-  <link href="css/materialize.css?version=0.97.4"" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.97.4"" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.97.4"">
-  <script src="js/jquery.js?version=0.97.4""></script>
-  <script src="js/materialize.js?version=0.97.4""></script>
-  <script src="js/init.js?version=0.97.4""></script>
-  <script src="js/scripts.js?version=0.97.4""></script>
-  <script src="js/settings.js?version=0.97.4""></script>
-  <script src="js/restore.js?version=0.97.4""></script>
-  <script src="js/moment.js?version=0.97.4""></script>
+  <link href="css/icons.css?version=0.98.1" rel="stylesheet">
+  <link href="css/materialize.css?version=0.98.1" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.98.1" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="images/favicon.png?version=0.98.1">
+  <script src="js/jquery.js?version=0.98.1"></script>
+  <script src="js/materialize.js?version=0.98.1"></script>
+  <script src="js/init.js?version=0.98.1"></script>
+  <script src="js/scripts.js?version=0.98.1"></script>
+  <script src="js/settings.js?version=0.98.1"></script>
+  <script src="js/restore.js?version=0.98.1"></script>
+  <script src="js/moment.js?version=0.98.1"></script>
 </head>
 
 <body>
@@ -166,14 +166,18 @@
               <label>
                 <input type="checkbox" name="expose_extra_server" id="expose_extra_server" class="filled-in checkbox-ha"
                   onchange="toggleSlide(this, 'settings_server_details');" />
-                <span id="expose_extra_server_label">Expose another server on port 1627</span>
+                <span id="expose_extra_server_label">Expose this web interface on an additional port</span>
                 <br />
-                <span class="helper-text" id="expose_extra_server_help">Expose another server on port 1627 with optional
-                  SSL and username authentication.</span>
+                <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.  This isn't necessary unless you'd like to avoid accessing this web interface through <a target="_blank" href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
               </label>
             </div>
           </div>
           <div class="row" id="settings_server_details" style="display: none">
+            <div class="col s11 offset-s1">
+              <label>
+                <span class="helper-text">Use the options below to configure what kind of SSL and and authentication you'd like to use for this webpage.  By default this server is exposed on port 1627, but that can be changed from the add-on installation page.</span>
+              </label>
+            </div>
             <div class="col s11 offset-s1">
               <div class="row">
                 <div class="col s12">
@@ -181,8 +185,7 @@
                     <input type="checkbox" name="require_login" id="require_login" class="filled-in checkbox-ha" />
                     <span>Require Login</span>
                     <br />
-                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.
-                      Disabling this isn't recommended.</span>
+                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.</span>
                   </label>
                 </div>
               </div>
@@ -393,7 +396,7 @@
                 <label for="alternate_dns_servers">Alternate DNS Servers</label>
                 <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
                   use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
-                  must support TCP DNS lookups. The defaults are Google's public DNS servers.</span>
+                  must support TCP DNS lookups. The defaults are <a href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS servers</a>.</span>
               </div>
             </div>
             <div class="col s11 offset-s1 row">

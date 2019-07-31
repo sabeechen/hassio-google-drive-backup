@@ -132,3 +132,8 @@ def getPingInfo(servers):
                         response = response[3:].strip()
                     pings[host][address] = response
     return pings
+
+
+def touch(file):
+    with open(file, "w"):
+        pass

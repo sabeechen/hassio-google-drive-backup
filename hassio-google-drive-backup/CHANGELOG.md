@@ -1,3 +1,9 @@
+## [0.98.1] 2018-07-31
+### Added
+- Support for Ingress.  When upgrading from an older version, the UI will present a dialog asking if you'd still like to serve the Web UI over another port or just use ingress in the future.  New users will be ingress-only by default (this can be changed form the settings).
+- Support for folders and snapshots in Team Drives.
+- Settings option to disable uploads to Google Drive, for example if you just want to use the addon to create snapshots.
+
 ## [0.97.4] - 2019-05-29
 - Fixes an issue where failed logins caused sync to fail.
 

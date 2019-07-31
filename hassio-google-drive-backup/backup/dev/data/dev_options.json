@@ -11,5 +11,6 @@
     "secrets_file_path": "backup/dev/data/secrets.yaml",
     "credentials_file_path": "backup/dev/data/credentials.dat",
     "folder_file_path": "backup/dev/data/folder.dat",
-    "authenticate_url": "http://localhost:2567/external/drivecreds/"
+    "authenticate_url": "http://localhost:2567/external/drivecreds/",
+    "ingress_token_file_path": "backup/dev/data/ingress.dat"
 }

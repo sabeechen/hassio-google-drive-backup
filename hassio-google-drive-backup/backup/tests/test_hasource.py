@@ -1,4 +1,6 @@
 import pytest
+from os.path import exists
+from os import remove
 from requests.exceptions import HTTPError
 from ..hasource import HaSource, PendingSnapshot
 from ..snapshots import HASnapshot, DummySnapshot
@@ -408,10 +410,53 @@ def test_delete_error(time, ha: HaSource, server: ServerInstance):
 
 
 def test_hostname(time, ha: HaSource, server: ServerInstance, global_info: GlobalInfo):
-    server.getServer().update({"hostname": "testme", "web_ui": "http://[HOST]:12345/"})
     ha.init()
-    assert global_info.url == "http://testme.local:12345/"
+    assert global_info.url == "/hassio/ingress/self_slug"
 
-    server.getServer().update({"hostname": None})
+
+def test_ingress_upgrade(time, ha: HaSource, config: Config):
+    # check the default before init
+    assert exists(config.get(Setting.CREDENTIALS_FILE_PATH))
+    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+    assert not ha.runTemporaryServer()
     ha.init()
-    assert global_info.url is None
+
+    # should run the server, since this is an upgrade
+    assert ha.runTemporaryServer()
+    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+
+    ha.init()
+    assert ha.runTemporaryServer()
+    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+
+
+def test_ingress_upgrade_new_install(time, ha: HaSource, config: Config):
+    # check the default before init
+    remove(config.get(Setting.CREDENTIALS_FILE_PATH))
+    assert not exists(config.get(Setting.CREDENTIALS_FILE_PATH))
+    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+    assert not ha.runTemporaryServer()
+    ha.init()
+
+    # should run the server, since this is an upgrade
+    assert not ha.runTemporaryServer()
+    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+
+    ha.init()
+    assert not ha.runTemporaryServer()
+    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+
+
+def test_ingress_upgrade_file_exists(time, ha: HaSource, config: Config):
+    with open(config.get(Setting.INGRESS_TOKEN_FILE_PATH), "x"):
+        pass
+
+    # check the default before init
+    assert exists(config.get(Setting.CREDENTIALS_FILE_PATH))
+    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+    assert not ha.runTemporaryServer()
+    ha.init()
+
+    # should run the server, since this is an upgrade
+    assert not ha.runTemporaryServer()
+    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))

@@ -1,3 +1,4 @@
+import os.path
 from .snapshots import HASnapshot, Snapshot, AbstractSnapshot
 from .config import Config
 from .time import Time
@@ -6,7 +7,7 @@ from typing import Optional, List, Dict
 from threading import Lock, Thread
 from .harequests import HaRequests
 from .exceptions import LogicError
-from .helpers import formatException
+from .helpers import formatException, touch
 from .exceptions import SnapshotInProgress, UploadFailed, ensureKey
 from .globalinfo import GlobalInfo
 from .const import SOURCE_HA
@@ -89,6 +90,10 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.cached_retention = {}
         self._info = info
         self.pending_options = {}
+        self._temporary_extra_server = False
+
+    def runTemporaryServer(self):
+        return self._temporary_extra_server
 
     def check(self) -> bool:
         # determine if the pending snapshot has timed out, but not if we're still waiting for the request
@@ -221,6 +226,20 @@ class HaSource(SnapshotSource[HASnapshot]):
     def init(self):
         self._refreshInfo()
 
+        # check if the upgrade file is present.
+        self._temporary_extra_server = False
+        if not os.path.exists(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH)):
+            # No upgrade file, so check if drive creds are saved.
+            if os.path.exists(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
+                # its an upgrade, so add the extra server option.
+                self._temporary_extra_server = True
+            else:
+                # Its a new install, write the upgrde file so we never check again.
+                touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+
+    def refresh(self):
+        self._refreshInfo()
+
     def _refreshInfo(self) -> None:
         self.self_info = self.harequests.selfInfo()
         self.host_info = self.harequests.info()
@@ -232,35 +251,37 @@ class HaSource(SnapshotSource[HASnapshot]):
         self._info.ha_ssl = ensureKey("ssl", self.ha_info, "Home Assistant metadata")
         self._info.addons = ensureKey("addons", self.super_info, "Supervisor metadata")
         self._info.slug = ensureKey("slug", self.self_info, "addon metdata")
-        hostname = ensureKey("hostname", self.host_info, "host metadata")
-        if hostname is not None:
-            self._info.url = ensureKey("webui", self.self_info, "addon metdata").replace("[HOST]", hostname + ".local")
-        else:
-            self._info.url = None
+        self._info.url = self.getAddonUrl()
 
         self._info.addDebugInfo("self_info", self.self_info)
         self._info.addDebugInfo("host_info", self.host_info)
         self._info.addDebugInfo("ha_info", self.ha_info)
         self._info.addDebugInfo("super_info", self.super_info)
 
+    def getAddonUrl(self):
+        """
+        Returns the relative path to the add-on, for the purpose of linking to the add-on page from within Home Assistant.
+        """
+        return "/hassio/ingress/" + str(self._info.slug)
+
+    def getFullAddonUrl(self):
+        return self._haUrl() + "hassio/ingress/" + str(self._info.slug)
+
+    def getFullRestoreLink(self):
+        return self._haUrl() + "hassio/snapshots"
+
+    def _haUrl(self):
+        if self._info.ha_ssl:
+            protocol = "https://"
+        else:
+            protocol = "http://"
+        return "".join([protocol, "{host}:", str(self._info.ha_port), "/"])
+
     def _validateSnapshot(self, snapshot) -> HASnapshot:
         item: HASnapshot = snapshot.getSource(self.name())
         if not item:
             raise LogicError("Requested to do something with a snapshot from Home Assistant, but the snapshot has no Home Assistant source")
         return item
-
-    def getIngressUrl(self):
-        if self.config.useIngress():
-            try:
-                if self.ha_info['ssl']:
-                    protocol = "https"
-                else:
-                    protocol = "http"
-                return "{0}://{1}:{2}/hassio/ingress/{3}".format(protocol, self.host_info['hostname'], self.ha_info['port'], self.self_info['slug'])
-            except KeyError:
-                return "/"
-        else:
-            return "/"
 
     def _requestSnapshot(self, *args) -> None:
         data = args

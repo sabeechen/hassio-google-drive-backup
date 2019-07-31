@@ -134,6 +134,27 @@ def test_notification_clears(updater: HaUpdater, server, time: FakeTime, global_
     assert backend.getNotification() is None
 
 
+def test_publish_for_failure(updater: HaUpdater, server, time: FakeTime, global_info: GlobalInfo):
+    backend: TestBackend = server.getServer()
+    global_info.success()
+    updater.update()
+    assert backend.getNotification() is None
+
+    time.advanceDay()
+    global_info.failed(Exception())
+    updater.update()
+    assert backend.getNotification() is not None
+
+    time.advanceDay()
+    global_info.failed(Exception())
+    updater.update()
+    assert backend.getNotification() is not None
+
+    global_info.success()
+    updater.update()
+    assert backend.getNotification() is None
+
+
 def verifyEntity(backend, name, state, attributes):
     assert backend.getEntity(name) == state
     assert backend.getAttributes(name) == attributes

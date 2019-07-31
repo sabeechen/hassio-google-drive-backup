@@ -60,8 +60,9 @@ class Setting(Enum):
     RETAINED_FILE_PATH = "retained_file_path"
     SECRETS_FILE_PATH = "secrets_file_path"
     BACKUP_DIRECTORY_PATH = "backup_directory_path"
+    INGRESS_TOKEN_FILE_PATH = "ingress_token_file_path"
 
-    # enpoints
+    # endpoints
     HASSIO_URL = "hassio_url"
     DRIVE_URL = "drive_url"
     HOME_ASSISTANT_URL = "home_assistant_url"
@@ -111,7 +112,7 @@ _DEFAULTS = {
     # UI Server settings
     Setting.USE_SSL: False,
     Setting.REQUIRE_LOGIN: False,
-    Setting.EXPOSE_EXTRA_SERVER: True,
+    Setting.EXPOSE_EXTRA_SERVER: False,
     Setting.CERTFILE: "/ssl/fullchain.pem",
     Setting.KEYFILE: "/ssl/privkey.pem",
     Setting.INGRESS_PORT: 8099,
@@ -147,6 +148,7 @@ _DEFAULTS = {
     Setting.BACKUP_DIRECTORY_PATH: "/backup",
     Setting.RETAINED_FILE_PATH: "/data/retained.json",
     Setting.SECRETS_FILE_PATH: "/config/secrets.yaml",
+    Setting.INGRESS_TOKEN_FILE_PATH: "/data/ingress.dat",
 
     # Various timeouts and intervals
     Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,

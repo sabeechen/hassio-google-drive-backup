@@ -144,7 +144,7 @@ class TestBackend(object):
             "ssl": False,
             "watchdog": True,
             "wait_boot": 600,
-            "web_ui": "http://[HOST]:1627/",
+            "web_ui": "http://[HOST]:8099/",
             "ingress_url": "/index",
             "supervisor": "2.2.2",
             "homeassistant": "0.93.1",

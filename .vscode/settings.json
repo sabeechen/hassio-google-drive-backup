@@ -1,12 +1,12 @@
 {
-    "python.testing.pyTestArgs": [
+    "python.testing.pytestArgs": [
         "-s",
         "--disable-warnings",
         "hassio-google-drive-backup"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
-    "python.testing.pyTestEnabled": true,
+    "python.testing.pytestEnabled": true,
     "python.pythonPath": "/usr/bin/python3.7",
     "python.linting.flake8Enabled": true,
     "python.linting.pylintEnabled": false,

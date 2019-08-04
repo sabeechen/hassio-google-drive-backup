@@ -34,7 +34,8 @@ function toggleLinkSlide(checkbox, target) {
 }
 
 function restoreClick(target) {
-  window.top.location.replace($(target).data('url'))
+  $('#restore_help_card').fadeIn(500);
+  //window.top.location.replace($(target).data('url'))
 }
 
 function setInputValue(id, value) {
@@ -554,6 +555,8 @@ function refreshstats() {
     } else {
       $(".ha_retain_label").hide()
     }
+
+    $("#restore_hard_link").attr("href", data.restore_link.replace("{host}", window.location.hostname));
 
     last_data = data;
 

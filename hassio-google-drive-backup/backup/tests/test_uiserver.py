@@ -359,7 +359,7 @@ def test_update_expose_server_redirect(ui_server: UIServer, ha: HaSource, config
     assert getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
 
     assert getjson('exposeserver?expose=true', url=EXTRA_SERVER_URL) == {
-        'message': 'Configuration updated', 
+        'message': 'Configuration updated',
         'redirect': 'http://{host}:1337/hassio/ingress/self_slug'}
 
 

@@ -169,7 +169,7 @@ class UIServer(Trigger, LogBase):
             return False
 
     def add_auth_header(self):
-        # Basically a hack.  This lets us pretend that any request to the ingress server includes 
+        # Basically a hack.  This lets us pretend that any request to the ingress server includes
         # a user/pass.  If the user has login turned on, this bypasses it for the ingress port.
         if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
             cherrypy.request.headers['authorization'] = "basic MWfhZHRedjpPcRVuU2XzYW4l"

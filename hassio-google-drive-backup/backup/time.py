@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.tz import tzutc
 from dateutil.tz import tzlocal
-from dateutil.parser import parse
+from .helpers import parseDateTime
 from time import sleep
 
 
@@ -16,7 +16,7 @@ class Time(object):
         return datetime.now(self.local_tz)
 
     def parse(self, text: str) -> datetime:
-        return parse(text, tzinfos=tzutc)
+        return parseDateTime(text)
 
     def toLocal(self, dt: datetime) -> datetime:
         return dt.astimezone(self.local_tz)

@@ -19,7 +19,10 @@ def strToBool(value) -> bool:
 
 
 def parseDateTime(text: str) -> datetime:
-    return parse(text, tzinfos=tzutc)
+    ret = parse(text)
+    if ret.tzinfo is None:
+        ret = ret.replace(tzinfo=tzutc())
+    return ret
 
 
 def nowutc() -> datetime:

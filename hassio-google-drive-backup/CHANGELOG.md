@@ -1,3 +1,12 @@
+## [0.98.2] 2019-08-04
+### Fixes
+- Restore link now brings up a help dialog, since sometimes it can't resolve the url to the restore page.
+- Added documentation detailing how authentication with Google Drive is accomplished and persisted.
+- Fixed a potential source of error when parsing timestamps from Google Drive/Hass.io.
+### Added
+ - Better messaging when a snapshot in progress is blocking the add-on.
+
+
 ## [0.98.1] 2019-07-31
 ### Added
 - Support for Ingress.  When upgrading from an older version, the UI will present a dialog asking if you'd still like to serve the Web UI over another port or just use ingress in the future.  New users will be ingress-only by default (this can be changed form the settings).

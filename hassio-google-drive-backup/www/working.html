@@ -1201,30 +1201,52 @@
           </div>
         </div>
         <div class="row default-hidden error_card password_key_invalid">
-          <div class="col s12 m12 l9">
-            <div class="card red darken-4">
-              <div class="card-content white-text">
-                <span class="card-title">
-                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">vpn_key</i>
-                  <span style="vertical-align: top;">Invalid Snapshot Password</span>
-                </span>
-                <p>The add-on couldn't find your snapshot password in your secrets.yaml file. Snapshots can't be created
-                  until you either configure a valid password or remove it.</p>
-                <p>This can happen if:</p>
-                <ul class="browser-default">
-                  <li>Your secrets.yaml file isn't present in your Home Assistant configuration directory</li>
-                  <li>The password key isn't present in your secrets.yaml file.</li>
-                </ul>
-                <p>Please review your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-                      style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
-                    settings</a>to ensure you've set the snapshot password you intended, then sync again.</p>
-                <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+            <div class="col s12 m12 l9">
+              <div class="card red darken-4">
+                <div class="card-content white-text">
+                  <span class="card-title">
+                    <i class="material-icons" style="font-size: 50px; padding-right: 10px;">vpn_key</i>
+                    <span style="vertical-align: top;">Invalid Snapshot Password</span>
+                  </span>
+                  <p>The add-on couldn't find your snapshot password in your secrets.yaml file. Snapshots can't be created
+                    until you either configure a valid password or remove it.</p>
+                  <p>This can happen if:</p>
+                  <ul class="browser-default">
+                    <li>Your secrets.yaml file isn't present in your Home Assistant configuration directory</li>
+                    <li>The password key isn't present in your secrets.yaml file.</li>
+                  </ul>
+                  <p>Please review your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                      settings</a>to ensure you've set the snapshot password you intended, then sync again.</p>
+                  <div class="card-action white-text">
+                    <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+        <div class="row default-hidden error_card snapshot_in_progress">
+            <div class="col s12 m12 l9">
+              <div class="card red darken-4">
+                <div class="card-content white-text">
+                  <span class="card-title">
+                    <i class="material-icons" style="font-size: 50px; padding-right: 10px;">settings_backup_restore</i>
+                    <span style="vertical-align: top;">Snapshot Already in Progress</span>
+                  </span>
+                  <p>The add-on couldn't create a snapshot on schedule because one is already in progress.  Hass.io can only create one snapshot at a time.  This can happen if:</p>
+                  <ul class="browser-default">
+                    <li>The add-on was started while a snapshot was already in progress</li>
+                    <li>A snapshot was started outside of the add-on, eg manually from the Hass.io snapshots page.</li>
+                  </ul>
+                  <p>Typically you don't need to do anything to resolve this, as the add-on will pick up again once the snapshot in progress finishes.  
+                    If you are certain no snapshot is in progress already or this error sticks around, you can try restarting the addon or Home Assistant's host machine.</p>
+                  <div class="card-action white-text">
+                    <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         <div class="row default-hidden error_card multiple_deletes" id="google_timeout">
           <div class="col s12 m12 l9">
             <div class="card red darken-4">

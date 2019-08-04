@@ -252,7 +252,7 @@ def test_config(ui_server, config: Config, server: ServerInstance):
 
 
 def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
-    update = {"config": {"require_login": True}}
+    update = {"config": {"require_login": True, "expose_extra_server": True}}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
@@ -260,13 +260,18 @@ def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
     assert server.getServer()._options['require_login']
     assert ui_server._starts == 2
 
-    get("getstatus", status=401)
-    get("getstatus", auth=("user", "badpassword"), status=401)
-    get("getstatus", auth=("user", "pass"))
-    status = getjson("sync", auth=("user", "pass"))
+    get("getstatus", status=401, url=EXTRA_SERVER_URL)
+    get("getstatus", auth=("user", "badpassword"), status=401, url=EXTRA_SERVER_URL)
+    get("getstatus", auth=("user", "pass"), url=EXTRA_SERVER_URL)
+    status = getjson("sync", auth=("user", "pass"), url=EXTRA_SERVER_URL)
 
     # verify a the sync succeeded (no errors)
     assert status["last_error"] is None
+
+    # The ingress server shouldn't require login, even though its turned on for the extra server
+    get("getstatus")
+    # even a bad user/pass should work
+    get("getstatus", auth=("baduser", "badpassword"))
 
 
 def test_expose_extra_server_option(ui_server: UIServer, config: Config):

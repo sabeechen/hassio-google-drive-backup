@@ -154,6 +154,10 @@ class UIServer(Trigger, LogBase):
             raise cherrypy.HTTPError()
 
     def auth(self, realm: str, username: str, password: str) -> bool:
+        if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
+            # Ingress port never requires auth
+            return True
+
         if username in self.auth_cache and self.auth_cache[username]['password'] == password and self.auth_cache[username]['timeout'] > self._time.now():
             return True
         try:
@@ -163,6 +167,12 @@ class UIServer(Trigger, LogBase):
         except Exception as e:
             self.error(formatException(e))
             return False
+
+    def add_auth_header(self):
+        # Basically a hack.  This lets us pretend that any request to the ingress server includes 
+        # a user/pass.  If the user has login turned on, this bypasses it for the ingress port.
+        if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
+            cherrypy.request.headers['authorization'] = "basic MWfhZHRedjpPcRVuU2XzYW4l"
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -447,6 +457,8 @@ class UIServer(Trigger, LogBase):
             self.host_server.unsubscribe()
             self.host_server = None
 
+        cherrypy.tools.addauth = cherrypy.Tool('on_start_resource', self.add_auth_header)
+
         conf: Dict[Any, Any] = {
             'global': {
                 'server.socket_port': self.config.get(Setting.INGRESS_PORT),
@@ -458,6 +470,7 @@ class UIServer(Trigger, LogBase):
                 'response.stream': True
             },
             "/": {
+                'tools.addauth.on': True,
                 'tools.staticdir.on': True,
                 'tools.staticdir.dir': os.path.join(os.getcwd(), "www"),
                 'tools.auth_basic.on': self.config.get(Setting.REQUIRE_LOGIN),

@@ -76,8 +76,8 @@
             </div>
             <div class="input-field col m6 s12" id="password_renter_block">
               <i class="material-icons prefix">vpn_key</i>
-              <input type="password" autocomplete="new-password" id="snapshot_password_reenter" name="snapshot_password_reenter" settings_ignore='true' 
-                class="validate" onkeyup="checkForSecret()" />
+              <input type="password" autocomplete="new-password" id="snapshot_password_reenter"
+                name="snapshot_password_reenter" settings_ignore='true' class="validate" onkeyup="checkForSecret()" />
               <label for="snapshot_password_reenter">Re-enter password</label>
               <span class="helper-text">Re-enter your new password to ensure it matches.</span>
             </div>
@@ -157,7 +157,8 @@
                   class="filled-in checkbox-ha" />
                 <span>Enable Google Drive Upload</span>
                 <br />
-                <span class="helper-text">When disabled, new snapshots will still be created in Home Assistant but will not be uploaded to Google Drive.</span>
+                <span class="helper-text">When disabled, new snapshots will still be created in Home Assistant but will
+                  not be uploaded to Google Drive.</span>
               </label>
             </div>
           </div>
@@ -168,14 +169,19 @@
                   onchange="toggleSlide(this, 'settings_server_details');" />
                 <span id="expose_extra_server_label">Expose this web interface on an additional port</span>
                 <br />
-                <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.  This isn't necessary unless you'd like to avoid accessing this web interface through <a target="_blank" href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
+                <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.
+                  This isn't necessary unless you'd like to avoid accessing this web interface through <a
+                    target="_blank"
+                    href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
               </label>
             </div>
           </div>
           <div class="row" id="settings_server_details" style="display: none">
             <div class="col s11 offset-s1">
               <label>
-                <span class="helper-text">Use the options below to configure what kind of SSL and and authentication you'd like to use for this webpage.  By default this server is exposed on port 1627, but that can be changed from the add-on installation page.</span>
+                <span class="helper-text">Use the options below to configure what kind of SSL and and authentication
+                  you'd like to use for this webpage. By default this server is exposed on port 1627, but that can be
+                  changed from the add-on installation page.</span>
               </label>
             </div>
             <div class="col s11 offset-s1">
@@ -185,7 +191,8 @@
                     <input type="checkbox" name="require_login" id="require_login" class="filled-in checkbox-ha" />
                     <span>Require Login</span>
                     <br />
-                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.</span>
+                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this
+                      webpage.</span>
                   </label>
                 </div>
               </div>
@@ -396,7 +403,9 @@
                 <label for="alternate_dns_servers">Alternate DNS Servers</label>
                 <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
                   use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
-                  must support TCP DNS lookups. The defaults are <a href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS servers</a>.</span>
+                  must support TCP DNS lookups. The defaults are <a
+                    href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS
+                    servers</a>.</span>
               </div>
             </div>
             <div class="col s11 offset-s1 row">
@@ -420,7 +429,8 @@
                 <label for="drive_ipv4">Google Drive IP Address Override</label>
                 <span class="helper-text">If you're having problems with reaching Google Drive, you can use this to
                   specify Google Drive's IP address manually and circumvent DNS lookup entirely. You can use a website
-                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this one</a> to lookup
+                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
+                    one</a> to lookup
                   what address will work for www.googleapis.com.</span>
               </div>
             </div>
@@ -589,35 +599,40 @@
 
         </div>
         <div class="row center">
-          <div class="col s12 m6 offset-m3">
-            <ul>
-              <li>
-                <h6 class="header col s12 light">*Note: this will <i>only</i> have access to the files and folders it
-                  creates.
-                  The Add-on can't see any of the other files you've added to Google Drive.</h6>
-              </li>
-              <li>
-                <h6 id="what_do_next_now_please" style="display: none;" class="header light">
-                  <span id="what_do_next_now_please_text"></span>
-                  Change your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-                      style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>settings</a>
-                  to alter the add-on's behavior if that isn't what you want.
-                </h6>
-              </li>
-            </ul>
+          <div class="col m12 l6 offset-l3">
+            <h6 id="what_do_next_now_please" style="display: none;" class="header light">
+              <span id="what_do_next_now_please_text"></span>
+              Change your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                  style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>settings</a>
+              to alter the add-on's behavior if that isn't what you want.
+            </h6>
           </div>
         </div>
         <div class="row center">
-          <div id="option1" class="col s12 m6 offset-m3 center center-align">
+          <div id="option1" class="col m12 l6 offset-l3 center center-align">
             <a target="_blank" id="authenticate-button" style="margin: 10px"
               class="btn-large waves-effect waves-light btn">Authenticate
               with Google Drive</a>
-            <div>
-              <span class="helper-text">This logs you in through an <a
-                  href="http://philosophyofpen.com/hassiodrivebackup">external domain</a> configured to
-                authenticate this add-on. You'll be routed back to this page after you're finished and your credentials
-                only get stored locally within your Home Assistant instance. By doing this, you agree to our <a
-                  href="pp">Privacy Policy</a> and <a href="tos">Terms of Service</a></span>
+            <div class="row center">
+              <div class="col s12">
+                <ul>
+                  <li>
+                    <h6 class="header col s12 light">
+                      Clicking this link authenticates you with an external domain (<a
+                        href="https://philosophyofpen.com/hassiodrivebackup">philosophyofpen.com</a>). To learn why
+                      this is necessary, check out the details <a
+                        href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">here</a>.
+                      By doing this, you agree to our <a href="pp">Privacy Policy</a> and <a href="tos">Terms of
+                        Service</a></h6>
+                  </li>
+                  <li>
+                    <h6 class="header col s12 light">*Note: this will <i>only</i> have access to the files and folders
+                      it
+                      creates.
+                      The Add-on can't see any of the other files you've added to Google Drive.</h6>
+                  </li>
+                </ul>
+              </div>
             </div>
             <br />
             Having trouble with this or looking to generate your own credentials without going through an external

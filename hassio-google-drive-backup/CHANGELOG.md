@@ -3,6 +3,7 @@
 - Restore link now brings up a help dialog, since sometimes it can't resolve the url to the restore page.
 - Added documentation detailing how authentication with Google Drive is accomplished and persisted.
 - Fixed a potential source of error when parsing timestamps from Google Drive/Hass.io.
+
 ### Added
  - Better messaging when a snapshot in progress is blocking the add-on.
 

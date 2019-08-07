@@ -1,6 +1,6 @@
 
 from datetime import datetime
-from .helpers import parseDateTime, strToBool
+from .helpers import parseDateTime, strToBool, nowutc
 from typing import Dict, Optional, Any
 from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from .exceptions import ensureKey
@@ -221,7 +221,7 @@ class Snapshot(object):
     def date(self) -> datetime:
         for snapshot in self.sources.values():
             return snapshot.date()
-        return datetime.now()
+        return nowutc()
 
     def sizeString(self) -> str:
         size_string = self.size()

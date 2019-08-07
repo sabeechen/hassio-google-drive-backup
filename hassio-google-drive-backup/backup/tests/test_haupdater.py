@@ -63,10 +63,22 @@ def test_failure_backoff_502(updater: HaUpdater, server, time: FakeTime):
     updater.update()
     assert not updater._ha_offline
 
+def test_failure_backoff_510(updater: HaUpdater, server, time: FakeTime):
+    backend: TestBackend = server.getServer()
+    backend.setHomeAssistantError(510)
+    for x in range(9):
+        updater.update()
+    assert updater._ha_offline
+    assert time.sleeps == [20, 40, 80, 160, 300, 300, 300, 300, 300]
+
+    backend.setHomeAssistantError(None)
+    updater.update()
+    assert not updater._ha_offline
+
 
 def test_failure_backoff_other(updater: HaUpdater, server, time: FakeTime):
     backend: TestBackend = server.getServer()
-    backend.setHomeAssistantError(500)
+    backend.setHomeAssistantError(400)
     for x in range(9):
         updater.update()
     assert not updater._ha_offline

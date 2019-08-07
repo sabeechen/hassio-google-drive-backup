@@ -54,9 +54,9 @@ class HaUpdater(Worker, LogBase):
                 self._ha_offline = False
             self._backoff.reset()
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 502:
+            if int(e.response.status_code / 100) == 5:
                 if not self._ha_offline:
-                    self.error("Unable to reach Home Assistant.  Is it restarting?")
+                    self.error("Unable to reach Home Assistant (HTTP {0}).  Is it restarting?".format(e.response.status_code))
                     self._ha_offline = True
             else:
                 self.error("Trouble updating Home Assistant sensors.")

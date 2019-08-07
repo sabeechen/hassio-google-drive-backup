@@ -100,7 +100,6 @@ class Coordinator(Trigger, LogBase):
             self.info("Syncing Snapshots")
             self._global_info.sync()
             self._buildModel().sync(self._time.now())
-            self._updateFreshness()
             self._global_info.success()
             self._backoff.reset()
         except Exception as e:
@@ -111,7 +110,7 @@ class Coordinator(Trigger, LogBase):
             self._global_info.failed(e)
             self._backoff.backoff(e)
             self.info("Another attempt to sync will be made in {0} seconds".format(self._backoff.peek()))
-        self._updater.updateSnapshots(self.snapshots())
+        self._updateFreshness()
 
     def snapshots(self) -> List[Snapshot]:
         ret = list(self._model.snapshots.values())
@@ -202,6 +201,7 @@ class Coordinator(Trigger, LogBase):
             for source in purges:
                 if snapshot.getSource(source):
                     snapshot.updatePurge(source, snapshot == purges[source])
+        self._updater.updateSnapshots(self.snapshots())
 
     def _withSoftLock(self, callable):
         if not self._lock.acquire(blocking=False):

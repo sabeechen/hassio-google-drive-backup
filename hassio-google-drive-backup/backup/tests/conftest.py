@@ -20,6 +20,7 @@ from .helpers import TestSource, LockBlocker
 from ..dev.testbackend import TestBackend
 from ..resolver import Resolver
 from ..settings import Setting
+from ..logbase import LogBase
 
 
 class ServerThread():
@@ -128,6 +129,7 @@ def cleandir():
 
 @pytest.fixture
 def time():
+    LogBase.reset()
     return FakeTime()
 
 

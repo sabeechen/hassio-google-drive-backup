@@ -16,7 +16,10 @@ NOTIFICATION_DESC_LINK = "The add-on is having trouble backing up your snapshots
 NOTIFICATION_DESC_STATIC = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on status page for details."
 
 MAX_BACKOFF = 60 * 5  # 5 minutes
-FIRST_BACKOFF = 20  # 1 minute
+FIRST_BACKOFF = 60  # 1 minute
+
+# Wait 5 minutes before logging
+NOTIFY_DELAY = 60 * 5  # 5 minute
 
 
 class HaUpdater(Worker, LogBase):
@@ -28,9 +31,9 @@ class HaUpdater(Worker, LogBase):
         self._cache = []
         self._info = global_info
         self._notified = False
-        self._ha_offline = False
         self._snapshots_stale = True
         self._backoff = Backoff(max=MAX_BACKOFF, base=FIRST_BACKOFF)
+        self._first_error = None
 
     def update(self):
         try:
@@ -50,14 +53,14 @@ class HaUpdater(Worker, LogBase):
                 elif not self._stale() and self._notified:
                     self._requests.dismissNotification()
                     self._notified = False
-            if self._ha_offline:
-                self._ha_offline = False
             self._backoff.reset()
+            self._first_error = None
         except requests.exceptions.HTTPError as e:
+            if self._first_error is None:
+                self._first_error = self._time.now()
             if int(e.response.status_code / 100) == 5:
-                if not self._ha_offline:
+                if self._time.now() > self._first_error + timedelta(seconds=NOTIFY_DELAY):
                     self.error("Unable to reach Home Assistant (HTTP {0}).  Is it restarting?".format(e.response.status_code))
-                    self._ha_offline = True
             else:
                 self.error("Trouble updating Home Assistant sensors.")
                 self.error(formatException(e))

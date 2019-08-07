@@ -2,6 +2,7 @@ from ..haupdater import HaUpdater
 from ..globalinfo import GlobalInfo
 from .faketime import FakeTime
 from ..dev.testbackend import TestBackend
+from ..logbase import LogBase
 
 STALE_ATTRIBUTES = { 
     "device_class": "problem",
@@ -56,24 +57,23 @@ def test_failure_backoff_502(updater: HaUpdater, server, time: FakeTime):
     backend.setHomeAssistantError(502)
     for x in range(9):
         updater.update()
-    assert updater._ha_offline
-    assert time.sleeps == [20, 40, 80, 160, 300, 300, 300, 300, 300]
+    assert time.sleeps == [60, 120, 240, 300, 300, 300, 300, 300, 300]
 
     backend.setHomeAssistantError(None)
     updater.update()
-    assert not updater._ha_offline
+    assert time.sleeps == [60, 120, 240, 300, 300, 300, 300, 300, 300]
+
 
 def test_failure_backoff_510(updater: HaUpdater, server, time: FakeTime):
     backend: TestBackend = server.getServer()
     backend.setHomeAssistantError(510)
     for x in range(9):
         updater.update()
-    assert updater._ha_offline
-    assert time.sleeps == [20, 40, 80, 160, 300, 300, 300, 300, 300]
+    assert time.sleeps == [60, 120, 240, 300, 300, 300, 300, 300, 300]
 
     backend.setHomeAssistantError(None)
     updater.update()
-    assert not updater._ha_offline
+    assert time.sleeps == [60, 120, 240, 300, 300, 300, 300, 300, 300]
 
 
 def test_failure_backoff_other(updater: HaUpdater, server, time: FakeTime):
@@ -81,11 +81,10 @@ def test_failure_backoff_other(updater: HaUpdater, server, time: FakeTime):
     backend.setHomeAssistantError(400)
     for x in range(9):
         updater.update()
-    assert not updater._ha_offline
-    assert time.sleeps == [20, 40, 80, 160, 300, 300, 300, 300, 300]
+    assert time.sleeps == [60, 120, 240, 300, 300, 300, 300, 300, 300]
     backend.setHomeAssistantError(None)
     updater.update()
-    assert not updater._ha_offline
+    assert time.sleeps == [60, 120, 240, 300, 300, 300, 300, 300, 300]
 
 
 def test_update_snapshots(updater: HaUpdater, server, time: FakeTime):
@@ -165,6 +164,32 @@ def test_publish_for_failure(updater: HaUpdater, server, time: FakeTime, global_
     global_info.success()
     updater.update()
     assert backend.getNotification() is None
+
+
+def test_failure_logging(updater: HaUpdater, server, time: FakeTime):
+    backend: TestBackend = server.getServer()
+    backend.setHomeAssistantError(501)
+    updater.update()
+    assert LogBase.getLast() is None
+
+    time.advance(minutes=1)
+    updater.update()
+    assert LogBase.getLast() is None
+
+    time.advance(minutes=5)
+    updater.update()
+    assert LogBase.getLast().msg == "Unable to reach Home Assistant (HTTP 501).  Is it restarting?"
+
+    last_log = LogBase.getLast()
+    time.advance(minutes=5)
+    updater.update()
+    assert LogBase.getLast() is not last_log
+    assert LogBase.getLast().msg == "Unable to reach Home Assistant (HTTP 501).  Is it restarting?"
+
+    last_log = LogBase.getLast()
+    backend.setHomeAssistantError(None)
+    updater.update()
+    assert LogBase.getLast() is last_log
 
 
 def verifyEntity(backend, name, state, attributes):

@@ -1,4 +1,5 @@
 import logging
+from logging import LogRecord
 import sys
 
 HISTORY_SIZE = 1000
@@ -10,8 +11,12 @@ class HistoryHandler(logging.Handler):
         self.history = [None] * HISTORY_SIZE
         self.history_index = 0
 
-    def emit(self, record):
-        self.history[self.history_index % HISTORY_SIZE] = (record.levelno, self.format(record))
+    def reset(self):
+        self.history = [None] * HISTORY_SIZE
+        self.history_index = 0
+
+    def emit(self, record: LogRecord):
+        self.history[self.history_index % HISTORY_SIZE] = record
         self.history_index += 1
 
     def getHistory(self, start=0, html=False):
@@ -21,24 +26,27 @@ class HistoryHandler(logging.Handler):
         for x in range(start, end):
             item = self.history[x % HISTORY_SIZE]
             if html:
-                if item[0] == logging.WARN:
+                if item.levelno == logging.WARN:
                     style = "console-warning"
-                elif item[0] == logging.ERROR:
+                elif item.levelno == logging.ERROR:
                     style = "console-error"
-                elif item[0] == logging.DEBUG:
+                elif item.levelno == logging.DEBUG:
                     style = "console-debug"
-                elif item[0] == logging.CRITICAL:
+                elif item.levelno == logging.CRITICAL:
                     style = "console-critical"
-                elif item[0] == logging.FATAL:
+                elif item.levelno == logging.FATAL:
                     style = "console-fatal"
-                elif item[0] == logging.WARNING:
+                elif item.levelno == logging.WARNING:
                     style = "console-warning"
                 else:
                     style = "console-default"
-                line = "<span class='" + style + "'>" + item[1] + "</span>"
+                line = "<span class='" + style + "'>" + self.format(item) + "</span>"
                 yield (x + 1, line)
             else:
-                yield (x + 1, item[1])
+                yield (x + 1, self.format(item))
+
+    def getLast(self) -> LogRecord:
+        return self.history[(self.history_index - 1) % HISTORY_SIZE]
 
 
 class ColorHandler(logging.Handler):
@@ -86,5 +94,14 @@ class LogBase(object):
     def setConsoleLevel(self, level) -> None:
         console_handler.setLevel(level)
 
-    def getHistory(self, index, html):
+    @classmethod
+    def getHistory(cls, index, html):
         return history_handler.getHistory(index, html)
+
+    @classmethod
+    def getLast(cls) -> LogRecord:
+        return history_handler.getLast()
+
+    @classmethod
+    def reset(cls) -> None:
+        return history_handler.reset()

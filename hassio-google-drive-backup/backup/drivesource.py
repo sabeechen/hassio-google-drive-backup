@@ -139,6 +139,31 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         self.drivebackend.update(item.id(), file_metadata)
         item.setRetained(retain)
 
+    def changeBackupFolder(self, id):
+        if self._verifyBackupFolderWithQuery(id):
+            self._saveFolder(id)
+            self._folderId = id
+            self._folder_queryied_last = self.time.now()
+        else:
+            # TODO
+            pass  
+
+    def _verifyBackupFolderWithQuery(self, id):
+        # Query drive for the folder to make sure it still exists and we have the right permission on it.
+        try:
+            folder = self._get(id)
+            if not self._isValidFolder(folder):
+                self.info("Provided snapshot folder {0} is invalid".format(id))
+                return False
+            return True
+        except HTTPError as e:
+            # 404 means the folder oean't exist (maybe it got moved?)
+            if e.response.status_code == 404:
+                self.info("Provided snapshot folder {0} is gone".format(id))
+                return False
+            else:
+                raise e
+
     def _getParentFolderId(self):
         if not self._folder_queryied_last or self._folder_queryied_last + timedelta(seconds=FOLDER_CACHE_SECONDS) < self.time.now():
             self._folderId = self._validateFolderId()
@@ -158,23 +183,9 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         if os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
             with open(self.config.get(Setting.FOLDER_FILE_PATH), "r") as folder_file:
                 folder_id: str = folder_file.readline()
-
-                # Query drive for the folder to make sure it still exists and we have the right permission on it.
-                try:
-                    folder = self._get(folder_id)
-                    if not self._isValidFolder(folder):
-                        self.info("Existing snapshot folder was invalid, so we'll try to find an existing one")
-                        return self._findDriveFolder()
-                    return folder_id
-                except HTTPError as e:
-                    # 404 means the folder oean't exist (maybe it got moved?)
-                    if e.response.status_code == 404:
-                        self.info("The Drive Snapshot folder is gone")
-                        return self._findDriveFolder()
-                    else:
-                        raise e
-        else:
-            return self._findDriveFolder()
+                if not self._verifyBackupFolderWithQuery(folder_id):
+                    return self._findDriveFolder()
+        return self._findDriveFolder()
 
     def _get(self, id):
         return self.drivebackend.get(id)

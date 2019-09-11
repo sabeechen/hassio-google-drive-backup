@@ -1,3 +1,10 @@
+## [0.98.3] 2019-09-10
+### Fixes
+- Fixed an issue causing the add-on to repeatedly attempt to create snapshots.
+- Fixed a race condition that caused snapshtos to be created twice on schedule.
+- The addon is now configured to startup after Home Assistant, which fixes some error messages at startup.
+
+
 ## [0.98.2] 2019-08-04
 ### Fixes
 - Restore link now brings up a help dialog, since sometimes it can't resolve the url to the restore page.

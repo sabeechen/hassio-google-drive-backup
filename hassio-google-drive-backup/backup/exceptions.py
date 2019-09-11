@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .const import ERROR_MULTIPLE_DELETES, ERROR_HA_DELETE_ERROR, ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT, ERROR_GOOGLE_INTERNAL, ERROR_GOOGLE_CONNECT, ERROR_GOOGLE_DNS, ERROR_DRIVE_FULL, ERROR_BAD_PASSWORD_KEY, ERROR_INVALID_CONFIG, ERROR_LOGIC, ERROR_CREDS_EXPIRED, ERROR_NO_SNAPSHOT, ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL, ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED
+from .const import ERROR_MULTIPLE_DELETES, ERROR_HA_DELETE_ERROR, ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT, ERROR_GOOGLE_INTERNAL, ERROR_GOOGLE_CONNECT, ERROR_GOOGLE_DNS, ERROR_DRIVE_FULL, ERROR_BAD_PASSWORD_KEY, ERROR_INVALID_CONFIG, ERROR_LOGIC, ERROR_CREDS_EXPIRED, ERROR_NO_SNAPSHOT, ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL, ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, ERROR_EXISTING_FOLDER, ERROR_MULTIPLE_FOLDERS, ERROR_BACKUP_FOLDER_MISSING
 
 
 def ensureKey(key, target, name):
@@ -200,3 +200,39 @@ class HomeAssistantDeleteError(KnownError):
 
     def code(self):
         return ERROR_HA_DELETE_ERROR
+
+
+class ExistingBackupFolderError(KnownError):
+    def __init__(self, existing_id: str):
+        self.existing_id = existing_id
+    
+    def message(self):
+        return "A backup folder already exists.  Please visit the add-on Web UI to select where to backup."
+
+    def code(self):
+        return ERROR_EXISTING_FOLDER
+
+    def data(self):
+        return {"existing_id": self.existing_id}
+
+
+class MultipleBackupFoldersError(KnownError):
+    def __init__(self, count: int):
+        self.count = count
+
+    def message(self):
+        return "Multiple backup folders were found.  Please visit the add-on Web UI to select where to backup."
+
+    def code(self):
+        return ERROR_MULTIPLE_FOLDERS
+
+    def data(self):
+        return {"count": self.count}
+
+
+class BackupFolderMissingError(KnownError):
+    def message(self):
+        return "The backup folder is missing.  Please visit the add-on Web UI to select where to backup."
+
+    def code(self):
+        return ERROR_BACKUP_FOLDER_MISSING

@@ -20,3 +20,7 @@ ERROR_GOOGLE_SESSION = "google_session_expired"
 ERROR_GOOGLE_TIMEOUT = "google_timeout"
 ERROR_HA_DELETE_ERROR = "delete_error"
 ERROR_MULTIPLE_DELETES = "multiple_deletes"
+
+ERROR_EXISTING_FOLDER = "existing_backup_folder"
+ERROR_MULTIPLE_FOLDERS = "multiple_backup_folders"
+ERROR_BACKUP_FOLDER_MISSING = "backup_folder_missing"

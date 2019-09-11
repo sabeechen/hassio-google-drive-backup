@@ -281,6 +281,13 @@ class UIServer(Trigger, LogBase):
         return self.redirect("/")
 
     @cherrypy.expose
+    def changefolder(self, id: str) -> None:
+        if self._coord._model.dest.changefolder(id):
+            # TODO
+            pass
+        return self.redirect("/")
+
+    @cherrypy.expose
     def simerror(self, error: str = "") -> None:
         if len(error) == 0:
             self._coord._model.simulate_error = None

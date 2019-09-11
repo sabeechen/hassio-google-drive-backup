@@ -85,7 +85,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.lock: Lock = Lock()
         self.time = time
         self.harequests = ha
-        self.last_slugs = []
+        self.last_slugs = set()
         self.retained = []
         self.cached_retention = {}
         self._info = info
@@ -168,20 +168,20 @@ class HaSource(SnapshotSource[HASnapshot]):
 
     def get(self) -> Dict[str, HASnapshot]:
         # TODO: refresh settings here instead of during snapshot creation.  maybe cache it with a timeout
-        slugs = []
+        slugs = set()
         retained = []
         snapshots: Dict[str, HASnapshot] = {}
         for snapshot in self.harequests.snapshots()['snapshots']:
             slug = snapshot['slug']
-            slugs.append(slug)
+            slugs.add(slug)
             item = self.harequests.snapshot(slug)
             if slug in self.pending_options:
                 item.setOptions(self.pending_options[slug])
             snapshots[slug] = item
             if item.retained():
                 retained.append(item.slug())
-        slugs.sort()
-        if slugs != self.last_slugs:
+        if len(slugs - self.last_slugs) > 0:
+            # At least one item was added since the last query
             self.last_slugs = slugs
             if self.pending_snapshot is not None:
                 self._killPending()

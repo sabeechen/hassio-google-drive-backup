@@ -34,8 +34,11 @@
             "label": "DEPLOY: Dev docker image",
             "type": "shell",
             "command": "./deploy_dev.sh",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
-
     ]
 }

@@ -283,7 +283,7 @@ class UIServer(Trigger, LogBase):
     @cherrypy.expose
     def changefolder(self, id: str) -> None:
         if self._coord._model.dest.changefolder(id):
-            # TODO
+            # TODO Implement me
             pass
         return self.redirect("/")
 

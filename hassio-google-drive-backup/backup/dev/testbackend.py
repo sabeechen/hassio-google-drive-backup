@@ -19,6 +19,7 @@ from ..tests.helpers import createSnapshotTar, parseSnapshotInfo, all_addons
 mimeTypeQueryPattern = re.compile("^mimeType='.*'$")
 parentsQueryPattern = re.compile("^'.*' in parents$")
 bytesPattern = re.compile("^bytes \\d+-\\d+/\\d+$")
+resumeBytesPattern = re.compile("^bytes \\*/\\d+$")
 intPattern = re.compile("\\d+")
 rangePattern = re.compile("bytes=\\d+-\\d+")
 
@@ -68,6 +69,7 @@ class TestBackend(object):
         self.snapshots: Dict[str, Any] = {}
         self.snapshot_data: Dict[str, bytearray] = {}
         self.files: Dict[str, bytearray] = {}
+        self.chunks = []
         self.settings: Dict[str, Any] = self.defaultSettings()
         self._snapshot_lock = Lock()
         self._settings_lock = Lock()
@@ -138,6 +140,7 @@ class TestBackend(object):
             "image": "homeassistant/raspberrypi3-homeassistant",
             "custom": True,
             "drive_upload_error": None,
+            "drive_upload_error_attempts": 0,
             "boot": True,
             "port": 8099,
             "ha_port": 1337,
@@ -319,14 +322,19 @@ class TestBackend(object):
         return resp
 
     def driveContinueUpload(self, context: Context, id: str) -> Any:
-        if self.getSetting("drive_upload_error") is not None:
-            return self.getSetting("drive_upload_error")
-        self._time.sleep(self.getSetting('drive_upload_sleep'))
+        if (self.getSetting('drive_upload_sleep') > 0):
+            self._time.sleep(self.getSetting('drive_upload_sleep'))
         self._checkDriveHeaders(context)
         if self.upload_info.get('id', "") != id:
             return HTTP_400_BAD_REQUEST
         chunk_size = int(context.headers()['Content-Length'])
         info = context.headers()['Content-Range']
+        if resumeBytesPattern.match(info):
+            resp = Response()
+            if self.upload_info['next_start'] != 0:
+                resp.headers['Range'] = "bytes=0-{0}".format(self.upload_info['next_start'] - 1)
+            resp.status_code = 308
+            return resp
         if not bytesPattern.match(info):
             return HTTP_400_BAD_REQUEST
         numbers = intPattern.findall(info)
@@ -351,6 +359,13 @@ class TestBackend(object):
             else:
                 received_bytes.extend(data)
 
+        # See if we shoudl fail the request
+        if self.getSetting("drive_upload_error") is not None:
+            if self.getSetting("drive_upload_error_attempts") <= 0:
+                return self.getSetting("drive_upload_error")
+            else:
+                self.update({"drive_upload_error_attempts": self.getSetting("drive_upload_error_attempts") - 1})
+
         # validate the chunk
         if len(received_bytes) != chunk_size:
             return HTTP_400_BAD_REQUEST
@@ -363,6 +378,7 @@ class TestBackend(object):
         if len(self.upload_info['item']['bytes']) != end + 1:
             return HTTP_400_BAD_REQUEST
 
+        self.chunks.append(len(received_bytes))
         if end == total - 1:
             # upload is complete, so create the item
             self.items[self.upload_info['id']] = self.upload_info['item']

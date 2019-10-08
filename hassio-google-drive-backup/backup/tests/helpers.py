@@ -119,6 +119,18 @@ def getTestStream(size: int):
     return BytesIO(arr)
 
 
+def compareStreams(left, right):
+    while True:
+        from_left = left.read(1024 * 1024)
+        from_right = right.read(1024 * 1024)
+        if len(from_left) == 0:
+            assert len(from_right) == 0
+            break
+        if from_left != from_right:
+            print("break!")
+        assert from_left == from_right
+
+
 class LockBlocker():
     def __init__(self):
         self._event = Event()

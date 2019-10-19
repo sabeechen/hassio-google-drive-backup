@@ -249,7 +249,7 @@ Alternatively, you can move a snapshot in Google Drive out of the snapshot folde
 If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage.  This should include a link to pre-populate a new issue in github, which I'd encourage you to do.  Additioanlly you can set the add-on config option `"verbose": true` to get information from the add-on's logs to help me with debugging.
 
 ### Will this fill up my Google Drive?  Why are my snapshots so big?
-You'll need tot take care to ensure you don't configure this to blow up your Google Drive.  You might want to consider:
+You'll need to take care to ensure you don't configure this to blow up your Google Drive.  You might want to consider:
 *   If your snapshots are HUGE, its probably because Home Assistant by defaults keeps 10 days of sensor history.  Consider setting `purge_keep_days: N` in your [recorder confiuration](https://www.home-assistant.io/components/recorder/) to trim it down to something more manageable, like 1 day of history.
 *   Also consider that some of the add-ons are designed to manage large amounts of media.  For example, add-ons like the Plex Media Server are designed to store media in the /share folder, and Mobile Upload folders default to a sub-folder in the addons folder.  If you migrate all of your media to the HASS.io folder structure and you don't exclude it from the backup, you _could easily chew up your entire Google Drive space in a single snapshot_.
 *   If you use the Google Drive Desktop sync client, you'll porbably want to tell it not to sync this folder (its available in the options).

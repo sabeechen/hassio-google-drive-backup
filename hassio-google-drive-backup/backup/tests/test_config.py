@@ -156,13 +156,14 @@ def test_resolver(time):
         config.update({Setting.DRIVE_IPV4: "1.1.1.1", Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8"})
         resolver.toggle()
         assert socket.getaddrinfo(host, 443) == [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ("1.1.1.1", 443))]
+        socket.getaddrinfo(host, 443) != resolver.old_getaddrinfo(host, 443)
         assert len(socket.getaddrinfo(host, 443)) == 1
 
         # test using alternate dns
         assert resolver.cache[host] is None
         config.update({Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8"})
-        assert len(socket.getaddrinfo(host, 443)) > 1
-        assert len(resolver.cache[host][0]) > 1
+        assert socket.getaddrinfo(host, 443)
+        assert len(resolver.cache[host][0]) > 0
         assert len(resolver.cache[host][0]) == len(socket.getaddrinfo(host, 443))
 
 

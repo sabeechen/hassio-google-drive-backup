@@ -253,7 +253,7 @@ class DriveRequests(LogBase):
                     # clear the cached session location URI, since this usually
                     # means the endpoint is no good anymore.
                     self.last_attempt_location = None
-                    self.last_attempt_metadata
+                    self.last_attempt_metadata = None
 
                 if e.response.status_code == 404:
                     raise GoogleSessionError()
@@ -262,6 +262,8 @@ class DriveRequests(LogBase):
             yield float(start + len(data)) / float(total_size)
             if partial.status_code == 200 or partial.status_code == 201:
                 # Upload completed, return the object json
+                self.last_attempt_location = None
+                self.last_attempt_metadata = None
                 yield self.get(partial.json()['id'])
                 break
             elif partial.status_code == 308:

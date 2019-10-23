@@ -3,14 +3,16 @@ import os
 import pytest
 from ..exceptions import GoogleCredentialsExpired, GoogleDnsFailure, GoogleCantConnect, GoogleSessionError, GoogleTimeoutError, GoogleInternalError
 from ..drivesource import FOLDER_MIME_TYPE, DriveSource
-from ..driverequests import BASE_CHUNK_SIZE, MAX_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS
+from ..driverequests import BASE_CHUNK_SIZE, MAX_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS, RETRY_SESSION_ATTEMPTS
 from ..snapshots import DriveSnapshot, DummySnapshot
 from time import sleep
 from .helpers import createSnapshotTar, compareStreams
-from .conftest import ServerInstance
+from .conftest import ServerInstance, RequestsMock
 from ..config import Config
 from .faketime import FakeTime
 from ..settings import Setting
+from requests.exceptions import HTTPError
+from requests import Response
 
 RETRY_EXHAUSTION_SLEEPS = [2, 4, 8, 16, 32]
 
@@ -87,12 +89,14 @@ def test_folder_creation(drive, time, config):
     drive.drivebackend.update(folderId, {"trashed": True})
     assert drive.drivebackend.get(folderId)["trashed"] is True
     assert len(drive.get()) == 0
+    time.advanceDay()
     assert drive.getFolderId() != folderId
 
     # delete the folder, assert we create a new one
     folderId = drive.getFolderId()
     drive.drivebackend.delete(folderId)
     assert len(drive.get()) == 0
+    time.advanceDay()
     assert drive.getFolderId() != folderId
 
 
@@ -251,3 +255,133 @@ def test_disable_upload(drive: DriveSource, config: Config):
     assert drive.upload()
     config.override(Setting.ENABLE_DRIVE_UPLOAD, False)
     assert not drive.upload()
+
+
+def test_resume_upload_on_connection_error(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
+    verify_upload_resumed(time, drive, config, requests_mock, ConnectionError())
+
+
+def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
+    response = Response()
+    response.status_code = 401
+    exception = HTTPError(response=response, request=None)
+    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
+    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+
+    # Configure the upload to fail after the first upload chunk
+    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
+    with pytest.raises(HTTPError):
+        drive.save(from_snapshot, data)
+
+    # Verify a requst was made to start the upload but not cached
+    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+    assert drive.drivebackend.last_attempt_count == 0
+    assert drive.drivebackend.last_attempt_location is None
+    assert drive.drivebackend.last_attempt_metadata is None
+
+    # upload again, which should retry
+    requests_mock.urls.clear()
+    requests_mock.setFailure(None, None, None)
+    snapshot = drive.save(from_snapshot, data)
+    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+
+    # Verify the uploaded bytes are identical
+    from_snapshot.addSource(snapshot)
+    download = drive.read(from_snapshot)
+    data.seek(0)
+    compareStreams(data, download)
+
+
+def test_resume_session_reused_on_http5XX(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
+    response = Response()
+    response.status_code = 550
+    verify_upload_resumed(time, drive, config, requests_mock, HTTPError(response=response, request=None))
+
+
+def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
+    exception = ConnectionError()
+    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
+    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+
+    # Configure the upload to fail after the first upload chunk
+    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
+    with pytest.raises(ConnectionError):
+        drive.save(from_snapshot, data)
+
+    # Verify a requst was made to start the upload but not cached
+    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+    assert drive.drivebackend.last_attempt_count == 0
+    assert drive.drivebackend.last_attempt_location is not None
+    assert drive.drivebackend.last_attempt_metadata is not None
+    last_location = drive.drivebackend.last_attempt_location
+
+    for x in range(1, RETRY_SESSION_ATTEMPTS + 1):
+        requests_mock.urls.clear()
+        requests_mock.setFailure(0, ".*upload/drive/v3/files/progress.*", exception)
+        with pytest.raises(ConnectionError):
+            drive.save(from_snapshot, data)
+        assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" not in requests_mock.urls
+        assert last_location in requests_mock.urls
+        assert drive.drivebackend.last_attempt_count == x
+        assert drive.drivebackend.last_attempt_location is last_location
+        assert drive.drivebackend.last_attempt_metadata is not None
+
+    # Next attempt should give up and restart the upload
+    requests_mock.urls.clear()
+    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
+    with pytest.raises(ConnectionError):
+        drive.save(from_snapshot, data)
+    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+    assert last_location not in requests_mock.urls
+    assert drive.drivebackend.last_attempt_count == 0
+
+    # upload again, which should retry
+    requests_mock.urls.clear()
+    requests_mock.setFailure(None, None, None)
+    snapshot = drive.save(from_snapshot, data)
+    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" not in requests_mock.urls
+
+    # Verify the uploaded bytes are identical
+    from_snapshot.addSource(snapshot)
+    download = drive.read(from_snapshot)
+    data.seek(0)
+    compareStreams(data, download)
+
+
+def verify_upload_resumed(time, drive: DriveSource, config: Config, requests_mock: RequestsMock, exception: Exception):
+    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
+    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+
+    # Configure the upload to fail after the first upload chunk
+    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
+    with pytest.raises(type(exception)):
+        drive.save(from_snapshot, data)
+
+    # Verify a requst was made to start the upload
+    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+    assert drive.drivebackend.last_attempt_count == 0
+    assert drive.drivebackend.last_attempt_location is not None
+    assert drive.drivebackend.last_attempt_metadata is not None
+    last_location = drive.drivebackend.last_attempt_location
+
+    # Retry the upload and let is succeed
+    requests_mock.urls.clear()
+    requests_mock.setFailure(None, None, None)
+    snapshot = drive.save(from_snapshot, data)
+
+    # We shoudl nto see the upload "initialize" url
+    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" not in requests_mock.urls
+
+    # We should see the last location url (which has a unique token) reused to resume the upload
+    assert last_location in requests_mock.urls
+
+    # The saved metadata should be cleared out.
+    assert drive.drivebackend.last_attempt_count == 1
+    assert drive.drivebackend.last_attempt_location is None
+    assert drive.drivebackend.last_attempt_metadata is None
+
+    # Verify the uploaded bytes are identical
+    from_snapshot.addSource(snapshot)
+    download = drive.read(from_snapshot)
+    data.seek(0)
+    compareStreams(data, download)

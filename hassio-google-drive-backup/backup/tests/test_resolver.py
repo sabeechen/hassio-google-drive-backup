@@ -48,4 +48,3 @@ def test_bad_name(resolver: Resolver):
         resolver.addResolveAddress("dfleinahsgftrutyo.com")
         with pytest.raises(NXDOMAIN):
             requests.get("http://dfleinahsgftrutyo.com/")
-

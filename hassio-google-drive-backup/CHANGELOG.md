@@ -1,3 +1,12 @@
+## [0.98.4] 2019-10-24
+### Fixes
+- Double sync at add-on startup (caused unnecessary traffic to Google Drive)
+- Drive folder Id gets cached for a few minutes instead of retried with every sync.
+
+### Changes
+- Partially completed uploads will be retried for a while (resuming where they left off) instead of having to start over on transient connection errors.
+- Connection errors (write timout, broken pipe, etc) now get rendered in the UI with a helful dialog.
+
 ## [0.98.3] 2019-09-10
 ### Fixes
 - Fixed an issue causing the add-on to repeatedly attempt to create snapshots.

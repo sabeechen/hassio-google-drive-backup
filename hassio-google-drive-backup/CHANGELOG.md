@@ -5,6 +5,7 @@
 
 ### Changes
 - Partially completed uploads will be retried for a while (resuming where they left off) instead of having to start over on transient connection errors.
+- The "chunk" size for Google Drive uploads is now adjusted based on your connection speed, which helps spotty connections make more progress and faster connections upload more quickly.
 - Connection errors (write timout, broken pipe, etc) now get rendered in the UI with a helful dialog.
 
 ## [0.98.3] 2019-09-10

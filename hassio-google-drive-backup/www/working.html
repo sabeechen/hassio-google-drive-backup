@@ -7,17 +7,17 @@
   <title>Hassio Google Drive Backup</title>
 
   <!-- CSS  -->
-  <link href="css/icons.css?version=0.98.3" rel="stylesheet">
-  <link href="css/materialize.css?version=0.98.3" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.98.3" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.98.3">
-  <script src="js/jquery.js?version=0.98.3"></script>
-  <script src="js/materialize.js?version=0.98.3"></script>
-  <script src="js/init.js?version=0.98.3"></script>
-  <script src="js/scripts.js?version=0.98.3"></script>
-  <script src="js/settings.js?version=0.98.3"></script>
-  <script src="js/restore.js?version=0.98.3"></script>
-  <script src="js/moment.js?version=0.98.3"></script>
+  <link href="css/icons.css?version=0.98.4" rel="stylesheet">
+  <link href="css/materialize.css?version=0.98.4" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css?version=0.98.4" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="images/favicon.png?version=0.98.4">
+  <script src="js/jquery.js?version=0.98.4"></script>
+  <script src="js/materialize.js?version=0.98.4"></script>
+  <script src="js/init.js?version=0.98.4"></script>
+  <script src="js/scripts.js?version=0.98.4"></script>
+  <script src="js/settings.js?version=0.98.4"></script>
+  <script src="js/restore.js?version=0.98.4"></script>
+  <script src="js/moment.js?version=0.98.4"></script>
   <script type="text/javascript">
     $(document).ready(function () {
       // Needed to make modal dialogs work.
@@ -1131,8 +1131,9 @@
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
                   <span style="vertical-align: top;">Google Drive Connection Timeout</span>
                 </span>
-                <p>The connection timed out while trying to read from or connect to Google Drive. Snapshots can't be
-                  backed up without being able to reach Google Drive.</p>
+                <p>The connection timed out or was closed unexpectedly while trying to communicate with Google Drive. Snapshots can't be
+                  backed up without being able to reach Google Drive reliably.  This can happen transiently from time to time and the 
+                  addon will continue to attempt to sync your snapshots.  This problem almost always resolves itself after some time.</p>
                 <p>Please ensure:</p>
                 <ul class="browser-default">
                   <li>The internet is working.</li>

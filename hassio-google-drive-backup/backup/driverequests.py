@@ -244,6 +244,7 @@ class DriveRequests(LogBase):
                 "Content-Range": "bytes {0}-{1}/{2}".format(start, start + len(data) - 1, total_size)
             }
             try:
+                self.debug("Sending {0} bytes to Google Drive".format(current_chunk_size))
                 partial = self.retryRequest("PUT", location, headers=headers, data=data, patch_url=False)
 
                 # Base the next chunk size on how long it took to send the last chunk.
@@ -316,6 +317,8 @@ class DriveRequests(LogBase):
                     raise GoogleCantConnect()
                 if isinstance(e, ConnectTimeout):
                     raise GoogleCantConnect()
+                if "The write operation timed out" in str(e) or "Connection aborted" in str(e):
+                    raise GoogleTimeoutError()
                 raise e
             except DNSException as e:
                 if self.resolver is not None:

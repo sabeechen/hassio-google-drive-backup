@@ -32,7 +32,7 @@ MIME_TYPE = "application/tar"
 THUMBNAIL_MIME_TYPE = "image/png"
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
 FOLDER_NAME = 'Hass.io Snapshots'
-FOLDER_CACHE_SECONDS = 60 * 5
+FOLDER_CACHE_SECONDS = 60
 
 
 class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
@@ -146,7 +146,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
             self._folder_queryied_last = self.time.now()
         else:
             # TODO
-            pass  
+            pass
 
     def _verifyBackupFolderWithQuery(self, id):
         # Query drive for the folder to make sure it still exists and we have the right permission on it.
@@ -157,7 +157,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 return False
             return True
         except HTTPError as e:
-            # 404 means the folder oean't exist (maybe it got moved?)
+            # 404 means the folder doesn't exist (maybe it got moved?)
             if e.response.status_code == 404:
                 self.info("Provided snapshot folder {0} is gone".format(id))
                 return False
@@ -167,6 +167,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
     def _getParentFolderId(self):
         if not self._folder_queryied_last or self._folder_queryied_last + timedelta(seconds=FOLDER_CACHE_SECONDS) < self.time.now():
             self._folderId = self._validateFolderId()
+            self._folder_queryied_last = self.time.now()
         return self._folderId
 
     def _validateSnapshot(self, snapshot: Snapshot) -> DriveSnapshot:
@@ -183,8 +184,8 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         if os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
             with open(self.config.get(Setting.FOLDER_FILE_PATH), "r") as folder_file:
                 folder_id: str = folder_file.readline()
-                if not self._verifyBackupFolderWithQuery(folder_id):
-                    return self._findDriveFolder()
+            if self._verifyBackupFolderWithQuery(folder_id):
+                return folder_id
         return self._findDriveFolder()
 
     def _get(self, id):

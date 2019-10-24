@@ -2,6 +2,7 @@ import os
 import pytest
 import tempfile
 import requests
+import re
 
 from .faketime import FakeTime
 from ..config import Config
@@ -21,6 +22,7 @@ from ..dev.testbackend import TestBackend
 from ..resolver import Resolver
 from ..settings import Setting
 from ..logbase import LogBase
+from threading import Lock
 
 
 class ServerThread():
@@ -69,6 +71,44 @@ class ServerInstance():
 
     def cleanup(self):
         cleanupInstance(self.id)
+
+
+class RequestsMock():
+    def __init__(self):
+        self.lock: Lock = Lock()
+        self.old_method = None
+        self.exception = None
+        self.attempts = None
+        self.url_filter = None
+        self.urls = []
+
+    def __enter__(self):
+        with self.lock:
+            self.old_method = requests.request
+            requests.request = self._override
+        return self
+
+    def __exit__(self, a, b, c):
+        with self.lock:
+            requests.request = self.old_method
+            self.old_method = None
+
+    def _override(self, *args, **kwargs):
+        if len(args) >= 2:
+            self.urls.append(args[1])
+
+        if len(args) >= 2 and self.exception is not None and (self.url_filter is None or re.match(self.url_filter, args[1])):
+            if self.attempts is None or self.attempts <= 0:
+                raise self.exception
+            else:
+                self.attempts -= 1
+
+        return self.old_method(*args, **kwargs)
+
+    def setFailure(self, attempts, url_filter, exception):
+        self.attempts = attempts
+        self.exception = exception
+        self.url_filter = url_filter
 
 
 @pytest.fixture
@@ -187,8 +227,14 @@ def resolver(time):
 
 
 @pytest.fixture
-def request_client(server):
-    return server.getClient()
+def request_client(requests_mock, server):
+    with requests_mock:
+        yield requests
+
+
+@pytest.fixture
+def requests_mock():
+    return RequestsMock()
 
 
 @pytest.fixture

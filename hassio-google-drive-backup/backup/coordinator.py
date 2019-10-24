@@ -45,6 +45,7 @@ class Coordinator(Trigger, LogBase):
 
     def check(self) -> bool:
         if self._time.now() >= self.nextSyncAttempt():
+            self.reset()
             return True
         else:
             return super().check()

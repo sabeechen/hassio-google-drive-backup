@@ -23,7 +23,8 @@ SNAPSHOT_NAME_KEYS = {
     "{date}": lambda snapshot_type, now_local, host_info: now_local.strftime("%x"),
     "{time}": lambda snapshot_type, now_local, host_info: now_local.strftime("%X"),
     "{datetime}": lambda snapshot_type, now_local, host_info: now_local.strftime("%c"),
-    "{isotime}": lambda snapshot_type, now_local, host_info: now_local.isoformat()
+    "{isotime}": lambda snapshot_type, now_local, host_info: now_local.isoformat(),
+    "{hostname}": lambda snapshot_type, now_local, host_info: str(host_info.get('hostname', 'None')),
 }
 
 

@@ -9,6 +9,7 @@ from .logbase import LogBase, console_handler
 from typing import Dict, List, Any, Optional
 from .resolver import Resolver
 from .settings import Setting, _LOOKUP
+from .backupscheme import GenConfig
 
 ALWAYS_KEEP = {
     Setting.DAYS_BETWEEN_SNAPSHOTS,
@@ -118,18 +119,19 @@ class Config(LogBase):
         years = self.get(Setting.GENERATIONAL_YEARS)
         if days + weeks + months + years == 0:
             return None
-        base = {
-            'days': days,
-            'weeks': weeks,
-            'months': months,
-            'years': years,
-            'day_of_week': self.get(Setting.GENERATIONAL_DAY_OF_WEEK),
-            'day_of_month': self.get(Setting.GENERATIONAL_DAY_OF_MONTH),
-            'day_of_year': self.get(Setting.GENERATIONAL_DAY_OF_YEAR)
-        }
-        if base['days'] <= 1:
+        base = GenConfig(
+            days=days,
+            weeks=weeks,
+            months=months,
+            years=years,
+            day_of_week=self.get(Setting.GENERATIONAL_DAY_OF_WEEK),
+            day_of_month=self.get(Setting.GENERATIONAL_DAY_OF_MONTH),
+            day_of_year=self.get(Setting.GENERATIONAL_DAY_OF_YEAR),
+            aggressive=self.get(Setting.GENERATIONAL_DELETE_EARLY)
+        )
+        if base.days <= 1:
             # must always be >= 1, otherwise we'll just create and delete snapshots constantly.
-            base['days'] = 1
+            base.days = 1
         return base
 
     def _loadRetained(self) -> List[str]:

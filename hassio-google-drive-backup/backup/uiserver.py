@@ -722,4 +722,12 @@ class UIServer(Trigger, LogBase):
             'box-shadow': "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
         })
 
+        ret += self.cssElement("nav a", {
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement(".btn, .btn-large, .btn-small", {
+            'color': accent_text.toCss()
+        })
+
         return ret

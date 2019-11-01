@@ -334,6 +334,14 @@ function setColors(background, accent) {
     'background-color': background.toCss(),
     'box-shadow': "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
   });
+
+  setRule("nav a",  {
+    'color': accent_text.toCss()
+  });
+
+  setRule(".btn, .btn-large, .btn-small",  {
+    'color': accent_text.toCss()
+  });
 }
 
 // Modifying style sheets directly probably isn't best practices, but damn does it work well.

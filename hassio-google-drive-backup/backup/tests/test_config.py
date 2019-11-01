@@ -3,6 +3,7 @@ from ..exceptions import InvalidConfigurationValue
 from ..config import Config
 from ..settings import Setting
 from ..resolver import Resolver
+from ..backupscheme import GenConfig
 import socket
 
 
@@ -121,17 +122,15 @@ def defaultAnd(config={}):
 
 def test_GenerationalConfig(mocker) -> None:
     assert Config().getGenerationalConfig() is None
-    assert Config().override(Setting.GENERATIONAL_DAYS, 3).getGenerationalConfig() == getGenConfig({"days": 3})
-    assert Config().override(Setting.GENERATIONAL_WEEKS, 3).getGenerationalConfig() == getGenConfig({"weeks": 3})
-    assert Config().override(Setting.GENERATIONAL_MONTHS, 3).getGenerationalConfig() == getGenConfig({"months": 3})
-    assert Config().override(Setting.GENERATIONAL_YEARS, 3).getGenerationalConfig() == getGenConfig({"years": 3})
-    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_YEAR, 3).getGenerationalConfig() == getGenConfig({
-        "day_of_year": 3
-    })
-    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).getGenerationalConfig() == getGenConfig({
-        "day_of_month": 3
-    })
-    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").getGenerationalConfig() == getGenConfig({"day_of_week": "tue"})
+
+    assert Config().override(Setting.GENERATIONAL_DAYS, 3).getGenerationalConfig() == GenConfig(days=3)
+    assert Config().override(Setting.GENERATIONAL_WEEKS, 3).getGenerationalConfig() == GenConfig(days=1, weeks=3)
+    assert Config().override(Setting.GENERATIONAL_MONTHS, 3).getGenerationalConfig() == GenConfig(days=1, months=3)
+    assert Config().override(Setting.GENERATIONAL_YEARS, 3).getGenerationalConfig() == GenConfig(days=1, years=3)
+    assert Config().override(Setting.GENERATIONAL_DELETE_EARLY, True).override(Setting.GENERATIONAL_DAYS, 2).getGenerationalConfig() == GenConfig(days=2, aggressive=True)
+    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_YEAR, 3).getGenerationalConfig() == GenConfig(days=1, day_of_year=3)
+    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).getGenerationalConfig() == GenConfig(days=1, day_of_month=3)
+    assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").getGenerationalConfig() == GenConfig(days=1, day_of_week="tue")
 
     assert Config().override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").override(Setting.GENERATIONAL_DAY_OF_YEAR, "4").getGenerationalConfig() is None
 

@@ -5,12 +5,12 @@ import threading
 from flask import Flask, request, Response
 from flask_api.status import HTTP_501_NOT_IMPLEMENTED
 from typing import Any, Dict
-from .testbackend import TestBackend, Context, HTTPResponseError
+from .testbackend import HelperTestBackend, Context, HTTPResponseError
 from ..time import Time
 
 app = Flask(__name__)
 app.secret_key = "FBSVFGTYHAVPWVGFRTSCDFBZGBECRFTEX"
-instances: Dict[str, TestBackend] = {}
+instances: Dict[str, HelperTestBackend] = {}
 instance_lock = threading.Lock()
 DEFAULTS = {
     'port': 1234,
@@ -65,7 +65,7 @@ class FlaskContext(Context):
 
 def initInstance(id, time, port=1234):
     with instance_lock:
-        instances[id] = TestBackend(port, time)
+        instances[id] = HelperTestBackend(port, time)
 
 
 def getContext():
@@ -87,7 +87,7 @@ def getInstance(id):
         if DEFAULTS['client_id']:
             id = DEFAULTS['client_id']
         if id not in instances:
-            instances[id] = TestBackend(DEFAULTS['port'], Time())
+            instances[id] = HelperTestBackend(DEFAULTS['port'], Time())
         return instances[id]
 
 

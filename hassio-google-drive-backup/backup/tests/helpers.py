@@ -157,7 +157,7 @@ class LockBlocker():
         self._event.clear()
 
 
-class TestSource(SimulatedSource):
+class HelperTestSource(SimulatedSource):
     def __init__(self, name):
         super().__init__(name)
 

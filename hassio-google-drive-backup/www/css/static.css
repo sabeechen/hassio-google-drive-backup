@@ -37,6 +37,11 @@ body {
     color: white;
     background-color: rgb(153, 0, 0);
   }
+
+  .error_card a {
+    color: white;
+    text-decoration: underline;
+  }
   
   .default-hidden {
     display: none;

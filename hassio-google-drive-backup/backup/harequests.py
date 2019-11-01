@@ -154,8 +154,7 @@ class HaRequests(LogBase):
         data: Dict[str, Any] = {
             "state": state,
             "attributes": {
-                "friendly_name": "Snapshots Stale",
-                "device_class": "problem"
+                "friendly_name": "Snapshots Stale"
             }
         }
         self._postHaData("states/binary_sensor.snapshots_stale", data)

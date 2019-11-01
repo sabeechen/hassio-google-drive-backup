@@ -1,3 +1,16 @@
+## [0.99.0] 2019-11-01
+# Added
+- Colors for the interface can now be choosen from the Setting Menu or through addon options.  Try it form the settings menu, you'll like it.
+- Added a config option 'delete_generational_early', which deletes older unused snapshots more aggressively ([see here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md for an explanation)).
+- '{hostname}' can now be used as an option in snapshot names. 
+
+# Changes
+- Snapshot staleness sensor now has the 'generic' device class, since the ' device class was removed from HA's documentation.
+
+# Fixes
+- Fixed a bug causing generational snapshots closer to noon to be saved over those later in the day.
+- Fixed a bug in generational snapshots that caused users far from GMT to save snapshots on the wrong day.
+
 ## [0.98.4] 2019-10-24
 ### Fixes
 - Double sync at add-on startup (caused unnecessary traffic to Google Drive)
@@ -5,6 +18,7 @@
 
 ### Changes
 - Partially completed uploads will be retried for a while (resuming where they left off) instead of having to start over on transient connection errors.
+- The "chunk" size for Google Drive uploads is now adjusted based on your connection speed, which helps spotty connections make more progress and faster connections upload more quickly.
 - Connection errors (write timout, broken pipe, etc) now get rendered in the UI with a helful dialog.
 
 ## [0.98.3] 2019-09-10

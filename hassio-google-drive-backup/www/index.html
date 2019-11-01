@@ -8,10 +8,13 @@
 
   <link href="css/icons.css?version=0.98.4" rel="stylesheet">
   <link href="css/materialize.css?version=0.98.4" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/style.css?version=0.98.4" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/colpick.css?version=0.98.4" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="theme?version=0.98.4" id="theme" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/static.css?version=0.98.4" type="text/css" rel="stylesheet" media="screen,projection" />
   <link rel="icon" type="image/png" href="images/favicon.png?version=0.98.4">
   <script src="js/jquery.js?version=0.98.4"></script>
   <script src="js/materialize.js?version=0.98.4"></script>
+  <script src="js/colpick.js?version=0.98.4"></script>
   <script src="js/init.js?version=0.98.4"></script>
   <script src="js/scripts.js?version=0.98.4"></script>
   <script src="js/settings.js?version=0.98.4"></script>
@@ -238,7 +241,9 @@
                 <span class="helper-text">Keeps older snapshots longer on daily, weekly, monthly, and yearly rotations
                   instead of just
                   deleting the oldest snapshots. When using this feature, its recommended that you keep "Days
-                  Between Snapshots" at 1.</span>
+                  Between Snapshots" at 1. <a
+                    href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md"
+                    target="_blank">See here</a> for a deeper explanation.</span>
               </label>
             </div>
             <div class="row" id="settings_gen_details" style="display: none">
@@ -297,6 +302,19 @@
                       max="365" class="validate" />
                     <label for="generational_day_of_year">Day of Year</label>
                     <span class="helper-text">The day of the year to keep yearly snapshots, from 1 to 365</span>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s12">
+                    <label>
+                      <input type="checkbox" settings_ignore='true' id="generational_delete_early"
+                        name="generational_delete_early" class="filled-in checkbox-ha" />
+                      <span>Purge Old Snapshots Aggressively</span>
+                      <br />
+                      <span class="helper-text">When checked, old snapshots that aren't part of any daily, weekly,
+                        monthly, or yearly cycle you've configured will be deleted even if you haven't reached the
+                        configured number of maximum snapshots to be kept in Google Drive/Home Assistant.</span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -371,6 +389,38 @@
                   <ul id="settings_addons">
 
                   </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s12">
+              <label>
+                <span style="font-size: 15px;">Look and Feel</span>
+                <br />
+                <span class="helper-text">Configure how this web UI looks</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s11 offset-s1 row">
+              <div class="row">
+                <div class="input-field col s6">
+                  <i class="material-icons prefix">format_paint</i>
+                  <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px"
+                    onclick="showPallette(this)" id="background_color"></a>
+                  <label style="transform: translateY(-20px) scale(0.8)">Background Color</label>
+                  <span class="helper-text" style="margin-top: 10px">The background color of this interface. <a href="#"
+                      onclick="revertColors();">Click here</a> to revert back to the default.</span>
+                </div>
+                <div class="input-field col s6">
+                  <i class="material-icons prefix">format_paint</i>
+                  <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px"
+                    onclick="showPallette(this)" id="accent_color"></a>
+                  <label style="transform: translateY(-20px) scale(0.8)">Accent Color</label>
+                  <span class="helper-text" style="margin-top: 10px">The accent color of this interface (eg links,
+                    buttons, and other elements you can interact with). <a href="#" onclick="revertColors();">Click
+                      here</a> to revert back to the default.</span>
                 </div>
               </div>
             </div>
@@ -611,7 +661,7 @@
         <div class="row center">
           <div id="option1" class="col m12 l6 offset-l3 center center-align">
             <a target="_blank" id="authenticate-button" style="margin: 10px"
-              class="btn-large waves-effect waves-light btn">Authenticate
+              class="btn-large waves-effect waves-light btn ha-blue">Authenticate
               with Google Drive</a>
             <div class="row center">
               <div class="col s12">
@@ -665,7 +715,7 @@
                 </div>
                 <div class=row>
                   <div class="input-field col s12">
-                    <a target="_blank" class="right btn-large waves-effect waves-light btn disabled" id="secret_button"
+                    <a target="_blank" class="right btn-large waves-effect waves-light ha-blue btn disabled" id="secret_button"
                       onclick="getAuthUrl()">Connect</a>
                   </div>
                 </div>
@@ -691,7 +741,7 @@
                     </div>
                     <div class=row>
                       <div class="col s12">
-                        <a target="_blank" class="right btn-large waves-effect waves-light btn disabled"
+                        <a target="_blank" class="right btn-large waves-effect waves-light btn ha-blue disabled"
                           id="manualauthbutton" onClick="submitCode()">Authorize</a>
                       </div>
                     </div>
@@ -720,23 +770,23 @@
     <div class="container">
       <div class="row">
         <div class="col l3 s12">
-          <h5 class="white-text">Connect</h5>
+          <h5 class="accent-text">Connect</h5>
           <ul>
-            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a>
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a>
             </li>
-            <li><a class="white-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue
                 Tracker</a></li>
-            <li><a class="white-text" href="https://materializecss.com">Materialize</a></li>
+            <li><a class="accent-text" href="https://materializecss.com">Materialize</a></li>
           </ul>
         </div>
         <div class="col l6 s12">
-          <h5 class="white-text">Who did this?</h5>
-          <p class="grey-text text-lighten-4">I'm an individual who works on projects like this in my spare time. If you
+          <h5 class="accent-title">Who did this?</h5>
+          <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
             like it and would like to support me, I don't need you to buy me coffee but you can star my projects on <a
               href="https://github.com/sabeechen">Github</a></p>
         </div>
       </div>
-      <div class="container left">
+      <div class="container left accent-text">
         © 2019 Stephen Beechen
       </div>
     </div>

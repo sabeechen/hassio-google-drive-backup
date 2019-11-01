@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Sequence, Optional
+from typing import List, Sequence, Optional
 from abc import ABC, abstractmethod
 from .snapshots import Snapshot
 from .time import Time
@@ -27,35 +27,64 @@ class OldestScheme(BackupScheme):
 
 
 class Partition(object):
-    def __init__(self, start: datetime, end: datetime, prefer: datetime):
+    def __init__(self, start: datetime, end: datetime, prefer: datetime, time: Time):
         self.start: datetime = start
         self.end: datetime = end
         self.prefer: datetime = prefer
+        self.time = time
 
     def select(self, snapshots: List[Snapshot]) -> Optional[Snapshot]:
         options: List[Snapshot] = []
         for snapshot in snapshots:
             if snapshot.date() >= self.start and snapshot.date() < self.end:
                 options.append(snapshot)
-        return min(options, default=None, key=lambda s: abs((s.date() - self.prefer).total_seconds()))
+
+        preferred = list(filter(lambda s: self.day(s.date()) == self.day(self.prefer), options))
+        if len(preferred) > 0:
+            return max(preferred, default=None, key=lambda s: s.date())
+
+        return min(options, default=None, key=lambda s: s.date())
+
+    def day(self, date: datetime):
+        local = self.time.toLocal(date)
+        return datetime(day=local.day, month=local.month, year=local.year)
+
+
+class GenConfig():
+    def __init__(self, days=0, weeks=0, months=0, years=0, day_of_week='mon', day_of_month=1, day_of_year=1, aggressive=False):
+        self.days = days
+        self.weeks = weeks
+        self.months = months
+        self.years = years
+        self.day_of_week = day_of_week
+        self.day_of_month = day_of_month
+        self.day_of_year = day_of_year
+        self.aggressive = aggressive
+
+    def __eq__(self, other):
+        """Overrides the default implementation"""
+        if isinstance(other, GenConfig):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __hash__(self):
+        """Overrides the default implementation"""
+        return hash(tuple(sorted(self.__dict__.items())))
 
 
 class GenerationalScheme(BackupScheme):
-    def __init__(self, time: Time, partitions: Dict[str, int], count=0):
+    def __init__(self, time: Time, config: GenConfig, count=0):
         self.count = count
         self.time: Time = time
-        self.partitions: Dict[str, Any] = partitions
-        pass
+        self.config = config
 
     def getOldest(self, to_segment: Sequence[Snapshot]) -> Optional[Snapshot]:
-        if len(to_segment) <= self.count:
-            return None
         snapshots: List[Snapshot] = list(to_segment)
 
-        # build the list of dates we should partition by
         if len(snapshots) == 0:
             return None
 
+        # build the list of dates we should partition by
         snapshots.sort(key=lambda s: s.date())
         day_of_week = 3
         lookup = {
@@ -67,36 +96,36 @@ class GenerationalScheme(BackupScheme):
             'sat': 5,
             'sun': 6,
         }
-        if 'day_of_week' in self.partitions and self.partitions['day_of_week'] in lookup:
-            day_of_week = lookup[self.partitions['day_of_week']]
+        if self.config.day_of_week in lookup:
+            day_of_week = lookup[self.config.day_of_week]
 
         last = self.time.toLocal(snapshots[len(snapshots) - 1].date())
         lookups: List[Partition] = []
-        for x in range(0, self.partitions['days']):
+        for x in range(0, self.config.days):
             start = datetime(last.year, last.month, last.day).astimezone(last.tzinfo) - timedelta(days=x)
             end = start + timedelta(days=1)
-            lookups.append(Partition(start, end, start + timedelta(hours=12)))
+            lookups.append(Partition(start, end, start, self.time))
 
-        for x in range(0, self.partitions['weeks']):
-            start = datetime(last.year, last.month, last.day).astimezone(last.tzinfo) - timedelta(days=last.weekday()) - timedelta(weeks=x)
+        for x in range(0, self.config.weeks):
+            start = self.time.local(last.year, last.month, last.day) - timedelta(days=last.weekday()) - timedelta(weeks=x)
             end = start + timedelta(days=7)
-            lookups.append(Partition(start, end, start + timedelta(days=day_of_week, hours=12)))
+            lookups.append(Partition(start, end, start + timedelta(days=day_of_week), self.time))
 
-        for x in range(0, self.partitions['months']):
+        for x in range(0, self.config.months):
             year_offset = int(x / 12)
             month_offset = int(x % 12)
             if last.month - month_offset < 1:
                 year_offset = year_offset + 1
                 month_offset = month_offset - 12
-            start = datetime(last.year - year_offset, last.month - month_offset, 1).astimezone(last.tzinfo)
+            start = self.time.local(last.year - year_offset, last.month - month_offset, 1)
             weekday, days = monthrange(start.year, start.month)
             end = start + timedelta(days=days)
-            lookups.append(Partition(start, end, start + timedelta(days=self.partitions['day_of_month'] - 1)))
+            lookups.append(Partition(start, end, start + timedelta(days=self.config.day_of_month - 1), self.time))
 
-        for x in range(0, self.partitions['years']):
-            start = datetime(last.year - x, 1, 1).astimezone(last.tzinfo)
-            end = datetime(last.year - x + 1, 1, 1).astimezone(last.tzinfo)
-            lookups.append(Partition(start, end, start + timedelta(days=self.partitions['day_of_year'] - 1)))
+        for x in range(0, self.config.years):
+            start = self.time.local(last.year - x, 1, 1)
+            end = self.time.local(last.year - x + 1, 1, 1)
+            lookups.append(Partition(start, end, start + timedelta(days=self.config.day_of_year - 1), self.time))
 
         keepers = set()
         for lookup in lookups:
@@ -104,9 +133,18 @@ class GenerationalScheme(BackupScheme):
             if keeper:
                 keepers.add(keeper)
 
+        extras = []
         for snapshot in snapshots:
             if snapshot not in keepers:
-                return snapshot
+                if self.config.aggressive:
+                    return snapshot
+                else:
+                    extras.append(snapshot)
 
-        # no non-keep is invalid, so delete the oldest keeper
-        return min(keepers, default=None, key=lambda s: s.date())
+        if len(to_segment) <= self.count and not self.config.aggressive:
+            return None
+        elif (self.config.aggressive or len(to_segment) > self.count) and len(extras) > 0:
+            return min(extras, default=None, key=lambda s: s.date())
+        elif len(to_segment) > self.count:
+            # no non-keep is invalid, so delete the oldest keeper
+            return min(keepers, default=None, key=lambda s: s.date())

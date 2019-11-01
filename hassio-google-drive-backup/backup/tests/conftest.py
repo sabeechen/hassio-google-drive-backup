@@ -12,24 +12,24 @@ from ..hasource import HaSource
 from ..harequests import HaRequests
 from ..driverequests import DriveRequests
 from ..dev.flaskserver import app, cleanupInstance, getInstance, initInstance
-from threading import Thread
+from threading import Thread, Lock
 from ..coordinator import Coordinator
 from ..globalinfo import GlobalInfo
 from ..model import Model
 from ..haupdater import HaUpdater
-from .helpers import TestSource, LockBlocker
-from ..dev.testbackend import TestBackend
+from .helpers import HelperTestSource, LockBlocker
+from ..dev.testbackend import HelperTestBackend
 from ..resolver import Resolver
 from ..settings import Setting
 from ..logbase import LogBase
-from threading import Lock
 
 
 class ServerThread():
-    def __init__(self):
-        self.base = "http://localhost:1234"
-        self.thread: Thread = Thread(target=run_server, name="server thread")
+    def __init__(self, port):
+        self.base = "http://localhost:" + str(port)
+        self.thread: Thread = Thread(target=self.run_server, name="server thread")
         self.thread.setDaemon(True)
+        self.port = port
 
     def startServer(self):
         self.thread.start()
@@ -46,18 +46,25 @@ class ServerThread():
         except requests.exceptions.ConnectionError:
             return False
 
+    def run_server(self):
+        try:
+            app.run(debug=False, host='0.0.0.0', threaded=True, port=self.port)
+        except Exception as e:
+            if "[Errno 98] Address already in use" not in str(e):
+                print("TEST ERROR: " + str(e))
+
 
 class ServerInstance():
-    def __init__(self, id, time):
-        self.base = "http://localhost:1234"
+    def __init__(self, id, time, port):
+        self.base = "http://localhost:" + str(port)
         self.id = id
-        initInstance(id, time)
+        initInstance(id, time, port=port)
 
     def reset(self, config={"update": "true"}):
         self.getServer().reset()
         self.update(config)
 
-    def getServer(self) -> TestBackend:
+    def getServer(self) -> HelperTestBackend:
         return getInstance(self.id)
 
     def update(self, config):
@@ -125,12 +132,12 @@ def model(source, dest, time, simple_config, global_info):
 
 @pytest.fixture
 def source():
-    return TestSource("Source")
+    return HelperTestSource("Source")
 
 
 @pytest.fixture
 def dest():
-    return TestSource("Dest")
+    return HelperTestSource("Dest")
 
 
 @pytest.fixture
@@ -147,6 +154,11 @@ def blocker():
 @pytest.fixture
 def global_info(time):
     return GlobalInfo(time)
+
+
+@pytest.fixture
+def port():
+    return 1234
 
 
 @pytest.fixture
@@ -243,8 +255,8 @@ def client_identifier(config: Config):
 
 
 @pytest.fixture
-def server(drive_creds: OAuth2Credentials, webserver_raw, client_identifier, time):
-    instance = ServerInstance(client_identifier, time)
+def server(drive_creds: OAuth2Credentials, webserver_raw, client_identifier, time, port):
+    instance = ServerInstance(client_identifier, time, port)
     instance.reset({
         "drive_refresh_token": drive_creds.refresh_token,
         "drive_client_id": drive_creds.client_id,
@@ -255,9 +267,10 @@ def server(drive_creds: OAuth2Credentials, webserver_raw, client_identifier, tim
     instance.cleanup()
 
 
-@pytest.fixture(scope="session")
-def webserver_raw():
-    server = ServerThread()
+@pytest.fixture()
+def webserver_raw(port, cleandir):
+    os.mkdir("www")
+    server = ServerThread(port)
     server.startServer()
     return server
 

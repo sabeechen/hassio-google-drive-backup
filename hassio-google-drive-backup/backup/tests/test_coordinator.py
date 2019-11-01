@@ -4,7 +4,7 @@ from ..globalinfo import GlobalInfo
 from .faketime import FakeTime
 from ..exceptions import PleaseWait, NoSnapshot, LogicError
 from ..model import CreateOptions
-from .helpers import TestSource
+from .helpers import HelperTestSource
 from ..snapshots import Snapshot
 from ..config import Config
 from ..settings import Setting
@@ -88,7 +88,7 @@ def test_delete(coord: Coordinator, snapshot, source, dest):
 def test_delete_errors(coord: Coordinator, source, dest, snapshot):
     with raises(NoSnapshot):
         coord.delete([source.name()], "badslug")
-    bad_source = TestSource("bad")
+    bad_source = HelperTestSource("bad")
     with raises(NoSnapshot):
         coord.delete([bad_source.name()], snapshot.slug())
 
@@ -107,12 +107,12 @@ def test_retain(coord: Coordinator, source, dest, snapshot):
 def test_retain_errors(coord: Coordinator, source, dest, snapshot):
     with raises(NoSnapshot):
         coord.retain({source.name(): True}, "badslug")
-    bad_source = TestSource("bad")
+    bad_source = HelperTestSource("bad")
     with raises(NoSnapshot):
         coord.delete({bad_source.name(): True}, snapshot.slug())
 
 
-def test_freshness(coord: Coordinator, source: TestSource, dest: TestSource, snapshot: Snapshot, time: FakeTime):
+def test_freshness(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, snapshot: Snapshot, time: FakeTime):
     assert snapshot.getPurges() == {
         source.name(): False,
         dest.name(): False
@@ -188,7 +188,7 @@ def test_freshness(coord: Coordinator, source: TestSource, dest: TestSource, sna
     }
 
 
-def test_upload(coord: Coordinator, source: TestSource, dest: TestSource, snapshot):
+def test_upload(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, snapshot):
     coord.delete([source.name()], snapshot.slug())
     assert snapshot.getSource(source.name()) is None
     coord.uploadSnapshot(snapshot.slug())
@@ -214,7 +214,7 @@ def test_download(coord: Coordinator, source, dest, snapshot):
         coord.download("bad slug")
 
 
-def test_backoff(coord: Coordinator, model, source: TestSource, dest: TestSource, snapshot, time: FakeTime, simple_config: Config):
+def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, snapshot, time: FakeTime, simple_config: Config):
     assert coord.check()
     simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)

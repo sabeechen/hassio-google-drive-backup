@@ -22,22 +22,42 @@ The add-on is installed like any other.
 3.   Click "Install" and give it a few minutes to finish downloading.
 4.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of people this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).
 5.   The "Getting Started" page will tell you how many snapshots you have and what it will do with them once you connect it to Google Drive.  You can click "Settings" to change those options throught he add-on (takes effect immediately), or update them from the page where you installed the add-on as shown below (restart for them to take effect).
-     *   **max_snapshots_in_hassio**: is the number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.
-     *   **max_snapshots_in_google_drive**: is the number of snapshots the add-on will keep in Google Drive before old ones are deleted.  Google Drive gives you 15GB of free storage (at the time of writing) so plan accordingly if you know how big your snapshots are.
-     *   **days_between_snapshots**: How often a new snapshot should be scheduled, eg "1" for daily and "7" for weekly.
-     *   **use_ssl**: determines if the add-on's webpage should only expose its interface over ssl.  If you use the [Duck DNS Add-on](https://www.home-assistant.io/addons/duckdns/) with the default settings then `"use_ssl": true`setting this to true should just work, if not [see below](#configuration-options).
-     
-     Other less common config options are explained [below](#configuration-options).
 6.   Click the "Authenticate with Drive" button to link the add-on with your Google Drive account.  Alternatively, you can generate your [own Google API credentials](#can-i-use-my-own-google-api-information-to-authenticate-instead-of-yours), though the process is not simple.
 7.   You should be redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.  You're done!
 
 ## Configuration Options
-You can modify the add-ons setting by changing its config json file (like any add-on) or by opening the settings menu from the top right of the web UI.  In addition to the options described in the instructions above you can set:
+Settings are most easily changed by starting the add-on and clicking "Settings" in the web UI.  The UI explains each setting and, you do not need to modify the settings before starting the add-on, and the defaults are appropriate for most users.  If you  would still prefer to modify the settings in json, the options are detailed below.
+*  **max_snapshots_in_hassio** (default: 4): The number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.
+    > #### Example: Keep 10 snapshots in Hass.io
+    > ```json
+    > "max_snapshots_in_hassio": "10"
+    > ```
+
+*  **max_snapshots_in_google_drive** (default: 4): The number of snapshots the add-on will keep in Google Drive before old ones are deleted.  Google Drive gives you 15GB of free storage (at the time of writing) so plan accordingly if you know how big your snapshots are.
+    > #### Example: Keep 10 snapshots in Google Drive
+    > ```json
+    > "max_snapshots_in_google_drive": "10"
+    > ```
+
+*  **days_between_snapshots** (default: 3): THow often a new snapshot should be scheduled, eg "1" for daily and "7" for weekly.
+    > #### Example: Keep 10 snapshots in Google Drive
+    > ```json
+    > "days_between_snapshots": "3"
+    > ```
+
 *  **snapshot_time_of_day** (default: None): The time of day (local time) that new snapshots should be created in 24 hour "HH:MM" format.  When not specified (the default), snapshots are created at the same time of day of the most recent snapshot.
     > #### Example: Create snapshots at 1:30pm
     > ```json
     > "snapshot_time_of_day": "13:30"
     > ```
+
+*  **background_color** and **accent_color**: The background and accent colors for the web UI.  You can use this to make the UI fit in with whatever color scheme you use in Home Assistant.  When unset, the interface matches Home Assistant's default blue/white style.
+    > #### Example: Use a dark and red theme
+    > ```json
+    > "background_color": "#242424"
+    > "accent_color": "#7D0034"
+    > ```
+
 *   **snapshot_stale_minutes** (default: 180):  How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention.  Setting this too low can cause you to be notified of transient errors, ie the internet, Google Drive, or Home Assistant being offline briefly.
     > #### Example: Notify after 12 hours of staleness
     > ```json
@@ -68,6 +88,7 @@ You can modify the add-ons setting by changing its config json file (like any ad
         > ```json
         > "require_login": false
         > ```
+    * **use_ssl** (default: false): determines if the add-on's webpage should only expose its interface over ssl.  If you use the [Duck DNS Add-on](https://www.home-assistant.io/addons/duckdns/) with the default settings then `"use_ssl": true` setting this to true should just work, if not [see below](#configuration-options).
     *   **certfile** (default: /ssl/certfile.pem): The path to your ssl keyfile
     *   **keyfile** (default: /ssl/keyfile.pem): the path to your ssl certfile
         > #### Example: Use certs you keep in a weird place
@@ -97,7 +118,7 @@ You can modify the add-ons setting by changing its config json file (like any ad
 *   **enable_snapshot_stale_sensor** (default: true): When false, the add-on will not publish the [binary_sensor.snapshots](#how-will-i-know-this-will-be-there-when-i-need-it) stale sensor.
 *   **enable_snapshot_state_sensor** (default: true): When false, the add-on will not publish the [sensor.snapshot_state](#how-will-i-know-this-will-be-there-when-i-need-it)  sensor.
 *   **notify_for_stale_snapshots** (default: true): When false, the add-on will send a [persistent notification](#how-will-i-know-this-will-be-there-when-i-need-it) in Home Assistant when snapshots are stale.
-    > #### Example: Turn off notifications and sensor
+    > #### Example: Turn off notifications and staleness sensor
     > ```json
     >   "enable_snapshot_stale_sensor": false,
     >   "enable_snapshot_state_sensor": false,
@@ -159,21 +180,12 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
 
 You could automate anything off of this binary sensor.  The add-on also exposes a sensor `sensor.snapshot_backup` that exposes the details of each snapshot.  I'm working on a custom lovelace component to expose that information.
 
-### Can I put a link to the web UI in home assistant?
-You can use [panel_iframe](https://www.home-assistant.io/components/panel_iframe/) to add a link to the Web UI from Home Assistant's side panel.  Try adding snippet below to your configuration.yaml file.
-```yaml
-panel_iframe:
-  backup:
-    title: 'Snapshots'
-    icon: mdi:cloud-upload
-    url: 'http://hassio.local:1627'
-```
-You might need to change the `url:` if you use ssl or access Home Assistant through a different hostname.
-
 ### Can I specify what time of day snapshots should be created?
 You can add `"snapshot_time_of_day": "13:00"` to your add-on configuration to make snapshots always happen at 1pm.  Specify the time in 24 hour format of `"HH:MM"`.  When unspecified, the next snapshot will be created at the same time of day as the last one.
 
 ### Can I keep older backups for longer?
+>This is just an overview of how to keep older snapshots longer.  [See here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md) for a more in-depth explanation.
+
 The add-on can be configured to keep [generational backups](https://en.wikipedia.org/wiki/Backup_rotation_scheme) on daily, weekly, monthly, and yearly intervals instead of just deleting the oldest snapshot.  This can be useful if, for example, you've made an erroneous change but haven't noticed for several days and all the backups before the change are gone.  With a configuration setting like this...
 ```json
   "generational_days": 3,
@@ -203,7 +215,7 @@ The add-on can be configured to keep [generational backups](https://en.wikipedia
 If you set '`"days_between_snapshots": 0`', then the add-on won't try to create new snapshots but will still back up any it finds to Google Drive and clean up old snapshots in both Home Assistant and Google Drive.  This can be useful if you already  have for example an automation that creates snapshots on a schedule.
 
 ### Can I give snapshots a different name?
-The config option `snapshot_name` can be changed to give snapshots a different name or with a date format of your choosing.  The default is `{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes snapshots with a name like `Full Snapshot 2019-04-28 14:00:00`.  Using the settings menu in the Web UI, you can see a preview of what a snapshot name will look like but you cna also set it in the add-on's options.  Below is the list of variables you can add to modify the name to your liking.
+The config option `snapshot_name` can be changed to give snapshots a different name or with a date format of your choosing.  The default is `{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes snapshots with a name like `Full Snapshot 2019-10-31 14:00:00`.  Using the settings menu in the Web UI, you can see a preview of what a snapshot name will look like but you cna also set it in the add-on's options.  Below is the list of variables you can add to modify the name to your liking.
 * `{type}`: The type of snapshot, either 'Full' or 'Partial'
 * `{year}`: Year in 4 digit format (eg 2019)
 * `{year_short}`: Year in 4 digit format (eg 19)
@@ -226,7 +238,14 @@ The config option `snapshot_name` can be changed to give snapshots a different n
 * `{time}`: Locale aware time (eg 02:03:04 am)
 * `{datetime}`: Locale-aware datetime string
 * `{isotime}`: Date and time in ISO format 
-        
+* `{hostname}`: The Home Assistant machine's hostname 
+
+
+### Will this ever upload to Dropbox/FTP/SMB/MyFavoriteProtocol?
+Most likely no.  I started this project to solve a specific problem I had, storing snapshot in a redundant cloud provider without having to write a bunch of buggy logic.  I don't have the personal bandwidth available to make this work well with other storage providers.
+
+### But Google reads my emails!
+Maybe.  You can encrypt your snapshots by giving a password in the add-on's options.
 
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
@@ -250,13 +269,13 @@ If the add-on runs into trouble and can't back up, you should see a big red box 
 
 ### Will this fill up my Google Drive?  Why are my snapshots so big?
 You'll need to take care to ensure you don't configure this to blow up your Google Drive.  You might want to consider:
-*   If your snapshots are HUGE, its probably because Home Assistant by defaults keeps 10 days of sensor history.  Consider setting `purge_keep_days: N` in your [recorder confiuration](https://www.home-assistant.io/components/recorder/) to trim it down to something more manageable, like 1 day of history.
-*   Also consider that some of the add-ons are designed to manage large amounts of media.  For example, add-ons like the Plex Media Server are designed to store media in the /share folder, and Mobile Upload folders default to a sub-folder in the addons folder.  If you migrate all of your media to the HASS.io folder structure and you don't exclude it from the backup, you _could easily chew up your entire Google Drive space in a single snapshot_.
+*   If your snapshots are HUGE, its probably because Home Assistant by default keeps a long sensor history.  Consider setting `purge_keep_days: N` in your [recorder confiuration](https://www.home-assistant.io/components/recorder/) to trim it down to something more manageable, like 1 day of history.
+*   Some other of the add-ons are designed to manage large amounts of media.  For example, add-ons like the Plex Media Server are designed to store media in the /share folder, and Mobile Upload folders default to a sub-folder in the addons folder.  If you migrate all of your media to the HASS.io folder structure and you don't exclude it from the backup, you _could easily chew up your entire Google Drive space in a single snapshot_.
 *   If you use the Google Drive Desktop sync client, you'll porbably want to tell it not to sync this folder (its available in the options).
 
 ### I want my snapshots to sync to my Desktop computer too
 Thats not a question but you can use [Google Drive Backup & Sync]([https://www.google.com/drive/download/) to download anything in your Google Drive to your desktop/laptop automatically.
 
 ### I configured this to only keep 4 snapshots in Drive and Hass.io, but sometimes I can see there are 5?
-The add-on will only delete an old snapshot if a new one exists to replace it, so it will create a 5th one before deleting the first.  This is a reliability/disk usage compromise that favors reliability, because otherwise it would have to delete an old snapshot (leaving only 3) before it could guarantee the 4th one actually exists.
+The add-on will only delete an old snapshot if a new one exists to replace it, so it will create a 5th one before deleting the first.  This is a reliability/disk usage compromise that favors reliability, because otherwise it would have to delete an old snapshot (leaving only 3) before it could guarantee the 4th one exists.
 

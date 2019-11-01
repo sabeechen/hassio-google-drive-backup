@@ -1,0 +1,72 @@
+body {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+  
+  main {
+    flex: 1 0 auto;
+  }
+  
+  .icon-block .material-icons {
+      font-size: inherit;
+  }
+  
+  .indented-li {
+    padding-left: 15px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  
+  .important-inline {
+    display: inline !important;
+  }
+  
+  .detail-node{ 
+    margin-top: 0px;
+    margin-bottom: 5px;
+  }
+  
+  .top-btn {
+    box-shadow: none;
+    -webkit-box-shadow: none;
+    margin-right: 10px;
+  }
+
+  .danger-button {
+    color: white;
+    background-color: rgb(153, 0, 0);
+  }
+
+  .error_card a {
+    color: white;
+    text-decoration: underline;
+  }
+  
+  .default-hidden {
+    display: none;
+  }
+  
+  .console-error {
+    color: #b30000
+  }
+  
+  .console-warning {
+    color: #a55d00
+  }
+  
+  .console-default {
+    color: #ffffff
+  }
+  
+  .console-debug {
+    color: #3141d1
+  }
+  
+  .console-critical {
+    color: #810000
+  }
+
+  .colpick {
+    z-index: 9999;
+  }

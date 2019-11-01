@@ -28,6 +28,7 @@ from .globalinfo import GlobalInfo
 from .password import Password
 from .trigger import Trigger
 from .settings import Setting
+from .color import Color
 from os.path import join, abspath
 
 # Used to Google's oauth verification
@@ -336,10 +337,14 @@ class UIServer(Trigger, LogBase):
         current_config = {}
         for setting in Setting:
             current_config[setting.key()] = self.config.get(setting)
+        default_config = {}
+        for setting in Setting:
+            default_config[setting.key()] = setting.default()
         return {
             'config': current_config,
             'addons': self._global_info.addons,
-            'name_keys': name_keys
+            'name_keys': name_keys,
+            'defaults': default_config
         }
 
     @cherrypy.expose
@@ -542,3 +547,187 @@ class UIServer(Trigger, LogBase):
 
     def filePath(self, name):
         return abspath(join(__file__, "..", "..", "www", name))
+
+    def cssElement(self, selector, keys):
+        ret = selector
+        ret += " {\n"
+        for key in keys:
+            ret += "\t" + key + ": " + keys[key] + ";\n"
+        ret += "}\n\n"
+        return ret
+
+    @cherrypy.expose
+    def theme(self, version=""):
+        cherrypy.response.headers['Content-Type'] = 'text/css'
+        cherrypy.response.headers['Cache-Control'] = 'no-cache'
+        background = Color.parse(self.config.get(Setting.BACKGROUND_COLOR))
+        accent = Color.parse(self.config.get(Setting.ACCENT_COLOR))
+
+        text = background.textColor()
+        accent_text = accent.textColor()
+        link_accent = accent
+        contrast_threshold = 4.5
+
+        contrast = background.contrast(accent)
+        if (contrast < contrast_threshold):
+            # do some adjustment to make the UI more readable if the contrast is really bad
+            scale = 1 - (contrast - 1) / (contrast_threshold - 1)
+            link_accent = link_accent.tint(text, scale * 0.5)
+
+        focus = accent.saturate(1.2)
+        help = text.tint(background, 0.25)
+
+        shadow1 = text.withAlpha(0.14)
+        shadow2 = text.withAlpha(0.12)
+        shadow3 = text.withAlpha(0.2)
+        bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
+
+        bg_modal = background.tint(text, 0.02)
+        shadow_modal = "box-shadow: 0 24px 38px 3px " + shadow1.toCss() + ", 0 9px 46px 8px " + shadow2.toCss() + ", 0 11px 15px -7px " + shadow3.toCss()
+
+        ret = ""
+        ret += self.cssElement("html", {
+            'background-color': background.toCss(),
+            'color': text.toCss()
+        })
+
+        ret += self.cssElement("label", {
+            'color': text.toCss()
+        })
+
+        ret += self.cssElement("a", {
+            'color': link_accent.toCss()
+        })
+
+        ret += self.cssElement("input", {
+            'color': text.toCss()
+        })
+
+        ret += self.cssElement(".helper-text", {
+            'color': help.toCss()
+        })
+
+        ret += self.cssElement(".ha-blue", {
+            'background-color': accent.toCss(),
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement("nav .brand-logo", {
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement("nav ul a", {
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement(".accent-title", {
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement("footer a:link", {
+            'text-decoration': 'underline',
+            'color': accent_text.textColor().tint(accent_text, 0.95).toCss()
+        })
+
+        ret += self.cssElement(".accent-text", {
+            'color': accent_text.textColor().tint(accent_text, 0.95).toCss()
+        })
+
+        ret += self.cssElement(".btn", {
+            'background-color': accent.toCss()
+        })
+
+        ret += self.cssElement(".btn:hover, .btn-large:hover, .btn-small:hover", {
+            'background-color': accent.toCss(),
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement(".btn:focus, .btn-large:focus, .btn-small:focus, .btn-floating:focus", {
+            'background-color': focus.toCss(),
+        })
+
+        ret += self.cssElement(".modal .modal-footer .btn, .modal .modal-footer .btn-large, .modal .modal-footer .btn-small, .modal .modal-footer .btn-flat", {
+            'margin': '6px 0',
+            'background-color': accent.toCss(),
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement(".dropdown-content", {
+            'background-color': background.toCss(),
+            'box-shadow': bgshadow,
+            'webkit-box-shadow': bgshadow,
+        })
+
+        ret += self.cssElement(".dropdown-content li > a", {
+            'color': text.tint(background, 0.5).toCss()
+        })
+
+        ret += self.cssElement(".modal", {
+            'background-color': bg_modal.toCss(),
+            'box-shadow': shadow_modal
+        })
+
+        ret += self.cssElement(".modal .modal-footer", {
+            'background-color': bg_modal.toCss()
+        })
+
+        ret += self.cssElement(".modal.modal-fixed-footer .modal-footer", {
+            'border-top': '1px solid ' + text.withAlpha(0.1).toCss()
+        })
+
+        ret += self.cssElement(".modal-overlay", {
+            'background': text.toCss()
+        })
+
+        ret += self.cssElement("[type=\"checkbox\"].filled-in:checked + span:not(.lever)::before", {
+            'border-right': '2px solid ' + text.toCss(),
+            'border-bottom': '2px solid ' + text.toCss()
+        })
+
+        ret += self.cssElement("[type=\"checkbox\"].filled-in:checked + span:not(.lever)::after", {
+            'border': '2px solid ' + text.toCss(),
+            'background-color': accent.darken(0.2).saturate(1.2).toCss()
+        })
+
+        ret += self.cssElement(".input-field .prefix.active", {
+            'color': accent.toCss()
+        })
+
+        ret += self.cssElement(".input-field > label", {
+            'color': help.toCss()
+        })
+
+        ret += self.cssElement(".input-field .helper-text", {
+            'color': help.toCss()
+        })
+
+        ret += self.cssElement("input:not([type]):focus:not([readonly]) + label, input[type=\"text\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"password\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"email\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"url\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"time\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"date\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"datetime\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"datetime-local\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"tel\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"number\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"search\"]:not(.browser-default):focus:not([readonly]) + label, textarea.materialize-textarea:focus:not([readonly]) + label", {
+            'color': text.toCss()
+        })
+
+        ret += self.cssElement("input.valid:not([type]), input.valid:not([type]):focus, input[type=\"text\"].valid:not(.browser-default), input[type=\"text\"].valid:not(.browser-default):focus, input[type=\"password\"].valid:not(.browser-default), input[type=\"password\"].valid:not(.browser-default):focus, input[type=\"email\"].valid:not(.browser-default), input[type=\"email\"].valid:not(.browser-default):focus, input[type=\"url\"].valid:not(.browser-default), input[type=\"url\"].valid:not(.browser-default):focus, input[type=\"time\"].valid:not(.browser-default), input[type=\"time\"].valid:not(.browser-default):focus, input[type=\"date\"].valid:not(.browser-default), input[type=\"date\"].valid:not(.browser-default):focus, input[type=\"datetime\"].valid:not(.browser-default), input[type=\"datetime\"].valid:not(.browser-default):focus, input[type=\"datetime-local\"].valid:not(.browser-default), input[type=\"datetime-local\"].valid:not(.browser-default):focus, input[type=\"tel\"].valid:not(.browser-default), input[type=\"tel\"].valid:not(.browser-default):focus, input[type=\"number\"].valid:not(.browser-default), input[type=\"number\"].valid:not(.browser-default):focus, input[type=\"search\"].valid:not(.browser-default), input[type=\"search\"].valid:not(.browser-default):focus, textarea.materialize-textarea.valid, textarea.materialize-textarea.valid:focus, .select-wrapper.valid > input.select-dropdown", {
+            'border-bottom': '1px solid ' + accent.toCss(),
+            ' -webkit-box-shadow': ' 0 1px 0 0 ' + accent.toCss(),
+            'box-shadow': '0 1px 0 0 ' + accent.toCss()
+        })
+
+        ret += self.cssElement("input:not([type]):focus:not([readonly]), input[type=\"text\"]:not(.browser-default):focus:not([readonly]), input[type=\"password\"]:not(.browser-default):focus:not([readonly]), input[type=\"email\"]:not(.browser-default):focus:not([readonly]), input[type=\"url\"]:not(.browser-default):focus:not([readonly]), input[type=\"time\"]:not(.browser-default):focus:not([readonly]), input[type=\"date\"]:not(.browser-default):focus:not([readonly]), input[type=\"datetime\"]:not(.browser-default):focus:not([readonly]), input[type=\"datetime-local\"]:not(.browser-default):focus:not([readonly]), input[type=\"tel\"]:not(.browser-default):focus:not([readonly]), input[type=\"number\"]:not(.browser-default):focus:not([readonly]), input[type=\"search\"]:not(.browser-default):focus:not([readonly]), textarea.materialize-textarea:focus:not([readonly])", {
+            'border-bottom': '1px solid ' + accent.toCss(),
+            '-webkit-box-shadow': '0 1px 0 0 ' + accent.toCss(),
+            'box-shadow': '0 1px 0 0 ' + accent.toCss()
+        })
+
+        ret += self.cssElement(".card", {
+            'background-color': background.toCss(),
+            'box-shadow': "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
+        })
+
+        ret += self.cssElement("nav a", {
+            'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement(".btn, .btn-large, .btn-small", {
+            'color': accent_text.toCss()
+        })
+
+        return ret

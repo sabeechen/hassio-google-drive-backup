@@ -423,7 +423,7 @@ def assertSnapshot(model, sources):
     assert model.snapshots[slug].sources == matches
 
 
-class TestSource(SnapshotSource[DummySnapshotSource]):
+class HelperTestSource(SnapshotSource[DummySnapshotSource]):
     def __init__(self, name):
         self._name = name
         self.current: Dict[str, DummySnapshotSource] = {}

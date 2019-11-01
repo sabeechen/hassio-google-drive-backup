@@ -59,13 +59,13 @@ class SnapshotSource(Trigger, Generic[T]):
 
 
 class Model(LogBase):
-    def __init__(self, config: Config, time: Time, source: SnapshotSource[AbstractSnapshot], dest: SnapshotSource[AbstractSnapshot], info: GlobalInfo, snapshots={}):
+    def __init__(self, config: Config, time: Time, source: SnapshotSource[AbstractSnapshot], dest: SnapshotSource[AbstractSnapshot], info: GlobalInfo):
         self.config: Config = config
         self.time = time
         self.source: SnapshotSource = source
         self.dest: SnapshotSource = dest
         self.reinitialize()
-        self.snapshots: Dict[str, Snapshot] = snapshots
+        self.snapshots: Dict[str, Snapshot] = {}
         self.firstSync = True
         self.info = info
         self.simulate_error = None

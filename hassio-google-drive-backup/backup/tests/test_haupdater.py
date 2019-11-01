@@ -1,17 +1,16 @@
 from ..haupdater import HaUpdater
 from ..globalinfo import GlobalInfo
 from .faketime import FakeTime
-from ..dev.testbackend import TestBackend
+from ..dev.testbackend import HelperTestBackend
 from ..logbase import LogBase
 
-STALE_ATTRIBUTES = { 
-    "device_class": "problem",
+STALE_ATTRIBUTES = {
     "friendly_name": "Snapshots Stale"
 }
 
 
 def test_init(updater: HaUpdater, global_info, server):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
@@ -31,7 +30,7 @@ def test_init(updater: HaUpdater, global_info, server):
 
 
 def test_init_failure(updater: HaUpdater, global_info: GlobalInfo, time: FakeTime, server):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
@@ -53,7 +52,7 @@ def test_init_failure(updater: HaUpdater, global_info: GlobalInfo, time: FakeTim
 
 
 def test_failure_backoff_502(updater: HaUpdater, server, time: FakeTime):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     backend.setHomeAssistantError(502)
     for x in range(9):
         updater.update()
@@ -65,7 +64,7 @@ def test_failure_backoff_502(updater: HaUpdater, server, time: FakeTime):
 
 
 def test_failure_backoff_510(updater: HaUpdater, server, time: FakeTime):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     backend.setHomeAssistantError(510)
     for x in range(9):
         updater.update()
@@ -77,7 +76,7 @@ def test_failure_backoff_510(updater: HaUpdater, server, time: FakeTime):
 
 
 def test_failure_backoff_other(updater: HaUpdater, server, time: FakeTime):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     backend.setHomeAssistantError(400)
     for x in range(9):
         updater.update()
@@ -88,7 +87,7 @@ def test_failure_backoff_other(updater: HaUpdater, server, time: FakeTime):
 
 
 def test_update_snapshots(updater: HaUpdater, server, time: FakeTime):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
@@ -103,7 +102,7 @@ def test_update_snapshots(updater: HaUpdater, server, time: FakeTime):
 
 
 def test_notification_link(updater: HaUpdater, server, time: FakeTime, global_info):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
@@ -129,7 +128,7 @@ def test_notification_link(updater: HaUpdater, server, time: FakeTime, global_in
 
 
 def test_notification_clears(updater: HaUpdater, server, time: FakeTime, global_info):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
@@ -146,7 +145,7 @@ def test_notification_clears(updater: HaUpdater, server, time: FakeTime, global_
 
 
 def test_publish_for_failure(updater: HaUpdater, server, time: FakeTime, global_info: GlobalInfo):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     global_info.success()
     updater.update()
     assert backend.getNotification() is None
@@ -167,7 +166,7 @@ def test_publish_for_failure(updater: HaUpdater, server, time: FakeTime, global_
 
 
 def test_failure_logging(updater: HaUpdater, server, time: FakeTime):
-    backend: TestBackend = server.getServer()
+    backend: HelperTestBackend = server.getServer()
     backend.setHomeAssistantError(501)
     updater.update()
     assert LogBase.getLast() is None

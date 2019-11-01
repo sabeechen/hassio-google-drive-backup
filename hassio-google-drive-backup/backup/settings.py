@@ -46,6 +46,10 @@ class Setting(Enum):
     CONFIRM_MULTIPLE_DELETES = "confirm_multiple_deletes"
     ENABLE_DRIVE_UPLOAD = "enable_drive_upload"
 
+    # Theme Settings
+    BACKGROUND_COLOR = "background_color"
+    ACCENT_COLOR = "accent_color"
+
     # Network and dns stuff
     DRIVE_EXPERIMENTAL = "drive_experimental"
     DRIVE_IPV4 = "drive_ipv4"
@@ -126,6 +130,10 @@ _DEFAULTS = {
     Setting.VERBOSE: False,
     Setting.CONFIRM_MULTIPLE_DELETES: True,
     Setting.ENABLE_DRIVE_UPLOAD: True,
+
+    # Theme Settings
+    Setting.BACKGROUND_COLOR: "#FFFFFF",
+    Setting.ACCENT_COLOR: "#03a9f4",
 
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8,8.8.4.4",

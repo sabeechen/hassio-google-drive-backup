@@ -32,12 +32,14 @@ class Time(object):
 
 
 class FakeTime(Time):
-    def __init__(self, now: datetime = None):
+    def __init__(self, now: datetime = None, tz=None):
         super().__init__()
         if now:
             self._now = now
         else:
             self._now = self.toUtc(datetime(1985, 12, 6, 0, 0, 0))
+        if tz:
+            self.local_tz = tz
         self.sleeps = []
 
     def setNow(self, now: datetime):

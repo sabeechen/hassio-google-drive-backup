@@ -287,6 +287,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         data = args
         options: CreateOptions = data[1]
         try:
+            self.harequests.eventSnapshotStart(data[0]['name'], options.when)
             slug = ensureKey("slug", self.harequests.createSnapshot(data[0]), "Hass.io's create snapshot response")
             with self.lock:
                 self.pending_snapshot_slug = slug
@@ -296,7 +297,9 @@ class HaSource(SnapshotSource[HASnapshot]):
                     self.pending_snapshot.complete()
                 self.info("Snapshot finished")
             self.trigger()
+            self.harequests.eventSnapshotComplete(data[0]['name'], options.when)
         except Exception as e:
+            self.harequests.eventSnapshotFailed(data[0]['name'], options.when)
             with self.lock:
                 if self.pending_snapshot:
                     self.pending_snapshot.failed(e, self.time.now())

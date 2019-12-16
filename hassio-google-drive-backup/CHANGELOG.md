@@ -1,7 +1,7 @@
 ## [0.99.0] 2019-11-01
 # Added
 - Colors for the interface can now be choosen from the Setting Menu or through addon options.  Try it form the settings menu, you'll like it.
-- Added a config option 'delete_generational_early', which deletes older unused snapshots more aggressively ([see here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md for an explanation)).
+- Added a config option 'delete_generational_early', which deletes older unused snapshots more aggressively ([see here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md) for an explanation).
 - '{hostname}' can now be used as an option in snapshot names. 
 
 # Changes

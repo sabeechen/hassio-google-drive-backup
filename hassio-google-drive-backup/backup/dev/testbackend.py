@@ -76,6 +76,7 @@ class HelperTestBackend(object):
         self._port = port
         self._ha_error = None
         self._entities = {}
+        self._events = []
         self._attributes = {}
         self._notification = None
         self._time = time
@@ -90,6 +91,9 @@ class HelperTestBackend(object):
             "days_between_snapshots": 3,
             "use_ssl": False
         }
+
+    def getEvents(self):
+        return self._events.copy()
 
     def setHomeAssistantError(self, status_code):
         self._ha_error = status_code
@@ -573,6 +577,11 @@ class HelperTestBackend(object):
         self._verifyHaHeader(context)
         self._entities[entity] = context.json()['state']
         self._attributes[entity] = context.json()['attributes']
+        return ""
+
+    def haEventUpdate(self, context, name: str) -> Any:
+        self._verifyHaHeader(context)
+        self._events.append((name, context.json()))
         return ""
 
     def createNotification(self, context: Context) -> Any:

@@ -144,6 +144,27 @@ class HaRequests(LogBase):
         }
         self._postHaData("services/persistent_notification/create", data)
 
+    def eventSnapshotStart(self, name, time):
+        self._sendEvent("snapshot_start", {
+            'snapshot_name': name,
+            'snapshot_time': str(time)
+        })
+
+    def eventSnapshotComplete(self, name, time):
+        self._sendEvent("snapshot_complete", {
+            'snapshot_name': name,
+            'snapshot_time': str(time)
+        })
+
+    def eventSnapshotFailed(self, name, time):
+        self._sendEvent("snapshot_failed", {
+            'snapshot_name': name,
+            'snapshot_time': str(time)
+        })
+
+    def _sendEvent(self, event_name: str, data: Dict[str, str]) -> None:
+        self._postHaData("events/" + event_name, data)
+
     def dismissNotification(self) -> None:
         data: Dict[str, str] = {
             "notification_id": NOTIFICATION_ID

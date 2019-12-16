@@ -283,6 +283,12 @@ def haStateUpdate(entity: str) -> Any:
     server = getState(context)
     return context.call(lambda: server.haStateUpdate(context, entity))
 
+@app.route("/homeassistant/api/events/<name>", methods=['POST'])
+def haEventUpdate(name: str) -> Any:
+    context = getContext()
+    server = getState(context)
+    return context.call(lambda: server.haEventUpdate(context, name))
+
 
 @app.route("/homeassistant/api/services/persistent_notification/create", methods=['POST'])
 def createNotification() -> Any:

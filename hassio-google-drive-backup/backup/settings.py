@@ -13,6 +13,7 @@ class Setting(Enum):
     SNAPSHOT_NAME = "snapshot_name"
     SNAPSHOT_TIME_OF_DAY = "snapshot_time_of_day"
     SNAPSHOT_PASSWORD = "snapshot_password"
+    SPECIFY_SNAPSHOT_FOLDER = "specify_snapshot_folder"
 
     # generational settings
     GENERATIONAL_DAYS = "generational_days"
@@ -98,6 +99,7 @@ _DEFAULTS = {
     Setting.SNAPSHOT_TIME_OF_DAY: "",
     Setting.SNAPSHOT_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
     Setting.SNAPSHOT_PASSWORD: "",
+    Setting.SPECIFY_SNAPSHOT_FOLDER: True,
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: 0,

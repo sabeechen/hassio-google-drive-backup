@@ -36,6 +36,7 @@
 
     "snapshot_name": "str?",
     "snapshot_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
+    "specify_snapshot_folder": "bool?",
 
     "generational_days": "int(0,)?",
     "generational_weeks": "int(0,)?",

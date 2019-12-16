@@ -96,6 +96,7 @@ class UIServer(Trigger, LogBase):
         status['sources'] = self._coord.buildSnapshotMetrics()
         status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
         status['dns_info'] = self._global_info.getDnsInfo()
+        status['enable_drive_upload'] = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
         return status
 
     def getSnapshotDetails(self, snapshot: Snapshot):

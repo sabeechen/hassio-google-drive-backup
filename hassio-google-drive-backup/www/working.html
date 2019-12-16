@@ -395,8 +395,8 @@
             </div>
             <div class="input-field col m6 s12" id="password_renter_block">
               <i class="material-icons prefix">vpn_key</i>
-              <input type="password" autocomplete="new-password" id="snapshot_password_reenter" name="snapshot_password_reenter" settings_ignore='true' 
-                class="validate" onkeyup="checkForSecret()" />
+              <input type="password" autocomplete="new-password" id="snapshot_password_reenter"
+                name="snapshot_password_reenter" settings_ignore='true' class="validate" onkeyup="checkForSecret()" />
               <label for="snapshot_password_reenter">Re-enter password</label>
               <span class="helper-text">Re-enter your new password to ensure it matches.</span>
             </div>
@@ -476,7 +476,8 @@
                   class="filled-in checkbox-ha" />
                 <span>Enable Google Drive Upload</span>
                 <br />
-                <span class="helper-text">When disabled, new snapshots will still be created in Home Assistant but will not be uploaded to Google Drive.</span>
+                <span class="helper-text">When disabled, new snapshots will still be created in Home Assistant but will
+                  not be uploaded to Google Drive.</span>
               </label>
             </div>
           </div>
@@ -487,14 +488,19 @@
                   onchange="toggleSlide(this, 'settings_server_details');" />
                 <span id="expose_extra_server_label">Expose this web interface on an additional port</span>
                 <br />
-                <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.  This isn't necessary unless you'd like to avoid accessing this web interface through <a target="_blank" href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
+                <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.
+                  This isn't necessary unless you'd like to avoid accessing this web interface through <a
+                    target="_blank"
+                    href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
               </label>
             </div>
           </div>
           <div class="row" id="settings_server_details" style="display: none">
             <div class="col s11 offset-s1">
               <label>
-                <span class="helper-text">Use the options below to configure what kind of SSL and and authentication you'd like to use for this webpage.  By default this server is exposed on port 1627, but that can be changed from the add-on installation page.</span>
+                <span class="helper-text">Use the options below to configure what kind of SSL and and authentication
+                  you'd like to use for this webpage. By default this server is exposed on port 1627, but that can be
+                  changed from the add-on installation page.</span>
               </label>
             </div>
             <div class="col s11 offset-s1">
@@ -504,7 +510,8 @@
                     <input type="checkbox" name="require_login" id="require_login" class="filled-in checkbox-ha" />
                     <span>Require Login</span>
                     <br />
-                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this webpage.</span>
+                    <span class="helper-text">Makes you enter your Home Assistant credentials to login to this
+                      webpage.</span>
                   </label>
                 </div>
               </div>
@@ -550,7 +557,9 @@
                 <span class="helper-text">Keeps older snapshots longer on daily, weekly, monthly, and yearly rotations
                   instead of just
                   deleting the oldest snapshots. When using this feature, its recommended that you keep "Days
-                  Between Snapshots" at 1. <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md" target="_blank">See here</a> for a deeper explanation.</span>
+                  Between Snapshots" at 1. <a
+                    href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md"
+                    target="_blank">See here</a> for a deeper explanation.</span>
               </label>
             </div>
             <div class="row" id="settings_gen_details" style="display: none">
@@ -613,13 +622,15 @@
                 </div>
                 <div class="row">
                   <div class="col s12">
-                      <label>
-                        <input type="checkbox" id="generational_delete_early" name="generational_delete_early"
-                          class="filled-in checkbox-ha" />
-                        <span>Purge Old Snapshots Early</span>
-                        <br />
-                        <span class="helper-text">When checked, old snapshots that aren't part of any daily, weekly, monthly, or yearly cycle you've configured will be deleted even if you haven't reached the configured maxium number of snapshots in Google Drive/Home Assistant.</span>
-                      </label>
+                    <label>
+                      <input type="checkbox" id="generational_delete_early" name="generational_delete_early"
+                        class="filled-in checkbox-ha" />
+                      <span>Purge Old Snapshots Early</span>
+                      <br />
+                      <span class="helper-text">When checked, old snapshots that aren't part of any daily, weekly,
+                        monthly, or yearly cycle you've configured will be deleted even if you haven't reached the
+                        configured maxium number of snapshots in Google Drive/Home Assistant.</span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -699,32 +710,37 @@
             </div>
           </div>
           <div class="row">
-              <div class="col s12">
-                <label>
-                  <span style="font-size: 15px;">Look and Feel</span>
-                  <br />
-                  <span class="helper-text">Configure how this web UI looks</span>
-                </label>
+            <div class="col s12">
+              <label>
+                <span style="font-size: 15px;">Look and Feel</span>
+                <br />
+                <span class="helper-text">Configure how this web UI looks</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s11 offset-s1 row">
+              <div class="row">
+                <div class="input-field col s6">
+                  <i class="material-icons prefix">format_paint</i>
+                  <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px"
+                    onclick="showPallette(this)" id="background_color"></a>
+                  <label style="transform: translateY(-20px) scale(0.8)">Background Color</label>
+                  <span class="helper-text" style="margin-top: 10px">The background color of this interface. <a href="#"
+                      onclick="revertColors();">Click here</a> to revert back to the default.</span>
+                </div>
+                <div class="input-field col s6">
+                  <i class="material-icons prefix">format_paint</i>
+                  <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px"
+                    onclick="showPallette(this)" id="accent_color"></a>
+                  <label style="transform: translateY(-20px) scale(0.8)">Accent Color</label>
+                  <span class="helper-text" style="margin-top: 10px">The accent color of this interface (eg links,
+                    buttons, and other elements you can interact with). <a href="#" onclick="revertColors();">Click
+                      here</a> to revert back to the default.</span>
+                </div>
               </div>
             </div>
-            <div class="row">
-                <div class="col s11 offset-s1 row">
-                    <div class="row">
-                        <div class="input-field col s6">
-                            <i class="material-icons prefix">format_paint</i>
-                            <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px" onclick="showPallette(this)" id="background_color"></a>
-                            <label style="transform: translateY(-20px) scale(0.8)">Background Color</label>
-                            <span class="helper-text" style="margin-top: 10px">The background color of this interface.  <a href="#" onclick="revertColors();">Click here</a> to revert back to the default.</span>
-                        </div>
-                        <div class="input-field col s6">
-                            <i class="material-icons prefix">format_paint</i>
-                            <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px" onclick="showPallette(this)" id="accent_color"></a>
-                            <label style="transform: translateY(-20px) scale(0.8)">Accent Color</label>
-                            <span class="helper-text" style="margin-top: 10px">The accent color of this interface (eg links, buttons, and other elements you can interact with).  <a href="#" onclick="revertColors();">Click here</a> to revert back to the default.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </div>
           <div class="row">
             <div class="col s12">
               <label>
@@ -753,7 +769,9 @@
                 <label for="alternate_dns_servers">Alternate DNS Servers</label>
                 <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
                   use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
-                  must support TCP DNS lookups. The defaults are <a href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS servers</a>.</span>
+                  must support TCP DNS lookups. The defaults are <a
+                    href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS
+                    servers</a>.</span>
               </div>
             </div>
             <div class="col s11 offset-s1 row">
@@ -777,7 +795,8 @@
                 <label for="drive_ipv4">Google Drive IP Address Override</label>
                 <span class="helper-text">If you're having problems with reaching Google Drive, you can use this to
                   specify Google Drive's IP address manually and circumvent DNS lookup entirely. You can use a website
-                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this one</a> to lookup
+                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
+                    one</a> to lookup
                   what address will work for www.googleapis.com.</span>
               </div>
             </div>
@@ -1172,9 +1191,12 @@
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">cloud_off</i>
                   <span style="vertical-align: top;">Google Drive Connection Timeout</span>
                 </span>
-                <p>The connection timed out or was closed unexpectedly while trying to communicate with Google Drive. Snapshots can't be
-                  backed up without being able to reach Google Drive reliably.  This can happen transiently from time to time and the 
-                  addon will continue to attempt to sync your snapshots.  This problem almost always resolves itself after some time.</p>
+                <p>The connection timed out or was closed unexpectedly while trying to communicate with Google Drive.
+                  Snapshots can't be
+                  backed up without being able to reach Google Drive reliably. This can happen transiently from time to
+                  time and the
+                  addon will continue to attempt to sync your snapshots. This problem almost always resolves itself
+                  after some time.</p>
                 <p>Please ensure:</p>
                 <ul class="browser-default">
                   <li>The internet is working.</li>
@@ -1243,52 +1265,55 @@
           </div>
         </div>
         <div class="row default-hidden error_card password_key_invalid">
-            <div class="col s12 m12 l9">
-              <div class="card red darken-4">
-                <div class="card-content white-text">
-                  <span class="card-title">
-                    <i class="material-icons" style="font-size: 50px; padding-right: 10px;">vpn_key</i>
-                    <span style="vertical-align: top;">Invalid Snapshot Password</span>
-                  </span>
-                  <p>The add-on couldn't find your snapshot password in your secrets.yaml file. Snapshots can't be created
-                    until you either configure a valid password or remove it.</p>
-                  <p>This can happen if:</p>
-                  <ul class="browser-default">
-                    <li>Your secrets.yaml file isn't present in your Home Assistant configuration directory</li>
-                    <li>The password key isn't present in your secrets.yaml file.</li>
-                  </ul>
-                  <p>Please review your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-                        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
-                      settings</a>to ensure you've set the snapshot password you intended, then sync again.</p>
-                  <div class="card-action white-text">
-                    <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-        </div>
-        <div class="row default-hidden error_card snapshot_in_progress">
-            <div class="col s12 m12 l9">
-              <div class="card red darken-4">
-                <div class="card-content white-text">
-                  <span class="card-title">
-                    <i class="material-icons" style="font-size: 50px; padding-right: 10px;">settings_backup_restore</i>
-                    <span style="vertical-align: top;">Snapshot Already in Progress</span>
-                  </span>
-                  <p>The add-on couldn't create a snapshot on schedule because one is already in progress.  Hass.io can only create one snapshot at a time.  This can happen if:</p>
-                  <ul class="browser-default">
-                    <li>The add-on was started while a snapshot was already in progress</li>
-                    <li>A snapshot was started outside of the add-on, eg manually from the Hass.io snapshots page.</li>
-                  </ul>
-                  <p>Typically you don't need to do anything to resolve this, as the add-on will pick up again once the snapshot in progress finishes.  
-                    If you are certain no snapshot is in progress already or this error sticks around, you can try restarting the addon or Home Assistant's host machine.</p>
-                  <div class="card-action white-text">
-                    <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
-                  </div>
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">vpn_key</i>
+                  <span style="vertical-align: top;">Invalid Snapshot Password</span>
+                </span>
+                <p>The add-on couldn't find your snapshot password in your secrets.yaml file. Snapshots can't be created
+                  until you either configure a valid password or remove it.</p>
+                <p>This can happen if:</p>
+                <ul class="browser-default">
+                  <li>Your secrets.yaml file isn't present in your Home Assistant configuration directory</li>
+                  <li>The password key isn't present in your secrets.yaml file.</li>
+                </ul>
+                <p>Please review your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                      style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                    settings</a>to ensure you've set the snapshot password you intended, then sync again.</p>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+        <div class="row default-hidden error_card snapshot_in_progress">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">settings_backup_restore</i>
+                  <span style="vertical-align: top;">Snapshot Already in Progress</span>
+                </span>
+                <p>The add-on couldn't create a snapshot on schedule because one is already in progress. Hass.io can
+                  only create one snapshot at a time. This can happen if:</p>
+                <ul class="browser-default">
+                  <li>The add-on was started while a snapshot was already in progress</li>
+                  <li>A snapshot was started outside of the add-on, eg manually from the Hass.io snapshots page.</li>
+                </ul>
+                <p>Typically you don't need to do anything to resolve this, as the add-on will pick up again once the
+                  snapshot in progress finishes.
+                  If you are certain no snapshot is in progress already or this error sticks around, you can try
+                  restarting the addon or Home Assistant's host machine.</p>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden error_card multiple_deletes" id="google_timeout">
           <div class="col s12 m12 l9">
             <div class="card red darken-4">
@@ -1388,6 +1413,60 @@
             </div>
           </div>
         </div>
+        <div class="row default-hidden error_card existing_backup_folder" id="existing_backup_folder">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">folder_special</i>
+                  <span style="vertical-align: top;">Existing Backup Folder Found</span>
+                </span>
+                <p>The add-on found a snapshot folder named "<span id=existing_name></span>" in Google Drive that might already have snapshots in it. The addon
+                  won't be able to back up your snapshots in Google Drive until you tell it which folder to put them in.  
+                  This is normal if you've used the addon in the past with this Google account.</p>
+                <p>To resolve this you can:</p>
+                <ul class="browser-default">
+                  <li>Click "USE THE FOLDER" below to let the add-on upload snapshots into this folder.  Click here to open the folder in Google Drive.</li>
+                  <li>Click "CHOOSE DIFFERENT FOLDER" to choose an existing folder in Google Drive to store snapshots in.</li>
+                  <li>Click "CREATE NEW FOLDER" below to let the addon automatically create a new folder in your My Drive to store snapshots.</li>
+                </ul>
+                <p>Note:  If run multiple instance of home Assistant with this addon using the same Google Drive account,
+                  its recommended that you use a different folder for each instance.  Otherwise they'll delete eachother's 
+                  snapshots!</p>
+                <div class="card-action white-text">
+                  <a href="#">Use the folder</a>
+                  <a href="#">Choose different folder</a>
+                  <a href="#">Create new folder</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card backup_folder_missing" id="backup_folder_missing">
+            <div class="col s12 m12 l9">
+              <div class="card red darken-4">
+                <div class="card-content white-text">
+                  <span class="card-title">
+                    <i class="material-icons" style="font-size: 50px; padding-right: 10px;">folder_special</i>
+                    <span style="vertical-align: top;">Existing Backup Folder Found</span>
+                  </span>
+                  <p>The add-on couldn't find your snapshot folder.  Snapshots won't be backed up to Google Drive until you tell it what to do.  Thi can happen if you trashed the folder, deleted it, or somethign else caused it to become unreadable.</p>
+                  <p>To resolve this you can:</p>
+                  <ul class="browser-default">
+                    <li>Click "CHOOSE DIFFERENT FOLDER" to choose an existing folder in Google Drive to store snapshots in.</li>
+                    <li>Click "CREATE NEW FOLDER" below to let the addon automatically create a new folder in your My Drive to store snapshots.</li>
+                  </ul>
+                  <p>Note:  If run multiple instance of home Assistant with this addon using the same Google Drive account,
+                    its recommended that you use a different folder for each instance.  Otherwise they'll delete eachother's 
+                    snapshots!</p>
+                  <div class="card-action white-text">
+                    <a href="#">Choose different folder</a>
+                    <a href="#">Create new folder</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         <div class="row default-hidden" id="error_details_card">
           <div class="col s12 m9">
             <div class="card red darken-4">
@@ -1427,21 +1506,25 @@
                     href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>. Ingress allows
                   this web interface to be embeeded inside of Home Assistant, which is usually more secure because it
                   delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and
-                  username/password). Currently this interface is being served on an additional port outside of 
+                  username/password). Currently this interface is being served on an additional port outside of
                   Home Assistant which is less secure.</p>
                 <br />
-                <p><b>Select YES</b> to only use ingress to access this interface.  This is recommended, as ingress is almost always more secure.
-                  In the future you can access this interface by following the "WEB UI" link from the add-on installation page or embedding it in 
+                <p><b>Select YES</b> to only use ingress to access this interface. This is recommended, as ingress is
+                  almost always more secure.
+                  In the future you can access this interface by following the "WEB UI" link from the add-on
+                  installation page or embedding it in
                   your Home Assistant side-bar from the same place.</p>
                 <br />
                 <p><b>Select NO</b> to continue exposing a web interface on an open port with the SSL and authentication
-                  settings you choose.  The port, which defaults to 1627, can be changed form the add-on page in Home Assistant.</p>
+                  settings you choose. The port, which defaults to 1627, can be changed form the add-on page in Home
+                  Assistant.</p>
                 <br />
                 <p>You can change this option any time from the settings menu. No matter which you choose, the interface
                   will be available through ingress.</p>
                 <br />
                 <div class="card-action white-text">
-                  <a target="_blank" class="waves-effect ha-blue waves-light btn" onClick="exposeServer('false');">Yes</a>
+                  <a target="_blank" class="waves-effect ha-blue waves-light btn"
+                    onClick="exposeServer('false');">Yes</a>
                   <a target="_blank" class="waves-effect ha-blue waves-light btn" onClick="exposeServer('true');">No</a>
                 </div>
               </div>
@@ -1453,14 +1536,17 @@
             <div class="card">
               <div class="card-content">
                 <span class="card-title">Restore a Snapshot</span>
-                <p>Snapshots must be restored through the Hass.io Snapshots page.  You can restore a snapshot by navigating to
-                  "Hass.io" &gt; "Snapshots" from the Home Assistant Web-UI, 
-                  or by click the button below to navigate there by a direct link.  Depending on how you access the Home 
+                <p>Snapshots must be restored through the Hass.io Snapshots page. You can restore a snapshot by
+                  navigating to
+                  "Hass.io" &gt; "Snapshots" from the Home Assistant Web-UI,
+                  or by click the button below to navigate there by a direct link. Depending on how you access the Home
                   Assistant Web-UI the direct link may not, so you'll just have to navigate there.</p>
                 <br />
                 <div class="card-action">
-                  <a target="_blank" id="restore_hard_link" class="waves-effect ha-blue waves-light btn" href="">Open Snapshots</a>
-                  <a target="_blank" class="waves-effect ha-blue waves-light btn modal-close" onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
+                  <a target="_blank" id="restore_hard_link" class="waves-effect ha-blue waves-light btn" href="">Open
+                    Snapshots</a>
+                  <a target="_blank" class="waves-effect ha-blue waves-light btn modal-close"
+                    onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
                 </div>
               </div>
             </div>

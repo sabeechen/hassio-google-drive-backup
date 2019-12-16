@@ -23,7 +23,7 @@ from .thumbnail import THUMBNAIL_IMAGE
 from .helpers import parseDateTime
 from .driverequests import DriveRequests
 from .time import Time
-from .exceptions import LogicError
+from .exceptions import LogicError, BackupFolderMissingError
 from .globalinfo import GlobalInfo
 from .const import SOURCE_GOOGLE_DRIVE
 from .settings import Setting
@@ -186,6 +186,10 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 folder_id: str = folder_file.readline()
             if self._verifyBackupFolderWithQuery(folder_id):
                 return folder_id
+        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+            # A weird error: the snapshot folder should have been specified
+            # TODO: needs test coverage
+            raise BackupFolderMissingError()
         return self._findDriveFolder()
 
     def _get(self, id):

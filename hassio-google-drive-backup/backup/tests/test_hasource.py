@@ -14,6 +14,7 @@ from ..const import SOURCE_HA
 from ..settings import Setting
 from ..password import Password
 from ..globalinfo import GlobalInfo
+from ..harequests import EVENT_SNAPSHOT_START, EVENT_SNAPSHOT_END
 
 
 def test_sync_empty(ha) -> None:
@@ -70,7 +71,7 @@ def test_CRUD(ha, time, server: ServerInstance) -> None:
     assert len(snapshots) == 0
 
 
-def test_pending_snapshot_nowait(ha, time, server):
+def test_pending_snapshot_nowait(ha: HaSource, time, server):
     server.update({"snapshot_wait_time": 5})
     server.getServer()._options.update({"new_snapshot_timeout_seconds": 0})
     snapshot_immediate: PendingSnapshot = ha.create(CreateOptions(time.now(), "Test Name"))
@@ -88,8 +89,24 @@ def test_pending_snapshot_nowait(ha, time, server):
     assert snapshot_immediate.date() == time.now()
     assert not snapshot_immediate.protected()
 
+    # Might be a little flaky but...whatever
+    ha.snapshot_thread.join(1)
+    assert server.getServer().getEvents() == [
+        (EVENT_SNAPSHOT_START, {
+            'snapshot_name': snapshot_immediate.name(),
+            'snapshot_time': str(snapshot_immediate.date())})]
+    ha.snapshot_thread.join()
+    assert server.getServer().getEvents() == [
+        (EVENT_SNAPSHOT_START, {
+            'snapshot_name': snapshot_immediate.name(),
+            'snapshot_time': str(snapshot_immediate.date())}),
+        (EVENT_SNAPSHOT_END, {
+            'completed': True,
+            'snapshot_name': snapshot_immediate.name(),
+            'snapshot_time': str(snapshot_immediate.date())})]
 
-def test_pending_snapshot_already_in_progress(ha, time, server):
+
+def test_pending_snapshot_already_in_progress(ha, time, server: ServerInstance):
     server.getServer()._options.update({"new_snapshot_timeout_seconds": 100})
     with server.blockSnapshots():
         with pytest.raises(SnapshotInProgress):
@@ -97,6 +114,16 @@ def test_pending_snapshot_already_in_progress(ha, time, server):
         snapshots = list(ha.get().values())
         assert len(snapshots) == 1
         snapshot = snapshots[0]
+
+    # Verify we logged events to start/end the snapshot
+    assert server.getServer().getEvents() == [
+        (EVENT_SNAPSHOT_START, {
+            'snapshot_name': 'Test Name',
+            'snapshot_time': str(snapshot.date())}),
+        (EVENT_SNAPSHOT_END, {
+            'completed': False,
+            'snapshot_name': "Test Name",
+            'snapshot_time': str(snapshot.date())})]
 
     assert isinstance(snapshot, PendingSnapshot)
     assert snapshot.name() == "Pending Snapshot"
@@ -107,12 +134,12 @@ def test_pending_snapshot_already_in_progress(ha, time, server):
     assert snapshot.date() == time.now()
     assert not snapshot.protected()
 
-    try:
+    with pytest.raises(SnapshotInProgress):
         ha.create(CreateOptions(time.now(), "Test Name"))
-        raise Exception("Should have thrown SnapshotInProgress")
-    except SnapshotInProgress:
-        # expected
-        pass
+
+    # Shouldn't see another start/fail because the addon already knows 
+    # there is a pending snapshot.
+    assert len(server.getServer().getEvents()) == 2
 
 
 def test_partial_snapshot(ha, time, server: ServerInstance, config: Config):
@@ -216,9 +243,10 @@ def test_default_name(time: FakeTime, ha, server):
     assert snapshot.name() == "Full Snapshot 1985-12-06 00:00:00"
 
 
-def test_pending_snapshot_timeout(time: FakeTime, ha, server):
+def test_pending_snapshot_timeout(time: FakeTime, ha, server: ServerInstance):
     server.update({"snapshot_wait_time": 5})
     server.getServer()._options.update({"new_snapshot_timeout_seconds": 0})
+    server.getServer().getEvents()
     snapshot_immediate: PendingSnapshot = ha.create(CreateOptions(time.now(), "Test Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Test Name"

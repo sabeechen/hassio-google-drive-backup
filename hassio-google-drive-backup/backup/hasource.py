@@ -297,9 +297,9 @@ class HaSource(SnapshotSource[HASnapshot]):
                     self.pending_snapshot.complete()
                 self.info("Snapshot finished")
             self.trigger()
-            self.harequests.eventSnapshotComplete(data[0]['name'], options.when)
+            self.harequests.eventSnapshotEnd(data[0]['name'], options.when, True)
         except Exception as e:
-            self.harequests.eventSnapshotFailed(data[0]['name'], options.when)
+            self.harequests.eventSnapshotEnd(data[0]['name'], options.when, False)
             with self.lock:
                 if self.pending_snapshot:
                     self.pending_snapshot.failed(e, self.time.now())

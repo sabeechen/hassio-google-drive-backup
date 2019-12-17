@@ -9,7 +9,7 @@ class FakeTime(Time):
         if now:
             self._now = now
         else:
-            self._now = self.toUtc(datetime(1985, 12, 6, 0, 0, 0))
+            self._now = self.toUtc(datetime(1985, 12, 6, 0, 0, 0, tzinfo=gettz('EST')))
         self.sleeps = []
 
     def setNow(self, now: datetime):

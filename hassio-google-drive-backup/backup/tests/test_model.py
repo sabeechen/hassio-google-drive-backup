@@ -87,7 +87,6 @@ def test_next_time_of_day():
     time: FakeTime = FakeTime()
     info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
-    assert now == datetime(1985, 12, 6, 3, 0, tzinfo=test_tz)
 
     config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source, default_source, info)

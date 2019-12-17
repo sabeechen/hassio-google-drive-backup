@@ -213,7 +213,7 @@ def assertName(ha: HaSource, time, template: str, expected: str):
 
 def test_default_name(time: FakeTime, ha, server):
     snapshot = ha.create(CreateOptions(time.now(), ""))
-    assert snapshot.name() == "Full Snapshot 1985-12-06 02:00:00"
+    assert snapshot.name() == "Full Snapshot 1985-12-06 00:00:00"
 
 
 def test_pending_snapshot_timeout(time: FakeTime, ha, server):

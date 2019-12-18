@@ -99,7 +99,7 @@ _DEFAULTS = {
     Setting.SNAPSHOT_TIME_OF_DAY: "",
     Setting.SNAPSHOT_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
     Setting.SNAPSHOT_PASSWORD: "",
-    Setting.SPECIFY_SNAPSHOT_FOLDER: True,
+    Setting.SPECIFY_SNAPSHOT_FOLDER: False,
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: 0,

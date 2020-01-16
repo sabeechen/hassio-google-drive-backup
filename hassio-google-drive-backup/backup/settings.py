@@ -58,6 +58,7 @@ class Setting(Enum):
     GOOGLE_DRIVE_TIMEOUT_SECONDS = "google_drive_timeout_seconds"
     GOOGLE_DRIVE_PAGE_SIZE = "google_drive_page_size"
     ALTERNATE_DNS_SERVERS = "alternate_dns_servers"
+    DEFAULT_DRIVE_CLIENT_ID = "default_drive_client_id"
 
     # Files and folders
     FOLDER_FILE_PATH = "folder_file_path"
@@ -73,6 +74,7 @@ class Setting(Enum):
     HOME_ASSISTANT_URL = "home_assistant_url"
     HASSIO_TOKEN = "hassio_header"
     AUTHENTICATE_URL = "authenticate_url"
+    CHOOSE_FOLDER_URL = "choose_folder_url"
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
@@ -151,6 +153,7 @@ _DEFAULTS = {
     Setting.HOME_ASSISTANT_URL: "http://hassio/homeassistant/api/",
     Setting.DRIVE_URL: "https://www.googleapis.com",
     Setting.AUTHENTICATE_URL: "https://philosophyofpen.com/login/backup.py",
+    Setting.CHOOSE_FOLDER_URL: "https://philosophyofpen.com/hassiodrivebackup/picker/",
 
     # File locations used to store things
     Setting.FOLDER_FILE_PATH: "/data/folder.dat",
@@ -166,6 +169,7 @@ _DEFAULTS = {
     Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: 60 * 30,
     Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: 5,
     Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60,
+    Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com"
 }
 
 _LOOKUP = {}

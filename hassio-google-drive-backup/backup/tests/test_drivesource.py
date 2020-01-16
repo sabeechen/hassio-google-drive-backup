@@ -1,10 +1,11 @@
 import os
 
 import pytest
-from ..exceptions import GoogleCredentialsExpired, GoogleDnsFailure, GoogleCantConnect, GoogleSessionError, GoogleTimeoutError, GoogleInternalError
+from ..exceptions import ExistingBackupFolderError, GoogleCredentialsExpired, GoogleDnsFailure, GoogleCantConnect, GoogleSessionError, GoogleTimeoutError, GoogleInternalError, BackupFolderInaccessible, BackupFolderMissingError
 from ..drivesource import FOLDER_MIME_TYPE, DriveSource
 from ..driverequests import BASE_CHUNK_SIZE, MAX_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS, RETRY_SESSION_ATTEMPTS
 from ..snapshots import DriveSnapshot, DummySnapshot
+from ..globalinfo import GlobalInfo
 from time import sleep
 from .helpers import createSnapshotTar, compareStreams
 from .conftest import ServerInstance, RequestsMock
@@ -95,6 +96,7 @@ def test_folder_creation(drive, time, config):
     # delete the folder, assert we create a new one
     folderId = drive.getFolderId()
     drive.drivebackend.delete(folderId)
+    time.advanceDay()
     assert len(drive.get()) == 0
     time.advanceDay()
     assert drive.getFolderId() != folderId
@@ -215,7 +217,7 @@ def test_resume_upload_attempts_exhausted(drive: DriveSource, server: ServerInst
     # We should still be using the same location url
     assert drive.drivebackend.last_attempt_location == last_location
 
-    # Another attempt shoudl sue another location url
+    # Another attempt should use another location url
     with pytest.raises(GoogleInternalError):
         drive.save(from_snapshot, data)
     assert drive.drivebackend.last_attempt_count == 0
@@ -385,3 +387,160 @@ def verify_upload_resumed(time, drive: DriveSource, config: Config, requests_moc
     download = drive.read(from_snapshot)
     data.seek(0)
     compareStreams(data, download)
+
+
+def test_folder_missing_on_upload(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
+    # Make the folder
+    drive.get()
+
+    # Require a specified folder so we don't query
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
+
+    # Delete the folder
+    drive.drivebackend.delete(drive.getFolderId())
+
+    # Then try to make one
+    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
+    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+
+    # Configure the upload to fail after the first upload chunk
+    with pytest.raises(BackupFolderInaccessible):
+        drive.save(from_snapshot, data)
+
+
+def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, config: Config, server: ServerInstance):
+    # Make the folder
+    drive.get()
+
+    # Require a specified folder so we don't query
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
+
+    # Make the folder inaccessible
+    server.getServer().lostPermission.append(drive.getFolderId())
+
+    # Then upload a folder
+    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
+    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+
+    # Configure the upload to fail after the first upload chunk
+    with pytest.raises(BackupFolderInaccessible):
+        drive.save(from_snapshot, data)
+
+
+def test_folder_error_on_query_lost_permission(time, drive: DriveSource, config: Config, server: ServerInstance):
+    # Make the folder
+    drive.get()
+
+    # Require a specified folder so we don't query
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
+
+    # Make the folder inaccessible
+    server.getServer().lostPermission.append(drive.getFolderId())
+
+    # It shoudl fail!
+    with pytest.raises(BackupFolderInaccessible):
+        drive.get()
+
+
+def test_folder_error_on_query_deleted(time, drive: DriveSource, config: Config, server: ServerInstance):
+    # Make the folder
+    drive.get()
+
+    # Require a specified folder so we don't query
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
+
+    # Delete the folder
+    drive.drivebackend.delete(drive.getFolderId())
+
+    # It should fail!
+    with pytest.raises(BackupFolderInaccessible):
+        drive.get()
+
+
+def test_backup_folder_not_specified(time, drive: DriveSource, config: Config, server: ServerInstance):
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+
+    with pytest.raises(BackupFolderMissingError):
+        drive.get()
+
+    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
+    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+    with pytest.raises(BackupFolderMissingError):
+        drive.save(from_snapshot, data)
+
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
+    with pytest.raises(BackupFolderMissingError):
+        drive.get()
+    with pytest.raises(BackupFolderMissingError):
+        drive.save(from_snapshot, data)
+
+
+def test_folder_invalid_when_specified(time, drive: DriveSource, config: Config, server: ServerInstance):
+    drive.get()
+
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    drive.drivebackend.update(drive.getFolderId(), {"trashed": True})
+
+    time.advanceDay()
+
+    with pytest.raises(BackupFolderInaccessible):
+        drive.get()
+
+
+def test_no_folder_when_required(time, drive: DriveSource, config: Config, server: ServerInstance):
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    with pytest.raises(BackupFolderMissingError):
+        drive.get()
+
+
+def test_existing_folder_already_exists(time, drive: DriveSource, config: Config, server: ServerInstance):
+    drive.get()
+    drive.checkBeforeChanges()
+
+    # Reset folder, try again
+    drive.resetFolder()
+    drive.get()
+    with pytest.raises(ExistingBackupFolderError):
+        drive.checkBeforeChanges()
+
+
+def test_existing_resolved_use_existing(time, drive: DriveSource, config: Config, server: ServerInstance, global_info: GlobalInfo):
+    drive.get()
+    drive.checkBeforeChanges()
+
+    folder_id = drive.getFolderId()
+
+    # Reset folder, try again
+    drive.resetFolder()
+    drive.get()
+    with pytest.raises(ExistingBackupFolderError):
+        drive.checkBeforeChanges()
+
+    global_info.resolveFolder(True)
+    drive.resetFolder()
+    drive.get()
+    drive.checkBeforeChanges()
+    assert drive.getFolderId() == folder_id
+
+
+def test_existing_resolved_create_new(time, drive: DriveSource, config: Config, server: ServerInstance, global_info: GlobalInfo):
+    drive.get()
+    drive.checkBeforeChanges()
+
+    folder_id = drive.getFolderId()
+
+    # Reset folder, try again
+    drive.resetFolder()
+    drive.get()
+    with pytest.raises(ExistingBackupFolderError):
+        drive.checkBeforeChanges()
+
+    global_info.resolveFolder(False)
+    drive.resetFolder()
+    drive.get()
+    drive.checkBeforeChanges()
+    assert drive.getFolderId() != folder_id

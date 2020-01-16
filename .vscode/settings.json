@@ -11,5 +11,6 @@
         "--ignore=E501,E731",
         "--verbose"
     ],
-    "python.autoComplete.addBrackets": true
+    "python.autoComplete.addBrackets": true,
+    "python.envFile": "${workspaceFolder}/.env"
 }

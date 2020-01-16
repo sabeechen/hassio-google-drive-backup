@@ -105,12 +105,30 @@ class Coordinator(Trigger, LogBase):
             self._backoff.reset()
         except Exception as e:
             if isinstance(e, KnownError):
-                self.error(e.message())
+                known: KnownError = e
+                self.error(known.message())
+                if known.retrySoon():
+                    self._backoff.backoff(e)
+                else:
+                    self._backoff.maxOut()
             else:
                 self.error(formatException(e))
+                self._backoff.backoff(e)
             self._global_info.failed(e)
-            self._backoff.backoff(e)
-            self.info("Another attempt to sync will be made in {0} seconds".format(self._backoff.peek()))
+
+            seconds = self._backoff.peek()
+            if seconds < 1:
+                text = "right now"
+            elif seconds < 60:
+                text = "in {0} seconds".format(seconds)
+            elif seconds < 60 * 60:
+                text = "in {0}(ish) minutes".format(int(seconds / 60))
+            elif seconds == 60 * 60:
+                text = "in an hour"
+            else:
+                text = "much later"
+
+            self.info("I'll try syncing again {0}".format(text))
         self._updateFreshness()
 
     def snapshots(self) -> List[Snapshot]:

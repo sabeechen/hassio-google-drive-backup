@@ -204,6 +204,7 @@ def config(cleandir, drive_creds: OAuth2Credentials):
     config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
     config.override(Setting.RETAINED_FILE_PATH, "retained.json")
     config.override(Setting.INGRESS_TOKEN_FILE_PATH, "ingress.dat")
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "test_client_id")
 
     return config
 

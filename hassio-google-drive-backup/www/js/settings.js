@@ -342,6 +342,33 @@ function setColors(background, accent) {
   setRule(".btn, .btn-large, .btn-small",  {
     'color': accent_text.toCss()
   });
+
+  setRule(".bmc-button",  {
+    'padding': '3px 5px 3px 5px !important',
+    'line-height': '25px !important',
+    'height': '35px !important',
+    'min-width': '160px !important',
+    'text-decoration': 'none !important',
+    'display': 'inline-flex !important',
+    'color': text.toCss(),
+    'background-color': background.toCss(),
+    'border-radius': '3px !important',
+    'border': '1px solid transparent !important',
+    'padding': '3px 5px 3px 5px !important',
+    'font-size': '7px !important',
+    'letter-spacing': '0.6px !important',
+    'box-shadow': '0px 1px 2px rgba(190, 190, 190, 0.5) !important',
+    '-webkit-box-shadow': '0px 1px 2px 2px rgba(190, 190, 190, 0.5) !important',
+    'margin': '0 auto !important',
+    'font-family': "'Cookie', cursive !important",
+    '-webkit-box-sizing': 'border-box !important',
+    'box-sizing': 'border-box !important',
+    '-o-transition': '0.3s all linear !important',
+    '-webkit-transition': '0.3s all linear !important',
+    '-moz-transition': '0.3s all linear !important',
+    '-ms-transition': '0.3s all linear !important',
+    'transition': '0.3s all linear !important'
+  });
 }
 
 // Modifying style sheets directly probably isn't best practices, but damn does it work well.
@@ -448,6 +475,7 @@ function handleCloseSettings() {
 function loadSettings() {
   var jqxhr = $.get("getconfig",
     function (data) {
+      config_data = data
       name_keys = data.name_keys;
       config = data.config;
       addons = data.addons;
@@ -508,6 +536,22 @@ function loadSettings() {
       settingsChanged = false;
       snapshotNameExample();
 
+      // Configure the visibility/link of the "current snapshot folder" help text and button.
+      if (data.snapshot_folder && data.snapshot_folder.length > 0) {
+        $("#current_folder_span").show()
+        $('#current_folder_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.snapshot_folder);
+      } else {
+        $("#current_folder_span").hide();
+      }
+
+      if (config.specify_snapshot_folder && last_data && last_data.drive_enabled) {
+        $("#choose_folder_controls").show();
+      } else {
+        $("#choose_folder_controls").hide();
+      }
+
+      $("#settings_specify_folder_id").val(data.snapshot_folder);
+
       if (config.hasOwnProperty("snapshot_password")) {
         $("#snapshot_password").data("old_password", config.snapshot_password);
       } else {
@@ -521,6 +565,14 @@ function loadSettings() {
       showPallette($("#background_color"));
       showPallette($("#accent_color"));
     }, "json")
+}
+
+function chooseFolderChanged() {
+  if ($("#specify_snapshot_folder").is(':checked') && (config.specify_snapshot_folder || config_data.is_custom_creds) && last_data && last_data.drive_enabled) {
+    $("#choose_folder_controls").show();
+  } else {
+    $("#choose_folder_controls").hide();
+  }
 }
 
 function saveSettings() {
@@ -584,7 +636,7 @@ function saveSettings() {
   config.accent_color = $("#accent_color").html();
 
   modal = M.Modal.getInstance(document.getElementById("settings_modal"))
-  postJson("saveconfig", {"config": config}, closeSettings, showSettingError); 
+  postJson("saveconfig", {"config": config, "snapshot_folder": $("#settings_specify_folder_id").val()}, closeSettings, showSettingError); 
 }
 
 function closeSettings(){

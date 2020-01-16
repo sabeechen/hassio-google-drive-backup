@@ -415,6 +415,46 @@
             </div>
           </div>
           <div class="row">
+            <div class="col s12">
+              <label>
+                <input type="checkbox" name="specify_snapshot_folder" id="specify_snapshot_folder"
+                  class="filled-in checkbox-ha" onchange="chooseFolderChanged();" />
+                <span>Manually specify the snapshot folder</span>
+                <br />
+                <span class="helper-text">Specify manually which folder snapshots should be uploaded into in Google
+                  Drive. <span class="hide-for-custom-creds">Once this setting is saved,
+                  you'll be prompted to select a folder from your Google Drive.</span> If disabled, the addon will
+                  automatically create a folder in your My Drive
+                  whenever its needed.</span><span id="current_folder_span"><a id=current_folder_link target="_blank">
+                    Click here</a> to see the folder currently being used.</span>
+              </label>
+              <br />
+              <div id="choose_folder_controls">
+                <div class="hide-for-custom-creds">
+                  <a href="#!" id="choose_folder_button" onclick="chooseSnapshotFolder()"
+                    class="waves-effect waves-light btn-flat ha-blue" id="save_settings"
+                    style="margin-left: 20px; margin-top: 10px;">Choose Folder</a> <span
+                    class="hide-for-custom-creds helper-text" style="vertical-align: middle;"> Note: This link takes you
+                    to an external domain.</span>
+                </div>
+                <div class="hide-for-default-creds">
+                  <div class="input-field col s11 offset-s1">
+                    <i class="material-icons prefix">folder_open</i>
+                    <input type="text" settings_ignore='true' id="settings_specify_folder_id" name="settings_specify_folder_id"
+                      class="validate" />
+                    <label for="settings_specify_folder_id">Snapshot Folder ID</label>
+                    <span class="helper-text">The Google Drive ID of the folder you'd like to upload snapshots into. You
+                      can get this id by navigating to the folder in <a href="https://drive.google.com">Google Drive</a>
+                      and copying it out of the URL. It should be a long sequence of characters at the end of the URL.
+                      For example if the URL for my folder is
+                      <a target="_blank" href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>, then the Drive ID is
+                      1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
             <div class="col m6 s12">
               <label>
                 <input type="checkbox" name="notify_for_stale_snapshots" id="notify_for_stale_snapshots"
@@ -1421,52 +1461,128 @@
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">folder_special</i>
                   <span style="vertical-align: top;">Existing Backup Folder Found</span>
                 </span>
-                <p>The add-on found a snapshot folder named "<span id=existing_name></span>" in Google Drive that might already have snapshots in it. The addon
-                  won't be able to back up your snapshots in Google Drive until you tell it which folder to put them in.  
-                  This is normal if you've used the addon in the past with this Google account.</p>
+                <p>The add-on found a snapshot folder named "<b><span id="data_existing_name"></span></b>" in Google
+                  Drive that might already have snapshots
+                  in it. This is normal if you've used this addon before, but you'll need to decide where snapshots
+                  should go before this will start backing up again. <a id="data_existing_url" target="_blank">Click
+                    here</a> to see the folder contents in Google Drive.</p>
                 <p>To resolve this you can:</p>
                 <ul class="browser-default">
-                  <li>Click "USE THE FOLDER" below to let the add-on upload snapshots into this folder.  Click here to open the folder in Google Drive.</li>
-                  <li>Click "CHOOSE DIFFERENT FOLDER" to choose an existing folder in Google Drive to store snapshots in.</li>
-                  <li>Click "CREATE NEW FOLDER" below to let the addon automatically create a new folder in your My Drive to store snapshots.</li>
+                  <li>"Use the folder" and merge in snapshots from this Hass.io/Home Assistant instance. If this
+                    instance has newer snapshots, then some of the snapshots in Google Drive might get deleted to make
+                    room for these newer ones (this depends on your settings). You probably want this option if you just
+                    reinstalled the addon.</li>
+                  <li>"Choose a different folder" to store snapshots in, ignoring the existing folder. You probably want
+                    his option if you have multiple Hass.io/Home Assistant instances that should all back up to their
+                    own folder.</li>
+                  <li>Or "create a new folder" automatically and ignore the existing one. The new folder will be created
+                    at the root of your My Drive.</li>
                 </ul>
-                <p>Note:  If run multiple instance of home Assistant with this addon using the same Google Drive account,
-                  its recommended that you use a different folder for each instance.  Otherwise they'll delete eachother's 
+                <p>Note: If you run multiple instance of Hass.io/Home Assistant with this addon using the same Google
+                  Drive account,
+                  its recommended that you use a different folder for each instance. Otherwise they'll delete
+                  eachother's
                   snapshots!</p>
                 <div class="card-action white-text">
-                  <a href="#">Use the folder</a>
-                  <a href="#">Choose different folder</a>
-                  <a href="#">Create new folder</a>
+                  <a href="#" onclick="resolvefolder('true')">Use the folder</a>
+                  <a href="#" onclick="chooseSnapshotFolder()">Choose a different folder</a>
+                  <a href="#" onclick="resolvefolder('false')">Create a new folder</a>
                 </div>
               </div>
             </div>
           </div>
         </div>
         <div class="row default-hidden error_card backup_folder_missing" id="backup_folder_missing">
-            <div class="col s12 m12 l9">
-              <div class="card red darken-4">
-                <div class="card-content white-text">
-                  <span class="card-title">
-                    <i class="material-icons" style="font-size: 50px; padding-right: 10px;">folder_special</i>
-                    <span style="vertical-align: top;">Existing Backup Folder Found</span>
-                  </span>
-                  <p>The add-on couldn't find your snapshot folder.  Snapshots won't be backed up to Google Drive until you tell it what to do.  Thi can happen if you trashed the folder, deleted it, or somethign else caused it to become unreadable.</p>
-                  <p>To resolve this you can:</p>
-                  <ul class="browser-default">
-                    <li>Click "CHOOSE DIFFERENT FOLDER" to choose an existing folder in Google Drive to store snapshots in.</li>
-                    <li>Click "CREATE NEW FOLDER" below to let the addon automatically create a new folder in your My Drive to store snapshots.</li>
-                  </ul>
-                  <p>Note:  If run multiple instance of home Assistant with this addon using the same Google Drive account,
-                    its recommended that you use a different folder for each instance.  Otherwise they'll delete eachother's 
-                    snapshots!</p>
-                  <div class="card-action white-text">
-                    <a href="#">Choose different folder</a>
-                    <a href="#">Create new folder</a>
-                  </div>
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">folder_special</i>
+                  <span style="vertical-align: top;">Please choose a backup folder</span>
+                </span>
+                <p class="hide-for-custom-creds">You've choosen to backup your snapshots to a folder of your choosing. Click the link below to open a new window and select the folder in Google Drive you'd like to store your snapshot in.</p>
+                <p class="hide-for-default-creds">You've choosen to backup your snapshots to a folder of your choosing. Please navigate to the addon settings to specify a folder to store snapshots in.</p>
+                <ul class="browser-default">
+                  <li>
+                    <p>If you'd rather not specify the folder for uploads, please return to your <a href="#!"
+                        onclick="loadSettings()"><i class="material-icons"
+                          style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                        settings</a> and change your preference.</p>
+                  </li>
+                  <li>
+                    Your snapshots in Home Assistant will be re-uploaded to the new folder. If you already have them in
+                    an existing folder in Google Drive and you'd like to avoid this, please move them in manually before
+                    selecting the folder.
+                  </li>
+                  <li>
+                    <p>If you run multiple instances of
+                      Home Assistant with this addon using the same Google Drive account, its recommended that you use a
+                      different folder
+                      for each instance. Otherwise they'll delete eachother's snapshots!</p>
+                  </li>
+                </ul>
+                <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to
+                  select your folder through an external domain, which is where the link below will take you.
+                  <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
+                    target="_blank">See here</a> for details if you'd like to know more about why.</p>
+                <div class="card-action white-text">
+                    <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose folder</a>
+                    <a href="#" onclick="loadSettings()">Open settings</a>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+        <div class="row default-hidden error_card backup_folder_inaccessible" id="backup_folder_inaccessible">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">sync_problem</i>
+                  <span style="vertical-align: top;">Couldn't use your backup folder</span>
+                </span>
+                <p>The addon couldn't use the folder you chose for storing snapshots. The addon can't backup your
+                  snapshots
+                  until you resolve this. This typically happens because the folder
+                  was deleted, you lost permissions to use it, or the folder was otherwise made unreadable.</p>
+                <br />
+                <p>
+                  To resolve this, you can:
+                </p>
+                <ul class="browser-default">
+                  <li class="hide-for-custom-creds">
+                    <p>Use the link below to choose a new folder to store snapshots in.</p>
+                  </li>
+                  <li class="hide-for-default-creds">
+                      <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                      settings</a> and, valid "Snapshot Folder Id".</p>
+                  </li>
+                  <li>
+                    <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                          style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                        settings</a> and deselect "Manually specify the snapshot folder". The addon will automatically
+                      create a new folder for you.</p>
+                  </li>
+                  <li>
+                    <p>If the folder still exists, you can restore access to it by the addon by ensuring that your
+                      google account has access to it. The folder should be accessible from <a id="data_existing_url"
+                        target="_blank">this link</a>. After doing so, click "sync now" below to try syncing again.</p>
+                  </li>
+                </ul>
+                <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to select
+                  your folder through an
+                  external domain, which is where the "choose folder" link below will take you.
+                  <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
+                    target="_blank">See here</a> for details if you'd like to know more about why.</p>
+                <div class="card-action white-text">
+                  <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose new folder</a>
+                  <a href="#" onclick="sync()">sync now</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden" id="error_details_card">
           <div class="col s12 m9">
             <div class="card red darken-4">
@@ -1633,12 +1749,16 @@
         <div class="col l6 s12">
           <h5 class="accent-title">Who did this?</h5>
           <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
-            like it and would like to support me, I don't need you to buy me coffee but you can star my projects on <a
-              href="https://github.com/sabeechen">Github</a></p>
-        </div>
+            like it and would like to support me, you can star my projects on <a
+              href="https://github.com/sabeechen">Github</a> or just gimme money at
+            <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet"><a class="bmc-button"
+              target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img
+                src="images/bmc.svg" alt="Buy me a coffee"><span
+                style="margin-left:15px;font-size:20px !important;">Buy me a coffee</span></a></p>
+        </div>  
       </div>
       <div class="container left accent-text">
-        © 2019 Stephen Beechen
+        © 2020 Stephen Beechen
       </div>
     </div>
   </footer>

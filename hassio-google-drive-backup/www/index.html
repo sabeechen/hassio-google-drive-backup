@@ -99,6 +99,48 @@
             </div>
           </div>
           <div class="row">
+            <div class="col s12">
+              <label>
+                <input type="checkbox" name="specify_snapshot_folder" id="specify_snapshot_folder"
+                  class="filled-in checkbox-ha" onchange="chooseFolderChanged();" />
+                <span>Manually specify the snapshot folder</span>
+                <br />
+                <span class="helper-text">Specify manually which folder snapshots should be uploaded into in Google
+                  Drive. <span class="hide-for-custom-creds">Once this setting is saved,
+                    you'll be prompted to select a folder from your Google Drive.</span> If disabled, the addon will
+                  automatically create a folder in your My Drive
+                  whenever its needed.</span><span id="current_folder_span"><a id=current_folder_link target="_blank">
+                    Click here</a> to see the folder currently being used.</span>
+              </label>
+              <br />
+              <div id="choose_folder_controls">
+                <div class="hide-for-custom-creds">
+                  <a href="#!" id="choose_folder_button" onclick="chooseSnapshotFolder()"
+                    class="waves-effect waves-light btn-flat ha-blue" id="save_settings"
+                    style="margin-left: 20px; margin-top: 10px;">Choose Folder</a> <span
+                    class="hide-for-custom-creds helper-text" style="vertical-align: middle;"> Note: This link takes you
+                    to an external domain.</span>
+                </div>
+                <div class="hide-for-default-creds">
+                  <div class="input-field col s11 offset-s1">
+                    <i class="material-icons prefix">folder_open</i>
+                    <input type="text" settings_ignore='true' id="settings_specify_folder_id"
+                      name="settings_specify_folder_id" class="validate" />
+                    <label for="settings_specify_folder_id">Snapshot Folder ID</label>
+                    <span class="helper-text">The Google Drive ID of the folder you'd like to upload snapshots into. You
+                      can get this id by navigating to the folder in <a href="https://drive.google.com">Google Drive</a>
+                      and copying it out of the URL. It should be a long sequence of characters at the end of the URL.
+                      For example if the URL for my folder is
+                      <a target="_blank"
+                        href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
+                      then the Drive ID is
+                      1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
             <div class="col m6 s12">
               <label>
                 <input type="checkbox" name="notify_for_stale_snapshots" id="notify_for_stale_snapshots"
@@ -307,13 +349,13 @@
                 <div class="row">
                   <div class="col s12">
                     <label>
-                      <input type="checkbox" settings_ignore='true' id="generational_delete_early"
-                        name="generational_delete_early" class="filled-in checkbox-ha" />
-                      <span>Purge Old Snapshots Aggressively</span>
+                      <input type="checkbox" id="generational_delete_early" name="generational_delete_early"
+                        class="filled-in checkbox-ha" />
+                      <span>Purge Old Snapshots Early</span>
                       <br />
                       <span class="helper-text">When checked, old snapshots that aren't part of any daily, weekly,
                         monthly, or yearly cycle you've configured will be deleted even if you haven't reached the
-                        configured number of maximum snapshots to be kept in Google Drive/Home Assistant.</span>
+                        configured maxium number of snapshots in Google Drive/Home Assistant.</span>
                     </label>
                   </div>
                 </div>
@@ -585,8 +627,8 @@
   <header>
     <nav class="non-ingress ha-blue" role="navigation">
       <div class="nav-wrapper">
-        <a class="brand-logo" <img style="vertical-align: middle;" src="images/logo.png" width=40 height=40 />
-        <span>Hass.io Google Drive Backup</span>
+        <a class="brand-logo"> <img style="vertical-align: middle;" src="images/logo.png" width=40 height=40 />
+          <span>Hass.io Google Drive Backup</span>
         </a>
         <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
         <ul class="right hide-on-med-and-down">
@@ -640,10 +682,10 @@
         <br><br>
         <h1 class="header center">Get Started</h1>
         <div class="row center">
-          <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;. On your
-            first backup it will create a new folder at the root of your <a
-              href="https://drive.google.com/drive/my-drive">My Drive</a> where future backups will be stored. Once its
-            created, you can move the folder wherever you want.</h5>
+          <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;. 
+            <span id="flavor_auto_folder">On your first backup it will create a new folder at the root of your <a href="https://drive.google.com/drive/my-drive">My Drive</a> where future backups will be stored. Once its created, you can move the folder wherever you want.</span>
+            <span id="flavor_specific_folder">After connecting with Google Drive, you'll be prompted to select your backup folder.</span>
+          </h5>
         </div>
         <div>
 
@@ -715,8 +757,8 @@
                 </div>
                 <div class=row>
                   <div class="input-field col s12">
-                    <a target="_blank" class="right btn-large waves-effect waves-light ha-blue btn disabled" id="secret_button"
-                      onclick="getAuthUrl()">Connect</a>
+                    <a target="_blank" class="right btn-large waves-effect waves-light ha-blue btn disabled"
+                      id="secret_button" onclick="getAuthUrl()">Connect</a>
                   </div>
                 </div>
               </form>
@@ -780,14 +822,18 @@
           </ul>
         </div>
         <div class="col l6 s12">
-          <h5 class="accent-title">Who did this?</h5>
-          <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
-            like it and would like to support me, I don't need you to buy me coffee but you can star my projects on <a
-              href="https://github.com/sabeechen">Github</a></p>
+            <h5 class="accent-title">Who did this?</h5>
+            <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
+              like it and would like to support me, you can star my projects on <a
+                href="https://github.com/sabeechen">Github</a> or just gimme money at
+              <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet"><a class="bmc-button"
+                target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img
+                  src="images/bmc.svg" alt="Buy me a coffee"><span
+                  style="margin-left:15px;font-size:20px !important;">Buy me a coffee</span></a></p>
         </div>
       </div>
       <div class="container left accent-text">
-        © 2019 Stephen Beechen
+        © 2020 Stephen Beechen
       </div>
     </div>
   </footer>

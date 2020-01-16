@@ -90,3 +90,14 @@ def test_realistic(error):
     for x in range(5):
         with raises(type(error)):
             backoff.backoff(error)
+
+
+def test_maxOut(error):
+    backoff = Backoff(base=10, max=100)
+    assert backoff.backoff(error) == 10
+    assert backoff.backoff(error) == 20
+    backoff.maxOut()
+    assert backoff.backoff(error) == 100
+    assert backoff.backoff(error) == 100
+    backoff.reset()
+    assert backoff.backoff(error) == 10

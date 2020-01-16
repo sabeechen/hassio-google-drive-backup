@@ -33,3 +33,6 @@ class Backoff():
             raise error
         self._counter += 1
         return self.peek()
+
+    def maxOut(self):
+        self._counter = 100

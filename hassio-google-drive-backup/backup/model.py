@@ -57,6 +57,11 @@ class SnapshotSource(Trigger, Generic[T]):
     def maxCount(self) -> None:
         return 0
 
+    # Gets called after reading state but before any changes are made
+    # to check for additional errors.
+    def checkBeforeChanges(self) -> None:
+        pass
+
 
 class Model(LogBase):
     def __init__(self, config: Config, time: Time, source: SnapshotSource[AbstractSnapshot], dest: SnapshotSource[AbstractSnapshot], info: GlobalInfo):
@@ -118,6 +123,9 @@ class Model(LogBase):
             else:
                 raise SimulatedError(self.simulate_error)
         self._syncSnapshots([self.source, self.dest])
+
+        self.source.checkBeforeChanges()
+        self.dest.checkBeforeChanges()
 
         if self.dest.enabled():
             self._purge(self.source)

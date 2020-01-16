@@ -72,6 +72,7 @@
     "hassio_header": "str?",
     "drive_url": "url?",
     "authenticate_url": "url?",
+    "choose_folder_url": "url?",
 
     "snapshot_stale_seconds": "float(0,)?",
     "max_sync_interval_seconds": "float(0,)?",
@@ -87,7 +88,8 @@
     "secrets_file_path": "str?",
     "backup_directory_path": "str?",
     "credentials_file_path": "str?",
-    "ingress_token_file_path": "str?"
+    "ingress_token_file_path": "str?",
+    "default_drive_client_id": "str?"
   },
   "ports": {
     "1627/tcp": 1627

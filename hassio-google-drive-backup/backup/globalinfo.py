@@ -32,6 +32,7 @@ class GlobalInfo(LogBase):
         self.url = ""
         self.debug = {}
         self.lock = Lock()
+        self._use_existing = None
 
     def refresh(self):
         pass
@@ -76,3 +77,9 @@ class GlobalInfo(LogBase):
     def addDebugInfo(self, key, value):
         with self.lock:
             self.debug[key] = value
+
+    def resolveFolder(self, use_existing):
+        self._use_existing = use_existing
+
+    def getUseExistingFolder(self):
+        return self._use_existing

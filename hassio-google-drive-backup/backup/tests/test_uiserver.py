@@ -226,7 +226,7 @@ def test_backup_now(ui_server, time: FakeTime, snapshot: Snapshot, coord: Coordi
     time.advance(hours=1)
     assert getjson("snapshot?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
         'message': "Requested snapshot 'TestName3'"
-    }
+    } 
     coord.sync()
     status = getjson('getstatus')
     assert len(status["snapshots"]) == 4
@@ -242,7 +242,8 @@ def test_config(ui_server, config: Config, server: ServerInstance):
         "config": {
             "days_between_snapshots": 20,
             "drive_ipv4": ""
-        }
+        },
+        "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
@@ -252,7 +253,7 @@ def test_config(ui_server, config: Config, server: ServerInstance):
 
 
 def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
-    update = {"config": {"require_login": True, "expose_extra_server": True}}
+    update = {"config": {"require_login": True, "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
@@ -328,7 +329,8 @@ def test_update_ingress_false(ui_server: UIServer, ha: HaSource, config: Config)
             "require_login": True,
             "ues_ssl": True,
             "expose_extra_server": False
-        }
+        },
+        "snapshot_folder": "unused"
     }
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
 

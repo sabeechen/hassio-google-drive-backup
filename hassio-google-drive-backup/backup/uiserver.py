@@ -30,6 +30,7 @@ from .trigger import Trigger
 from .settings import Setting
 from .color import Color
 from os.path import join, abspath
+from urllib.parse import quote
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -95,8 +96,12 @@ class UIServer(Trigger, LogBase):
         status["snapshot_name_template"] = self.config.get(Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
         status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
+        status['choose_folder_url'] = self.config.get(Setting.CHOOSE_FOLDER_URL) + "?bg={0}&ac={1}".format(quote(self.config.get(Setting.BACKGROUND_COLOR)), quote(self.config.get(Setting.ACCENT_COLOR)))
         status['dns_info'] = self._global_info.getDnsInfo()
         status['enable_drive_upload'] = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
+        status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
+        status['drive_client'] = self._coord._model.dest.drivebackend.cred_id
+        status['is_specify_folder'] = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         return status
 
     def getSnapshotDetails(self, snapshot: Snapshot):
@@ -231,6 +236,17 @@ class UIServer(Trigger, LogBase):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def resolvefolder(self, use_existing=False):
+        return self.handleError(lambda: self._resolvefolder(strToBool(use_existing)))
+
+    def _resolvefolder(self, use_existing: bool):
+        self._global_info.resolveFolder(use_existing)
+        self._coord._model.dest.resetFolder()
+        self.sync()
+        return {'message': 'Done'}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def confirmdelete(self, always=False):
         return self.handleError(lambda: self._confirmdelete(always))
 
@@ -284,9 +300,8 @@ class UIServer(Trigger, LogBase):
 
     @cherrypy.expose
     def changefolder(self, id: str) -> None:
-        if self._coord._model.dest.changefolder(id):
-            # TODO Implement me
-            pass
+        self._coord._model.dest.changeBackupFolder(id)
+        self.trigger()
         return self.redirect("/")
 
     @cherrypy.expose
@@ -345,7 +360,9 @@ class UIServer(Trigger, LogBase):
             'config': current_config,
             'addons': self._global_info.addons,
             'name_keys': name_keys,
-            'defaults': default_config
+            'defaults': default_config,
+            'snapshot_folder': self._coord._model.dest._folderId,
+            'is_custom_creds': self._coord._model.dest.isCustomCreds()
         }
 
     @cherrypy.expose
@@ -408,20 +425,33 @@ class UIServer(Trigger, LogBase):
         Password(self.config.getConfigFor(update)).resolve()
 
         validated = self.config.validate(update)
-        self._updateConfiguration(validated)
+        self._updateConfiguration(validated, ensureKey("snapshot_folder", cherrypy.request.json, "the confgiuration update request"))
         return {'message': 'Settings saved'}
 
-    def _updateConfiguration(self, new_config):
+    def _updateConfiguration(self, new_config, snapshot_folder_id=None):
         server_config_before = self._getServerOptions()
 
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
         self._harequests.updateConfig(update)
+
+        was_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         self.config.update(new_config)
+
+        is_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         server_config_after = self._getServerOptions()
         if server_config_before != server_config_after:
             self.run()
+        if is_specify and not was_specify:
+            # Delete the reset the saved backup folder, since the preference
+            # for specifying the folder changed from false->true
+            self._coord._model.dest.resetFolder()
+        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None:
+            if len(snapshot_folder_id) > 0:
+                self._coord._model.dest.changeBackupFolder(snapshot_folder_id)
+            else:
+                self._coord._model.dest.resetFolder()
         self.trigger()
         return {'message': 'Settings saved'}
 
@@ -729,6 +759,41 @@ class UIServer(Trigger, LogBase):
 
         ret += self.cssElement(".btn, .btn-large, .btn-small", {
             'color': accent_text.toCss()
+        })
+
+        ret += self.cssElement(".bmc-button img", {
+            'width': '25px !important',
+            'margin-bottom': '1px !important',
+            'box-shadow': 'none !important',
+            'border': 'none !important',
+            'vertical-align': 'middle !important'
+        })
+
+        ret += self.cssElement(".bmc-button", {
+            'padding': '3px 5px 3px 5px !important',
+            'line-height': '25px !important',
+            'height': '35px !important',
+            'min-width': '160px !important',
+            'text-decoration': 'none !important',
+            'display': 'inline-flex !important',
+            'color': text.toCss(),
+            'background-color': background.toCss(),
+            'border-radius': '3px !important',
+            'border': '1px solid transparent !important',
+            'padding': '3px 5px 3px 5px !important',
+            'font-size': '7px !important',
+            'letter-spacing': '0.6px !important',
+            'box-shadow': '0px 1px 2px rgba(190, 190, 190, 0.5) !important',
+            '-webkit-box-shadow': '0px 1px 2px 2px rgba(190, 190, 190, 0.5) !important',
+            'margin': '0 auto !important',
+            'font-family': "'Cookie', cursive !important",
+            '-webkit-box-sizing': 'border-box !important',
+            'box-sizing': 'border-box !important',
+            '-o-transition': '0.3s all linear !important',
+            '-webkit-transition': '0.3s all linear !important',
+            '-moz-transition': '0.3s all linear !important',
+            '-ms-transition': '0.3s all linear !important',
+            'transition': '0.3s all linear !important'
         })
 
         return ret

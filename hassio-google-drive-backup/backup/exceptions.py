@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .const import ERROR_MULTIPLE_DELETES, ERROR_HA_DELETE_ERROR, ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT, ERROR_GOOGLE_INTERNAL, ERROR_GOOGLE_CONNECT, ERROR_GOOGLE_DNS, ERROR_DRIVE_FULL, ERROR_BAD_PASSWORD_KEY, ERROR_INVALID_CONFIG, ERROR_LOGIC, ERROR_CREDS_EXPIRED, ERROR_NO_SNAPSHOT, ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL, ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, ERROR_EXISTING_FOLDER, ERROR_BACKUP_FOLDER_MISSING
+from .const import ERROR_BACKUP_FOLDER_INACCESSIBLE, ERROR_MULTIPLE_DELETES, ERROR_HA_DELETE_ERROR, ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT, ERROR_GOOGLE_INTERNAL, ERROR_GOOGLE_CONNECT, ERROR_GOOGLE_DNS, ERROR_DRIVE_FULL, ERROR_BAD_PASSWORD_KEY, ERROR_INVALID_CONFIG, ERROR_LOGIC, ERROR_CREDS_EXPIRED, ERROR_NO_SNAPSHOT, ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL, ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, ERROR_EXISTING_FOLDER, ERROR_BACKUP_FOLDER_MISSING, CHOOSE_BACKUP_FOLDER, DRIVE_FOLDER_URL_FORMAT
 
 
 def ensureKey(key, target, name):
@@ -22,6 +22,9 @@ class KnownError(Exception, ABC):
 
     def data(self):
         return {}
+
+    def retrySoon(self):
+        return True
 
 
 class SimulatedError(KnownError):
@@ -77,6 +80,9 @@ class SnapshotPasswordKeyInvalid(KnownError):
     def code(self):
         return ERROR_BAD_PASSWORD_KEY
 
+    def retrySoon(self):
+        return False
+
 
 class UploadFailed(KnownError):
     def message(self):
@@ -92,6 +98,9 @@ class GoogleCredentialsExpired(KnownError):
 
     def code(self):
         return ERROR_CREDS_EXPIRED
+
+    def retrySoon(self):
+        return False
 
 
 class NoSnapshot(KnownError):
@@ -145,6 +154,9 @@ class DeleteMutlipleSnapshotsError(KnownError):
     def data(self):
         return self.delete_sources
 
+    def retrySoon(self):
+        return False
+
 
 class DriveQuotaExceeded(KnownError):
     def message(self):
@@ -152,6 +164,9 @@ class DriveQuotaExceeded(KnownError):
 
     def code(self):
         return ERROR_DRIVE_FULL
+
+    def retrySoon(self):
+        return False
 
 
 class GoogleDnsFailure(KnownError):
@@ -215,14 +230,44 @@ class ExistingBackupFolderError(KnownError):
 
     def data(self):
         return {
-            "existing_id": self.existing_id,
+            "existing_url#href": DRIVE_FOLDER_URL_FORMAT.format(self.existing_id),
             "existing_name": self.existing_name
         }
+
+    def retrySoon(self):
+        return False
 
 
 class BackupFolderMissingError(KnownError):
     def message(self):
-        return "The backup folder is missing.  Please visit the add-on Web UI to select where to backup."
+        return "Please visit the add-on Web UI to select where to backup."
 
     def code(self):
         return ERROR_BACKUP_FOLDER_MISSING
+
+    def retrySoon(self):
+        return False
+
+
+class BackupFolderInaccessible(KnownError):
+    def __init__(self, existing_id: str):
+        self.existing_id = existing_id
+
+    def message(self):
+        return "The choosen backup folder has become inaccessible.  Please visit the addon web UI to select a backup folder."
+
+    def data(self):
+        return {
+            "existing_url#href": DRIVE_FOLDER_URL_FORMAT.format(self.existing_id)
+        }
+
+    def code(self):
+        return ERROR_BACKUP_FOLDER_INACCESSIBLE
+
+
+class GoogleDrivePermissionDenied(KnownError):
+    def message(self):
+        return "Google Drive denied the request due to permissions."
+
+    def code(self):
+        return "google_Drive_permissions"

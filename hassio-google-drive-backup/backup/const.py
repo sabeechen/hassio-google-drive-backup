@@ -23,3 +23,7 @@ ERROR_MULTIPLE_DELETES = "multiple_deletes"
 
 ERROR_EXISTING_FOLDER = "existing_backup_folder"
 ERROR_BACKUP_FOLDER_MISSING = "backup_folder_missing"
+CHOOSE_BACKUP_FOLDER = "choose_backup_folder"
+ERROR_BACKUP_FOLDER_INACCESSIBLE = "backup_folder_inaccessible"
+
+DRIVE_FOLDER_URL_FORMAT = "https://drive.google.com/drive/u/0/folders/{0}"

@@ -1,11 +1,25 @@
+## [0.100.0 2019-01-17]
+# Added
+- Option to select the snapshot folder.  Now you can sync multiple instances to a single Google Drive account. See settings to try it out.  Implementing this was difficult, difficult, lemon difficult.
+- Web UI now shows total space usage in Google Drive and Home Assistant.
+- Web UI now shows space available in the backup folder.
+- Addon stops and asks for help if it thinks you're going to run out of space.
+- Config options for the above features.
+- A link to my Buy Me a Coffee page if you'd like to support.
+# Changes
+- Got rid of "jank" in various places.  The fight against jank is never truly won.
+- If an existing snapshot folder is found on installation, the addon will ask before using it.
+# Fixes
+- Lots of spelling errors.
+
 ## [0.99.0] 2019-11-01
 # Added
-- Colors for the interface can now be choosen from the Setting Menu or through addon options.  Try it form the settings menu, you'll like it.
+- Colors for the interface can now be choosen from the Setting Menu or through addon options.  Try it from the settings menu, you'll like it.
 - Added a config option 'delete_generational_early', which deletes older unused snapshots more aggressively ([see here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md) for an explanation).
 - '{hostname}' can now be used as an option in snapshot names. 
 
 # Changes
-- Snapshot staleness sensor now has the 'generic' device class, since the ' device class was removed from HA's documentation.
+- Snapshot staleness sensor now has the 'generic' device class, since the 'problem' device class was removed from HA's documentation.
 
 # Fixes
 - Fixed a bug causing generational snapshots closer to noon to be saved over those later in the day.
@@ -40,7 +54,7 @@
 
 ## [0.98.1] 2019-07-31
 ### Added
-- Support for Ingress.  When upgrading from an older version, the UI will present a dialog asking if you'd still like to serve the Web UI over another port or just use ingress in the future.  New users will be ingress-only by default (this can be changed form the settings).
+- Support for Ingress.  When upgrading from an older version, the UI will present a dialog asking if you'd still like to serve the Web UI over another port or just use ingress in the future.  New users will be ingress-only by default (this can be changed from the settings).
 - Support for folders and snapshots in Team Drives.
 - Settings option to disable uploads to Google Drive, for example if you just want to use the addon to create snapshots.
 
@@ -56,7 +70,7 @@
 ## [0.97.1] - 2019-05-22
 ### Added
 - Better logging when the addon can't configure itself on startup
-- Settings menau makes you confirm the password when you change it
+- Settings menu makes you confirm the password when you change it
 
 ### Fixes
 - Some small UI glitches
@@ -166,7 +180,7 @@
 
 ## [0.8] - 2019-04-16
 ### Added
-- Partial snapshot support.  Chose the folders and add-ons you want included in snapshots from the settings menu.
+- Partial snapshot support.  Choose the folders and add-ons you want included in snapshots from the settings menu.
 - Download snapshots form the new "Actions" menu.
 - Upload snapshots directly from Google Drive with one click!
 - Direct link to the restore web UI in Hass.io
@@ -185,8 +199,8 @@
 
 ### Added
 - Config option `snapshot_password` for password protecting snapshots.
-- A settings menu within the web interface, which lets you modify the add-on's settings without having to touch json.  Try in from the upper right menu of the web-UI.
-- Created an opt-in setting to allow sending error reports.  Add `"send_error_reports": true` to your config to help me out, or just clock "YES" in the dialog you see in the web UI after installing the latest version.
+- A settings menu within the web interface, which lets you modify the add-on's settings without having to touch json.  Try it from the upper right menu of the web-UI.
+- Created an opt-in setting to allow sending error reports.  Add `"send_error_reports": true` to your config to help me out, or just click "YES" in the dialog you see in the web UI after installing the latest version.
 
 ## [0.61] - 2019-04-03
 

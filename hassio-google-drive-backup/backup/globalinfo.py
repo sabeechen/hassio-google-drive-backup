@@ -23,6 +23,7 @@ class GlobalInfo(LogBase):
         self._first_sync = True
         self._multipleDeletesPermitted = False
         self._dns_info = None
+        self._skip_space_check_once = False
 
         self.drive_folder_id = None
         self.ha_ssl = False
@@ -83,3 +84,9 @@ class GlobalInfo(LogBase):
 
     def getUseExistingFolder(self):
         return self._use_existing
+
+    def isSkipSpaceCheckOnce(self):
+        return self._skip_space_check_once
+
+    def setSkipSpaceCheckOnce(self, val):
+        self._skip_space_check_once = val

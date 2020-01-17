@@ -372,10 +372,12 @@ last_data = null;
 // Refreshes the display with stats from the server.
 function refreshstats() {
   var jqxhr = $.get("getstatus", function (data) {
-    $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots);
-    $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots);
+    $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots + " (" + data.sources.HomeAssistant.size + ")");
+    $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots + " (" + data.sources.GoogleDrive.size + ")");
+    $('#space_left').empty().append("x GB remaining");
     $('#last_snapshot').empty().append(data.last_snapshot);
     $('#next_snapshot').empty().append(data.next_snapshot);
+    $('#free_space').empty().append(data.free_space + " remaining");
     $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
     snapshot_div = $('#snapshots')
     slugs = []
@@ -688,6 +690,11 @@ function allowDeletion(always) {
 
 function chooseSnapshotFolder() {
   window.open(last_data.choose_folder_url + "&returnto=" + encodeURIComponent(getWindowRootUri() + "changefolder"));
+}
+
+function skipLowSpaceWarning() {
+  var url = "skipspacecheck";
+  postJson(url, {}, refreshstats, null, "Syncing...");
 }
 
 

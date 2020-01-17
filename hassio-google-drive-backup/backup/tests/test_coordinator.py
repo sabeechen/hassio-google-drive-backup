@@ -2,13 +2,14 @@ from pytest import raises
 from ..coordinator import Coordinator
 from ..globalinfo import GlobalInfo
 from .faketime import FakeTime
-from ..exceptions import PleaseWait, NoSnapshot, LogicError
+from ..exceptions import PleaseWait, NoSnapshot, LogicError, LowSpaceError
 from ..model import CreateOptions
 from .helpers import HelperTestSource
 from ..snapshots import Snapshot
 from ..config import Config
 from ..settings import Setting
 from datetime import timedelta
+from .conftest import FsFaker
 
 
 def test_enabled(coord: Coordinator, dest):
@@ -261,3 +262,33 @@ def test_dest_disabled():
 
 def test_save_creds(coord: Coordinator, source, dest):
     pass
+
+
+def test_check_size_new_snapshot(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker):
+    fs.setFreeBytes(0)
+    with(raises(LowSpaceError)):
+        coord.startSnapshot(CreateOptions(time.now(), "Test Name"))
+
+
+def test_check_size_sync(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker, global_info: GlobalInfo):
+    fs.setFreeBytes(0)
+    coord.sync()
+    assert len(coord.snapshots()) == 0
+    assert global_info._last_error is not None
+
+    coord.sync()
+    assert len(coord.snapshots()) == 0
+    assert global_info._last_error is not None
+
+    # Verify it resets the global size skip check, but gets through once
+    global_info.setSkipSpaceCheckOnce(True)
+    coord.sync()
+    assert len(coord.snapshots()) == 1
+    assert global_info._last_error is None
+    assert not global_info.isSkipSpaceCheckOnce()
+
+    # Next attempt to snapshot shoudl fail again.
+    time.advance(days=7)
+    coord.sync()
+    assert len(coord.snapshots()) == 1
+    assert global_info._last_error is not None

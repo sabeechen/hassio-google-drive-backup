@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .const import ERROR_BACKUP_FOLDER_INACCESSIBLE, ERROR_MULTIPLE_DELETES, ERROR_HA_DELETE_ERROR, ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT, ERROR_GOOGLE_INTERNAL, ERROR_GOOGLE_CONNECT, ERROR_GOOGLE_DNS, ERROR_DRIVE_FULL, ERROR_BAD_PASSWORD_KEY, ERROR_INVALID_CONFIG, ERROR_LOGIC, ERROR_CREDS_EXPIRED, ERROR_NO_SNAPSHOT, ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL, ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, ERROR_EXISTING_FOLDER, ERROR_BACKUP_FOLDER_MISSING, DRIVE_FOLDER_URL_FORMAT
+from .const import ERROR_BACKUP_FOLDER_INACCESSIBLE, ERROR_MULTIPLE_DELETES, ERROR_HA_DELETE_ERROR, ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT, ERROR_GOOGLE_INTERNAL, ERROR_GOOGLE_CONNECT, ERROR_GOOGLE_DNS, ERROR_DRIVE_FULL, ERROR_BAD_PASSWORD_KEY, ERROR_INVALID_CONFIG, ERROR_LOGIC, ERROR_CREDS_EXPIRED, ERROR_NO_SNAPSHOT, ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL, ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, ERROR_LOW_SPACE, ERROR_EXISTING_FOLDER, ERROR_BACKUP_FOLDER_MISSING, DRIVE_FOLDER_URL_FORMAT
 
 
 def ensureKey(key, target, name):
@@ -270,4 +270,22 @@ class GoogleDrivePermissionDenied(KnownError):
         return "Google Drive denied the request due to permissions."
 
     def code(self):
-        return "google_Drive_permissions"
+        return "google_drive_permissions"
+
+
+class LowSpaceError(KnownError):
+    def __init__(self, pct_used, space_remaining):
+        self.pct_used = pct_used
+        self.space_remaining = space_remaining
+
+    def message(self):
+        return "Your backup folder is low on disk space.  Snapshots can't be created until space is available."
+
+    def code(self):
+        return ERROR_LOW_SPACE
+
+    def data(self):
+        return {
+            "pct_used": self.pct_used,
+            "space_remaining": self.space_remaining
+        }

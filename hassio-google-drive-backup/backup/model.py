@@ -7,6 +7,7 @@ from .trigger import Trigger
 from .exceptions import DeleteMutlipleSnapshotsError, SimulatedError
 from .globalinfo import GlobalInfo
 from .settings import Setting
+from .estimator import Estimator
 
 from datetime import datetime, timedelta
 from typing import TypeVar, Generic, List, Dict, Optional, Tuple
@@ -64,7 +65,7 @@ class SnapshotSource(Trigger, Generic[T]):
 
 
 class Model(LogBase):
-    def __init__(self, config: Config, time: Time, source: SnapshotSource[AbstractSnapshot], dest: SnapshotSource[AbstractSnapshot], info: GlobalInfo):
+    def __init__(self, config: Config, time: Time, source: SnapshotSource[AbstractSnapshot], dest: SnapshotSource[AbstractSnapshot], info: GlobalInfo, estimator: Estimator):
         self.config: Config = config
         self.time = time
         self.source: SnapshotSource = source
@@ -74,6 +75,7 @@ class Model(LogBase):
         self.firstSync = True
         self.info = info
         self.simulate_error = None
+        self.estimator = estimator
 
     def reinitialize(self):
         self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
@@ -158,6 +160,9 @@ class Model(LogBase):
     def createSnapshot(self, options):
         if not self.source.enabled():
             return
+
+        self.estimator.refresh()
+        self.estimator.checkSpace(list(self.snapshots.values()))
         created = self.source.create(options)
         snapshot = Snapshot(created)
         self.snapshots[snapshot.slug()] = snapshot

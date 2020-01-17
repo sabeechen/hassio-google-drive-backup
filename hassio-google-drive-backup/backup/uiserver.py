@@ -9,7 +9,7 @@ from oauth2client.client import OAuth2Credentials
 from .helpers import formatTimeSince
 from .helpers import formatException
 from .helpers import strToBool
-from .helpers import touch
+from .helpers import touch, asSizeString
 from .exceptions import ensureKey
 from .config import Config
 from .snapshotname import SNAPSHOT_NAME_KEYS
@@ -29,6 +29,7 @@ from .password import Password
 from .trigger import Trigger
 from .settings import Setting
 from .color import Color
+from .estimator import Estimator
 from os.path import join, abspath
 from urllib.parse import quote
 
@@ -38,7 +39,7 @@ MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 
 
 class UIServer(Trigger, LogBase):
-    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo):
+    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
         self._coord = coord
         self._time = time
@@ -53,6 +54,7 @@ class UIServer(Trigger, LogBase):
         self._global_info = global_info
         self._ha_source = ha_source
         self._starts = 0
+        self._estimator = estimator
 
     def name(self):
         return "UI Server"
@@ -74,6 +76,7 @@ class UIServer(Trigger, LogBase):
         status['ask_error_reports'] = not self.config.isExplicit(Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = self._ha_source.runTemporaryServer()
         status['cred_version'] = self._global_info.credVersion
+        status['free_space'] = asSizeString(self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
             status['next_snapshot'] = "Disabled"
@@ -242,6 +245,16 @@ class UIServer(Trigger, LogBase):
     def _resolvefolder(self, use_existing: bool):
         self._global_info.resolveFolder(use_existing)
         self._coord._model.dest.resetFolder()
+        self.sync()
+        return {'message': 'Done'}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def skipspacecheck(self):
+        return self.handleError(lambda: self._skipspacecheck())
+
+    def _skipspacecheck(self):
+        self._global_info.setSkipSpaceCheckOnce(True)
         self.sync()
         return {'message': 'Done'}
 

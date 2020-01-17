@@ -140,3 +140,26 @@ def getPingInfo(servers):
 def touch(file):
     with open(file, "w"):
         pass
+
+
+def asSizeString(size):
+    size_bytes = float(size)
+    if size_bytes <= 1024.0:
+        return str(int(size_bytes)) + " B"
+    if size_bytes <= 1024.0 * 1024.0:
+        return str(int(size_bytes / 1024.0)) + " kB"
+    if size_bytes <= 1024.0 * 1024.0 * 1024.0:
+        return str(int(size_bytes / (1024.0 * 1024.0))) + " MB"
+    if size_bytes <= 1024.0 * 1024.0 * 1024.0 * 1024:
+        return str(int(size_bytes / ((1024.0 * 1024.0 * 1024.0) / 10)) / 10) + " GB"
+    if size_bytes <= 1024.0 * 1024.0 * 1024.0 * 1024 * 1024:
+        return str(int(size_bytes / ((1024.0 * 1024.0 * 1024.0 * 1024.0) / 10)) / 10) + " TB"
+    if size_bytes <= 1024.0 * 1024.0 * 1024.0 * 1024 * 1024 * 1024:
+        return str(int(size_bytes / ((1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0) / 10)) / 10) + " PB"
+    if size_bytes <= 1024.0 * 1024.0 * 1024.0 * 1024 * 1024 * 1024 * 1024:
+        return str(int(size_bytes / ((1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0) / 10)) / 10) + " EB"
+    if size_bytes <= 1024.0 * 1024.0 * 1024.0 * 1024 * 1024 * 1024 * 1024 * 1024:
+        return str(int(size_bytes / ((1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0) / 10)) / 10) + " ZB"
+    if size_bytes <= 1024.0 * 1024.0 * 1024.0 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024:
+        return str(int(size_bytes / ((1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0) / 10)) / 10) + " YB"
+    return "A lot"

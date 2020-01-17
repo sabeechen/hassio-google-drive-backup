@@ -210,6 +210,19 @@
           <div class="row">
             <div class="col s12">
               <label>
+                <input type="checkbox" name="warn_for_low_space" id="warn_for_low_space"
+                  class="filled-in checkbox-ha" />
+                <span>Stop on low disk space</span>
+                <br />
+                <span class="helper-text">When enabled, the addon will stop creating snapshots and ask for you to take
+                  action it thinks you don't have enough disk space. Disabling this is not recommended because
+                  recovering from an exhausted disk can be very difficult.</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s12">
+              <label>
                 <input type="checkbox" name="expose_extra_server" id="expose_extra_server" class="filled-in checkbox-ha"
                   onchange="toggleSlide(this, 'settings_server_details');" />
                 <span id="expose_extra_server_label">Expose this web interface on an additional port</span>
@@ -682,9 +695,12 @@
         <br><br>
         <h1 class="header center">Get Started</h1>
         <div class="row center">
-          <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;. 
-            <span id="flavor_auto_folder">On your first backup it will create a new folder at the root of your <a href="https://drive.google.com/drive/my-drive">My Drive</a> where future backups will be stored. Once its created, you can move the folder wherever you want.</span>
-            <span id="flavor_specific_folder">After connecting with Google Drive, you'll be prompted to select your backup folder.</span>
+          <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;.
+            <span id="flavor_auto_folder">On your first backup it will create a new folder at the root of your <a
+                href="https://drive.google.com/drive/my-drive">My Drive</a> where future backups will be stored. Once
+              its created, you can move the folder wherever you want.</span>
+            <span id="flavor_specific_folder">After connecting with Google Drive, you'll be prompted to select your
+              backup folder.</span>
           </h5>
         </div>
         <div>
@@ -822,14 +838,14 @@
           </ul>
         </div>
         <div class="col l6 s12">
-            <h5 class="accent-title">Who did this?</h5>
-            <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
-              like it and would like to support me, you can star my projects on <a
-                href="https://github.com/sabeechen">Github</a> or just gimme money at
-              <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet"><a class="bmc-button"
-                target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img
-                  src="images/bmc.svg" alt="Buy me a coffee"><span
-                  style="margin-left:15px;font-size:20px !important;">Buy me a coffee</span></a></p>
+          <h5 class="accent-title">Who did this?</h5>
+          <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
+            like it and would like to support me, you can star my projects on <a
+              href="https://github.com/sabeechen">Github</a> or just gimme money at
+            <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet"><a class="bmc-button"
+              target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img src="images/bmc.svg"
+                alt="Buy me a coffee"><span style="margin-left:15px;font-size:20px !important;">Buy me a
+                coffee</span></a></p>
         </div>
       </div>
       <div class="container left accent-text">

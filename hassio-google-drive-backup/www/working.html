@@ -423,7 +423,7 @@
                 <br />
                 <span class="helper-text">Specify manually which folder snapshots should be uploaded into in Google
                   Drive. <span class="hide-for-custom-creds">Once this setting is saved,
-                  you'll be prompted to select a folder from your Google Drive.</span> If disabled, the addon will
+                    you'll be prompted to select a folder from your Google Drive.</span> If disabled, the addon will
                   automatically create a folder in your My Drive
                   whenever its needed.</span><span id="current_folder_span"><a id=current_folder_link target="_blank">
                     Click here</a> to see the folder currently being used.</span>
@@ -440,14 +440,16 @@
                 <div class="hide-for-default-creds">
                   <div class="input-field col s11 offset-s1">
                     <i class="material-icons prefix">folder_open</i>
-                    <input type="text" settings_ignore='true' id="settings_specify_folder_id" name="settings_specify_folder_id"
-                      class="validate" />
+                    <input type="text" settings_ignore='true' id="settings_specify_folder_id"
+                      name="settings_specify_folder_id" class="validate" />
                     <label for="settings_specify_folder_id">Snapshot Folder ID</label>
                     <span class="helper-text">The Google Drive ID of the folder you'd like to upload snapshots into. You
                       can get this id by navigating to the folder in <a href="https://drive.google.com">Google Drive</a>
                       and copying it out of the URL. It should be a long sequence of characters at the end of the URL.
                       For example if the URL for my folder is
-                      <a target="_blank" href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>, then the Drive ID is
+                      <a target="_blank"
+                        href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
+                      then the Drive ID is
                       1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
                   </div>
                 </div>
@@ -518,6 +520,19 @@
                 <br />
                 <span class="helper-text">When disabled, new snapshots will still be created in Home Assistant but will
                   not be uploaded to Google Drive.</span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s12">
+              <label>
+                <input type="checkbox" name="warn_for_low_space" id="warn_for_low_space"
+                  class="filled-in checkbox-ha" />
+                <span>Stop on low disk space</span>
+                <br />
+                <span class="helper-text">When enabled, the addon will stop creating snapshots and ask for you to take
+                  action it thinks you don't have enough disk space. Disabling this is not recommended because
+                  recovering from an exhausted disk can be very difficult.</span>
               </label>
             </div>
           </div>
@@ -1099,6 +1114,45 @@
             </div>
           </div>
         </div>
+        <div class="row default-hidden error_card low_space" id="low_space">
+          <div class="col s12 m9">
+            <div class="card red darken-4 white-text">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">disc_full</i>
+                  <span style="vertical-align: top;">Low Disc Space</span>
+                </span>
+                <p> It looks like you're low on disk space. The addon won't attempt to create a snapshot until you take
+                  action or more space becomes available. It looks like your backup folder in Home Assistant is <b
+                    id="data_pct_used"></b> full and only has <b id="data_space_remaining"></b> left so creating 
+                    another snapshot runs the risk of exhausting the space available.  When Home Assistant runs out of 
+                    disk space, it can stop responding and become very difficult to fix.  This addon can only estimate 
+                    how big the the next snapshot will be based on your most recent one, it can't know how big the snapshot 
+                    will be until its actually created.</p>
+                  <p>To resolve this you can:</p>
+                  <ul class="browser-default">
+                    <li>Free up space in Home Assistant.  Addons like the <a target="_blank" href="https://www.home-assistant.io/addons/configurator/">Configurator</a> can help you see what files might be taking up space.</li>
+                    <li>Make your snapshots smaller (see <a target="_blank"
+                      href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this
+                      tip</a>).  You can also click the little <i class="material-icons"
+                      style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">info</i> next to snapshots below to see which parts of them are taking up the most space.</li>
+                      <li>Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                      settings</a> to store fewer snapshots in Home Assistant.</li>
+                      <li>Delete existing snapshots from Home Assitant by clicking "Action" -> "Delete" on snapshots below.  Make sure you don't need them anymore of they're backed to Google Drive.</li>
+                    <li>Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                      style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                      settings</a> and disable "Stop on low disc space".  This will make the addon stop checking disc usage, do so at your own peril.</li>
+                    <li>Click "Create snapshot anyway" to bypass this warning just this one time.  This is useful if you're confident that the snapshot actually will fit in the available space.  Again, do so at your own peril.</li>
+                  </ul>
+                  <div class="card-action white-text">
+                      <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                      <a href="#" onclick="skipLowSpaceWarning(); return false;">Create snapshot anyway</a>
+                  </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden error_card drive_full" id="drive_full_card">
           <div class="col s12 m9">
             <div class="card red darken-4 white-text">
@@ -1500,8 +1554,11 @@
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">folder_special</i>
                   <span style="vertical-align: top;">Please choose a backup folder</span>
                 </span>
-                <p class="hide-for-custom-creds">You've choosen to backup your snapshots to a folder of your choosing. Click the link below to open a new window and select the folder in Google Drive you'd like to store your snapshot in.</p>
-                <p class="hide-for-default-creds">You've choosen to backup your snapshots to a folder of your choosing. Please navigate to the addon settings to specify a folder to store snapshots in.</p>
+                <p class="hide-for-custom-creds">You've choosen to backup your snapshots to a folder of your choosing.
+                  Click the link below to open a new window and select the folder in Google Drive you'd like to store
+                  your snapshot in.</p>
+                <p class="hide-for-default-creds">You've choosen to backup your snapshots to a folder of your choosing.
+                  Please navigate to the addon settings to specify a folder to store snapshots in.</p>
                 <ul class="browser-default">
                   <li>
                     <p>If you'd rather not specify the folder for uploads, please return to your <a href="#!"
@@ -1526,8 +1583,8 @@
                   <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
                     target="_blank">See here</a> for details if you'd like to know more about why.</p>
                 <div class="card-action white-text">
-                    <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose folder</a>
-                    <a href="#" onclick="loadSettings()">Open settings</a>
+                  <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose folder</a>
+                  <a href="#" onclick="loadSettings()">Open settings</a>
                 </div>
               </div>
             </div>
@@ -1554,9 +1611,9 @@
                     <p>Use the link below to choose a new folder to store snapshots in.</p>
                   </li>
                   <li class="hide-for-default-creds">
-                      <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-                        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
-                      settings</a> and, valid "Snapshot Folder Id".</p>
+                    <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                          style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                        settings</a> and, valid "Snapshot Folder Id".</p>
                   </li>
                   <li>
                     <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
@@ -1677,7 +1734,11 @@
               <h7 class="left"><span class="ha_retain_count"></span> saved indefinitely</h7>
             </div>
             <div class="right container">
-              <h5 class="right " id="ha_snapshots"></h5>
+              <div class="right">
+                <h5 id="ha_snapshots" style="text-align: right;"></h5>
+                <div id="free_space" style="text-align: right;" class="tooltipped"
+                  data-tooltip="An estimate of the space available in your Home Assistant backup folder."></div>
+              </div>
             </div>
             <div class="left container" style="margin-left: 15px">
               <h6>In Google Drive:</h6>
@@ -1752,10 +1813,10 @@
             like it and would like to support me, you can star my projects on <a
               href="https://github.com/sabeechen">Github</a> or just gimme money at
             <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet"><a class="bmc-button"
-              target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img
-                src="images/bmc.svg" alt="Buy me a coffee"><span
-                style="margin-left:15px;font-size:20px !important;">Buy me a coffee</span></a></p>
-        </div>  
+              target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img src="images/bmc.svg"
+                alt="Buy me a coffee"><span style="margin-left:15px;font-size:20px !important;">Buy me a
+                coffee</span></a></p>
+        </div>
       </div>
       <div class="container left accent-text">
         © 2020 Stephen Beechen

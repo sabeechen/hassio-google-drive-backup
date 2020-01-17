@@ -21,6 +21,7 @@ from .watcher import Watcher
 from .debugworker import DebugWorker
 from .resolver import Resolver
 from .exceptions import KnownError
+from .estimator import Estimator
 
 
 def getConfig(resolver):
@@ -66,12 +67,13 @@ def main():
 
         drive_requests = DriveRequests(config, time, requests, resolver)
         drive_source = DriveSource(config, time, drive_requests, info)
-        model = Model(config, time, ha_source, drive_source, info)
-        coord = Coordinator(model, time, config, info, ha_updater)
+        estimator = Estimator(config, info)
+        model = Model(config, time, ha_source, drive_source, info, estimator)
+        coord = Coordinator(model, time, config, info, ha_updater, estimator)
 
         # Start the UI server
         # SOMEDAY: Someday: Server shoudl start before ha_source.init() and display an error page if we can't connect to the coordinator
-        server = UIServer(coord, ha_source, ha_requests, time, config, info)
+        server = UIServer(coord, ha_source, ha_requests, time, config, info, estimator)
         server.run()
 
         watcher: Watcher = Watcher(time, config)

@@ -14,6 +14,8 @@ class Setting(Enum):
     SNAPSHOT_TIME_OF_DAY = "snapshot_time_of_day"
     SNAPSHOT_PASSWORD = "snapshot_password"
     SPECIFY_SNAPSHOT_FOLDER = "specify_snapshot_folder"
+    WARN_FOR_LOW_SPACE = "warn_for_low_space"
+    LOW_SPACE_THRESHOLD = "low_space_threshold"
 
     # generational settings
     GENERATIONAL_DAYS = "generational_days"
@@ -102,6 +104,8 @@ _DEFAULTS = {
     Setting.SNAPSHOT_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
     Setting.SNAPSHOT_PASSWORD: "",
     Setting.SPECIFY_SNAPSHOT_FOLDER: False,
+    Setting.WARN_FOR_LOW_SPACE: True,
+    Setting.LOW_SPACE_THRESHOLD: 1024 * 1024 * 1024,
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: 0,

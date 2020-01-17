@@ -624,6 +624,7 @@ class UIServer(Trigger, LogBase):
         shadow1 = text.withAlpha(0.14)
         shadow2 = text.withAlpha(0.12)
         shadow3 = text.withAlpha(0.2)
+        shadowbmc = background.withAlpha(0.2)
         bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
 
         bg_modal = background.tint(text, 0.02)
@@ -775,38 +776,37 @@ class UIServer(Trigger, LogBase):
         })
 
         ret += self.cssElement(".bmc-button img", {
-            'width': '25px !important',
-            'margin-bottom': '1px !important',
-            'box-shadow': 'none !important',
-            'border': 'none !important',
-            'vertical-align': 'middle !important'
+            'width': '15px',
+            'margin-bottom': '1px',
+            'box-shadow': 'none',
+            'border': 'none',
+            'vertical-align': 'middle'
         })
 
         ret += self.cssElement(".bmc-button", {
-            'padding': '3px 5px 3px 5px !important',
-            'line-height': '25px !important',
-            'height': '35px !important',
-            'min-width': '160px !important',
-            'text-decoration': 'none !important',
-            'display': 'inline-flex !important',
+            'padding': '3px 5px 3px 5px',
+            'line-height': '15px',
+            'height': '25px',
+            'text-decoration': 'none',
+            'display': 'inline-flex',
             'color': text.toCss(),
             'background-color': background.toCss(),
-            'border-radius': '3px !important',
-            'border': '1px solid transparent !important',
-            'padding': '3px 5px 3px 5px !important',
-            'font-size': '7px !important',
-            'letter-spacing': '0.6px !important',
-            'box-shadow': '0px 1px 2px rgba(190, 190, 190, 0.5) !important',
-            '-webkit-box-shadow': '0px 1px 2px 2px rgba(190, 190, 190, 0.5) !important',
-            'margin': '0 auto !important',
-            'font-family': "'Cookie', cursive !important",
-            '-webkit-box-sizing': 'border-box !important',
-            'box-sizing': 'border-box !important',
-            '-o-transition': '0.3s all linear !important',
-            '-webkit-transition': '0.3s all linear !important',
-            '-moz-transition': '0.3s all linear !important',
-            '-ms-transition': '0.3s all linear !important',
-            'transition': '0.3s all linear !important'
+            'border-radius': '3px',
+            'border': '1px solid transparent',
+            'padding': '3px 2px 3px 2px',
+            'letter-spacing': '0.6px',
+            'box-shadow': '0px 1px 2px ' + shadowbmc.toCss(),
+            '-webkit-box-shadow': '0px 1px 2px 2px ' + shadowbmc.toCss(),
+            'margin': '0 auto',
+            'font-family': "'Cookie', cursive",
+            '-webkit-box-sizing': 'border-box',
+            'box-sizing': 'border-box',
+            '-o-transition': '0.3s all linear',
+            '-webkit-transition': '0.3s all linear',
+            '-moz-transition': '0.3s all linear',
+            '-ms-transition': '0.3s all linear',
+            'transition': '0.3s all linear',
+            'font-size': '17px'
         })
 
         return ret

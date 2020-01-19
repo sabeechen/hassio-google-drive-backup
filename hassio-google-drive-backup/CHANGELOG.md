@@ -1,27 +1,27 @@
 ## [0.100.0 2019-01-18]
-# Added
+### Added
 - Option to select the snapshot folder.  Now you can sync multiple instances to a single Google Drive account. See settings to try it out.
 - Web UI now shows total disk usage in Google Drive and Home Assistant.
 - Web UI now shows disk space available in the backup folder.
 - Addon stops and asks for help if it thinks you're going to run out of space.
 - Config options for the above features.
 - A link to my [Buy Me a Coffee](https://www.buymeacoffee.com/sabeechen) page if you'd like to support.
-# Changes
+### Changes
 - Got rid of "jank" in various places.  The fight against jank is never truly won.
 - If an existing snapshot folder is found on installation, the addon will ask before using it.
-# Fixes
+### Fixes
 - Lots of spelling errors.
 
 ## [0.99.0] 2019-11-01
-# Added
+### Added
 - Colors for the interface can now be choosen from the Setting Menu or through addon options.  Try it from the settings menu, you'll like it.
 - Added a config option 'delete_generational_early', which deletes older unused snapshots more aggressively ([see here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md) for an explanation).
 - '{hostname}' can now be used as an option in snapshot names. 
 
-# Changes
+### Changes
 - Snapshot staleness sensor now has the 'generic' device class, since the 'problem' device class was removed from HA's documentation.
 
-# Fixes
+### Fixes
 - Fixed a bug causing generational snapshots closer to noon to be saved over those later in the day.
 - Fixed a bug in generational snapshots that caused users far from GMT to save snapshots on the wrong day.
 

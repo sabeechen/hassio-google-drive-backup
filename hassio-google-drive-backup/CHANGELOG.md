@@ -1,11 +1,11 @@
-## [0.100.0 2019-01-17]
+## [0.100.0 2019-01-18]
 # Added
-- Option to select the snapshot folder.  Now you can sync multiple instances to a single Google Drive account. See settings to try it out.  Implementing this was difficult, difficult, lemon difficult.
-- Web UI now shows total space usage in Google Drive and Home Assistant.
-- Web UI now shows space available in the backup folder.
+- Option to select the snapshot folder.  Now you can sync multiple instances to a single Google Drive account. See settings to try it out.
+- Web UI now shows total disk usage in Google Drive and Home Assistant.
+- Web UI now shows disk space available in the backup folder.
 - Addon stops and asks for help if it thinks you're going to run out of space.
 - Config options for the above features.
-- A link to my Buy Me a Coffee page if you'd like to support.
+- A link to my [Buy Me a Coffee](https://www.buymeacoffee.com/sabeechen) page if you'd like to support.
 # Changes
 - Got rid of "jank" in various places.  The fight against jank is never truly won.
 - If an existing snapshot folder is found on installation, the addon will ask before using it.

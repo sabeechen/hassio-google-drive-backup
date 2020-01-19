@@ -7,13 +7,15 @@ A complete and easy to configure solution for backing up your snapshots to Googl
 * Automatically cleans up old snapshots in Home Assistant and Google drive so you don't run out of space.
 * Lets you upload snapshots directly from Google Drive, which makes [restoring from a fresh install](#how-do-i-restore-a-snapshot) very easy.
 * Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
-* Simple UI focused on clarity, usability and getting out of your way because you have more important things to worry about.  
+* Simple UI focused on clarity, usability and getting out of the way.  
 
 This is for you if you want to quickly set up a backup strategy without much fuss.  It doesn't require much familiarity with Hass.io, its architectire, or Google Drive.  Detailed install instrctions are provided below but you can just add the repo, click install and open the Web UI.  It will tell you what to do and only takes a few simple clicks.
 
+Do you like this?  Give me a reason to keep doing it and [![Repo Screenshot](images/bmc.png)](https://www.buymeacoffee.com/sabeechen)
+
 ## Installation
 The add-on is installed like any other.
-1.   Go to you Hass.io > "Add-on" page in Home Assistant and add this repository: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
+1.   Go to "Hass.io" > "Add-on" in Home Assistant and add this repository URL: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
   
      ![Add Repo Screenshot](images/add_ss.png)
 2.   Scroll down the page to find the new repository, and click the new add-on named "Hass.io Google Drive Backup"
@@ -26,7 +28,7 @@ The add-on is installed like any other.
 7.   You should be redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.  You're done!
 
 ## Configuration Options
-Settings are most easily changed by starting the add-on and clicking "Settings" in the web UI.  The UI explains each setting and, you do not need to modify the settings before starting the add-on, and the defaults are appropriate for most users.  If you  would still prefer to modify the settings in json, the options are detailed below.
+Settings can be change easily by starting the add-on and clicking "Settings" in the web UI.  The UI explains what each setting is and you don't need to modify anything before clicking "start".  If you  would still prefer to modify the settings in json, the options are detailed below.
 *  **max_snapshots_in_hassio** (default: 4): The number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.
     > #### Example: Keep 10 snapshots in Hass.io
     > ```json
@@ -49,6 +51,12 @@ Settings are most easily changed by starting the add-on and clicking "Settings" 
     > #### Example: Create snapshots at 1:30pm
     > ```json
     > "snapshot_time_of_day": "13:30"
+    > ```
+
+*  **specify_snapshot_folder** (default: False): When true, you must select the folder in Google Drive where snapshots are stored.  Once you turn this on, restart the add-on and visit the web-ui to be prompted to select the snapshot folder.
+    > #### Example: Specify the snapshot folder.
+    > ```json
+    > "specify_snapshot_folder": true
     > ```
 
 *  **background_color** and **accent_color**: The background and accent colors for the web UI.  You can use this to make the UI fit in with whatever color scheme you use in Home Assistant.  When unset, the interface matches Home Assistant's default blue/white style.
@@ -139,11 +147,13 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 Redundancy is the foundation of reliability.  With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
 
 ### How do I restore a snapshot?
-The snapshots can be copied over to your Home Assistant "/backups" folder like any snapshot, however because I found this tedious to do on a fresh install of Home Assistant I've made a workflow thats a little easier.  On your fresh install of Hass.io:
-*  [Install the add-on.](#installation)  Once linked with Google Drive, you should see the snapshots you created previously show up.
-* Click "Actions" -> "Upload" which will upload the snapshot to Home Assistant directly from Google Drive.  Wait for the upload to finish.
-* Click "Actions" -> "Restore" to be taken to the Hass.io restore page, or just navigate there through the Home Assistant interface.
-* You'll see the snapshot you uploaded.  Click on it and select "Wipe & Restore".  Congrats! you're back up and running.
+If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant. If not, you'll need to start up a fresh installation of Hass.io and do the following:  can be copied over to your Home Assistant "/backups" folder like any snapshot, however because I found this tedious to do on a fresh install of Home Assistant I've made a workflow thats a little easier.  On your fresh install of Hass.io:
+*  [Install the add-on.](#installation)  Once linked with Google Drive, you should see the snapshots you created previously show up.  You should see a warning pop up about fidning an "Existing snapshot folder" which is expected, you cna just ignore it for now.
+* Click "Actions" -> "Upload" on the snapshot you want to use which will upload the snapshot to Home Assistant directly from Google Drive.  Wait for the upload to finish.
+* Click "Actions" -> "Restore" to be taken to the Hass.io restore page, or just navigate there through the Home Assistant interface ("Hass.io" -> "Snapshots").
+* You'll see the snapshot you uploaded.  Click on it and select "Wipe & Restore".  Wait a while for it to complete (maybe a logn while).  Congrats! you're back up and running.
+
+Note: You can also just copy a snapshots manually from Google Drive to your /backup folder using something like the Sambda addon.  I've found the steps above to be a little easier, since it works for any operating system, network setup, etc.
 
 ### I never look at HA notifications.  Can I show information about backups in my Home Assistant Interface?
 The add-on creates a few sensors that show the status of snapshots that you could trigger automations off of.  `binary_sensor.snapshots_stale` becomes true when the add-on has trouble backing up or creating snapshots.  For example the lovelace card below only shows up in the UI when snapshots go stale:
@@ -242,7 +252,7 @@ The config option `snapshot_name` can be changed to give snapshots a different n
 
 
 ### Will this ever upload to Dropbox/FTP/SMB/MyFavoriteProtocol?
-Most likely no.  I started this project to solve a specific problem I had, storing snapshot in a redundant cloud provider without having to write a bunch of buggy logic.  I don't have the personal bandwidth available to make this work well with other storage providers.
+Most likely no.  I started this project to solve a specific problem I had, storing snapshot in a redundant cloud provider without having to write a bunch of buggy logic and automations.  I don't have the personal bandwidth available to make this work well with other storage providers.
 
 ### But Google reads my emails!
 Maybe.  You can encrypt your snapshots by giving a password in the add-on's options.
@@ -250,7 +260,7 @@ Maybe.  You can encrypt your snapshots by giving a password in the add-on's opti
 ### Does this store any personal information?
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
 * You can opt-in to sending error reports from the add-on sent to a database maintained by me.  This includes the full text of the error's stack trace, the error message, and the version of the add-on you're running.  This helps notice problems with new releases but leaving it off (the default unless you turn it on) doesn't affect the functionality of the add-on in any way.
-* Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance.  This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive.  Your password is never seen by me or the add-on.
+* Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance.  This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive.  Your password is never seen by me or the add-on.  You can read mroe abotu how authentication with Google is accomplished [here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md).
 * The add-on has access to the files in Google Drive it created, which is the 'Hass.io Snapshots' folder and any snapshots it uploads.  See the https://www.googleapis.com/auth/drive.file scope in the [Drive REST API v3 Documentation](https://developers.google.com/drive/api/v3/about-auth) for details, this is the only scope the add-on requests for your account.
 * Google stores a history of information about the number of requests, number of errors, and latency of requests made by this Add-on and makes a graph of that visible to me.  This is needed because Google only gives me a certain quota for requests shared between all users of the add-on, so I need to be aware if someone is abusing it.
 * The Add-on is distributed as a Docker container hosted on Docker Hub, which his how almost all add-ons work.  Docker keeps track of how many people have requested an image and makes that information publicly visible.

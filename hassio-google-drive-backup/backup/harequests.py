@@ -12,6 +12,8 @@ from typing import Any, List, Dict
 import os
 
 NOTIFICATION_ID = "backup_broken"
+EVENT_SNAPSHOT_START = "snapshot_started"
+EVENT_SNAPSHOT_END = "snapshot_ended"
 
 
 class HaRequests(LogBase):
@@ -145,19 +147,14 @@ class HaRequests(LogBase):
         self._postHaData("services/persistent_notification/create", data)
 
     def eventSnapshotStart(self, name, time):
-        self._sendEvent("snapshot_start", {
+        self._sendEvent(EVENT_SNAPSHOT_START, {
             'snapshot_name': name,
             'snapshot_time': str(time)
         })
 
-    def eventSnapshotComplete(self, name, time):
-        self._sendEvent("snapshot_complete", {
-            'snapshot_name': name,
-            'snapshot_time': str(time)
-        })
-
-    def eventSnapshotFailed(self, name, time):
-        self._sendEvent("snapshot_failed", {
+    def eventSnapshotEnd(self, name, time, completed):
+        self._sendEvent(EVENT_SNAPSHOT_END, {
+            'completed': completed,
             'snapshot_name': name,
             'snapshot_time': str(time)
         })

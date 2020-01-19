@@ -9,7 +9,7 @@ from oauth2client.client import OAuth2Credentials
 from .helpers import formatTimeSince
 from .helpers import formatException
 from .helpers import strToBool
-from .helpers import touch
+from .helpers import touch, asSizeString
 from .exceptions import ensureKey
 from .config import Config
 from .snapshotname import SNAPSHOT_NAME_KEYS
@@ -29,7 +29,9 @@ from .password import Password
 from .trigger import Trigger
 from .settings import Setting
 from .color import Color
+from .estimator import Estimator
 from os.path import join, abspath
+from urllib.parse import quote
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -37,7 +39,7 @@ MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 
 
 class UIServer(Trigger, LogBase):
-    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo):
+    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
         self._coord = coord
         self._time = time
@@ -52,6 +54,7 @@ class UIServer(Trigger, LogBase):
         self._global_info = global_info
         self._ha_source = ha_source
         self._starts = 0
+        self._estimator = estimator
 
     def name(self):
         return "UI Server"
@@ -73,6 +76,7 @@ class UIServer(Trigger, LogBase):
         status['ask_error_reports'] = not self.config.isExplicit(Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = self._ha_source.runTemporaryServer()
         status['cred_version'] = self._global_info.credVersion
+        status['free_space'] = asSizeString(self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
             status['next_snapshot'] = "Disabled"
@@ -87,7 +91,7 @@ class UIServer(Trigger, LogBase):
             status['last_snapshot'] = "Never"
 
         status['last_error'] = None
-        if self._global_info._last_error is not None:
+        if self._global_info._last_error is not None and self._global_info.isErrorSuppressed():
             status['last_error'] = self.processError(self._global_info._last_error)
         status["firstSync"] = self._global_info._first_sync
         status["maxSnapshotsInHasssio"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
@@ -95,7 +99,12 @@ class UIServer(Trigger, LogBase):
         status["snapshot_name_template"] = self.config.get(Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
         status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
+        status['choose_folder_url'] = self.config.get(Setting.CHOOSE_FOLDER_URL) + "?bg={0}&ac={1}".format(quote(self.config.get(Setting.BACKGROUND_COLOR)), quote(self.config.get(Setting.ACCENT_COLOR)))
         status['dns_info'] = self._global_info.getDnsInfo()
+        status['enable_drive_upload'] = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
+        status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
+        status['drive_client'] = self._coord._model.dest.drivebackend.cred_id
+        status['is_specify_folder'] = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         return status
 
     def getSnapshotDetails(self, snapshot: Snapshot):
@@ -230,6 +239,28 @@ class UIServer(Trigger, LogBase):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def resolvefolder(self, use_existing=False):
+        return self.handleError(lambda: self._resolvefolder(strToBool(use_existing)))
+
+    def _resolvefolder(self, use_existing: bool):
+        self._global_info.resolveFolder(use_existing)
+        self._global_info.suppressError()
+        self._coord._model.dest.resetFolder()
+        self.sync()
+        return {'message': 'Done'}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def skipspacecheck(self):
+        return self.handleError(lambda: self._skipspacecheck())
+
+    def _skipspacecheck(self):
+        self._global_info.setSkipSpaceCheckOnce(True)
+        self.sync()
+        return {'message': 'Done'}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def confirmdelete(self, always=False):
         return self.handleError(lambda: self._confirmdelete(always))
 
@@ -283,8 +314,13 @@ class UIServer(Trigger, LogBase):
 
     @cherrypy.expose
     def changefolder(self, id: str) -> None:
-        if self._coord._model.dest.changefolder(id):
-            # TODO Implement me
+        self._coord._model.dest.changeBackupFolder(id)
+        self.trigger()
+        try:
+            if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
+                return self.redirect(self._ha_source.getAddonUrl())
+        except:  # noqa: E722
+            # eat the error
             pass
         return self.redirect("/")
 
@@ -344,7 +380,9 @@ class UIServer(Trigger, LogBase):
             'config': current_config,
             'addons': self._global_info.addons,
             'name_keys': name_keys,
-            'defaults': default_config
+            'defaults': default_config,
+            'snapshot_folder': self._coord._model.dest._folderId,
+            'is_custom_creds': self._coord._model.dest.isCustomCreds()
         }
 
     @cherrypy.expose
@@ -407,20 +445,33 @@ class UIServer(Trigger, LogBase):
         Password(self.config.getConfigFor(update)).resolve()
 
         validated = self.config.validate(update)
-        self._updateConfiguration(validated)
+        self._updateConfiguration(validated, ensureKey("snapshot_folder", cherrypy.request.json, "the confgiuration update request"))
         return {'message': 'Settings saved'}
 
-    def _updateConfiguration(self, new_config):
+    def _updateConfiguration(self, new_config, snapshot_folder_id=None):
         server_config_before = self._getServerOptions()
 
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
         self._harequests.updateConfig(update)
+
+        was_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         self.config.update(new_config)
+
+        is_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         server_config_after = self._getServerOptions()
         if server_config_before != server_config_after:
             self.run()
+        if is_specify and not was_specify:
+            # Delete the reset the saved backup folder, since the preference
+            # for specifying the folder changed from false->true
+            self._coord._model.dest.resetFolder()
+        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None:
+            if len(snapshot_folder_id) > 0:
+                self._coord._model.dest.changeBackupFolder(snapshot_folder_id)
+            else:
+                self._coord._model.dest.resetFolder()
         self.trigger()
         return {'message': 'Settings saved'}
 
@@ -580,6 +631,7 @@ class UIServer(Trigger, LogBase):
         shadow1 = text.withAlpha(0.14)
         shadow2 = text.withAlpha(0.12)
         shadow3 = text.withAlpha(0.2)
+        shadowbmc = background.withAlpha(0.2)
         bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
 
         bg_modal = background.tint(text, 0.02)
@@ -729,5 +781,40 @@ class UIServer(Trigger, LogBase):
         ret += self.cssElement(".btn, .btn-large, .btn-small", {
             'color': accent_text.toCss()
         })
+
+        ret += self.cssElement(".bmc-button img", {
+            'width': '15px',
+            'margin-bottom': '1px',
+            'box-shadow': 'none',
+            'border': 'none',
+            'vertical-align': 'middle'
+        })
+
+        ret += self.cssElement(".bmc-button", {
+            'padding': '3px 5px 3px 5px',
+            'line-height': '15px',
+            'height': '25px',
+            'text-decoration': 'none',
+            'display': 'inline-flex',
+            'background-color': background.toCss(),
+            'border-radius': '3px',
+            'border': '1px solid transparent',
+            'padding': '3px 2px 3px 2px',
+            'letter-spacing': '0.6px',
+            'box-shadow': '0px 1px 2px ' + shadowbmc.toCss(),
+            '-webkit-box-shadow': '0px 1px 2px 2px ' + shadowbmc.toCss(),
+            'margin': '0 auto',
+            'font-family': "'Cookie', cursive",
+            '-webkit-box-sizing': 'border-box',
+            'box-sizing': 'border-box',
+            '-o-transition': '0.3s all linear',
+            '-webkit-transition': '0.3s all linear',
+            '-moz-transition': '0.3s all linear',
+            '-ms-transition': '0.3s all linear',
+            'transition': '0.3s all linear',
+            'font-size': '17px'
+        })
+
+        ret += self.cssElement(".bmc-button span", {'color': text.toCss()})
 
         return ret

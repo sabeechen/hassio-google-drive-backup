@@ -23,7 +23,7 @@ from .thumbnail import THUMBNAIL_IMAGE
 from .helpers import parseDateTime
 from .driverequests import DriveRequests
 from .time import Time
-from .exceptions import LogicError
+from .exceptions import LogicError, BackupFolderMissingError, ExistingBackupFolderError, BackupFolderInaccessible, GoogleDrivePermissionDenied
 from .globalinfo import GlobalInfo
 from .const import SOURCE_GOOGLE_DRIVE
 from .settings import Setting
@@ -32,7 +32,7 @@ MIME_TYPE = "application/tar"
 THUMBNAIL_MIME_TYPE = "image/png"
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
 FOLDER_NAME = 'Hass.io Snapshots'
-FOLDER_CACHE_SECONDS = 60
+FOLDER_CACHE_SECONDS = 30
 
 
 class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
@@ -46,10 +46,19 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         self._folder_queryied_last = None
         self._info = info
 
+        # These get set when an existing folder is found and should cause the UI to
+        # prompt for what to do about it.
+        self._existing_folder_id = None
+        self._existing_folder_name = None
+        self._existing_folders = {}
+
     def saveCreds(self, creds: Credentials) -> None:
         self.info("Saving new Google Drive credentials")
         self.drivebackend.saveCredentials(creds)
         self.trigger()
+
+    def isCustomCreds(self):
+        return self.drivebackend.isCustomCreds()
 
     def name(self) -> str:
         return SOURCE_GOOGLE_DRIVE
@@ -69,14 +78,27 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
     def getFolderId(self) -> str:
         return self._getParentFolderId()
 
+    def checkBeforeChanges(self):
+        if self._existing_folder_id:
+            raise ExistingBackupFolderError(self._existing_folder_id, self._existing_folder_name)
+
     def get(self) -> Dict[str, DriveSnapshot]:
         self._info.drive_folder_id = self.getFolderId()
         snapshots: Dict[str, DriveSnapshot] = {}
-        for child in self.drivebackend.query("'{}' in parents".format(self._getParentFolderId())):
-            properties = child.get('appProperties')
-            if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties and not child.get('trashed'):
-                snapshot = DriveSnapshot(child)
-                snapshots[snapshot.slug()] = snapshot
+        try:
+            for child in self.drivebackend.query("'{}' in parents".format(self._getParentFolderId())):
+                properties = child.get('appProperties')
+                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties:
+                    snapshot = DriveSnapshot(child)
+                    snapshots[snapshot.slug()] = snapshot
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
+                raise BackupFolderInaccessible(self._getParentFolderId())
+            raise e
+        except GoogleDrivePermissionDenied:
+            # This should always mean we lost permission on the backup folder, but at least it still exists.
+            raise BackupFolderInaccessible(self._getParentFolderId())
         return snapshots
 
     def delete(self, snapshot: Snapshot):
@@ -120,6 +142,14 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 else:
                     return DriveSnapshot(progress)
             raise LogicError("Google Drive snapshot upload didn't return a completed item before exiting")
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
+                raise BackupFolderInaccessible(self._getParentFolderId())
+            raise e
+        except GoogleDrivePermissionDenied:
+            # This shoudl always mean we lost permission on the backup folder, but at least it still exists.
+            raise BackupFolderInaccessible(self._getParentFolderId())
         finally:
             snapshot.clearStatus()
 
@@ -140,15 +170,20 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         item.setRetained(retain)
 
     def changeBackupFolder(self, id):
-        if self._verifyBackupFolderWithQuery(id):
-            self._saveFolder(id)
-            self._folderId = id
-            self._folder_queryied_last = self.time.now()
-        else:
-            # TODO
-            pass
+        self._saveFolderId(id)
+        self._folderId = id
+        self._folder_queryied_last = None
+        self._existing_folder_id = None
+        self._existing_folder_name = None
 
     def _verifyBackupFolderWithQuery(self, id):
+        if self.isCustomCreds():
+            # If the user is using custom creds and specifying the snapshot folder, then chances are the
+            # app doesn't have permission to access the parent folder directly.  Ironically, we can still
+            # query for children and add/remove snapshots.  Not a huge deal, just
+            # means we can't verify the folder still exists, isn't trashed, etc.  Just let it be valid
+            # and handle potential errors elsewhere.
+            return True
         # Query drive for the folder to make sure it still exists and we have the right permission on it.
         try:
             folder = self._get(id)
@@ -186,6 +221,12 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 folder_id: str = folder_file.readline()
             if self._verifyBackupFolderWithQuery(folder_id):
                 return folder_id
+            elif self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+                # Raise a special exception about losing access.
+                raise BackupFolderInaccessible(folder_id)
+
+        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+            raise BackupFolderMissingError()
         return self._findDriveFolder()
 
     def _get(self, id):
@@ -200,8 +241,27 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
 
         folders.sort(key=lambda c: parseDateTime(c.get("modifiedTime")))
         if len(folders) > 0:
-            self.info("Found " + folders[len(folders) - 1].get('name'))
-            return self._saveFolder(folders[len(folders) - 1])
+            # Found a folder, which means we're probably using the add-on from a
+            # previous (or duplicate) installation.  Record and return the id but don't
+            # persist it until the user chooses to do so.
+            folder = folders[len(folders) - 1]
+            self.info("Found " + folder.get('name'))
+
+            if self._info.getUseExistingFolder() is not None:
+                if self._info.getUseExistingFolder():
+                    # Just use the folder
+                    return self._saveFolderId(folder.get('id'))
+                else:
+                    # Create a new folder
+                    new_id = self._createDriveFolder()
+                    self._info.resolveFolder(None)
+                    return new_id
+            self._folderId = folder.get("id")
+            self._existing_folder_name = folder.get("name")
+            self._existing_folder_id = folder.get("id")
+            return self._folderId
+
+        # Create a new folder since one doesn't already exist.
         return self._createDriveFolder()
 
     def _isValidFolder(self, folder) -> bool:
@@ -234,7 +294,21 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         return self._saveFolder(folder)
 
     def _saveFolder(self, folder: Any) -> str:
-        self.info("Saving snapshot folder: " + folder.get('id'))
+        return self._saveFolderId(folder.get('id'))
+
+    def _saveFolderId(self, folder_id: str) -> str:
+        self.info("Saving snapshot folder: " + folder_id)
         with open(self.config.get(Setting.FOLDER_FILE_PATH), "w") as folder_file:
-            folder_file.write(folder.get('id'))
-        return folder.get('id')
+            folder_file.write(folder_id)
+        self._existing_folder_name = None
+        self._existing_folder_id = None
+        return folder_id
+
+    def resetFolder(self):
+        if (os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH))):
+            os.remove(self.config.get(Setting.FOLDER_FILE_PATH))
+        self._folderId = None
+        self._folder_queryied_last = None
+        self._existing_folder_name = None
+        self._existing_folder_id = None
+        self._folder_queryied_last = None

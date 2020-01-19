@@ -1,6 +1,6 @@
 
 from datetime import datetime
-from .helpers import parseDateTime, strToBool, nowutc
+from .helpers import parseDateTime, strToBool, nowutc, asSizeString
 from typing import Dict, Optional, Any
 from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from .exceptions import ensureKey
@@ -45,6 +45,12 @@ class AbstractSnapshot():
 
     def size(self) -> int:
         return self._size
+
+    def sizeInt(self) -> int:
+        try:
+            return int(self.size())
+        except ValueError:
+            return 0
 
     def date(self) -> datetime:
         return self._date
@@ -198,6 +204,11 @@ class Snapshot(object):
             return snapshot.size()
         return 0
 
+    def sizeInt(self) -> int:
+        for snapshot in self.sources.values():
+            return snapshot.sizeInt()
+        return 0
+
     def snapshotType(self) -> str:
         for snapshot in self.sources.values():
             return snapshot.snapshotType()
@@ -227,14 +238,7 @@ class Snapshot(object):
         size_string = self.size()
         if type(size_string) == str:
             return size_string
-        size_bytes = float(size_string)
-        if size_bytes <= 1024.0:
-            return str(int(size_bytes)) + " B"
-        if size_bytes <= 1024.0 * 1024.0:
-            return str(int(size_bytes / 1024.0)) + " kB"
-        if size_bytes <= 1024.0 * 1024.0 * 1024.0:
-            return str(int(size_bytes / (1024.0 * 1024.0))) + " MB"
-        return str(int(size_bytes / (1024.0 * 1024.0 * 1024.0))) + " GB"
+        return asSizeString(size_string)
 
     def status(self) -> str:
         if self._status_override is not None:

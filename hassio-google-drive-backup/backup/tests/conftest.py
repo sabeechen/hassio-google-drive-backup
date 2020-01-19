@@ -22,6 +22,30 @@ from ..dev.testbackend import HelperTestBackend
 from ..resolver import Resolver
 from ..settings import Setting
 from ..logbase import LogBase
+from ..estimator import Estimator
+
+
+class FsFaker():
+    def __init__(self):
+        self.bytes_free = 1024 * 1024 * 1024
+        self.bytes_total = 1024 * 1024 * 1024
+        self.old_method = None
+
+    def start(self):
+        self.old_method = os.statvfs
+        os.statvfs = self._hijack
+
+    def stop(self):
+        os.statvfs = self.old_method
+
+    def _hijack(self, path):
+        return os.statvfs_result((0, 1, int(self.bytes_total), int(self.bytes_free), 0, 0, 0, 0, 0, 255))
+
+    def setFreeBytes(self, bytes_free, bytes_total=1):
+        self.bytes_free = bytes_free
+        self.bytes_total = bytes_total
+        if self.bytes_free > self.bytes_total:
+            self.bytes_total = self.bytes_free
 
 
 class ServerThread():
@@ -126,8 +150,21 @@ def snapshot(coord, source, dest):
 
 
 @pytest.fixture
-def model(source, dest, time, simple_config, global_info):
-    return Model(simple_config, time, source, dest, global_info)
+def fs(config, global_info):
+    faker = FsFaker()
+    faker.start()
+    yield faker
+    faker.stop()
+
+
+@pytest.fixture
+def estimator(config, global_info, fs):
+    yield Estimator(config, global_info)
+
+
+@pytest.fixture
+def model(source, dest, time, simple_config, global_info, estimator):
+    return Model(simple_config, time, source, dest, global_info, estimator)
 
 
 @pytest.fixture
@@ -162,9 +199,9 @@ def port():
 
 
 @pytest.fixture
-def coord(model, time, simple_config, global_info):
+def coord(model, time, simple_config, global_info, estimator):
     updater = HaUpdater(None, simple_config, time, global_info)
-    return Coordinator(model, time, simple_config, global_info, updater)
+    return Coordinator(model, time, simple_config, global_info, updater, estimator)
 
 
 @pytest.fixture()
@@ -204,6 +241,8 @@ def config(cleandir, drive_creds: OAuth2Credentials):
     config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
     config.override(Setting.RETAINED_FILE_PATH, "retained.json")
     config.override(Setting.INGRESS_TOKEN_FILE_PATH, "ingress.dat")
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "test_client_id")
+    config.override(Setting.BACKUP_DIRECTORY_PATH, cleandir)
 
     return config
 

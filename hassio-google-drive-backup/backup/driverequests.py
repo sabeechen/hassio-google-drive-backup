@@ -4,7 +4,7 @@ from .config import Config
 from .time import Time
 from .resolver import Resolver
 from .settings import Setting
-from .exceptions import LogicError, GoogleCredentialsExpired, ProtocolError, ensureKey, GoogleInternalError, DriveQuotaExceeded, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError, GoogleSessionError
+from .exceptions import GoogleDrivePermissionDenied, LogicError, GoogleCredentialsExpired, ProtocolError, ensureKey, GoogleInternalError, DriveQuotaExceeded, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError, GoogleSessionError
 from datetime import timedelta
 from requests.exceptions import HTTPError, ConnectionError, Timeout, ConnectTimeout
 from requests import Response
@@ -23,7 +23,7 @@ FOLDER_NAME = 'Hass.io Snapshots'
 DRIVE_VERSION = "v3"
 DRIVE_SERVICE = "drive"
 
-SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabilities"
+SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabilities,parents"
 THUMBNAIL_MIME_TYPE = "image/png"
 QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
 CREATE_FIELDS = SELECT_FIELDS
@@ -80,6 +80,9 @@ class DriveRequests(LogBase):
             "Authorization": "Bearer " + self.getToken(refresh=refresh),
             "Client-Identifier": self.config.clientIdentifier()
         }
+
+    def isCustomCreds(self):
+        return self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID) != self.cred_id
 
     def _getAuthHeaders(self):
         return {
@@ -374,3 +377,5 @@ class DriveRequests(LogBase):
                 continue
             if error["reason"] == "storageQuotaExceeded":
                 raise DriveQuotaExceeded()
+            elif error["reason"] == "forbidden":
+                raise GoogleDrivePermissionDenied()

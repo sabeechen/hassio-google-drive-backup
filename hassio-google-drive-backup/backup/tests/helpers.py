@@ -134,6 +134,7 @@ def compareStreams(left, right):
 class LockBlocker():
     def __init__(self):
         self._event = Event()
+        self._start_event = Event()
         self._thread = Thread(target=self._doBlock, name="Blocker Thread")
         self._thread.setDaemon(True)
         self._lock = None
@@ -144,12 +145,15 @@ class LockBlocker():
 
     def _doBlock(self):
         with self._lock:
+            self._start_event.set()
             self._event.wait()
+            self._start_event.clear()
 
     def __enter__(self):
         if self._lock is None:
             raise Exception("Lock was not configured")
         self._thread.start()
+        self._start_event.wait()
 
     def __exit__(self, a, b, c):
         self._event.set()

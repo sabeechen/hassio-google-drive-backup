@@ -9,16 +9,17 @@ from oauth2client.client import Credentials
 from typing import List, Dict
 from .globalinfo import GlobalInfo
 from threading import Lock
-from .helpers import formatException
+from .helpers import formatException, asSizeString
 from .haupdater import HaUpdater
 from .backoff import Backoff
 from datetime import timedelta
 from .settings import Setting
+from .estimator import Estimator
 
 
 class Coordinator(Trigger, LogBase):
     # SOMEDAY: would be nice to have a way to "cancel" sync at certain intervals.
-    def __init__(self, model: Model, time: Time, config: Config, global_info: GlobalInfo, updater: HaUpdater = None):
+    def __init__(self, model: Model, time: Time, config: Config, global_info: GlobalInfo, updater: HaUpdater, estimator: Estimator):
         super().__init__()
         self._model = model
         self._time = time
@@ -31,6 +32,7 @@ class Coordinator(Trigger, LogBase):
         }
         self._updater = updater
         self._backoff = Backoff(initial=0, base=10, max=60 * 60)
+        self._estimator = estimator
         self.trigger()
 
     def saveCreds(self, creds: Credentials):
@@ -84,6 +86,7 @@ class Coordinator(Trigger, LogBase):
                 'deletable': 0,
                 'name': source
             }
+            size = 0
             for snapshot in self.snapshots():
                 data: AbstractSnapshot = snapshot.getSource(source)
                 if data is None:
@@ -93,6 +96,8 @@ class Coordinator(Trigger, LogBase):
                     source_info['retained'] += 1
                 else:
                     source_info['deletable'] += 1
+                size += int(data.sizeInt())
+            source_info['size'] = asSizeString(size)
             info[source] = source_info
         return info
 
@@ -100,17 +105,37 @@ class Coordinator(Trigger, LogBase):
         try:
             self.info("Syncing Snapshots")
             self._global_info.sync()
+            self._estimator.refresh()
             self._buildModel().sync(self._time.now())
             self._global_info.success()
             self._backoff.reset()
+            self._global_info.setSkipSpaceCheckOnce(False)
         except Exception as e:
             if isinstance(e, KnownError):
-                self.error(e.message())
+                known: KnownError = e
+                self.error(known.message())
+                if known.retrySoon():
+                    self._backoff.backoff(e)
+                else:
+                    self._backoff.maxOut()
             else:
                 self.error(formatException(e))
+                self._backoff.backoff(e)
             self._global_info.failed(e)
-            self._backoff.backoff(e)
-            self.info("Another attempt to sync will be made in {0} seconds".format(self._backoff.peek()))
+
+            seconds = self._backoff.peek()
+            if seconds < 1:
+                text = "right now"
+            elif seconds < 60:
+                text = "in {0} seconds".format(seconds)
+            elif seconds < 60 * 60:
+                text = "in {0}(ish) minutes".format(int(seconds / 60))
+            elif seconds == 60 * 60:
+                text = "in an hour"
+            else:
+                text = "much later"
+
+            self.info("I'll try syncing again {0}".format(text))
         self._updateFreshness()
 
     def snapshots(self) -> List[Snapshot]:
@@ -139,10 +164,13 @@ class Coordinator(Trigger, LogBase):
         return self._withSoftLock(lambda: self._startSnapshot(options))
 
     def _startSnapshot(self, options: CreateOptions):
+        self._estimator.refresh()
+        self._estimator.checkSpace(self.snapshots())
         created = self._buildModel().source.create(options)
         snapshot = Snapshot(created)
         self._model.snapshots[snapshot.slug()] = snapshot
         self._updateFreshness()
+        self._estimator.refresh()
         return snapshot
 
     def getSnapshot(self, slug):

@@ -19,10 +19,12 @@ class GlobalInfo(LogBase):
         self._last_upload_size = None
         self._last_sync_start = None
         self._last_error = None
+        self._supress_error = False
         self.credVersion = 0
         self._first_sync = True
         self._multipleDeletesPermitted = False
         self._dns_info = None
+        self._skip_space_check_once = False
 
         self.drive_folder_id = None
         self.ha_ssl = False
@@ -32,6 +34,7 @@ class GlobalInfo(LogBase):
         self.url = ""
         self.debug = {}
         self.lock = Lock()
+        self._use_existing = None
 
     def refresh(self):
         pass
@@ -58,6 +61,13 @@ class GlobalInfo(LogBase):
         self._last_error = error
         self._failures += 1
         self._last_failure_time = self._time.now()
+        self._supress_error = False
+
+    def suppressError(self):
+        self._supress_error = True
+
+    def isErrorSuppressed(self):
+        return self.suppressError
 
     def upload(self, size):
         self._last_upload = self._time.now()
@@ -76,3 +86,15 @@ class GlobalInfo(LogBase):
     def addDebugInfo(self, key, value):
         with self.lock:
             self.debug[key] = value
+
+    def resolveFolder(self, use_existing):
+        self._use_existing = use_existing
+
+    def getUseExistingFolder(self):
+        return self._use_existing
+
+    def isSkipSpaceCheckOnce(self):
+        return self._skip_space_check_once
+
+    def setSkipSpaceCheckOnce(self, val):
+        self._skip_space_check_once = val

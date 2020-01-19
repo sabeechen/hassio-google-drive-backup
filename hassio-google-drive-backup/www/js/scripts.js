@@ -8,12 +8,15 @@ tooltipPending = "This snapshot is being created.  If it takes a long time, see 
 tooltipUploading = "This snapshot is being uploaded to Google Drive."
 
 var github_bug_desc = `
-Please add some information about your configuration and the problem you ran into here. More info really helps speed up debugging, and if you don't make it clear whats happening you're much more likely to get snarky comment from the dev before he helps.  Remember that its just one guy back here doing all of this and he's not *really* under any obligation to put up with your shit if you're disrespectful.  If english isn't your first language, don't sweat it.  Just try to be clear and I'll do the same for you.  Some things you might consider including:
+Please add some information about your configuration and the problem you ran into here. 
+More info really helps speed up debugging, if you don't even read this and help me understand what happened, I probably won't help you.  
+Remember that its just one guy back here doing all of this.  
+If english isn't your first language, don't sweat it.  Just try to be clear and I'll do the same for you.  Some things you might consider including:
  * What were you doing when the problem happened?
  * A screenshot if its something visual.
  * What configuration options are you using with the add-on?
- * What logs is the add-on printing out?  You can see the detailed logs by clicking "Logs" at the top right of the web-UI.
- * Are there any problematic logs from the Hassio supervisor?  You can get to them from the Home Assistant Interface from "Hass.io" > "System" > "System Log"
+ * What logs is the add-on printing out?  You can see the detailed logs by clicking "Logs" at the right of the web-UI.
+ * Are there any problematic looking logs from the Hassio supervisor?  You can get to them from the Home Assistant Interface from "Hass.io" > "System" > "System Log"
  \n\n`;
 
 function toggleSlide(checkbox, target) {
@@ -151,6 +154,12 @@ function exposeServer(expose) {
   }, null, "Saving settings...");
 }
 
+function resolvefolder(use_existing) {
+  var url = "resolvefolder?use_existing=" + use_existing;
+  postJson(url, {}, refreshstats, null, "Syncing...");
+  $('#existing_backup_folder').hide();
+}
+
 function sync() {
   postJson("sync", {}, refreshstats, null, "Syncing...")
 }
@@ -280,6 +289,23 @@ function parseErrorInfo(e) {
 last_cred_version = -1;
 function reloadForNewCreds() {
   var jqxhr = $.get("getstatus", function (data) {
+    last_data = data;
+    if (data.is_custom_creds) {
+      $(".hide-for-custom-creds").hide();
+      $(".hide-for-default-creds").show();
+    } else {
+      $(".hide-for-custom-creds").show();
+      $(".hide-for-default-creds").hide();
+    }
+
+    if (data.is_specify_folder) {
+      $("#flavor_auto_folder").hide();
+      $("#flavor_specific_folder").show();
+    } else {
+      $("#flavor_auto_folder").show();
+      $("#flavor_specific_folder").hide();
+    }
+
     if (data.hasOwnProperty("cred_version")) {
       if (last_cred_version == -1) {
         last_cred_version = data.cred_version;
@@ -347,10 +373,12 @@ last_data = null;
 // Refreshes the display with stats from the server.
 function refreshstats() {
   var jqxhr = $.get("getstatus", function (data) {
-    $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots);
-    $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots);
+    $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots + " (" + data.sources.HomeAssistant.size + ")");
+    $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots + " (" + data.sources.GoogleDrive.size + ")");
+    $('#space_left').empty().append("x GB remaining");
     $('#last_snapshot').empty().append(data.last_snapshot);
     $('#next_snapshot').empty().append(data.next_snapshot);
+    $('#free_space').empty().append(data.free_space + " remaining");
     $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
     snapshot_div = $('#snapshots')
     slugs = []
@@ -511,7 +539,14 @@ function refreshstats() {
               continue;
             }
             var value = error.data[key];
-            $("#data_" + key, item).html(value);
+            var index = key.lastIndexOf("#");
+            if (index > 0) {
+              var attr = key.slice(index + 1);
+              key = key.slice(0, index);
+              $("#data_" + key, item).attr(attr, value);
+            } else {
+              $("#data_" + key, item).html(value);
+            }
           }
         }
         if (item.is(":hidden")) {
@@ -530,10 +565,18 @@ function refreshstats() {
       $("#error_card").hide();
     }
 
-    if (data.ask_error_reports) {
+    if (data.ask_error_reports && !found) {
       $('#error_reports_card').fadeIn(500);
     } else {
       $('#error_reports_card').hide();
+    }
+
+    if (data.is_custom_creds) {
+      $(".hide-for-custom-creds").hide();
+      $(".hide-for-default-creds").show();
+    } else {
+      $(".hide-for-custom-creds").show();
+      $(".hide-for-default-creds").hide();
     }
 
     if (data.warn_ingress_upgrade && !hideIngress) {
@@ -646,9 +689,20 @@ function allowDeletion(always) {
   postJson(url, {}, refreshstats, null, "Allowing deletion and syncing...");
 }
 
+function chooseSnapshotFolder() {
+  window.open(last_data.choose_folder_url + "&returnto=" + encodeURIComponent(getWindowRootUri() + "changefolder"));
+}
+
+function skipLowSpaceWarning() {
+  var url = "skipspacecheck";
+  postJson(url, {}, refreshstats, null, "Syncing...");
+}
+
+
+
 $(document).ready(function () {
   if (window.top.location == window.location) {
-    // We're in a standard webpage, onyl show the header
+    // We're in a standard webpage, only show the header
     $(".ingress-only").hide();
   } else {
     // We're in an ingress iframe.

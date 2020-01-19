@@ -101,10 +101,10 @@ class GenerationalScheme(BackupScheme):
 
         last = self.time.toLocal(snapshots[len(snapshots) - 1].date())
         lookups: List[Partition] = []
+        currentDay = self.day(last)
         for x in range(0, self.config.days):
-            start = datetime(last.year, last.month, last.day).astimezone(last.tzinfo) - timedelta(days=x)
-            end = start + timedelta(days=1)
-            lookups.append(Partition(start, end, start, self.time))
+            lookups.append(Partition(currentDay, currentDay + timedelta(days=1), currentDay, self.time))
+            currentDay = self.day(currentDay - timedelta(hours=12))
 
         for x in range(0, self.config.weeks):
             start = self.time.local(last.year, last.month, last.day) - timedelta(days=last.weekday()) - timedelta(weeks=x)
@@ -148,3 +148,7 @@ class GenerationalScheme(BackupScheme):
         elif len(to_segment) > self.count:
             # no non-keep is invalid, so delete the oldest keeper
             return min(keepers, default=None, key=lambda s: s.date())
+
+    def day(self, date: datetime):
+        local = self.time.toLocal(date)
+        return datetime(day=local.day, month=local.month, year=local.year, tzinfo=local.tzinfo)

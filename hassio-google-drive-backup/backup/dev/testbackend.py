@@ -7,7 +7,7 @@ from flask import request, Response, redirect
 from typing import Dict, Any, List
 from oauth2client.client import OAuth2Credentials
 from flask_api import status
-from flask_api.status import HTTP_401_UNAUTHORIZED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from flask_api.status import HTTP_401_UNAUTHORIZED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_403_FORBIDDEN
 from threading import Lock
 from time import sleep
 from io import BytesIO
@@ -83,6 +83,7 @@ class HelperTestBackend(object):
         self._options = self.defaultOptions()
         self._username = "user"
         self._password = "pass"
+        self.lostPermission = []
 
     def defaultOptions(self):
         return {
@@ -282,6 +283,14 @@ class HelperTestBackend(object):
         elif parentsQueryPattern.match(query):
             ret = []
             parent = query[1:-len("' in parents")]
+            if parent not in self.items:
+                return HTTP_404_NOT_FOUND
+            if parent in self.lostPermission:
+                resp = Response()
+                resp.status_code = HTTP_403_FORBIDDEN
+                resp.content_type = "application/json"
+                resp.set_data('{"error": {"errors": [{"reason": "forbidden"}]}}')
+                return resp
             for item in self.items.values():
                 if parent in item.get('parents', []):
                     ret.append(self.filter_fields(item, fields))
@@ -313,6 +322,18 @@ class HelperTestBackend(object):
             return HTTP_400_BAD_REQUEST
         metadata = context.json()
         id = self.generateId()
+
+        # Validate parents
+        if 'parents' in metadata:
+            for parent in metadata['parents']:
+                if parent not in self.items:
+                    return HTTP_404_NOT_FOUND
+                if parent in self.lostPermission:
+                    resp = Response()
+                    resp.status_code = HTTP_403_FORBIDDEN
+                    resp.content_type = "application/json"
+                    resp.set_data('{"error": {"errors": [{"reason": "forbidden"}]}}')
+                    return resp
         self.upload_info['size'] = size
         self.upload_info['mime'] = mimeType
         self.upload_info['item'] = self.formatItem(metadata, id)

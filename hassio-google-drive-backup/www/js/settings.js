@@ -194,6 +194,7 @@ function setColors(background, accent) {
   let shadow1 = text.withAlpha(0.14);
   let shadow2 = text.withAlpha(0.12);
   let shadow3 = text.withAlpha(0.2);
+  let shadowbmc = background.withAlpha(0.2);
   let bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss();
 
   let bg_modal = background.tint(text, 0.02);
@@ -342,6 +343,34 @@ function setColors(background, accent) {
   setRule(".btn, .btn-large, .btn-small",  {
     'color': accent_text.toCss()
   });
+
+  setRule(".bmc-button",  {
+    'padding': '3px 5px 3px 5px',
+    'line-height': '15px',
+    'height': '25px',
+    'text-decoration': 'none',
+    'display': 'inline-flex',
+    'background-color': background.toCss(),
+    'border-radius': '3px',
+    'border': '1px solid transparent',
+    'padding': '3px 2px 3px 2px',
+    'font-size': '7px',
+    'letter-spacing': '0.6px',
+    'box-shadow': '0px 1px 2px ' + shadowbmc.toCss(),
+    '-webkit-box-shadow': '0px 1px 2px 2px ' + shadowbmc.toCss(),
+    'margin': '0 auto',
+    'font-family': "'Cookie', cursive",
+    '-webkit-box-sizing': 'border-box',
+    'box-sizing': 'border-box',
+    '-o-transition': '0.3s all linear',
+    '-webkit-transition': '0.3s all linear',
+    '-moz-transition': '0.3s all linear',
+    '-ms-transition': '0.3s all linear',
+    'transition': '0.3s all linear',
+    'font-size': '17px'
+  });
+
+  setRule(".bmc-button span", {'color': text.toCss()});
 }
 
 // Modifying style sheets directly probably isn't best practices, but damn does it work well.
@@ -448,6 +477,7 @@ function handleCloseSettings() {
 function loadSettings() {
   var jqxhr = $.get("getconfig",
     function (data) {
+      config_data = data
       name_keys = data.name_keys;
       config = data.config;
       addons = data.addons;
@@ -508,6 +538,22 @@ function loadSettings() {
       settingsChanged = false;
       snapshotNameExample();
 
+      // Configure the visibility/link of the "current snapshot folder" help text and button.
+      if (data.snapshot_folder && data.snapshot_folder.length > 0) {
+        $("#current_folder_span").show()
+        $('#current_folder_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.snapshot_folder);
+      } else {
+        $("#current_folder_span").hide();
+      }
+
+      if (config.specify_snapshot_folder && last_data && last_data.drive_enabled) {
+        $("#choose_folder_controls").show();
+      } else {
+        $("#choose_folder_controls").hide();
+      }
+
+      $("#settings_specify_folder_id").val(data.snapshot_folder);
+
       if (config.hasOwnProperty("snapshot_password")) {
         $("#snapshot_password").data("old_password", config.snapshot_password);
       } else {
@@ -521,6 +567,14 @@ function loadSettings() {
       showPallette($("#background_color"));
       showPallette($("#accent_color"));
     }, "json")
+}
+
+function chooseFolderChanged() {
+  if ($("#specify_snapshot_folder").is(':checked') && (config.specify_snapshot_folder || config_data.is_custom_creds) && last_data && last_data.drive_enabled) {
+    $("#choose_folder_controls").show();
+  } else {
+    $("#choose_folder_controls").hide();
+  }
 }
 
 function saveSettings() {
@@ -584,7 +638,7 @@ function saveSettings() {
   config.accent_color = $("#accent_color").html();
 
   modal = M.Modal.getInstance(document.getElementById("settings_modal"))
-  postJson("saveconfig", {"config": config}, closeSettings, showSettingError); 
+  postJson("saveconfig", {"config": config, "snapshot_folder": $("#settings_specify_folder_id").val()}, closeSettings, showSettingError); 
 }
 
 function closeSettings(){

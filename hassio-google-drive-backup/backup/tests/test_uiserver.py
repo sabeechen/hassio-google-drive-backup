@@ -15,6 +15,7 @@ from ..settings import Setting
 from .conftest import ServerInstance
 from urllib.parse import quote
 from requests.exceptions import ConnectionError
+from ..estimator import Estimator
 
 URL = "http://localhost:8099/"
 EXTRA_SERVER_URL = "http://localhost:1627/"
@@ -36,8 +37,8 @@ def simple_config(config):
 
 
 @pytest.fixture
-def ui_server(coord, ha, ha_requests, time: FakeTime, global_info, config):
-    server = UIServer(coord, ha, ha_requests, time, config, global_info)
+def ui_server(coord, ha, ha_requests, time: FakeTime, global_info, config, estimator: Estimator):
+    server = UIServer(coord, ha, ha_requests, time, config, global_info, estimator)
     server.run()
     yield server
     server.stop()
@@ -77,13 +78,15 @@ def test_getstatus(ui_server, config: Config, ha):
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 0
+        'snapshots': 0,
+        'size': '0 B'
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
         'name': SOURCE_HA,
         'retained': 0,
-        'snapshots': 0
+        'snapshots': 0,
+        'size': '0 B'
     }
     assert len(data['sources']) == 2
 
@@ -100,13 +103,15 @@ def test_getstatus_sync(ui_server, config: Config, snapshot: Snapshot):
         'deletable': 1,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 1
+        'snapshots': 1,
+        'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
         'name': SOURCE_HA,
         'retained': 0,
-        'snapshots': 1
+        'snapshots': 1,
+        'size': data['sources'][SOURCE_HA]['size']
     }
     assert len(data['sources']) == 2
 
@@ -121,13 +126,15 @@ def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinato
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 1,
-        'snapshots': 1
+        'snapshots': 1,
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
         'name': SOURCE_HA,
         'retained': 1,
-        'snapshots': 1
+        'snapshots': 1,
+        'size': status['sources'][SOURCE_HA]['size']
     }
 
     getjson("retain?slug={0}&drive=false&ha=false".format(slug))
@@ -136,13 +143,15 @@ def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinato
         'deletable': 1,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 1
+        'snapshots': 1,
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
         'name': SOURCE_HA,
         'retained': 0,
-        'snapshots': 1
+        'snapshots': 1,
+        'size': status['sources'][SOURCE_HA]['size']
     }
     getjson("deleteSnapshot?slug={0}&drive=true&ha=false".format(slug))
     getjson("retain?slug={0}&drive=true&ha=true".format(slug))
@@ -151,13 +160,15 @@ def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinato
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 0
+        'snapshots': 0,
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
         'name': SOURCE_HA,
         'retained': 1,
-        'snapshots': 1
+        'snapshots': 1,
+        'size': status['sources'][SOURCE_HA]['size']
     }
 
     # sync again, which should upoload the snapshot to Drive
@@ -242,7 +253,8 @@ def test_config(ui_server, config: Config, server: ServerInstance):
         "config": {
             "days_between_snapshots": 20,
             "drive_ipv4": ""
-        }
+        },
+        "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
@@ -252,7 +264,7 @@ def test_config(ui_server, config: Config, server: ServerInstance):
 
 
 def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
-    update = {"config": {"require_login": True, "expose_extra_server": True}}
+    update = {"config": {"require_login": True, "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
@@ -328,7 +340,8 @@ def test_update_ingress_false(ui_server: UIServer, ha: HaSource, config: Config)
             "require_login": True,
             "ues_ssl": True,
             "expose_extra_server": False
-        }
+        },
+        "snapshot_folder": "unused"
     }
     assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
 

@@ -22,5 +22,9 @@ ERROR_HA_DELETE_ERROR = "delete_error"
 ERROR_MULTIPLE_DELETES = "multiple_deletes"
 
 ERROR_EXISTING_FOLDER = "existing_backup_folder"
-ERROR_MULTIPLE_FOLDERS = "multiple_backup_folders"
 ERROR_BACKUP_FOLDER_MISSING = "backup_folder_missing"
+CHOOSE_BACKUP_FOLDER = "choose_backup_folder"
+ERROR_BACKUP_FOLDER_INACCESSIBLE = "backup_folder_inaccessible"
+ERROR_LOW_SPACE = "low_space"
+
+DRIVE_FOLDER_URL_FORMAT = "https://drive.google.com/drive/u/0/folders/{0}"

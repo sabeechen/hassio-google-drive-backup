@@ -350,7 +350,6 @@ function setColors(background, accent) {
     'height': '25px',
     'text-decoration': 'none',
     'display': 'inline-flex',
-    'color': text.toCss(),
     'background-color': background.toCss(),
     'border-radius': '3px',
     'border': '1px solid transparent',
@@ -370,6 +369,8 @@ function setColors(background, accent) {
     'transition': '0.3s all linear',
     'font-size': '17px'
   });
+
+  setRule(".bmc-button span", {'color': text.toCss()});
 }
 
 // Modifying style sheets directly probably isn't best practices, but damn does it work well.

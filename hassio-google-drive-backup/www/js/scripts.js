@@ -157,6 +157,7 @@ function exposeServer(expose) {
 function resolvefolder(use_existing) {
   var url = "resolvefolder?use_existing=" + use_existing;
   postJson(url, {}, refreshstats, null, "Syncing...");
+  M.Modal.getInstance(document.querySelector('#existing_backup_folder')).close();
 }
 
 function sync() {

@@ -315,6 +315,12 @@ class UIServer(Trigger, LogBase):
     def changefolder(self, id: str) -> None:
         self._coord._model.dest.changeBackupFolder(id)
         self.trigger()
+        try:
+            if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
+                return self.redirect(self._ha_source.getAddonUrl())
+        except:  # noqa: E722
+            # eat the error
+            pass
         return self.redirect("/")
 
     @cherrypy.expose
@@ -789,7 +795,6 @@ class UIServer(Trigger, LogBase):
             'height': '25px',
             'text-decoration': 'none',
             'display': 'inline-flex',
-            'color': text.toCss(),
             'background-color': background.toCss(),
             'border-radius': '3px',
             'border': '1px solid transparent',
@@ -808,5 +813,7 @@ class UIServer(Trigger, LogBase):
             'transition': '0.3s all linear',
             'font-size': '17px'
         })
+
+        ret += self.cssElement(".bmc-button span", {'color': text.toCss()})
 
         return ret

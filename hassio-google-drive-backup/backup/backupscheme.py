@@ -132,9 +132,6 @@ class GenerationalScheme(BackupScheme):
             keeper = lookup.select(snapshots)
             if keeper:
                 keepers.add(keeper)
-            else:
-                print("whoops")
-                pass
 
         extras = []
         for snapshot in snapshots:

@@ -91,7 +91,7 @@ class UIServer(Trigger, LogBase):
             status['last_snapshot'] = "Never"
 
         status['last_error'] = None
-        if self._global_info._last_error is not None:
+        if self._global_info._last_error is not None and self._global_info.isErrorSuppressed():
             status['last_error'] = self.processError(self._global_info._last_error)
         status["firstSync"] = self._global_info._first_sync
         status["maxSnapshotsInHasssio"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
@@ -244,6 +244,7 @@ class UIServer(Trigger, LogBase):
 
     def _resolvefolder(self, use_existing: bool):
         self._global_info.resolveFolder(use_existing)
+        self._global_info.suppressError()
         self._coord._model.dest.resetFolder()
         self.sync()
         return {'message': 'Done'}

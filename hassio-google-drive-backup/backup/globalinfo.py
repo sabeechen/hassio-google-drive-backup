@@ -19,6 +19,7 @@ class GlobalInfo(LogBase):
         self._last_upload_size = None
         self._last_sync_start = None
         self._last_error = None
+        self._supress_error = False
         self.credVersion = 0
         self._first_sync = True
         self._multipleDeletesPermitted = False
@@ -60,6 +61,13 @@ class GlobalInfo(LogBase):
         self._last_error = error
         self._failures += 1
         self._last_failure_time = self._time.now()
+        self._supress_error = False
+
+    def suppressError(self):
+        self._supress_error = True
+
+    def isErrorSuppressed(self):
+        return self.suppressError
 
     def upload(self, size):
         self._last_upload = self._time.now()

@@ -1,4 +1,4 @@
-## [0.100.0 2019-01-18]
+## [0.100.0 2020-01-18]
 ### Added
 - Option to select the snapshot folder.  Now you can sync multiple instances to a single Google Drive account. See settings to try it out.
 - Web UI now shows total disk usage in Google Drive and Home Assistant.

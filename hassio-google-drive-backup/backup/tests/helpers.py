@@ -1,10 +1,11 @@
 from datetime import datetime
 from io import BytesIO
 from ..simulation import SimulatedSource
-from threading import Thread, Event
+from ..asynchttpgetter import AsyncHttpGetter
 import tarfile
 import json
-
+from injector import singleton, inject
+from aiohttp import ClientSession
 all_folders = [
     "share",
     "ssl",
@@ -119,46 +120,18 @@ def getTestStream(size: int):
     return BytesIO(arr)
 
 
-def compareStreams(left, right):
+async def compareStreams(left, right):
+    await left.setup()
+    await right.setup()
     while True:
-        from_left = left.read(1024 * 1024)
-        from_right = right.read(1024 * 1024)
-        if len(from_left) == 0:
-            assert len(from_right) == 0
+        from_left = await left.read(1024 * 1024)
+        from_right = await right.read(1024 * 1024)
+        if len(from_left.getbuffer()) == 0:
+            assert len(from_right.getbuffer()) == 0
             break
-        if from_left != from_right:
+        if from_left.getbuffer() != from_right.getbuffer():
             print("break!")
-        assert from_left == from_right
-
-
-class LockBlocker():
-    def __init__(self):
-        self._event = Event()
-        self._start_event = Event()
-        self._thread = Thread(target=self._doBlock, name="Blocker Thread")
-        self._thread.setDaemon(True)
-        self._lock = None
-
-    def block(self, lock):
-        self._lock = lock
-        return self
-
-    def _doBlock(self):
-        with self._lock:
-            self._start_event.set()
-            self._event.wait()
-            self._start_event.clear()
-
-    def __enter__(self):
-        if self._lock is None:
-            raise Exception("Lock was not configured")
-        self._thread.start()
-        self._start_event.wait()
-
-    def __exit__(self, a, b, c):
-        self._event.set()
-        self._thread.join()
-        self._event.clear()
+        assert from_left.getbuffer() == from_right.getbuffer()
 
 
 class HelperTestSource(SimulatedSource):
@@ -180,3 +153,17 @@ class HelperTestSource(SimulatedSource):
     def assertUnchanged(self):
         self.assertThat(current=len(self.current))
         return self
+
+
+@singleton
+class Uploader():
+    @inject
+    def __init__(self, host, session: ClientSession):
+        self.host = host
+        self.session = session
+
+    async def upload(self, data):
+        async with await self.session.post(self.host + "/uploadfile", data=data) as resp:
+            resp.raise_for_status()
+        source = AsyncHttpGetter(self.host + "/readfile", {}, self.session)
+        return source

@@ -1,90 +1,54 @@
 import socket
-import dns
-import dns.resolver
+import aiodns
 
-from .logbase import LogBase
-from threading import Lock
+from .config import Config
 from typing import Dict, List, Any
-from datetime import timedelta
+from injector import inject, singleton
+from aiohttp.resolver import AsyncResolver
+from .settings import Setting
 
 TTL_HOURS = 12
 
 
-class Resolver(LogBase):
-    def __init__(self, time):
-        self.cache: Dict[str, Any] = {}
-        self.overrides: Dict[str, List[str]] = {}
-        self.resolver: dns.resolver.Resolver = None
-        self.lock: Lock = Lock()
-        self.old_getaddrinfo = None
-        self.ignoreIpv6 = False
-        self.time = time
-        self.enabled = False
+@singleton
+class SubvertingResolver(AsyncResolver):
+    @inject
+    def __init__(self, config: Config):
+        super().__init__()
+        self.config = config
+        self._original_dns = self._resolver
+        self.setAlternateResolver()
 
-    def addResolveAddress(self, address):
-        with self.lock:
-            if address not in self.cache:
-                self.cache[address] = None
+    async def resolve(self, host: str, port: int = 0,
+                      family: int = socket.AF_INET) -> List[Dict[str, Any]]:
+        # TODO: add readme for "How do I know this won't do anything sketchy" along the lines of Tron's FAQ.  Caveat Emptor, explain the environment (docker, images, etc) for peace of mind.
+        if host == self.config.get(Setting.DRIVE_HOST_NAME) and len(self.config.get(Setting.DRIVE_IPV4)) > 0 and family == 0:
+            # return the "mocked" drive address instead.
+            return [{
+                'family': 0,
+                'flags': socket.AddressInfo.AI_NUMERICHOST,
+                'port': port,
+                'proto': 0,
+                'host': self.config.get(Setting.DRIVE_IPV4),
+                'hostname': host
+            }]
+        addresses = await super().resolve(host, port, family)
+        return addresses
 
-    def addOverride(self, host, addresses):
-        with self.lock:
-            self.overrides[host] = addresses
+    def updateConfig(self):
+        if self._alt_ns != self.config.get(Setting.ALTERNATE_DNS_SERVERS):
+            self.setAlternateResolver()
+            self._resolver = self._alt_dns
+
+    def setAlternateResolver(self):
+        if len(self.config.get(Setting.ALTERNATE_DNS_SERVERS)) > 0:
+            self._alt_dns = aiodns.DNSResolver(loop=self._loop, nameservers=self.config.get(Setting.ALTERNATE_DNS_SERVERS).split(","))
+        else:
+            self._alt_dns = self._original_dns
+        self._alt_ns = self.config.get(Setting.ALTERNATE_DNS_SERVERS)
 
     def toggle(self):
-        self.enabled = not self.enabled
-
-    def clearOverrides(self):
-        with self.lock:
-            self.overrides = {}
-
-    def setDnsServers(self, servers):
-        with self.lock:
-            self.resolver = dns.resolver.Resolver()
-            self.resolver.nameservers = servers
-
-    def setIgnoreIpv6(self, ignore):
-        self.ignoreIpv6 = ignore
-
-    def __enter__(self):
-        with self.lock:
-            self.old_getaddrinfo = socket.getaddrinfo
-            socket.getaddrinfo = self._override_getaddrinfo
-        return self
-
-    def __exit__(self, a, b, c):
-        with self.lock:
-            socket.getaddrinfo = self.old_getaddrinfo
-            self.old_getaddrinfo = None
-
-    def _override_getaddrinfo(self, *args, **kwargs):
-        with self.lock:
-            if len(args) > 1 and args[0] in self.cache:
-                override = self.cachedLookup(args[0])
-                if override is not None and len(override) > 0:
-                    resp = []
-                    for ip in override:
-                        resp.append((socket.AF_INET, socket.SOCK_STREAM, 6, '', (ip, args[1])))
-                    return resp
-
-        responses = self.old_getaddrinfo(*args, **kwargs)
-        if self.ignoreIpv6:
-            responses = [response for response in responses if response[0] != socket.AF_INET6]
-        return responses
-
-    def cachedLookup(self, host):
-        if host in self.overrides:
-            return self.overrides[host]
-        if self.resolver is None:
-            return None
-        if not self.enabled:
-            return None
-
-        entry = self.cache.get(host)
-        if entry is not None and entry[1] > self.time.now():
-            return entry[0]
-        addresses = []
-        for data in self.resolver.query(host, "A", tcp=True):
-            addresses.append(data.address)
-        data = (addresses, self.time.now() + timedelta(hours=TTL_HOURS))
-        self.cache[host] = data
-        return addresses
+        if self._resolver == self._original_dns:
+            self._resolver = self._alt_dns
+        else:
+            self._resolver = self._original_dns

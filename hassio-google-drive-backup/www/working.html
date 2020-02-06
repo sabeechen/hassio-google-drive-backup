@@ -7,21 +7,21 @@
   <title>Hassio Google Drive Backup</title>
 
   <!-- CSS  -->
-  <link href="css/icons.css?version=0.100.0" rel="stylesheet">
-  <link href="css/materialize.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/colpick.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="static/css/icons.css?version=0.100.0" rel="stylesheet">
+  <link href="static/css/materialize.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="static/css/colpick.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="theme?version=0.100.0" id="theme" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="css/static.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="static/css/static.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
-  <link rel="icon" type="image/png" href="images/favicon.png?version=0.100.0">
-  <script src="js/jquery.js?version=0.100.0"></script>
-  <script src="js/materialize.js?version=0.100.0"></script>
-  <script src="js/colpick.js?version=0.100.0"></script>
-  <script src="js/init.js?version=0.100.0"></script>
-  <script src="js/scripts.js?version=0.100.0"></script>
-  <script src="js/settings.js?version=0.100.0"></script>
-  <script src="js/restore.js?version=0.100.0"></script>
-  <script src="js/moment.js?version=0.100.0"></script>
+  <link rel="icon" type="image/png" href="static/images/favicon.png?version=0.100.0">
+  <script src="static/js/jquery.js?version=0.100.0"></script>
+  <script src="static/js/materialize.js?version=0.100.0"></script>
+  <script src="static/js/colpick.js?version=0.100.0"></script>
+  <script src="static/js/init.js?version=0.100.0"></script>
+  <script src="static/js/scripts.js?version=0.101.0"></script>
+  <script src="static/js/settings.js?version=0.100.0"></script>
+  <script src="static/js/restore.js?version=0.100.0"></script>
+  <script src="static/js/moment.js?version=0.100.0"></script>
   <script type="text/javascript">
     $(document).ready(function () {
       // Needed to make modal dialogs work.
@@ -990,21 +990,21 @@
     <ul id="main_menu_dropdown" class="dropdown-content">
       <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a>
       </li>
-      <li><a onclick="sync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+      <li><a onclick="sync('error_card')"><i class="material-icons left">autorenew</i>Sync Now</a></li>
       <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
       <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
     </ul>
     <ul id="main_menu_dropdown2" class="dropdown-content">
       <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a>
       </li>
-      <li><a onclick="sync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+      <li><a onclick="sync('error_card')"><i class="material-icons left">autorenew</i>Sync Now</a></li>
       <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
       <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
     </ul>
     <nav class="non-ingress ha-blue" role="navigation">
       <div class="nav-wrapper">
         <a class="brand-logo">
-          <img style="vertical-align: middle;" src="images/logo.png" width=40 height=40 />
+          <img style="vertical-align: middle;" src="static/images/logo.png" width=40 height=40 />
           <span>Snapshots</span>
         </a>
         <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
@@ -1147,7 +1147,7 @@
                     <li>Click "Create snapshot anyway" to bypass this warning just this one time.  This is useful if you're confident that the snapshot actually will fit in the available space.  Again, do so at your own peril.</li>
                   </ul>
                   <div class="card-action white-text">
-                      <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                      <a href="#" onclick="sync('low_space'); return false;">Try Syncing Again</a>
                       <a href="#" onclick="skipLowSpaceWarning(); return false;">Create snapshot anyway</a>
                   </div>
               </div>
@@ -1209,7 +1209,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden error_card delete_error" id="creds_bad_card">
+        <div class="row default-hidden error_card delete_error" id="delete_error">
           <div class="col s12 m9">
             <div class="card red darken-4">
               <div class="card-content white-text">
@@ -1234,7 +1234,7 @@
                   to get more help.</p>
               </div>
               <div class="card-action white-text">
-                <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                <a href="#" onclick="sync('delete_error'); return false;">Try Syncing Again</a>
               </div>
             </div>
           </div>
@@ -1272,7 +1272,7 @@
 
                 <p>You can also try restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync('google_dns'); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1315,7 +1315,7 @@
                 </ul>
                 <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync('google_timeout'); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1353,7 +1353,7 @@
                 </ul>
                 <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync('google_cant_connect'); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1378,7 +1378,7 @@
                       style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
                     settings</a>to ensure you've set the snapshot password you intended, then sync again.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync('password_key_invalid'); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1403,7 +1403,7 @@
                   If you are certain no snapshot is in progress already or this error sticks around, you can try
                   restarting the addon or Home Assistant's host machine.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync('snapshot_in_progress'); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1463,7 +1463,7 @@
                   <li>Reinstalling the add-on.</li>
                 </ul>
                 <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync('google_server_error'); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1502,7 +1502,7 @@
                   <li>Reinstalling the add-on.</li>
                 </ul>
                 <div class="card-action white-text">
-                  <a href="#" onclick="sync(); return false;">Try Syncing Again</a>
+                  <a href="#" onclick="sync('google_session_expired'); return false;">Try Syncing Again</a>
                 </div>
               </div>
             </div>
@@ -1530,7 +1530,7 @@
                   <li>"Choose a different folder" to store snapshots in, ignoring the existing folder. You probably want
                     his option if you have multiple Hass.io/Home Assistant instances that should all back up to their
                     own folder.</li>
-                  <li>Or "create a new folder" automatically and ignore the existing one. The new folder will be created
+                  <li>Or "create a new folder" to automatically create a folder and ignore the existing one. The new folder will be created
                     at the root of your My Drive.</li>
                 </ul>
                 <p>Note: If you run multiple instance of Hass.io/Home Assistant with this addon using the same Google
@@ -1635,7 +1635,35 @@
                     target="_blank">See here</a> for details if you'd like to know more about why.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose new folder</a>
-                  <a href="#" onclick="sync()">sync now</a>
+                  <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card cancelled" id="cancelled">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">pause</i>
+                  <span style="vertical-align: top;">Backup is Paused</span>
+                </span>
+                <p>Sync was cancelled because you requested it.  The addon will not resume syncing for another hour unless you take action.</p>
+                <br />
+                <p>
+                  Please note:
+                </p>
+                <ul class="browser-default">
+                  <li>
+                    <p>A pending snapshot can't be stopped once its started, because its creation is managed by Home Assistant and Hass.io.  Being "Paused" only stos the addon from creating new snapshots and syncing them with Google Drive.</p>
+                  </li>
+                  <li>
+                    <p>You can resume by clicking the link below or just waiting.</p>
+                  </li>
+                </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('cancelled')">Resume</a>
                 </div>
               </div>
             </div>
@@ -1813,7 +1841,7 @@
           <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
             like it and would like to support me, you can star my projects on <a
               href="https://github.com/sabeechen" class="accent-text">Github</a> or just gimme money at
-            <a class="bmc-button" target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img src="images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
+            <a class="bmc-button" target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img src="static/images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
         </div>
       </div>
       <div class="container left accent-text">

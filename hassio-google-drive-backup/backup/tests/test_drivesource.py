@@ -1,32 +1,36 @@
 import os
 
 import pytest
-from ..exceptions import ExistingBackupFolderError, GoogleCredentialsExpired, GoogleDnsFailure, GoogleCantConnect, GoogleSessionError, GoogleTimeoutError, GoogleInternalError, BackupFolderInaccessible, BackupFolderMissingError
+from ..exceptions import DriveQuotaExceeded, ExistingBackupFolderError, GoogleCredentialsExpired, GoogleDnsFailure, GoogleCantConnect, GoogleSessionError, GoogleTimeoutError, GoogleInternalError, BackupFolderInaccessible, BackupFolderMissingError
 from ..drivesource import FOLDER_MIME_TYPE, DriveSource
 from ..driverequests import BASE_CHUNK_SIZE, MAX_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS, RETRY_SESSION_ATTEMPTS
 from ..snapshots import DriveSnapshot, DummySnapshot
 from ..globalinfo import GlobalInfo
 from time import sleep
 from .helpers import createSnapshotTar, compareStreams
-from .conftest import ServerInstance, RequestsMock
 from ..config import Config
+from ..dev.simulationserver import SimulationServer
 from .faketime import FakeTime
 from ..settings import Setting
-from requests.exceptions import HTTPError
-from requests import Response
+from aiohttp.client_exceptions import ClientResponseError
 
 RETRY_EXHAUSTION_SLEEPS = [2, 4, 8, 16, 32]
 
 
-def test_sync_empty(drive) -> None:
-    assert len(drive.get()) == 0
+@pytest.fixture
+def snapshot_helper(uploader, time):
+    return SnapshotHelper(uploader, time)
 
 
-def test_CRUD(drive, time) -> None:
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
+@pytest.mark.asyncio
+async def test_sync_empty(drive) -> None:
+    assert len(await drive.get()) == 0
 
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
-    snapshot: DriveSnapshot = drive.save(from_snapshot, data)
+
+@pytest.mark.asyncio
+async def test_CRUD(snapshot_helper, drive, time, session) -> None:
+    from_snapshot, data = await snapshot_helper.createFile()
+    snapshot: DriveSnapshot = await drive.save(from_snapshot, data)
     assert snapshot.name() == "Test Name"
     assert snapshot.date() == time.local(1985, 12, 6)
     assert not snapshot.retained()
@@ -38,12 +42,12 @@ def test_CRUD(drive, time) -> None:
     from_snapshot.addSource(snapshot)
 
     # downlaod the item, its bytes should match up
-    download = drive.read(from_snapshot)
-    data.seek(0)
-    compareStreams(data, download)
+    download = await drive.read(from_snapshot)
+    data.position(0)
+    await compareStreams(data, download)
 
     # read the item, make sure its data matches up
-    snapshots = drive.get()
+    snapshots = await drive.get()
     assert len(snapshots) == 1
     snapshot = snapshots[from_snapshot.slug()]
     assert snapshot.name() == "Test Name"
@@ -57,24 +61,25 @@ def test_CRUD(drive, time) -> None:
 
     # update retention
     assert not snapshot.retained()
-    drive.retain(from_snapshot, True)
-    assert drive.get()[from_snapshot.slug()].retained()
-    drive.retain(from_snapshot, False)
-    assert not drive.get()[from_snapshot.slug()].retained()
+    await drive.retain(from_snapshot, True)
+    assert (await drive.get())[from_snapshot.slug()].retained()
+    await drive.retain(from_snapshot, False)
+    assert not (await drive.get())[from_snapshot.slug()].retained()
 
     # Delete the item, make sure its gone
-    drive.delete(from_snapshot)
-    snapshots = drive.get()
+    await drive.delete(from_snapshot)
+    snapshots = await drive.get()
     assert len(snapshots) == 0
 
 
-def test_folder_creation(drive, time, config):
-    assert len(drive.get()) == 0
+@pytest.mark.asyncio
+async def test_folder_creation(drive, time, config):
+    assert len(await drive.get()) == 0
 
-    folderId = drive.getFolderId()
+    folderId = await drive.getFolderId()
     assert len(folderId) > 0
 
-    item = drive.drivebackend.get(folderId)
+    item = await drive.drivebackend.get(folderId)
     assert not item["trashed"]
     assert item["name"] == "Hass.io Snapshots"
     assert item["mimeType"] == FOLDER_MIME_TYPE
@@ -83,26 +88,27 @@ def test_folder_creation(drive, time, config):
     # sync again, assert the folder is reused
     time.advanceDay()
     os.remove(config.get(Setting.FOLDER_FILE_PATH))
-    assert len(drive.get()) == 0
-    assert drive.getFolderId() == folderId
+    assert len(await drive.get()) == 0
+    assert await drive.getFolderId() == folderId
 
     # trash the folder, assert we create a new one on sync
-    drive.drivebackend.update(folderId, {"trashed": True})
-    assert drive.drivebackend.get(folderId)["trashed"] is True
-    assert len(drive.get()) == 0
+    await drive.drivebackend.update(folderId, {"trashed": True})
+    assert (await drive.drivebackend.get(folderId))["trashed"] is True
+    assert len(await drive.get()) == 0
     time.advanceDay()
-    assert drive.getFolderId() != folderId
+    assert await drive.getFolderId() != folderId
 
     # delete the folder, assert we create a new one
-    folderId = drive.getFolderId()
-    drive.drivebackend.delete(folderId)
+    folderId = await drive.getFolderId()
+    await drive.drivebackend.delete(folderId)
     time.advanceDay()
-    assert len(drive.get()) == 0
+    assert len(await drive.get()) == 0
     time.advanceDay()
-    assert drive.getFolderId() != folderId
+    assert await drive.getFolderId() != folderId
 
 
-def test_folder_selection(drive, time):
+@pytest.mark.asyncio
+async def test_folder_selection(drive, time):
     folder_metadata = {
         'name': "Junk Data",
         'mimeType': FOLDER_MIME_TYPE,
@@ -112,75 +118,82 @@ def test_folder_selection(drive, time):
     }
 
     # create two fodlers at different times
-    id_old = drive.drivebackend.createFolder(folder_metadata)['id']
+    id_old = (await drive.drivebackend.createFolder(folder_metadata))['id']
     sleep(2)
-    id_new = drive.drivebackend.createFolder(folder_metadata)['id']
+    id_new = (await drive.drivebackend.createFolder(folder_metadata))['id']
 
     # Verify we use the newest
-    drive.get()
-    assert drive.getFolderId() == id_new
-    assert drive.getFolderId() != id_old
+    await drive.get()
+    assert await drive.getFolderId() == id_new
+    assert await drive.getFolderId() != id_old
 
 
-def test_bad_auth_creds(drive: DriveSource, time):
+@pytest.mark.asyncio
+async def test_bad_auth_creds(drive: DriveSource, time):
     drive.drivebackend.cred_refresh = "not_allowed"
     with pytest.raises(GoogleCredentialsExpired):
-        drive.get()
+        await drive.get()
     assert time.sleeps == []
 
 
-def test_out_of_space():
-    # SOMEDAY: Implement this test, server needs to return drive error json (see DriveRequests)
-    pass
+@pytest.mark.asyncio
+async def test_out_of_space(snapshot_helper, drive: DriveSource, server: SimulationServer):
+    server.simulate_out_of_drive_space = True
+    from_snapshot, data = await snapshot_helper.createFile()
+    with pytest.raises(DriveQuotaExceeded):
+        await drive.save(from_snapshot, data)
 
 
-def test_drive_dns_resolution_error(drive: DriveSource, server: ServerInstance, config: Config, time):
+@pytest.mark.asyncio
+async def test_drive_dns_resolution_error(drive: DriveSource, config: Config, time):
     config.override(Setting.DRIVE_URL, "http://fsdfsdasdasdf.saasdsdfsdfsd.com:2567")
     with pytest.raises(GoogleDnsFailure):
-        drive.get()
+        await drive.get()
     assert time.sleeps == []
 
 
-def test_drive_connect_error(drive: DriveSource, server: ServerInstance, config: Config, time):
+@pytest.mark.asyncio
+async def test_drive_connect_error(drive: DriveSource, config: Config, time):
     config.override(Setting.DRIVE_URL, "http://localhost:1034")
     with pytest.raises(GoogleCantConnect):
-        drive.get()
+        await drive.get()
     assert time.sleeps == []
 
 
-def test_upload_session_expired(drive, time, server: ServerInstance):
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+@pytest.mark.asyncio
+async def test_upload_session_expired(drive, time, server, snapshot_helper):
+    from_snapshot, data = await snapshot_helper.createFile()
     server.update({"drive_upload_error": 404})
     with pytest.raises(GoogleSessionError):
-        drive.save(from_snapshot, data)
+        await drive.save(from_snapshot, data)
     assert time.sleeps == []
 
 
-def test_upload_resume(drive: DriveSource, time, server: ServerInstance):
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+@pytest.mark.asyncio
+async def test_upload_resume(drive: DriveSource, time, server, snapshot_helper):
+    from_snapshot, data = await snapshot_helper.createFile()
     server.update({"drive_upload_error": 500, "drive_upload_error_attempts": 1})
 
     # Upload, which will fail
     with pytest.raises(GoogleInternalError):
-        drive.save(from_snapshot, data)
+        await drive.save(from_snapshot, data)
 
     # Verify we uploaded one chunk
-    assert server.getServer().chunks == [BASE_CHUNK_SIZE]
+    assert server.chunks == [BASE_CHUNK_SIZE]
 
     # Retry the upload, which shoudl now pass
     server.update({"drive_upload_error": None})
-    drive_snapshot = drive.save(from_snapshot, data)
+    drive_snapshot = await drive.save(from_snapshot, data)
     from_snapshot.addSource(drive_snapshot)
-    assert server.getServer().chunks == [BASE_CHUNK_SIZE, BASE_CHUNK_SIZE, data.size() - BASE_CHUNK_SIZE * 2]
+    assert server.chunks == [BASE_CHUNK_SIZE, BASE_CHUNK_SIZE, (data.size()) - BASE_CHUNK_SIZE * 2]
 
     # Verify the data is correct
-    data.seek(0)
-    compareStreams(data, drive.read(from_snapshot))
+    data.position(0)
+    await compareStreams(data, await drive.read(from_snapshot))
 
 
 def test_chunk_size(drive: DriveSource):
+    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == MAX_CHUNK_SIZE
     assert drive.drivebackend._getNextChunkSize(1, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
     assert drive.drivebackend._getNextChunkSize(1000000000, CHUNK_UPLOAD_TARGET_SECONDS) == MAX_CHUNK_SIZE
     assert drive.drivebackend._getNextChunkSize(BASE_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
@@ -188,21 +201,22 @@ def test_chunk_size(drive: DriveSource):
     assert drive.drivebackend._getNextChunkSize(BASE_CHUNK_SIZE, 1.01) == BASE_CHUNK_SIZE * (CHUNK_UPLOAD_TARGET_SECONDS - 1)
 
 
-def test_drive_timeout(drive, config, time: FakeTime):
+@pytest.mark.asyncio
+async def test_drive_timeout(drive, config, time: FakeTime):
     config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 0.000001)
     with pytest.raises(GoogleTimeoutError):
-        drive.get()
+        await drive.get()
     assert time.sleeps == []
 
 
-def test_resume_upload_attempts_exhausted(drive: DriveSource, server: ServerInstance, time):
+@pytest.mark.asyncio
+async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time, snapshot_helper):
     # Allow an upload to update one chunk and then fail.
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+    from_snapshot, data = await snapshot_helper.createFile()
     server.update({"drive_upload_error": 500, "drive_upload_error_attempts": 1})
     with pytest.raises(GoogleInternalError):
-        drive.save(from_snapshot, data)
-    assert server.getServer().chunks == [BASE_CHUNK_SIZE]
+        await drive.save(from_snapshot, data)
+    assert server.chunks == [BASE_CHUNK_SIZE]
 
     # Verify we have a cached location
     assert drive.drivebackend.last_attempt_location is not None
@@ -211,7 +225,7 @@ def test_resume_upload_attempts_exhausted(drive: DriveSource, server: ServerInst
 
     for x in range(1, 11):
         with pytest.raises(GoogleInternalError):
-            drive.save(from_snapshot, data)
+            await drive.save(from_snapshot, data)
         assert drive.drivebackend.last_attempt_count == x
 
     # We should still be using the same location url
@@ -219,163 +233,158 @@ def test_resume_upload_attempts_exhausted(drive: DriveSource, server: ServerInst
 
     # Another attempt should use another location url
     with pytest.raises(GoogleInternalError):
-        drive.save(from_snapshot, data)
+        await drive.save(from_snapshot, data)
     assert drive.drivebackend.last_attempt_count == 0
     assert drive.drivebackend.last_attempt_location is not None
     assert drive.drivebackend.last_attempt_location != last_location
 
     # Now let it succeed
     server.update({"drive_upload_error": None})
-    drive_snapshot = drive.save(from_snapshot, data)
+    drive_snapshot = await drive.save(from_snapshot, data)
     from_snapshot.addSource(drive_snapshot)
 
     # And verify the bytes are correct
-    data.seek(0)
-    compareStreams(data, drive.read(from_snapshot))
+    data.position(0)
+    await compareStreams(data, await drive.read(from_snapshot))
 
 
-def test_google_internal_error(drive, server: ServerInstance, time: FakeTime):
+@pytest.mark.asyncio
+async def test_google_internal_error(drive, server, time: FakeTime):
     server.update({"drive_all_error": 500})
     with pytest.raises(GoogleInternalError):
-        drive.get()
+        await drive.get()
     assert time.sleeps == RETRY_EXHAUSTION_SLEEPS
     time.sleeps = []
 
     server.update({"drive_all_error": 503})
     with pytest.raises(GoogleInternalError):
-        drive.get()
+        await drive.get()
     assert time.sleeps == RETRY_EXHAUSTION_SLEEPS
 
 
-def test_check_time(drive: DriveSource, drive_creds):
+@pytest.mark.asyncio
+async def test_check_time(drive: DriveSource, drive_creds):
     assert not drive.check()
     drive.saveCreds(drive_creds)
     assert drive.check()
 
 
-def test_disable_upload(drive: DriveSource, config: Config):
+@pytest.mark.asyncio
+async def test_disable_upload(drive: DriveSource, config: Config):
     assert drive.upload()
     config.override(Setting.ENABLE_DRIVE_UPLOAD, False)
     assert not drive.upload()
 
 
-def test_resume_upload_on_connection_error(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
-    verify_upload_resumed(time, drive, config, requests_mock, ConnectionError())
-
-
-def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
-    response = Response()
-    response.status_code = 401
-    exception = HTTPError(response=response, request=None)
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+@pytest.mark.asyncio
+async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, config: Config, server, snapshot_helper):
+    from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
-    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
-    with pytest.raises(HTTPError):
-        drive.save(from_snapshot, data)
+    server.setError(".*upload/drive/v3/files/progress.*", 1, 402)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload but not cached
-    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
     assert drive.drivebackend.last_attempt_count == 0
     assert drive.drivebackend.last_attempt_location is None
     assert drive.drivebackend.last_attempt_metadata is None
 
     # upload again, which should retry
-    requests_mock.urls.clear()
-    requests_mock.setFailure(None, None, None)
-    snapshot = drive.save(from_snapshot, data)
-    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+    server.urls.clear()
+    server.match_errors.clear()
+    snapshot = await drive.save(from_snapshot, data)
+    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
-    download = drive.read(from_snapshot)
-    data.seek(0)
-    compareStreams(data, download)
+    download = await drive.read(from_snapshot)
+    data.position(0)
+    await compareStreams(data, download)
 
 
-def test_resume_session_reused_on_http5XX(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
-    response = Response()
-    response.status_code = 550
-    verify_upload_resumed(time, drive, config, requests_mock, HTTPError(response=response, request=None))
+@pytest.mark.asyncio
+async def test_resume_session_reused_on_http5XX(time, drive: DriveSource, config: Config, server, snapshot_helper):
+    await verify_upload_resumed(time, drive, config, server, 550, snapshot_helper)
 
 
-def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
-    exception = ConnectionError()
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+@pytest.mark.asyncio
+async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, server, snapshot_helper):
+    from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
-    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
-    with pytest.raises(ConnectionError):
-        drive.save(from_snapshot, data)
+    server.match_errors.clear()
+    server.setError(".*upload/drive/v3/files/progress.*", 1, 501)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload but not cached
-    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
+    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
     assert drive.drivebackend.last_attempt_count == 0
     assert drive.drivebackend.last_attempt_location is not None
     assert drive.drivebackend.last_attempt_metadata is not None
     last_location = drive.drivebackend.last_attempt_location
 
     for x in range(1, RETRY_SESSION_ATTEMPTS + 1):
-        requests_mock.urls.clear()
-        requests_mock.setFailure(0, ".*upload/drive/v3/files/progress.*", exception)
-        with pytest.raises(ConnectionError):
-            drive.save(from_snapshot, data)
-        assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" not in requests_mock.urls
-        assert last_location in requests_mock.urls
+        server.urls.clear()
+        server.match_errors.clear()
+        server.setError(".*upload/drive/v3/files/progress.*", 0, 501)
+        with pytest.raises(ClientResponseError):
+            await drive.save(from_snapshot, data)
+        assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+        assert server.wasUrlRequested(last_location)
         assert drive.drivebackend.last_attempt_count == x
         assert drive.drivebackend.last_attempt_location is last_location
         assert drive.drivebackend.last_attempt_metadata is not None
 
     # Next attempt should give up and restart the upload
-    requests_mock.urls.clear()
-    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
-    with pytest.raises(ConnectionError):
-        drive.save(from_snapshot, data)
-    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
-    assert last_location not in requests_mock.urls
+    server.urls.clear()
+    server.match_errors.clear()
+    server.setError(".*upload/drive/v3/files/progress.*", 1, 501)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
+    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert not server.wasUrlRequested(last_location)
     assert drive.drivebackend.last_attempt_count == 0
 
     # upload again, which should retry
-    requests_mock.urls.clear()
-    requests_mock.setFailure(None, None, None)
-    snapshot = drive.save(from_snapshot, data)
-    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" not in requests_mock.urls
+    server.urls.clear()
+    server.match_errors.clear()
+    snapshot = await drive.save(from_snapshot, data)
+    assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
-    download = drive.read(from_snapshot)
-    data.seek(0)
-    compareStreams(data, download)
+    download = await drive.read(from_snapshot)
+    data.position(0)
+    await compareStreams(data, download)
 
 
-def verify_upload_resumed(time, drive: DriveSource, config: Config, requests_mock: RequestsMock, exception: Exception):
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+async def verify_upload_resumed(time, drive: DriveSource, config: Config, server, status, snapshot_helper, expected=ClientResponseError):
+    from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
-    requests_mock.setFailure(1, ".*upload/drive/v3/files/progress.*", exception)
-    with pytest.raises(type(exception)):
-        drive.save(from_snapshot, data)
+    server.setError(".*upload/drive/v3/files/progress.*", 1, status)
+    with pytest.raises(expected):
+        await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload
-    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" in requests_mock.urls
-    assert drive.drivebackend.last_attempt_count == 0
+    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
     assert drive.drivebackend.last_attempt_location is not None
     assert drive.drivebackend.last_attempt_metadata is not None
     last_location = drive.drivebackend.last_attempt_location
 
     # Retry the upload and let is succeed
-    requests_mock.urls.clear()
-    requests_mock.setFailure(None, None, None)
-    snapshot = drive.save(from_snapshot, data)
+    server.urls.clear()
+    server.match_errors.clear()
+    snapshot = await drive.save(from_snapshot, data)
 
     # We shoudl nto see the upload "initialize" url
-    assert "http://localhost:1234/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true" not in requests_mock.urls
+    assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
     # We should see the last location url (which has a unique token) reused to resume the upload
-    assert last_location in requests_mock.urls
+    assert server.wasUrlRequested(last_location)
 
     # The saved metadata should be cleared out.
     assert drive.drivebackend.last_attempt_count == 1
@@ -384,163 +393,181 @@ def verify_upload_resumed(time, drive: DriveSource, config: Config, requests_moc
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
-    download = drive.read(from_snapshot)
-    data.seek(0)
-    compareStreams(data, download)
+    download = await drive.read(from_snapshot)
+    data.position(0)
+    await compareStreams(data, download)
 
 
-def test_folder_missing_on_upload(time, drive: DriveSource, config: Config, requests_mock: RequestsMock):
+@pytest.mark.asyncio
+async def test_folder_missing_on_upload(time, drive: DriveSource, config: Config, snapshot_helper):
     # Make the folder
-    drive.get()
+    await drive.get()
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Delete the folder
-    drive.drivebackend.delete(drive.getFolderId())
+    await drive.drivebackend.delete(await drive.getFolderId())
 
     # Then try to make one
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+    from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
     with pytest.raises(BackupFolderInaccessible):
-        drive.save(from_snapshot, data)
+        await drive.save(from_snapshot, data)
 
 
-def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, config: Config, server, snapshot_helper, session):
     # Make the folder
-    drive.get()
+    await drive.get()
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Make the folder inaccessible
-    server.getServer().lostPermission.append(drive.getFolderId())
+    server.lostPermission.append(await drive.getFolderId())
 
     # Then upload a folder
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+    from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
     with pytest.raises(BackupFolderInaccessible):
-        drive.save(from_snapshot, data)
+        await drive.save(from_snapshot, data)
 
 
-def test_folder_error_on_query_lost_permission(time, drive: DriveSource, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_folder_error_on_query_lost_permission(time, drive: DriveSource, config: Config, server):
     # Make the folder
-    drive.get()
+    await drive.get()
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Make the folder inaccessible
-    server.getServer().lostPermission.append(drive.getFolderId())
+    server.lostPermission.append(await drive.getFolderId())
 
     # It shoudl fail!
     with pytest.raises(BackupFolderInaccessible):
-        drive.get()
+        await drive.get()
 
 
-def test_folder_error_on_query_deleted(time, drive: DriveSource, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_folder_error_on_query_deleted(time, drive: DriveSource, config: Config, server):
     # Make the folder
-    drive.get()
+    await drive.get()
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Delete the folder
-    drive.drivebackend.delete(drive.getFolderId())
+    await drive.drivebackend.delete(await drive.getFolderId())
 
     # It should fail!
     with pytest.raises(BackupFolderInaccessible):
-        drive.get()
+        await drive.get()
 
 
-def test_backup_folder_not_specified(time, drive: DriveSource, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_backup_folder_not_specified(time, drive: DriveSource, config: Config, server, snapshot_helper):
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
 
     with pytest.raises(BackupFolderMissingError):
-        drive.get()
+        await drive.get()
 
-    from_snapshot: DummySnapshot = DummySnapshot("Test Name", time.toUtc(time.local(1985, 12, 6)), "fake source", "testslug")
-    data = createSnapshotTar("testslug", "Test Name", time.now(), 1024 * 1024 * 10)
+    from_snapshot, data = await snapshot_helper.createFile()
     with pytest.raises(BackupFolderMissingError):
-        drive.save(from_snapshot, data)
+        await drive.save(from_snapshot, data)
 
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
     with pytest.raises(BackupFolderMissingError):
-        drive.get()
+        await drive.get()
     with pytest.raises(BackupFolderMissingError):
-        drive.save(from_snapshot, data)
+        await drive.save(from_snapshot, data)
 
 
-def test_folder_invalid_when_specified(time, drive: DriveSource, config: Config, server: ServerInstance):
-    drive.get()
+@pytest.mark.asyncio
+async def test_folder_invalid_when_specified(time, drive: DriveSource, config: Config, server):
+    await drive.get()
 
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
-    drive.drivebackend.update(drive.getFolderId(), {"trashed": True})
+    await drive.drivebackend.update(await drive.getFolderId(), {"trashed": True})
 
     time.advanceDay()
 
     with pytest.raises(BackupFolderInaccessible):
-        drive.get()
+        await drive.get()
 
 
-def test_no_folder_when_required(time, drive: DriveSource, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_no_folder_when_required(time, drive: DriveSource, config: Config):
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
     with pytest.raises(BackupFolderMissingError):
-        drive.get()
+        await drive.get()
 
 
-def test_existing_folder_already_exists(time, drive: DriveSource, config: Config, server: ServerInstance):
-    drive.get()
+@pytest.mark.asyncio
+async def test_existing_folder_already_exists(time, drive: DriveSource, config: Config):
+    await drive.get()
     drive.checkBeforeChanges()
 
     # Reset folder, try again
     drive.resetFolder()
-    drive.get()
+    await drive.get()
     with pytest.raises(ExistingBackupFolderError):
         drive.checkBeforeChanges()
 
 
-def test_existing_resolved_use_existing(time, drive: DriveSource, config: Config, server: ServerInstance, global_info: GlobalInfo):
-    drive.get()
+@pytest.mark.asyncio
+async def test_existing_resolved_use_existing(time, drive: DriveSource, config: Config, global_info: GlobalInfo):
+    await drive.get()
     drive.checkBeforeChanges()
 
-    folder_id = drive.getFolderId()
+    folder_id = await drive.getFolderId()
 
     # Reset folder, try again
     drive.resetFolder()
-    drive.get()
+    await drive.get()
     with pytest.raises(ExistingBackupFolderError):
         drive.checkBeforeChanges()
 
     global_info.resolveFolder(True)
     drive.resetFolder()
-    drive.get()
+    await drive.get()
     drive.checkBeforeChanges()
-    assert drive.getFolderId() == folder_id
+    assert await drive.getFolderId() == folder_id
 
 
-def test_existing_resolved_create_new(time, drive: DriveSource, config: Config, server: ServerInstance, global_info: GlobalInfo):
-    drive.get()
+@pytest.mark.asyncio
+async def test_existing_resolved_create_new(time, drive: DriveSource, config: Config, global_info: GlobalInfo):
+    await drive.get()
     drive.checkBeforeChanges()
 
-    folder_id = drive.getFolderId()
+    folder_id = await drive.getFolderId()
 
     # Reset folder, try again
     drive.resetFolder()
-    drive.get()
+    await drive.get()
     with pytest.raises(ExistingBackupFolderError):
         drive.checkBeforeChanges()
 
     global_info.resolveFolder(False)
     drive.resetFolder()
-    drive.get()
+    await drive.get()
     drive.checkBeforeChanges()
-    assert drive.getFolderId() != folder_id
+    assert await drive.getFolderId() != folder_id
+
+
+class SnapshotHelper():
+    def __init__(self, uploader, time):
+        self.time = time
+        self.uploader = uploader
+
+    async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name"):
+        from_snapshot: DummySnapshot = DummySnapshot(name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug)
+        data = await self.uploader.upload(createSnapshotTar(slug, name, self.time.now(), size))
+        return from_snapshot, data

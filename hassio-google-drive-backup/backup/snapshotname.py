@@ -17,14 +17,14 @@ SNAPSHOT_NAME_KEYS = {
     "{min}": lambda snapshot_type, now_local, host_info: now_local.strftime("%M"),
     "{sec}": lambda snapshot_type, now_local, host_info: now_local.strftime("%S"),
     "{ampm}": lambda snapshot_type, now_local, host_info: now_local.strftime("%p"),
-    "{version_ha}": lambda snapshot_type, now_local, host_info: str(host_info.get('homeassistant', 'None')),
-    "{version_hassos}": lambda snapshot_type, now_local, host_info: str(host_info.get('hassos', 'None')),
-    "{version_super}": lambda snapshot_type, now_local, host_info: str(host_info.get('supervisor', 'None')),
+    "{version_ha}": lambda snapshot_type, now_local, host_info: str(host_info.get('homeassistant', 'Unknown')),
+    "{version_hassos}": lambda snapshot_type, now_local, host_info: str(host_info.get('hassos', 'Unknown')),
+    "{version_super}": lambda snapshot_type, now_local, host_info: str(host_info.get('supervisor', 'Unknown')),
     "{date}": lambda snapshot_type, now_local, host_info: now_local.strftime("%x"),
     "{time}": lambda snapshot_type, now_local, host_info: now_local.strftime("%X"),
     "{datetime}": lambda snapshot_type, now_local, host_info: now_local.strftime("%c"),
     "{isotime}": lambda snapshot_type, now_local, host_info: now_local.isoformat(),
-    "{hostname}": lambda snapshot_type, now_local, host_info: str(host_info.get('hostname', 'None')),
+    "{hostname}": lambda snapshot_type, now_local, host_info: str(host_info.get('hostname', 'Unknown')),
 }
 
 

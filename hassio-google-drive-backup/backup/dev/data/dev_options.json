@@ -13,5 +13,6 @@
     "folder_file_path": "backup/dev/data/folder.dat",
     "authenticate_url": "http://hassio.local:2567/external/drivecreds/",
     "ingress_token_file_path": "backup/dev/data/ingress.dat",
-    "default_drive_client_id": "test_client_id"
+    "default_drive_client_id": "test_client_id",
+    "low_space_threshold": 1099511627776000
 }

@@ -65,7 +65,7 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
         self.snapshot_type = type
         self.host_info = host_info
 
-    def create(self, options: CreateOptions) -> DummySnapshotSource:
+    async def create(self, options: CreateOptions) -> DummySnapshotSource:
         assert self.enabled
         new_snapshot = DummySnapshotSource(
             # TODO: time shoudl be local
@@ -78,11 +78,11 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
         self.created.append(new_snapshot)
         return new_snapshot
 
-    def get(self) -> Dict[str, DummySnapshotSource]:
+    async def get(self) -> Dict[str, DummySnapshotSource]:
         assert self.enabled
         return self.current
 
-    def delete(self, snapshot: Snapshot):
+    async def delete(self, snapshot: Snapshot):
         assert self.enabled
         assert snapshot.getSource(self._name) is not None
         assert snapshot.getSource(self._name).source() is self._name
@@ -92,7 +92,7 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
         snapshot.removeSource(self._name)
         del self.current[slug]
 
-    def save(self, snapshot: Snapshot, bytes: IOBase = None) -> DummySnapshotSource:
+    async def save(self, snapshot: Snapshot, bytes: IOBase = None) -> DummySnapshotSource:
         assert self.enabled
         assert snapshot.slug() not in self.current
         new_snapshot = DummySnapshotSource(snapshot.name(), snapshot.date(), self._name, snapshot.slug())
@@ -101,11 +101,11 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
         self.saved.append(new_snapshot)
         return new_snapshot
 
-    def read(self, snapshot: DummySnapshotSource) -> IOBase:
+    async def read(self, snapshot: DummySnapshotSource) -> IOBase:
         assert self.enabled
         return None
 
-    def retain(self, snapshot: DummySnapshotSource, retain: bool) -> None:
+    async def retain(self, snapshot: DummySnapshotSource, retain: bool) -> None:
         assert self.enabled
         snapshot.getSource(self.name()).setRetained(retain)
 

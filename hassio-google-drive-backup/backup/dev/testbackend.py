@@ -65,6 +65,7 @@ class HelperTestBackend(object):
         self.upload_info: Dict[str, Any] = {}
         self.simulate_drive_errors = False
         self.error_code = 500
+        self.match_errors = []
         self.last_error = False
         self.snapshots: Dict[str, Any] = {}
         self.snapshot_data: Dict[str, bytearray] = {}
@@ -84,6 +85,14 @@ class HelperTestBackend(object):
         self._username = "user"
         self._password = "pass"
         self.lostPermission = []
+        self.urls = []
+
+    def setError(self, url_regx, attempts, status):
+        self.match_errors.append({
+            'url': url_regx,
+            'attempts': attempts,
+            'status': status
+        })
 
     def defaultOptions(self):
         return {

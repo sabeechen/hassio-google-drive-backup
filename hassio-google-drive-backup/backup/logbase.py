@@ -86,7 +86,7 @@ class LogBase(object):
         logger.error(message)
 
     def warn(self, message: str) -> None:
-        logger.warn(message)
+        logger.warning(message)
 
     def critical(self, message: str) -> None:
         logger.critical(message)

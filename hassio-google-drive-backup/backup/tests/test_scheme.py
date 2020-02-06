@@ -1,3 +1,4 @@
+import pytest
 from ..time import Time
 from ..backupscheme import GenerationalScheme, GenConfig
 from ..snapshots import Snapshot, DummySnapshot
@@ -151,6 +152,7 @@ def test_removal_order(time) -> None:
     ])
 
 
+@pytest.mark.timeout(60)
 def test_simulate_daily_backup_for_4_years(time):
     config = GenConfig(days=4, weeks=4, months=4, years=4, day_of_week='mon', day_of_month=1, day_of_year=1)
     scheme = GenerationalScheme(time, config, count=16)
@@ -182,6 +184,7 @@ def test_simulate_daily_backup_for_4_years(time):
     ])
 
 
+@pytest.mark.timeout(60)
 def test_simulate_agressive_daily_backup_for_4_years(time):
     config = GenConfig(days=4, weeks=4, months=4, years=4, day_of_week='mon', day_of_month=1, day_of_year=1, aggressive=True)
     scheme = GenerationalScheme(time, config, count=16)

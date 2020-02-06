@@ -1,24 +1,67 @@
-import pytest
-import requests
+import logging
+import os
+from os.path import abspath, join
+from shutil import copyfile
+from urllib.parse import quote
 
-from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, ERROR_NO_SNAPSHOT, ERROR_CREDS_EXPIRED, ERROR_MULTIPLE_DELETES
-from ..uiserver import UIServer
-from ..helpers import touch
-from .faketime import FakeTime
+import aiohttp
+import pytest
+from aiohttp import BasicAuth
+
+from ..asyncserver import AsyncServer
 from ..config import Config
-from ..snapshots import Snapshot
+from ..const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
+                     ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
+                     SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from ..coordinator import Coordinator
 from ..globalinfo import GlobalInfo
 from ..hasource import HaSource
+from ..helpers import touch
 from ..model import CreateOptions
+from ..drivesource import DriveSource
 from ..settings import Setting
-from .conftest import ServerInstance
-from urllib.parse import quote
-from requests.exceptions import ConnectionError
-from ..estimator import Estimator
+from ..snapshots import Snapshot
+from ..asynchttpgetter import AsyncHttpGetter
+from .helpers import compareStreams
+from .faketime import FakeTime
 
-URL = "http://localhost:8099/"
-EXTRA_SERVER_URL = "http://localhost:1627/"
+
+class ReaderHelper:
+    def __init__(self, session, ui_port, ingress_port):
+        self.session = session
+        self.ui_port = ui_port
+        self.ingress_port = ingress_port
+        self.timeout = aiohttp.ClientTimeout(total=3)
+
+    def getUrl(self, ingress=True, ssl=False):
+        if ssl:
+            protocol = "https"
+        else:
+            protocol = "http"
+        if ingress:
+            return protocol + "://localhost:" + str(self.ingress_port) + "/"
+        else:
+            return protocol + "://localhost:" + str(self.ui_port) + "/"
+
+    async def getjson(self, path, status=200, json=None, auth=None, ingress=True, ssl=False, sslcontext=None):
+        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, ssl=sslcontext, timeout=self.timeout) as resp:
+            assert resp.status == status
+            return await resp.json()
+
+    async def get(self, path, status=200, json=None, auth=None, ingress=True, ssl=False):
+        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, timeout=self.timeout) as resp:
+            assert resp.status == status
+            return await resp.text()
+
+    async def postjson(self, path, status=200, json=None, ingress=True):
+        async with self.session.post(self.getUrl(ingress) + path, json=json, timeout=self.timeout) as resp:
+            assert resp.status == status
+            return await resp.json()
+
+    async def assertError(self, path, error_type="generic_error", status=500, ingress=True):
+        logging.getLogger().info("Requesting " + path)
+        data = await self.getjson(path, status=status, ingress=ingress)
+        assert data['error_type'] == error_type
 
 
 @pytest.fixture
@@ -37,29 +80,37 @@ def simple_config(config):
 
 
 @pytest.fixture
-def ui_server(coord, ha, ha_requests, time: FakeTime, global_info, config, estimator: Estimator):
-    server = UIServer(coord, ha, ha_requests, time, config, global_info, estimator)
-    server.run()
+async def ui_server(injector, server):
+    os.mkdir("www")
+    server = injector.get(AsyncServer)
+    await server.run()
     yield server
-    server.stop()
+    await server.shutdown()
 
 
-def test_uiserver_start(ui_server: UIServer):
+@pytest.fixture
+def reader(ui_server, session, ui_port, ingress_port):
+    return ReaderHelper(session, ui_port, ingress_port)
+
+
+@pytest.mark.asyncio
+async def test_AsyncServer_start(ui_server: AsyncServer):
     assert ui_server.running
 
 
-def test_uiserver_static_files(ui_server: UIServer):
-    requests.get("http://localhost:8099").raise_for_status()
-    requests.get("http://localhost:8099/reauthenticate").raise_for_status()
-    requests.get("http://localhost:8099/pp").raise_for_status()
-    requests.get("http://localhost:8099/tos").raise_for_status()
-    requests.get("http://localhost:8099/redirect?url=test").raise_for_status()
+@pytest.mark.asyncio
+async def test_AsyncServer_static_files(reader):
+    await reader.get("")
+    await reader.get("reauthenticate")
+    await reader.get("pp")
+    await reader.get("tos")
 
 
-def test_getstatus(ui_server, config: Config, ha):
+@pytest.mark.asyncio
+async def test_getstatus(reader, config: Config, ha, server):
     touch(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-    ha.init()
-    data = getjson("getstatus")
+    await ha.init()
+    data = await reader.getjson("getstatus")
     assert data['ask_error_reports'] is True
     assert data['cred_version'] == 0
     assert data['drive_enabled'] is True
@@ -91,8 +142,9 @@ def test_getstatus(ui_server, config: Config, ha):
     assert len(data['sources']) == 2
 
 
-def test_getstatus_sync(ui_server, config: Config, snapshot: Snapshot):
-    data = getjson("getstatus")
+@pytest.mark.asyncio
+async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot):
+    data = await reader.getjson("getstatus")
     assert data['firstSync'] is False
     assert data['folder_id'] is not None
     assert data['last_error'] is None
@@ -116,12 +168,13 @@ def test_getstatus_sync(ui_server, config: Config, snapshot: Snapshot):
     assert len(data['sources']) == 2
 
 
-def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinator):
+@pytest.mark.asyncio
+async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordinator):
     slug = snapshot.slug()
-    assert getjson("retain?slug={0}&drive=true&ha=true".format(slug)) == {
+    assert await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug)) == {
         'message': "Updated the snapshot's settings"
     }
-    status = getjson("getstatus")
+    status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
@@ -137,8 +190,8 @@ def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinato
         'size': status['sources'][SOURCE_HA]['size']
     }
 
-    getjson("retain?slug={0}&drive=false&ha=false".format(slug))
-    status = getjson("getstatus")
+    await reader.getjson("retain?slug={0}&drive=false&ha=false".format(slug))
+    status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
         'name': SOURCE_GOOGLE_DRIVE,
@@ -153,9 +206,9 @@ def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinato
         'snapshots': 1,
         'size': status['sources'][SOURCE_HA]['size']
     }
-    getjson("deleteSnapshot?slug={0}&drive=true&ha=false".format(slug))
-    getjson("retain?slug={0}&drive=true&ha=true".format(slug))
-    status = getjson("getstatus")
+    await reader.getjson("deleteSnapshot?slug={0}&drive=true&ha=false".format(slug))
+    await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug))
+    status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
@@ -172,8 +225,8 @@ def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinato
     }
 
     # sync again, which should upoload the snapshot to Drive
-    coord.sync()
-    status = getjson("getstatus")
+    await coord.sync()
+    status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 1
 
@@ -181,40 +234,43 @@ def test_retain(ui_server, config: Config, snapshot: Snapshot, coord: Coordinato
     assert status['snapshots'][0]['driveRetain']
 
 
-def test_sync(ui_server, coord: Coordinator, time: FakeTime):
+@pytest.mark.asyncio
+async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, session):
     assert len(coord.snapshots()) == 0
-    status = getjson("sync")
+    status = await reader.getjson("sync")
     assert len(coord.snapshots()) == 1
-    assert status == getjson("getstatus")
+    assert status == await reader.getjson("getstatus")
     time.advance(days=7)
-    assert len(getjson("sync")['snapshots']) == 2
+    assert len((await reader.getjson("sync"))['snapshots']) == 2
 
 
-def test_delete(ui_server, snapshot):
+@pytest.mark.asyncio
+async def test_delete(reader, ui_server, snapshot):
     slug = snapshot.slug()
-    assertError("deleteSnapshot?slug={}&drive=true&ha=false".format("bad_slug"), error_type=ERROR_NO_SNAPSHOT)
-    status = getjson("getstatus")
+    await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format("bad_slug"), error_type=ERROR_NO_SNAPSHOT)
+    status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
-    assert getjson("deleteSnapshot?slug={}&drive=true&ha=false".format(slug)) == {"message": "Its gone!"}
-    assertError("deleteSnapshot?slug={}&drive=true&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
-    status = getjson("getstatus")
+    assert await reader.getjson("deleteSnapshot?slug={}&drive=true&ha=false".format(slug)) == {"message": "Its gone!"}
+    await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
+    status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 0
-    assert getjson("deleteSnapshot?slug={}&drive=false&ha=true".format(slug)) == {"message": "Its gone!"}
-    status = getjson("getstatus")
+    assert await reader.getjson("deleteSnapshot?slug={}&drive=false&ha=true".format(slug)) == {"message": "Its gone!"}
+    status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 0
-    assertError("deleteSnapshot?slug={}&drive=false&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
+    await reader.assertError("deleteSnapshot?slug={}&drive=false&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
 
 
-def test_backup_now(ui_server, time: FakeTime, snapshot: Snapshot, coord: Coordinator):
+@pytest.mark.asyncio
+async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot, coord: Coordinator):
     assert len(coord.snapshots()) == 1
-    assert getjson("getstatus")["snapshots"][0]["date"] == time.now().isoformat()
+    assert (await reader.getjson("getstatus"))["snapshots"][0]["date"] == time.now().isoformat()
 
     time.advance(hours=1)
-    assert getjson("snapshot?custom_name=TestName&retain_drive=False&retain_ha=False") == {
+    assert await reader.getjson("snapshot?custom_name=TestName&retain_drive=False&retain_ha=False") == {
         'message': "Requested snapshot 'TestName'"
     }
-    status = getjson('getstatus')
+    status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 2
     assert status["snapshots"][1]["date"] == time.now().isoformat()
     assert status["snapshots"][1]["name"] == "TestName"
@@ -222,11 +278,11 @@ def test_backup_now(ui_server, time: FakeTime, snapshot: Snapshot, coord: Coordi
     assert not status["snapshots"][1]["haRetain"]
 
     time.advance(hours=1)
-    assert getjson("snapshot?custom_name=TestName2&retain_drive=True&retain_ha=False") == {
+    assert await reader.getjson("snapshot?custom_name=TestName2&retain_drive=True&retain_ha=False") == {
         'message': "Requested snapshot 'TestName2'"
     }
-    coord.sync()
-    status = getjson('getstatus')
+    await coord.sync()
+    status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 3
     assert not status["snapshots"][1]["driveRetain"]
     assert status["snapshots"][2]["date"] == time.now().isoformat()
@@ -235,11 +291,11 @@ def test_backup_now(ui_server, time: FakeTime, snapshot: Snapshot, coord: Coordi
     assert status["snapshots"][2]["driveRetain"]
 
     time.advance(hours=1)
-    assert getjson("snapshot?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
+    assert await reader.getjson("snapshot?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
         'message': "Requested snapshot 'TestName3'"
     }
-    coord.sync()
-    status = getjson('getstatus')
+    await coord.sync()
+    status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 4
     assert not status["snapshots"][1]["driveRetain"]
     assert status["snapshots"][3]["date"] == time.now().isoformat()
@@ -248,7 +304,8 @@ def test_backup_now(ui_server, time: FakeTime, snapshot: Snapshot, coord: Coordi
     assert not status["snapshots"][3]["driveRetain"]
 
 
-def test_config(ui_server, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_config(reader, ui_server, config: Config, server):
     update = {
         "config": {
             "days_between_snapshots": 20,
@@ -257,84 +314,91 @@ def test_config(ui_server, config: Config, server: ServerInstance):
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     assert config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) == 20
-    assert server.getServer()._options["days_between_snapshots"] == 20
+    assert server._options["days_between_snapshots"] == 20
     assert ui_server._starts == 1
 
 
-def test_auth_and_restart(ui_server, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_auth_and_restart(reader, ui_server, config: Config, server):
     update = {"config": {"require_login": True, "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
-    assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    await ui_server.restart_complete.wait()
     assert config.get(Setting.REQUIRE_LOGIN)
-    assert server.getServer()._options['require_login']
+    assert server._options['require_login']
     assert ui_server._starts == 2
 
-    get("getstatus", status=401, url=EXTRA_SERVER_URL)
-    get("getstatus", auth=("user", "badpassword"), status=401, url=EXTRA_SERVER_URL)
-    get("getstatus", auth=("user", "pass"), url=EXTRA_SERVER_URL)
-    status = getjson("sync", auth=("user", "pass"), url=EXTRA_SERVER_URL)
+    await reader.get("getstatus", status=401, ingress=False)
+    await reader.get("getstatus", auth=BasicAuth("user", "badpassword"), status=401, ingress=False)
+    await reader.get("getstatus", auth=BasicAuth("user", "pass"), ingress=False)
+    status = await reader.getjson("sync", auth=BasicAuth("user", "pass"), ingress=False)
 
     # verify a the sync succeeded (no errors)
     assert status["last_error"] is None
 
     # The ingress server shouldn't require login, even though its turned on for the extra server
-    get("getstatus")
+    await reader.get("getstatus")
     # even a bad user/pass should work
-    get("getstatus", auth=("baduser", "badpassword"))
+    await reader.get("getstatus", auth=BasicAuth("baduser", "badpassword"))
 
 
-def test_expose_extra_server_option(ui_server: UIServer, config: Config):
-    with pytest.raises(ConnectionError):
-        getjson("sync", url=EXTRA_SERVER_URL)
+@pytest.mark.asyncio
+async def test_expose_extra_server_option(reader, ui_server: AsyncServer, config: Config):
+    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
+        await reader.getjson("sync", ingress=False)
     config.override(Setting.EXPOSE_EXTRA_SERVER, True)
-    ui_server.run()
-    getjson("sync", url=EXTRA_SERVER_URL)
-    ui_server.run()
-    getjson("sync", url=EXTRA_SERVER_URL)
+    await ui_server.run()
+    await reader.getjson("sync", ingress=False)
+    await ui_server.run()
+    await reader.getjson("sync", ingress=False)
     config.override(Setting.EXPOSE_EXTRA_SERVER, False)
-    ui_server.run()
-    with pytest.raises(ConnectionError):
-        getjson("sync", url=EXTRA_SERVER_URL)
-    getjson("sync")
+    await ui_server.run()
+    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
+        await reader.getjson("sync", ingress=False)
+    await reader.getjson("sync")
 
 
-def test_expose_extra_server_override(ui_server: UIServer, config: Config, ha: HaSource):
-    with pytest.raises(ConnectionError):
-        getjson("sync", url=EXTRA_SERVER_URL)
+@pytest.mark.asyncio
+async def test_expose_extra_server_override(reader, ui_server: AsyncServer, config: Config, ha: HaSource):
+    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
+        await reader.getjson("sync", ingress=False)
     ha._temporary_extra_server = True
-    ui_server.run()
-    getjson("sync", url=EXTRA_SERVER_URL)
-    ui_server.run()
-    getjson("sync", url=EXTRA_SERVER_URL)
+    await ui_server.run()
+    await reader.getjson("sync", ingress=False)
+    await ui_server.run()
+    await reader.getjson("sync", ingress=False)
     ha._temporary_extra_server = False
-    ui_server.run()
-    with pytest.raises(ConnectionError):
-        getjson("sync", url=EXTRA_SERVER_URL)
-    getjson("sync")
+    await ui_server.run()
+    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
+        await reader.getjson("sync", ingress=False)
+    await reader.getjson("sync")
 
 
-def test_update_ingress_true(ui_server: UIServer, ha: HaSource, config: Config):
+@pytest.mark.asyncio
+async def test_update_ingress_true(reader, ui_server: AsyncServer, ha: HaSource, config: Config):
     # Simulate a user who upgraded from a non-ingress aware version
-    ha.init()
+    await ha.init()
     assert ha.runTemporaryServer()
     assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
-    ui_server.run()
-    assert getjson('getstatus')['warn_ingress_upgrade']
-    assert getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+    await ui_server.run()
+    assert (await reader.getjson('getstatus'))['warn_ingress_upgrade']
+    assert (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
 
     # Expose the extra server, verify its still available
-    assert getjson('exposeserver?expose=true') == {'message': 'Configuration updated', 'redirect': ''}
+    assert await reader.getjson('exposeserver?expose=true') == {'message': 'Configuration updated', 'redirect': ''}
     assert config.get(Setting.EXPOSE_EXTRA_SERVER)
-    assert not getjson('getstatus')['warn_ingress_upgrade']
-    assert not getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+    await ui_server.restart_complete.wait()
+    assert not (await reader.getjson('getstatus'))['warn_ingress_upgrade']
+    assert not (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
 
 
-def test_update_ingress_false(ui_server: UIServer, ha: HaSource, config: Config):
+@pytest.mark.asyncio
+async def test_update_ingress_false(reader, ui_server: AsyncServer, ha: HaSource, config: Config):
     # Simulate a user who upgraded from a non-ingress aware version
-    ha.init()
+    await ha.init()
     update = {
         "config": {
             "require_login": True,
@@ -343,59 +407,66 @@ def test_update_ingress_false(ui_server: UIServer, ha: HaSource, config: Config)
         },
         "snapshot_folder": "unused"
     }
-    assert postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+
+    await ui_server.waitForReset()
 
     assert ha.runTemporaryServer()
     assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
-    ui_server.run()
-    assert getjson('getstatus', auth=("user", "pass"))['warn_ingress_upgrade']
-    assert getjson('getstatus', auth=("user", "pass"), url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+    await ui_server.run()
+    assert (await reader.getjson('getstatus', auth=BasicAuth("user", "pass")))['warn_ingress_upgrade']
+    assert (await reader.getjson('getstatus', auth=BasicAuth("user", "pass"), ingress=False))['warn_ingress_upgrade']
 
     # Turn off the extra server, verify its off
-    assert getjson('exposeserver?expose=false', auth=("user", "pass")) == {'message': 'Configuration updated', 'redirect': ''}
+    assert await reader.getjson('exposeserver?expose=false', auth=BasicAuth("user", "pass")) == {'message': 'Configuration updated', 'redirect': ''}
+    await ui_server.waitForReset()
     assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
     assert not config.get(Setting.USE_SSL)
     assert not config.get(Setting.REQUIRE_LOGIN)
-    assert not getjson('getstatus')['warn_ingress_upgrade']
-    with pytest.raises(ConnectionError):
-        assert not getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+    assert not (await reader.getjson('getstatus'))['warn_ingress_upgrade']
+    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
+        assert not (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
 
 
-def test_update_expose_server_redirect(ui_server: UIServer, ha: HaSource, config: Config):
-    ha.init()
+@pytest.mark.asyncio
+async def test_update_expose_server_redirect(reader, ui_server: AsyncServer, ha: HaSource, config: Config):
+    await ha.init()
     assert ha.runTemporaryServer()
     assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
-    ui_server.run()
-    assert getjson('getstatus')['warn_ingress_upgrade']
+    await ui_server.run()
+    assert (await reader.getjson('getstatus'))['warn_ingress_upgrade']
 
     # Verify the extra server is running
-    assert getjson('getstatus', url=EXTRA_SERVER_URL)['warn_ingress_upgrade']
+    assert (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
 
-    assert getjson('exposeserver?expose=true', url=EXTRA_SERVER_URL) == {
+    assert await reader.getjson('exposeserver?expose=true', ingress=False) == {
         'message': 'Configuration updated',
         'redirect': 'http://{host}:1337/hassio/ingress/self_slug'}
 
 
-def test_update_error_reports_true(ui_server, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_update_error_reports_true(reader, ui_server, config: Config, server):
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert getjson("errorreports?send=true") == {'message': 'Configuration updated'}
+    assert await reader.getjson("errorreports?send=true") == {'message': 'Configuration updated'}
     assert config.get(Setting.SEND_ERROR_REPORTS) is True
     assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert server.getServer()._options["send_error_reports"] is True
+    assert server._options["send_error_reports"] is True
 
 
-def test_update_error_reports_false(ui_server, config: Config, server: ServerInstance):
+@pytest.mark.asyncio
+async def test_update_error_reports_false(reader, ui_server, config: Config, server):
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert getjson("errorreports?send=false") == {'message': 'Configuration updated'}
+    assert await reader.getjson("errorreports?send=false") == {'message': 'Configuration updated'}
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert server.getServer()._options["send_error_reports"] is False
+    assert server._options["send_error_reports"] is False
 
 
-def test_drive_cred_generation(ui_server, snapshot, server: ServerInstance, config: Config, global_info: GlobalInfo):
-    status = getjson("getstatus")
+@pytest.mark.asyncio
+async def test_drive_cred_generation(reader, ui_server, snapshot, server, config: Config, global_info: GlobalInfo, session):
+    status = await reader.getjson("getstatus")
     assert len(status["snapshots"]) == 1
     assert global_info.credVersion == 0
     # Invalidate the drive creds, sync, then verify we see an error
@@ -405,28 +476,30 @@ def test_drive_cred_generation(ui_server, snapshot, server: ServerInstance, conf
         "drive_refresh_token": "another_refresh_token",
         "drive_auth_token": "another_auth_token"
     })
-    status = getjson("sync")
+    status = await reader.getjson("sync")
     assert status["last_error"]["error_type"] == "creds_bad"
 
     # simulate the user going through the Drive authentication workflow
-    requests.get(config.get(Setting.AUTHENTICATE_URL) + "?redirectbacktoken=" + quote(URL + "token")).raise_for_status()
-    status = getjson("sync")["last_error"] is ERROR_CREDS_EXPIRED
+    async with session.get(config.get(Setting.AUTHENTICATE_URL) + "?redirectbacktoken=" + quote(reader.getUrl(True) + "token")) as resp:
+        resp.raise_for_status()
+    status = (await reader.getjson("sync"))["last_error"] is ERROR_CREDS_EXPIRED
     assert global_info.credVersion == 1
 
 
-def test_confirm_multiple_deletes(ui_server, server: ServerInstance, config: Config, time: FakeTime, ha: HaSource):
+@pytest.mark.asyncio
+async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
-    server.getServer()._options.update({"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
+    server._options.update({"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
     config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
     config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
 
     # create three snapshots
-    ha.create(CreateOptions(time.now(), "Name1"))
-    ha.create(CreateOptions(time.now(), "Name2"))
-    ha.create(CreateOptions(time.now(), "Name3"))
+    await ha.create(CreateOptions(time.now(), "Name1"))
+    await ha.create(CreateOptions(time.now(), "Name2"))
+    await ha.create(CreateOptions(time.now(), "Name3"))
 
     # verify we have 3 snapshots an the multiple delete error
-    status = getjson("sync")
+    status = await reader.getjson("sync")
     assert len(status['snapshots']) == 3
     assert status["last_error"]["error_type"] == ERROR_MULTIPLE_DELETES
     assert status["last_error"]["data"] == {
@@ -435,26 +508,26 @@ def test_confirm_multiple_deletes(ui_server, server: ServerInstance, config: Con
     }
 
     # request that multiple deletes be allowed
-    assert getjson("confirmdelete?always=false") == {
+    assert await reader.getjson("confirmdelete?always=false") == {
         'message': 'Snapshots deleted this one time'
     }
     assert config.get(Setting.CONFIRM_MULTIPLE_DELETES)
 
     # backup, verify the deletes go through
-    status = getjson("sync")
+    status = await reader.getjson("sync")
     assert status["last_error"] is None
     assert len(status["snapshots"]) == 1
 
     # create another snapshot, verify we delete the one
-    ha.create(CreateOptions(time.now(), "Name1"))
-    status = getjson("sync")
+    await ha.create(CreateOptions(time.now(), "Name1"))
+    status = await reader.getjson("sync")
     assert len(status['snapshots']) == 1
     assert status["last_error"] is None
 
     # create two mroe snapshots, verify we see the error again
-    ha.create(CreateOptions(time.now(), "Name1"))
-    ha.create(CreateOptions(time.now(), "Name2"))
-    status = getjson("sync")
+    await ha.create(CreateOptions(time.now(), "Name1"))
+    await ha.create(CreateOptions(time.now(), "Name2"))
+    status = await reader.getjson("sync")
     assert len(status['snapshots']) == 3
     assert status["last_error"]["error_type"] == ERROR_MULTIPLE_DELETES
     assert status["last_error"]["data"] == {
@@ -463,38 +536,126 @@ def test_confirm_multiple_deletes(ui_server, server: ServerInstance, config: Con
     }
 
 
-def test_update_multiple_deletes_setting(ui_server, server: ServerInstance, config: Config, time: FakeTime, ha: HaSource, global_info: GlobalInfo):
-    assert getjson("confirmdelete?always=true") == {
+@pytest.mark.asyncio
+async def test_update_multiple_deletes_setting(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource, global_info: GlobalInfo):
+    assert await reader.getjson("confirmdelete?always=true") == {
         'message': 'Configuration updated, I\'ll never ask again'
     }
     assert not config.get(Setting.CONFIRM_MULTIPLE_DELETES)
 
 
-def getjson(path, status=200, json=None, auth=None, url=None):
-    if url is None:
-        url = URL
-    resp = requests.get(url + path, json=json, auth=auth)
-    assert resp.status_code == status
-    data = resp.json()
-    return data
+@pytest.mark.asyncio
+async def test_resolve_folder_reuse(reader, config: Config, snapshot, time, drive):
+    # Simulate an existing folder error
+    old_folder = await drive.getFolderId()
+    os.remove(config.get(Setting.FOLDER_FILE_PATH))
+    time.advance(days=1)
+    status = await reader.getjson("sync")
+    assert status["last_error"]["error_type"] == ERROR_EXISTING_FOLDER
+
+    assert (await reader.getjson("resolvefolder?use_existing=true")) == {'message': 'Done'}
+    status = await reader.getjson("sync")
+    assert status["last_error"] is None
+    assert old_folder == await drive.getFolderId()
 
 
-def get(path, status=200, json=None, auth=None, url=None):
-    if url is None:
-        url = URL
-    resp = requests.get(url + path, json=json, auth=auth)
-    assert resp.status_code == status
+@pytest.mark.asyncio
+async def test_resolve_folder_new(reader, config: Config, snapshot, time, drive):
+    # Simulate an existing folder error
+    old_folder = await drive.getFolderId()
+    os.remove(config.get(Setting.FOLDER_FILE_PATH))
+    time.advance(days=1)
+    status = await reader.getjson("sync")
+    assert status["last_error"]["error_type"] == ERROR_EXISTING_FOLDER
+
+    assert (await reader.getjson("resolvefolder?use_existing=false")) == {'message': 'Done'}
+    status = await reader.getjson("sync")
+    assert status["last_error"] is None
+    assert old_folder != await drive.getFolderId()
 
 
-def postjson(path, status=200, json=None, url=None):
-    if url is None:
-        url = URL
-    resp = requests.post(url + path, json=json)
-    assert resp.status_code == status
-    data = resp.json()
-    return data
+@pytest.mark.asyncio
+async def test_ssl_server(reader: ReaderHelper, ui_server: AsyncServer, config, server, cleandir):
+    ssl_dir = abspath(join(__file__, "..", "..", "dev", "ssl"))
+    copyfile(join(ssl_dir, "localhost.crt"), join(cleandir, "localhost.crt"))
+    copyfile(join(ssl_dir, "localhost.key"), join(cleandir, "localhost.key"))
+    update = {
+        "config": {
+            "use_ssl": True,
+            "expose_extra_server": True,
+            "certfile": join(cleandir, "localhost.crt"),
+            "keyfile": join(cleandir, "localhost.key")
+        },
+        "snapshot_folder": "unused"
+    }
+    assert ui_server._starts == 1
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    await ui_server.restart_complete.wait()
+    assert ui_server._starts == 2
 
 
-def assertError(path, error_type="generic_error", status=500, url=None):
-    data = getjson(path, status=status, url=url)
-    assert data['error_type'] == error_type
+@pytest.mark.asyncio
+async def test_bad_ssl_config_missing_files(reader: ReaderHelper, ui_server: AsyncServer, config, server, cleandir):
+    update = {
+        "config": {
+            "use_ssl": True,
+            "expose_extra_server": True,
+            "certfile": join(cleandir, "localhost.crt"),
+            "keyfile": join(cleandir, "localhost.key")
+        },
+        "snapshot_folder": "unused"
+    }
+    assert ui_server._starts == 1
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    await ui_server.restart_complete.wait()
+    assert ui_server._starts == 2
+
+    # Verify the ingress endpoint is still up, but not the SSL one
+    await reader.getjson("getstatus")
+    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
+        await reader.getjson("getstatus", ingress=False, ssl=True, sslcontext=False)
+
+
+@pytest.mark.asyncio
+async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: AsyncServer, config, server, cleandir):
+    ssl_dir = abspath(join(__file__, "..", "..", "dev", "ssl"))
+    copyfile(join(ssl_dir, "localhost.crt"), join(cleandir, "localhost.crt"))
+    copyfile(join(ssl_dir, "localhost.key"), join(cleandir, "localhost.key"))
+    update = {
+        "config": {
+            "use_ssl": True,
+            "expose_extra_server": True,
+            "certfile": join(cleandir, "localhost.key"),
+            "keyfile": join(cleandir, "localhost.crt")
+        },
+        "snapshot_folder": "unused"
+    }
+    assert ui_server._starts == 1
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    await ui_server.restart_complete.wait()
+    assert ui_server._starts == 2
+
+    # Verify the ingress endpoint is still up, but not the SSL one
+    await reader.getjson("getstatus")
+    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
+        await reader.getjson("getstatus", ingress=False, ssl=True, sslcontext=False)
+
+
+@pytest.mark.asyncio
+async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
+    await ha.delete(snapshot)
+    # download the item from Google Drive
+    from_drive = await drive.read(snapshot)
+    # Download rom the web server
+    from_server = AsyncHttpGetter(reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+    await compareStreams(from_drive, from_server)
+
+
+@pytest.mark.asyncio
+async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
+    await drive.delete(snapshot)
+    # download the item from Google Drive
+    from_ha = await ha.read(snapshot)
+    # Download rom the web server
+    from_server = AsyncHttpGetter(reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+    await compareStreams(from_ha, from_server)

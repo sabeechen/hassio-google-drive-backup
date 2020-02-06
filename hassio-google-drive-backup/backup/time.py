@@ -2,10 +2,13 @@ from datetime import datetime, timedelta
 from dateutil.tz import tzutc
 from dateutil.tz import tzlocal
 from .helpers import parseDateTime
-from time import sleep
+from injector import inject, singleton
+import asyncio
 
 
+@singleton
 class Time(object):
+    @inject
     def __init__(self, local_tz=tzlocal()):
         self.local_tz = local_tz
 
@@ -24,8 +27,8 @@ class Time(object):
     def toUtc(self, dt: datetime) -> datetime:
         return dt.astimezone(tzutc())
 
-    def sleep(self, seconds: float) -> None:
-        sleep(seconds)
+    async def sleepAsync(self, seconds: float) -> None:
+        await asyncio.sleep(seconds)
 
     def local(self, year, month, day, hour=0, minute=0, second=0, ms=0):
         return datetime(year, month, day, hour, minute, second, ms, tzinfo=self.local_tz)

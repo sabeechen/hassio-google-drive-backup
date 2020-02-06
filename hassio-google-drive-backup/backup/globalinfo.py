@@ -2,9 +2,12 @@
 from .time import Time
 from .logbase import LogBase
 from threading import Lock
+from injector import inject, singleton
 
 
+@singleton
 class GlobalInfo(LogBase):
+    @inject
     def __init__(self, time: Time):
         self._time = time
         self._syncs = 0
@@ -25,6 +28,7 @@ class GlobalInfo(LogBase):
         self._multipleDeletesPermitted = False
         self._dns_info = None
         self._skip_space_check_once = False
+        self._ignore_errors_for_now = False
 
         self.drive_folder_id = None
         self.ha_ssl = False
@@ -35,6 +39,15 @@ class GlobalInfo(LogBase):
         self.debug = {}
         self.lock = Lock()
         self._use_existing = None
+
+    def ignoreErrorsForNow(self):
+        return self._ignore_errors_for_now
+
+    def setIngoreErrorsForNow(self, value):
+        self._ignore_errors_for_now = value
+
+    def failureCount(self):
+        return self._failures
 
     def refresh(self):
         pass
@@ -51,6 +64,7 @@ class GlobalInfo(LogBase):
         self._last_success = self._time.now()
         self._successes += 1
         self._multipleDeletesPermitted = False
+        self.setIngoreErrorsForNow(False)
 
     def sync(self):
         self._last_sync_start = self._time.now()
@@ -62,6 +76,7 @@ class GlobalInfo(LogBase):
         self._failures += 1
         self._last_failure_time = self._time.now()
         self._supress_error = False
+        self.setIngoreErrorsForNow(False)
 
     def suppressError(self):
         self._supress_error = True

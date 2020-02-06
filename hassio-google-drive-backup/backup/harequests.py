@@ -1,14 +1,15 @@
-from requests import Response
-from requests.exceptions import HTTPError
+from aiohttp.client_exceptions import ClientResponseError
 from .exceptions import HomeAssistantDeleteError
 from .snapshots import HASnapshot
 from .snapshots import Snapshot
 from .config import Config
 from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from .logbase import LogBase
-from .seekablerequest import SeekableRequest
+from .asynchttpgetter import AsyncHttpGetter
 from .settings import Setting
 from typing import Any, List, Dict
+from injector import inject
+from aiohttp import ClientSession
 import os
 
 NOTIFICATION_ID = "backup_broken"
@@ -20,94 +21,98 @@ class HaRequests(LogBase):
     """
     Stores logic for interacting with the Hass.io add-on API
     """
-    def __init__(self, config: Config, client):
+    @inject
+    def __init__(self, config: Config, session: ClientSession):
         self.config: Config = config
         self.cache = {}
-        self._client = client
+        self.session = session
 
-    def createSnapshot(self, info):
+    async def createSnapshot(self, info):
         if 'folders' in info or 'addons' in info:
             url = "{0}snapshots/new/partial".format(self.config.get(Setting.HASSIO_URL))
         else:
             url = "{0}snapshots/new/full".format(self.config.get(Setting.HASSIO_URL))
-        return self._postHassioData(url, info)
+        return await self._postHassioData(url, info)
 
-    def auth(self, user: str, password: str) -> None:
-        self._postHassioData("{}auth".format(self.config.get(Setting.HASSIO_URL)), {"username": user, "password": password})
+    async def auth(self, user: str, password: str) -> None:
+        await self._postHassioData("{}auth".format(self.config.get(Setting.HASSIO_URL)), {"username": user, "password": password})
 
-    def upload(self, stream):
+    async def upload(self, stream):
         url: str = "{0}snapshots/new/upload".format(
             self.config.get(Setting.HASSIO_URL))
-        return self._postHassioData(url, data=stream)
+        async with stream:
+            return await self._postHassioData(url, data=stream.generator(self.config.get(Setting.DEFAULT_CHUNK_SIZE)))
 
-    def delete(self, slug) -> None:
+    async def delete(self, slug) -> None:
         delete_url: str = "{0}snapshots/{1}/remove".format(self.config.get(Setting.HASSIO_URL), slug)
         if slug in self.cache:
             del self.cache[slug]
         try:
-            self._postHassioData(delete_url, {})
-        except HTTPError as e:
-            if e.response.status_code == 400:
+            await self._postHassioData(delete_url, {})
+        except ClientResponseError as e:
+            if e.status == 400:
                 raise HomeAssistantDeleteError()
             raise e
 
-    def snapshot(self, slug):
+    async def snapshot(self, slug):
         if slug in self.cache:
             info = self.cache[slug]
         else:
-            info = self._getHassioData("{0}snapshots/{1}/info".format(self.config.get(Setting.HASSIO_URL), slug))
+            info = await self._getHassioData("{0}snapshots/{1}/info".format(self.config.get(Setting.HASSIO_URL), slug))
             self.cache[slug] = info
         return HASnapshot(info, self.config.isRetained(slug))
 
-    def snapshots(self):
-        return self._getHassioData(self.config.get(Setting.HASSIO_URL) + "snapshots")
+    async def snapshots(self):
+        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "snapshots")
 
-    def haInfo(self):
+    async def haInfo(self):
         url = "{0}homeassistant/info".format(self.config.get(Setting.HASSIO_URL))
-        return self._getHassioData(url)
+        return await self._getHassioData(url)
 
-    def selfInfo(self) -> Dict[str, Any]:
-        return self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/self/info")
+    async def selfInfo(self) -> Dict[str, Any]:
+        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/self/info")
 
-    def hassosInfo(self) -> Dict[str, Any]:
-        return self._getHassioData(self.config.get(Setting.HASSIO_URL) + "hassos/info")
+    async def hassosInfo(self) -> Dict[str, Any]:
+        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "hassos/info")
 
-    def info(self) -> Dict[str, Any]:
-        return self._getHassioData(self.config.get(Setting.HASSIO_URL) + "info")
+    async def info(self) -> Dict[str, Any]:
+        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "info")
 
-    def refreshSnapshots(self):
+    async def refreshSnapshots(self):
         url = "{0}snapshots/reload".format(self.config.get(Setting.HASSIO_URL))
-        return self._postHassioData(url)
+        return await self._postHassioData(url)
 
-    def supervisorInfo(self):
+    async def supervisorInfo(self):
         url = "{0}supervisor/info".format(self.config.get(Setting.HASSIO_URL))
-        return self._getHassioData(url)
+        return await self._getHassioData(url)
 
-    def restore(self, slug: str, password: str = None) -> None:
+    async def restore(self, slug: str, password: str = None) -> None:
         url: str = "{0}snapshots/{1}/restore/full".format(self.config.get(Setting.HASSIO_URL), slug)
         if password:
-            self._postHassioData(url, {'password': password})
+            await self._postHassioData(url, {'password': password})
         else:
-            self._postHassioData(url, {})
+            await self._postHassioData(url, {})
 
-    def download(self, slug) -> SeekableRequest:
+    async def download(self, slug) -> AsyncHttpGetter:
         url = "{0}snapshots/{1}/download".format(self.config.get(Setting.HASSIO_URL), slug)
-        return SeekableRequest(url, self._getHassioHeaders()).prepare()
+        ret = AsyncHttpGetter(url, self._getHassioHeaders(), self.session)
+        return ret
 
-    def _validateHassioReply(self, resp: Response) -> Dict[str, Any]:
-        resp.raise_for_status()
-        details: Dict[str, Any] = resp.json()
-        if "result" not in details or details["result"] != "ok":
-            if "result" in details:
-                raise Exception("Hassio said: " + details["result"])
-            else:
-                raise Exception(
-                    "Malformed response from Hassio: " + str(details))
+    async def _validateHassioReply(self, resp) -> Dict[str, Any]:
+        async with resp:
+            resp.raise_for_status()
+            details: Dict[str, Any] = await resp.json()
+            if "result" not in details or details["result"] != "ok":
+                if "result" in details:
+                    raise Exception("Hassio said: " + details["result"])
+                else:
+                    raise Exception(
+                        "Malformed response from Hassio: " + str(details))
 
-        if "data" not in details:
-            return {}
+            if "data" not in details:
+                return {}
 
-        return details["data"]
+            return details["data"]
 
     def _getToken(self):
         configured = self.config.get(Setting.HASSIO_TOKEN)
@@ -127,60 +132,61 @@ class HaRequests(LogBase):
             'Client-Identifier': self.config.clientIdentifier()
         }
 
-    def _getHassioData(self, url: str) -> Dict[str, Any]:
+    async def _getHassioData(self, url: str) -> Dict[str, Any]:
         self.debug("Making Hassio request: " + url)
-        return self._validateHassioReply(self._client.get(url, headers=self._getHassioHeaders()))
+        return await self._validateHassioReply(await self.session.get(url, headers=self._getHassioHeaders()))
 
-    def _postHassioData(self, url: str, json=None, file=None, data=None) -> Dict[str, Any]:
+    async def _postHassioData(self, url: str, json=None, file=None, data=None) -> Dict[str, Any]:
         self.debug("Making Hassio request: " + url)
-        return self._validateHassioReply(self._client.post(url, headers=self._getHassioHeaders(), json=json, data=data))
+        return await self._validateHassioReply(await self.session.post(url, headers=self._getHassioHeaders(), json=json, data=data))
 
-    def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
-        self._client.post(self.config.get(Setting.HOME_ASSISTANT_URL) + path, headers=self._getHaHeaders(), json=data).raise_for_status()
+    async def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
+        async with self.session.post(self.config.get(Setting.HOME_ASSISTANT_URL) + path, headers=self._getHaHeaders(), json=data) as resp:
+            resp.raise_for_status()
 
-    def sendNotification(self, title: str, message: str) -> None:
+    async def sendNotification(self, title: str, message: str) -> None:
         data: Dict[str, str] = {
             "title": title,
             "message": message,
             "notification_id": NOTIFICATION_ID
         }
-        self._postHaData("services/persistent_notification/create", data)
+        await self._postHaData("services/persistent_notification/create", data)
 
-    def eventSnapshotStart(self, name, time):
-        self._sendEvent(EVENT_SNAPSHOT_START, {
+    async def eventSnapshotStart(self, name, time):
+        await self._sendEvent(EVENT_SNAPSHOT_START, {
             'snapshot_name': name,
             'snapshot_time': str(time)
         })
 
-    def eventSnapshotEnd(self, name, time, completed):
-        self._sendEvent(EVENT_SNAPSHOT_END, {
+    async def eventSnapshotEnd(self, name, time, completed):
+        await self._sendEvent(EVENT_SNAPSHOT_END, {
             'completed': completed,
             'snapshot_name': name,
             'snapshot_time': str(time)
         })
 
-    def _sendEvent(self, event_name: str, data: Dict[str, str]) -> None:
-        self._postHaData("events/" + event_name, data)
+    async def _sendEvent(self, event_name: str, data: Dict[str, str]) -> None:
+        await self._postHaData("events/" + event_name, data)
 
-    def dismissNotification(self) -> None:
+    async def dismissNotification(self) -> None:
         data: Dict[str, str] = {
             "notification_id": NOTIFICATION_ID
         }
-        self._postHaData("services/persistent_notification/dismiss", data)
+        await self._postHaData("services/persistent_notification/dismiss", data)
 
-    def updateSnapshotStaleSensor(self, state: bool) -> None:
+    async def updateSnapshotStaleSensor(self, state: bool) -> None:
         data: Dict[str, Any] = {
             "state": state,
             "attributes": {
                 "friendly_name": "Snapshots Stale"
             }
         }
-        self._postHaData("states/binary_sensor.snapshots_stale", data)
+        await self._postHaData("states/binary_sensor.snapshots_stale", data)
 
-    def updateConfig(self, config) -> None:
-        return self._postHassioData("{0}addons/self/options".format(self.config.get(Setting.HASSIO_URL)), {'options': config})
+    async def updateConfig(self, config) -> None:
+        return await self._postHassioData("{0}addons/self/options".format(self.config.get(Setting.HASSIO_URL)), {'options': config})
 
-    def updateSnapshotsSensor(self, state: str, snapshots: List[Snapshot]) -> None:
+    async def updateSnapshotsSensor(self, state: str, snapshots: List[Snapshot]) -> None:
         last = "Never"
         if len(snapshots) > 0:
             last = max(snapshots, key=lambda s: s.date()).date().isoformat()
@@ -195,4 +201,4 @@ class HaRequests(LogBase):
                 "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date().isoformat()), "state": s.status()}, snapshots))
             }
         }
-        self._postHaData("states/sensor.snapshot_backup", data)
+        await self._postHaData("states/sensor.snapshot_backup", data)

@@ -1,7 +1,9 @@
 import os.path
 import os
 import cherrypy
-import logging
+import ssl
+import aiofiles
+import asyncio
 
 from datetime import timedelta
 from oauth2client.client import OAuth2WebServerFlow
@@ -18,7 +20,6 @@ from .logbase import LogBase
 from typing import Dict, Any
 from .model import CreateOptions
 from .time import Time
-from pathlib import Path
 from .coordinator import Coordinator
 from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from .harequests import HaRequests
@@ -30,17 +31,26 @@ from .trigger import Trigger
 from .settings import Setting
 from .color import Color
 from .estimator import Estimator
+from .resolver import SubvertingResolver
 from os.path import join, abspath
 from urllib.parse import quote
+from aiohttp import BasicAuth, web, hdrs
+from aiohttp.web import Request, HTTPBadRequest, HTTPException, static
+from injector import inject, singleton
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
 MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 
 
-class UIServer(Trigger, LogBase):
-    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
+@singleton
+class AsyncServer(Trigger, LogBase):
+    @inject
+    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator, resolver: SubvertingResolver):
         super().__init__()
+
+        # Currently running server tasks
+        self.runners = []
         self._coord = coord
         self._time = time
         self.oauth_flow_manual: OAuth2WebServerFlow = None
@@ -55,16 +65,15 @@ class UIServer(Trigger, LogBase):
         self._ha_source = ha_source
         self._starts = 0
         self._estimator = estimator
+        self.server_restarter = None
+        self.restart_trigger = asyncio.Event()
+        self.restart_complete = asyncio.Event()
+        self.resolver = resolver
 
     def name(self):
         return "UI Server"
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def getstatus(self) -> Dict[Any, Any]:
-        return self.handleError(self._getstatus)
-
-    def _getstatus(self) -> Dict[Any, Any]:
+    async def getstatus(self, request) -> Dict[Any, Any]:
         status: Dict[Any, Any] = {}
         status['folder_id'] = self._global_info.drive_folder_id
         status['snapshots'] = []
@@ -92,7 +101,10 @@ class UIServer(Trigger, LogBase):
 
         status['last_error'] = None
         if self._global_info._last_error is not None and self._global_info.isErrorSuppressed():
-            status['last_error'] = self.processError(self._global_info._last_error)
+            status['last_error'] = AsyncServer.processError(self._global_info._last_error)
+        status["last_error_count"] = self._global_info.failureCount()
+        status["ignore_errors_for_now"] = self._global_info.ignoreErrorsForNow()
+        status["syncing"] = self._coord.isSyncing()
         status["firstSync"] = self._global_info._first_sync
         status["maxSnapshotsInHasssio"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
         status["maxSnapshotsInDrive"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
@@ -105,7 +117,7 @@ class UIServer(Trigger, LogBase):
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['drive_client'] = self._coord._model.dest.drivebackend.cred_id
         status['is_specify_folder'] = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
-        return status
+        return web.json_response(status)
 
     def getSnapshotDetails(self, snapshot: Snapshot):
         drive = snapshot.getSource(SOURCE_GOOGLE_DRIVE)
@@ -128,9 +140,10 @@ class UIServer(Trigger, LogBase):
             'haRetain': ha.retained() if ha else False
         }
 
-    @cherrypy.expose  # type: ignore
-    @cherrypy.tools.json_out()
-    def manualauth(self, code: str = "", client_id: str = "", client_secret: str = "") -> None:
+    async def manualauth(self, request: Request) -> None:
+        client_id = request.query.get("client_id", "")
+        code = request.query.get("code", "")
+        client_secret = request.query.get("client_secret", "")
         if client_id != "" and client_secret != "":
             try:
                 # Redirect to the webpage that takes you to the google auth page.
@@ -142,82 +155,55 @@ class UIServer(Trigger, LogBase):
                     include_granted_scopes='true',
                     prompt='consent',
                     access_type='offline')
-                return {
+                return web.json_response({
                     'auth_url': self.oauth_flow_manual.step1_get_authorize_url()
-                }
+                })
             except Exception as e:
-                return {
+                return web.json_response({
                     'error': "Couldn't create authorization URL, Google said:" + str(e)
-                }
-            raise cherrypy.HTTPError()
+                })
         elif code != "":
             try:
                 self._coord.saveCreds(self.oauth_flow_manual.step2_exchange(code))
-                return {
-                    # TODO: this redirects back to the reauth page if user already has drive creds!
-                    'auth_url': "index"
-                }
+                self._global_info.setIngoreErrorsForNow(True)
+                # TODO: this redirects back to the reauth page if user already has drive creds!
+                return web.json_response({'auth_url': "index"})
             except Exception as e:
-                return {
-                    'error': "Couldn't create authorization URL, Google said:" + str(e)
-                }
-            raise cherrypy.HTTPError()
+                return web.json_response({'error': "Couldn't create authorization URL, Google said:" + str(e)})
+        raise HTTPBadRequest()
 
-    def auth(self, realm: str, username: str, password: str) -> bool:
-        if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
-            # Ingress port never requires auth
-            return True
-
-        if username in self.auth_cache and self.auth_cache[username]['password'] == password and self.auth_cache[username]['timeout'] > self._time.now():
-            return True
-        try:
-            self._harequests.auth(username, password)
-            self.auth_cache[username] = {'password': password, 'timeout': (self._time.now() + timedelta(minutes=10))}
-            return True
-        except Exception as e:
-            self.error(formatException(e))
-            return False
-
-    def add_auth_header(self):
-        # Basically a hack.  This lets us pretend that any request to the ingress server includes
-        # a user/pass.  If the user has login turned on, this bypasses it for the ingress port.
-        if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
-            cherrypy.request.headers['authorization'] = "basic MWfhZHRedjpPcRVuU2XzYW4l"
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def snapshot(self, custom_name=None, retain_drive=False, retain_ha=False) -> Any:
-        return self.handleError(lambda: self._snapshot(custom_name, retain_drive, retain_ha))
-
-    def _snapshot(self, custom_name=None, retain_drive=False, retain_ha=False) -> Any:
+    async def snapshot(self, request: Request) -> Any:
+        custom_name = request.query.get("custom_name", None)
+        retain_drive = strToBool(request.query.get("retain_drive", False))
+        retain_ha = strToBool(request.query.get("retain_ha", False))
         options = CreateOptions(self._time.now(), custom_name, {
-            SOURCE_GOOGLE_DRIVE: strToBool(retain_drive),
-            SOURCE_HA: strToBool(retain_ha)
+            SOURCE_GOOGLE_DRIVE: retain_drive,
+            SOURCE_HA: retain_ha
         })
-        snapshot = self._coord.startSnapshot(options)
-        return {"message": "Requested snapshot '{0}'".format(snapshot.name())}
+        snapshot = await self._coord.startSnapshot(options)
+        return web.json_response({"message": "Requested snapshot '{0}'".format(snapshot.name())})
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def deleteSnapshot(self, slug: str, drive: str, ha: str) -> Any:
-        return self.handleError(lambda: self._deleteSnapshot(slug, drive, ha))
-
-    def _deleteSnapshot(self, slug: str, drive: str, ha: str) -> Any:
+    async def deleteSnapshot(self, request: Request):
+        drive = strToBool(request.query.get("drive", False))
+        ha = strToBool(request.query.get("ha", False))
+        slug = request.query.get("slug", "")
         self._coord.getSnapshot(slug)
         sources = []
-        if strToBool(drive):
+        messages = []
+        if drive:
+            messages.append("Google Drive")
             sources.append(SOURCE_GOOGLE_DRIVE)
-        if strToBool(ha):
+        if ha:
+            messages.append("Home Assistant")
             sources.append(SOURCE_HA)
-        self._coord.delete(sources, slug)
-        return {"message": "Its gone!"}
+        await self._coord.delete(sources, slug)
+        return web.json_response({"message": "Deleted from " + " and ".join(messages)})
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def retain(self, slug, drive, ha):
-        return self.handleError(lambda: self._retain(slug, drive, ha))
+    async def retain(self, request: Request):
+        drive = strToBool(request.query.get("drive", False))
+        ha = strToBool(request.query.get("ha", False))
+        slug = request.query.get("slug", "")
 
-    def _retain(self, slug, drive, ha):
         snapshot: Snapshot = self._coord.getSnapshot(slug)
 
         # override create options for future uploads
@@ -232,60 +218,54 @@ class UIServer(Trigger, LogBase):
             retention[SOURCE_GOOGLE_DRIVE] = strToBool(drive)
         if snapshot.getSource(SOURCE_HA) is not None:
             retention[SOURCE_HA] = strToBool(ha)
-        self._coord.retain(retention, slug)
-        return {
-            'message': "Updated the snapshot's settings"
-        }
+        await self._coord.retain(retention, slug)
+        return web.json_response({'message': "Updated the snapshot's settings"})
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def resolvefolder(self, use_existing=False):
-        return self.handleError(lambda: self._resolvefolder(strToBool(use_existing)))
-
-    def _resolvefolder(self, use_existing: bool):
+    async def resolvefolder(self, request: Request):
+        use_existing = strToBool(request.query.get("use_existing", False))
         self._global_info.resolveFolder(use_existing)
         self._global_info.suppressError()
         self._coord._model.dest.resetFolder()
-        self.sync()
-        return {'message': 'Done'}
+        self._global_info.setIngoreErrorsForNow(True)
+        await self.sync()
+        return web.json_response({'message': 'Done'})
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def skipspacecheck(self):
-        return self.handleError(lambda: self._skipspacecheck())
-
-    def _skipspacecheck(self):
+    async def skipspacecheck(self, request: Request):
         self._global_info.setSkipSpaceCheckOnce(True)
-        self.sync()
-        return {'message': 'Done'}
+        self._global_info.setIngoreErrorsForNow(True)
+        await self.startSync(request)
+        return web.json_response({'message': 'Done'})
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def confirmdelete(self, always=False):
-        return self.handleError(lambda: self._confirmdelete(always))
-
-    def _confirmdelete(self, always) -> Any:
+    async def confirmdelete(self, request: Request):
+        always = strToBool(request.query.get("always", False))
         self._global_info.allowMultipleDeletes()
-        if strToBool(always):
+        self._global_info.setIngoreErrorsForNow(True)
+        if always:
             validated = self.config.validateUpdate({"confirm_multiple_deletes": False})
-            self._updateConfiguration(validated)
-            self.sync()
-            return {'message': 'Configuration updated, I\'ll never ask again'}
+            await self._updateConfiguration(validated)
+            await self.sync()
+            return web.json_response({'message': 'Configuration updated, I\'ll never ask again'})
         else:
-            self.sync()
-            return {'message': 'Snapshots deleted this one time'}
+            await self.sync()
+            return web.json_response({'message': 'Snapshots deleted this one time'})
 
-    @cherrypy.expose
-    def log(self, format="download", catchup=False) -> Any:
+    async def log(self, request: Request) -> Any:
+        format = request.query.get("format", "download")
+        catchup = strToBool(request.query.get("catchup", "False"))
+
         if not catchup:
             self.last_log_index = 0
         if format == "view":
-            return open(self.filePath("logs.html"))
+            return web.FileResponse(self.filePath("logs.html"))
+
+        resp = web.StreamResponse()
         if format == "html":
-            cherrypy.response.headers['Content-Type'] = 'text/html'
+            resp.content_type = 'text/html'
         else:
-            cherrypy.response.headers['Content-Type'] = 'text/plain'
-            cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="hassio-google-drive-backup.log"'
+            resp.content_type = 'text/plain'
+            resp.headers['Content-Disposition'] = 'attachment; filename="hassio-google-drive-backup.log"'
+
+        await resp.prepare(request)
 
         def content():
             html = format == "colored"
@@ -297,114 +277,107 @@ class UIServer(Trigger, LogBase):
                     yield line[1].replace("\n", "   \n") + "\n"
             if format == "html":
                 yield "</pre></body>\n"
-        return content()
 
-    @cherrypy.expose
-    def token(self, **kwargs: Dict[str, Any]) -> None:
-        if 'creds' in kwargs:
-            creds = OAuth2Credentials.from_json(kwargs['creds'])
+        for line in content():
+            await resp.write(line.encode())
+        await resp.write_eof()
+
+    async def token(self, request: Request) -> None:
+        if 'creds' in request.query:
+            creds = OAuth2Credentials.from_json(request.query['creds'])
+            self._global_info.setIngoreErrorsForNow(True)
             self._coord.saveCreds(creds)
         try:
             if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
-                return self.redirect(self._ha_source.getAddonUrl())
+                return await self.redirect(self._ha_source.getAddonUrl())
         except:  # noqa: E722
             # eat the error
             pass
-        return self.redirect("/")
+        return await self.redirect("/")
 
-    @cherrypy.expose
-    def changefolder(self, id: str) -> None:
+    async def changefolder(self, request: Request) -> None:
+        id = request.query.get("id", None)
         self._coord._model.dest.changeBackupFolder(id)
+        self._global_info.setIngoreErrorsForNow(True)
         self.trigger()
         try:
-            if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
-                return self.redirect(self._ha_source.getAddonUrl())
+            if request.url.port == self.config.get(Setting.INGRESS_PORT):
+                return await self.redirect(self._ha_source.getAddonUrl())
         except:  # noqa: E722
             # eat the error
             pass
-        return self.redirect("/")
+        return await self.redirect("/")
 
-    @cherrypy.expose
-    def simerror(self, error: str = "") -> None:
+    async def simerror(self, request: Request):
+        error = request.query.get("error", "")
         if len(error) == 0:
             self._coord._model.simulate_error = None
         else:
             self._coord._model.simulate_error = error
         self.trigger()
+        return web.json_response({})
 
-    @cherrypy.expose
-    def index(self) -> Any:
+    async def index(self, request: Request):
         if not self._coord.enabled():
-            return open(self.filePath("index.html"))
+            return web.FileResponse(self.filePath("index.html"))
         else:
-            return open(self.filePath("working.html"))
+            return web.FileResponse(self.filePath("working.html"))
 
-    @cherrypy.expose
-    def pp(self):
-        return open(self.filePath("privacy_policy.html"))
+    async def pp(self, request: Request):
+        return web.FileResponse(self.filePath("privacy_policy.html"))
 
-    @cherrypy.expose
-    def tos(self):
-        return open(self.filePath("terms_of_service.html"))
+    async def tos(self, request: Request):
+        return web.FileResponse(self.filePath("terms_of_service.html"))
 
-    @cherrypy.expose
-    def reauthenticate(self) -> Any:
-        return open(self.filePath("index.html"))
+    async def reauthenticate(self, request: Request) -> Any:
+        return web.FileResponse(self.filePath("index.html"))
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def sync(self) -> Any:
-        return self.handleError(lambda: self._sync())
+    async def sync(self, request: Request = None) -> Any:
+        await self._coord.sync()
+        return await self.getstatus(request)
 
-    def _sync(self) -> Any:
-        self._coord.sync()
-        return self._getstatus()
+    async def startSync(self, request) -> Any:
+        asyncio.create_task(self._coord.sync())
+        await asyncio.sleep(0.5)
+        return await self.getstatus(request)
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def getconfig(self) -> Any:
-        return self.handleError(lambda: self._getconfig())
+    async def cancelSync(self, request: Request):
+        await self._coord.cancel()
+        return await self.getstatus(request)
 
-    def _getconfig(self) -> Any:
-        self._ha_source.refresh()
+    async def getconfig(self, request: Request):
+        await self._ha_source.refresh()
         name_keys = {}
         for key in SNAPSHOT_NAME_KEYS:
-            name_keys[key] = SNAPSHOT_NAME_KEYS[key]("Full", self._time.now(), self._ha_source.host_info)
+            name_keys[key] = SNAPSHOT_NAME_KEYS[key]("Full", self._time.now(), self._ha_source.getHostInfo())
         current_config = {}
         for setting in Setting:
             current_config[setting.key()] = self.config.get(setting)
         default_config = {}
         for setting in Setting:
             default_config[setting.key()] = setting.default()
-        return {
+        return web.json_response({
             'config': current_config,
             'addons': self._global_info.addons,
             'name_keys': name_keys,
             'defaults': default_config,
             'snapshot_folder': self._coord._model.dest._folderId,
             'is_custom_creds': self._coord._model.dest.isCustomCreds()
-        }
+        })
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def errorreports(self, send: str) -> None:
-        return self.handleError(lambda: self._errorreports(send))
+    async def errorreports(self, request: Request):
+        send = strToBool(request.query.get("send", False))
 
-    def _errorreports(self, send: str) -> None:
         update = {
-            "send_error_reports": strToBool(send)
+            "send_error_reports": send
         }
         validated = self.config.validateUpdate(update)
-        self._updateConfiguration(validated)
-        return {'message': 'Configuration updated'}
+        await self._updateConfiguration(validated)
+        return web.json_response({'message': 'Configuration updated'})
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def exposeserver(self, expose: str) -> None:
-        return self.handleError(lambda: self._exposeserver(expose))
-
-    def _exposeserver(self, expose: str) -> None:
-        if expose == "true":
+    async def exposeserver(self, request: Request):
+        expose = strToBool(request.query.get("expose", False))
+        if expose:
             update = {
                 Setting.EXPOSE_EXTRA_SERVER: True
             }
@@ -415,46 +388,43 @@ class UIServer(Trigger, LogBase):
                 Setting.REQUIRE_LOGIN: False
             }
         validated = self.config.validateUpdate(update)
-        self._updateConfiguration(validated)
+        await self._updateConfiguration(validated)
 
         touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-        self._ha_source.init()
-        self.run()
+        await self._ha_source.init()
+
+        # Trigger a restart
+        self.restart_trigger.set()
         redirect = ""
         try:
-            if cherrypy.request.local.port != self.config.get(Setting.INGRESS_PORT):
+            if request.url.port != self.config.get(Setting.INGRESS_PORT):
                 redirect = self._ha_source.getFullAddonUrl()
         except:  # noqa: E722
             # eat the error
             pass
-        return {
+        return web.json_response({
             'message': 'Configuration updated',
             'redirect': redirect
-        }
+        })
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    @cherrypy.tools.json_in()
-    def saveconfig(self) -> Any:
-        return self.handleError(lambda: self._saveconfig())
-
-    def _saveconfig(self) -> Any:
-        update = ensureKey("config", cherrypy.request.json, "the confgiuration update request")
+    async def saveconfig(self, request: Request) -> Any:
+        data = await request.json()
+        update = ensureKey("config", data, "the confgiuration update request")
 
         # validate the snapshot password
         Password(self.config.getConfigFor(update)).resolve()
 
         validated = self.config.validate(update)
-        self._updateConfiguration(validated, ensureKey("snapshot_folder", cherrypy.request.json, "the confgiuration update request"))
-        return {'message': 'Settings saved'}
+        await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the confgiuration update request"))
+        return web.json_response({'message': 'Settings saved'})
 
-    def _updateConfiguration(self, new_config, snapshot_folder_id=None):
+    async def _updateConfiguration(self, new_config, snapshot_folder_id=None):
         server_config_before = self._getServerOptions()
 
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
-        self._harequests.updateConfig(update)
+        await self._harequests.updateConfig(update)
 
         was_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         self.config.update(new_config)
@@ -462,7 +432,8 @@ class UIServer(Trigger, LogBase):
         is_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         server_config_after = self._getServerOptions()
         if server_config_before != server_config_after:
-            self.run()
+            # Trigger a restart
+            self.restart_trigger.set()
         if is_specify and not was_specify:
             # Delete the reset the saved backup folder, since the preference
             # for specifying the folder changed from false->true
@@ -472,6 +443,7 @@ class UIServer(Trigger, LogBase):
                 self._coord._model.dest.changeBackupFolder(snapshot_folder_id)
             else:
                 self._coord._model.dest.resetFolder()
+        self.resolver.updateConfig()
         self.trigger()
         return {'message': 'Settings saved'}
 
@@ -484,101 +456,146 @@ class UIServer(Trigger, LogBase):
             "extra_server": self.config.get(Setting.EXPOSE_EXTRA_SERVER)
         }
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def upload(self, slug):
-        return self.handleError(lambda: self._upload(slug))
+    async def upload(self, request: Request):
+        slug = request.query.get("slug", "")
+        await self._coord.uploadSnapshot(slug)
+        return web.json_response({'message': "Snapshot uploaded to Home Assistant"})
 
-    def _upload(self, slug):
-        self._coord.uploadSnapshot(slug)
-        return {'message': "Snapshot uploaded to Home Assistant"}
+    async def redirect(self, url):
+        async with aiofiles.open(self.filePath("redirect.html"), mode='r') as f:
+            contents = (await f.read(1024 * 1024 * 2)).replace("{url}", url)
+        return web.Response(body=contents, content_type="text/html")
 
-    @cherrypy.expose
-    def redirect(self, url):
-        return Path(self.filePath("redirect.html")).read_text().replace("{url}", url)
-
-    @cherrypy.expose
-    def download(self, slug):
-        return self.handleError(lambda: self._download(slug))
-
-    def _download(self, slug):
+    async def download(self, request: Request):
+        slug = request.query.get("slug", "")
         snapshot = self._coord.getSnapshot(slug)
-        stream = self._coord.download(slug)
-        cherrypy.response.headers['Content-Type'] = 'application/tar'
-        cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="{}.tar"'.format(snapshot.name())
-        cherrypy.response.headers['Content-Length'] = str(stream.size())
-        return stream
+        stream = await self._coord.download(slug)
+        await stream.setup()
+        resp = web.StreamResponse()
+        resp.content_type = 'application/tar'
+        resp.headers['Content-Disposition'] = 'attachment; filename="{}.tar"'.format(snapshot.name())
+        resp.headers['Content-Length'] = str(stream.size())
 
-    def run(self) -> None:
-        self._starts += 1
-        if self.running:
-            self.info("Stopping server...")
-            cherrypy.engine.stop()
+        await resp.prepare(request)
 
-        # unbind existing servers.
-        if self.host_server is not None:
-            self.host_server.unsubscribe()
-            self.host_server = None
+        # SOMEDAY: consider re-streaming a decompressed tar file for the sake of convenience
 
-        cherrypy.tools.addauth = cherrypy.Tool('on_start_resource', self.add_auth_header)
+        async for chunk in stream.generator(self.config.get(Setting.DEFAULT_CHUNK_SIZE)):
+            await resp.write(chunk)
 
-        conf: Dict[Any, Any] = {
-            'global': {
-                'server.socket_port': self.config.get(Setting.INGRESS_PORT),
-                'server.socket_host': '0.0.0.0',
-                'engine.autoreload.on': False,
-                'log.access_file': '',
-                'log.error_file': '',
-                'log.screen': False,
-                'response.stream': True
-            },
-            "/": {
-                'tools.addauth.on': True,
-                'tools.staticdir.on': True,
-                'tools.staticdir.dir': os.path.join(os.getcwd(), "www"),
-                'tools.auth_basic.on': self.config.get(Setting.REQUIRE_LOGIN),
-                'tools.auth_basic.realm': 'localhost',
-                'tools.auth_basic.checkpassword': self.auth,
-                'tools.auth_basic.accept_charset': 'UTF-8'
-            }
-        }
+        await resp.write_eof()
 
+    async def run(self) -> None:
+        await self.stop()
+
+        # Create the ingress server
+        app = web.Application(middlewares=[AsyncServer.error_middleware])
+        self._addRoutes(app)
+
+        # The ingress port is considered secured by Home Assistant, so it doesn't get SSL or basic HTTP auth
         self.info("Starting server on port {}".format(self.config.get(Setting.INGRESS_PORT)))
+        await self._start_site(app, self.config.get(Setting.INGRESS_PORT))
 
-        cherrypy.config.update(conf)
+        try:
+            if self.config.get(Setting.EXPOSE_EXTRA_SERVER) or self._ha_source.runTemporaryServer():
+                ssl_context = None
+                if self.config.get(Setting.USE_SSL):
+                    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                    ssl_context.load_cert_chain(self.config.get(Setting.CERTFILE), self.config.get(Setting.KEYFILE))
+                middleware = [AsyncServer.error_middleware]
+                if self.config.get(Setting.REQUIRE_LOGIN):
+                    middleware.append(HomeAssistantLoginAuth(self._time, self._harequests))
 
-        if self.config.get(Setting.EXPOSE_EXTRA_SERVER) or self._ha_source.runTemporaryServer():
-            self.info("Starting server on port {}".format(self.config.get(Setting.PORT)))
-            self.host_server = cherrypy._cpserver.Server()
-            self.host_server.socket_port = self.config.get(Setting.PORT)
-            self.host_server._socket_host = "0.0.0.0"
-            self.host_server.subscribe()
-            if self.config.get(Setting.USE_SSL):
-                self.host_server.ssl_certificate = self.config.get(Setting.CERTFILE)
-                self.host_server.ssl_private_key = self.config.get(Setting.KEYFILE)
-
-        cherrypy.tree.mount(self, "/", conf)
-        logging.getLogger("cherrypy.error").setLevel(logging.WARNING)
-        cherrypy.engine.start()
+                extra_app = web.Application(middlewares=middleware)
+                self._addRoutes(extra_app)
+                self.info("Starting server on port {}".format(self.config.get(Setting.PORT)))
+                await self._start_site(extra_app, self.config.get(Setting.PORT), ssl_context=ssl_context)
+        except FileNotFoundError:
+            self.error("The configured SSL key or certificate files couldn't be found and so \nan SSL server couldn't be started, please check your settings. \nThe addon web-ui is still available through ingress.")
+        except ssl.SSLError:
+            self.error("Your SSL certificate or key couldn't be loaded and so an SSL server couldn't be started.  Please verify that your SSL settings are correctly configured.  The addon web-ui is still available through ingress.")
         self.info("Server started")
         self.running = True
+        self._starts += 1
+        if self.server_restarter is None:
+            self.server_restarter = asyncio.create_task(self._waitForRestart())
 
-    def stop(self):
-        cherrypy.engine.stop()
-        if self.host_server is not None:
-            self.host_server.unsubscribe()
-        cherrypy.process.bus.exit()
+    def _addRoutes(self, app):
+        app.add_routes([web.static('/static', os.path.join(os.getcwd(), "www"), append_version=True)])
+        app.add_routes([web.get('/', self.index)])
+        app.add_routes([web.get('/index.html', self.index)])
 
-    def handleError(self, call):
+        self._addRoute(app, self.reauthenticate)
+        self._addRoute(app, self.tos)
+        self._addRoute(app, self.pp)
+
+        self._addRoute(app, self.getstatus)
+        self._addRoute(app, self.snapshot)
+        self._addRoute(app, self.manualauth)
+        self._addRoute(app, self.deleteSnapshot)
+        self._addRoute(app, self.retain)
+        self._addRoute(app, self.resolvefolder)
+        self._addRoute(app, self.skipspacecheck)
+        self._addRoute(app, self.confirmdelete)
+        self._addRoute(app, self.log)
+        self._addRoute(app, self.token)
+        self._addRoute(app, self.simerror)
+        self._addRoute(app, self.changefolder)
+        self._addRoute(app, self.sync)
+        self._addRoute(app, self.startSync)
+        self._addRoute(app, self.getconfig)
+        self._addRoute(app, self.errorreports)
+        self._addRoute(app, self.exposeserver)
+        self._addRoute(app, self.saveconfig)
+        self._addRoute(app, self.upload)
+        self._addRoute(app, self.download)
+        self._addRoute(app, self.theme)
+        self._addRoute(app, self.cancelSync)
+
+    def _addRoute(self, app, method):
+        app.add_routes([
+            web.get("/" + method.__name__, method),
+            web.post("/" + method.__name__, method)
+        ])
+
+    async def _start_site(self, app, port, ssl_context=None):
+        runner = web.AppRunner(app)
+        self.runners.append(runner)
+        await runner.setup()
+        # maybe host should be 0.0.0.0
+        site = web.TCPSite(runner, "0.0.0.0", port, ssl_context=ssl_context)
+        await site.start()
+
+    async def stop(self):
+        # Stop pending requests for all available servers
+        for runner in self.runners:
+            try:
+                await runner.shutdown()
+            except Exception as e:
+                self.error("Error while trying to shut down server: " + str(e))
+            try:
+                await runner.cleanup()
+            except Exception as e:
+                self.error("Error while trying to shut down server: " + str(e))
+        self.runners = []
+
+    async def shutdown(self):
+        await self.stop()
+        if self.server_restarter is not None:
+            self.server_restarter.cancel()
+            self.server_restarter = None
+
+    @web.middleware
+    async def error_middleware(request, handler):
         try:
-            return call()
-        except Exception as e:
-            data = self.processError(e)
-            cherrypy.response.headers['Content-Type'] = 'application/json'
-            cherrypy.response.status = data['http_status']
-            return data
+            return await handler(request)
+        except Exception as ex:
+            if isinstance(ex, HTTPException):
+                raise
+            data = AsyncServer.processError(ex)
+            return web.json_response(data, status=data['http_status'])
 
-    def processError(self, e):
+    def processError(e):
         if isinstance(e, KnownError):
             known: KnownError = e
             return {
@@ -599,6 +616,10 @@ class UIServer(Trigger, LogBase):
     def filePath(self, name):
         return abspath(join(__file__, "..", "..", "www", name))
 
+    async def waitForReset(self):
+        await self.restart_complete.wait()
+        self.restart_complete.clear()
+
     def cssElement(self, selector, keys):
         ret = selector
         ret += " {\n"
@@ -607,10 +628,7 @@ class UIServer(Trigger, LogBase):
         ret += "}\n\n"
         return ret
 
-    @cherrypy.expose
-    def theme(self, version=""):
-        cherrypy.response.headers['Content-Type'] = 'text/css'
-        cherrypy.response.headers['Cache-Control'] = 'no-cache'
+    async def theme(self, request: Request):
         background = Color.parse(self.config.get(Setting.BACKGROUND_COLOR))
         accent = Color.parse(self.config.get(Setting.ACCENT_COLOR))
 
@@ -791,7 +809,6 @@ class UIServer(Trigger, LogBase):
         })
 
         ret += self.cssElement(".bmc-button", {
-            'padding': '3px 5px 3px 5px',
             'line-height': '15px',
             'height': '25px',
             'text-decoration': 'none',
@@ -817,4 +834,75 @@ class UIServer(Trigger, LogBase):
 
         ret += self.cssElement(".bmc-button span", {'color': text.toCss()})
 
-        return ret
+        return web.Response(text=ret, content_type='text/css')
+
+    async def _waitForRestart(self):
+        while(True):
+            # Wait for the restart trigger
+            await self.restart_trigger.wait()
+            self.restart_trigger.clear()
+
+            try:
+                # Restart the server
+                await self.run()
+            except Exception as e:
+                self.error("Unable to restart Webserver " + formatException(e))
+            # signal completion
+            self.restart_complete.set()
+
+
+@web.middleware
+class HomeAssistantLoginAuth(LogBase):
+    def __init__(self, time, harequests):
+        self._time = time
+        self._harequests = harequests
+        self.auth_cache: Dict[str, Any] = {}
+        self.realm = "Home Assistant Login"
+
+    # noinspection PyMethodMayBeStatic
+    def parse_auth_header(self, request):
+        auth_header = request.headers.get(hdrs.AUTHORIZATION)
+        if not auth_header:
+            return None
+        try:
+            auth = BasicAuth.decode(auth_header=auth_header)
+        except ValueError:  # pragma: no cover
+            auth = None
+        return auth
+
+    async def authenticate(self, request):
+        auth = self.parse_auth_header(request)
+        return (auth is not None and await self.check_credentials(auth.login, auth.password))
+
+    async def check_credentials(self, username, password):
+        if username is None:
+            raise ValueError('username is None')  # pragma: no cover
+
+        if password is None:
+            raise ValueError('password is None')  # pragma: no cover
+
+        if username in self.auth_cache and self.auth_cache[username]['password'] == password and self.auth_cache[username]['timeout'] > self._time.now():
+            return True
+        try:
+            await self._harequests.auth(username, password)
+            self.auth_cache[username] = {'password': password, 'timeout': (self._time.now() + timedelta(minutes=10))}
+            return True
+        except Exception as e:
+            self.error(formatException(e))
+            return False
+
+    def challenge(self):
+        return web.Response(
+            body=b'', status=401, reason='UNAUTHORIZED',
+            headers={
+                hdrs.WWW_AUTHENTICATE: 'Basic realm="%s"' % self.realm,
+                hdrs.CONTENT_TYPE: 'text/html; charset=utf-8',
+                hdrs.CONNECTION: 'keep-alive'
+            }
+        )
+
+    async def __call__(self, request, handler):
+        if await self.authenticate(request):
+            return await handler(request)
+        else:
+            return self.challenge()

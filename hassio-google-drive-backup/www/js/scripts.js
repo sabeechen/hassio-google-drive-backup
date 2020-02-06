@@ -151,17 +151,31 @@ function exposeServer(expose) {
         window.location.assign(data.redirect.replace("{host}", window.location.hostname))
       }
     }
-  }, null, "Saving settings...");
+  }, null, "Saving setting...");
 }
 
 function resolvefolder(use_existing) {
   var url = "resolvefolder?use_existing=" + use_existing;
-  postJson(url, {}, refreshstats, null, "Syncing...");
+  postJson(url, {}, refreshstats, null, null);
+  setErrorWatermark();
   $('#existing_backup_folder').hide();
+  refreshstats();
 }
 
-function sync() {
-  postJson("sync", {}, refreshstats, null, "Syncing...")
+function sync(dialog_class) {
+  postJsonCloseErrorDialog("startSync", dialog_class);
+}
+
+function postJsonCloseErrorDialog(url, dialog_class) {
+  postJson(url, {}, 
+    function(data) {
+      if (dialog_class) {
+        // Hide the error dialog
+        $("." + dialog_class).hide();
+        setErrorWatermark();
+      }
+      refreshstats(data);
+    }, null)
 }
 
 function toast(text) {
@@ -218,16 +232,23 @@ function htmlEntities(str) {
 
 errorToasted = false;
 
-function postJson(path, json, onSuccess, onFail, toastWhile) {
+function postJson(path, json, onSuccess, onFail=null, toastWhile=null) {
+  var notification = null
+  var returned = false
   if (toastWhile) {
-    M.toast({ html: toastWhile, displayLength: 9999999 });
+    setTimeout(function () {
+      if (!returned) {
+        notification = M.toast({ html: toastWhile, displayLength: 99999999 });
+      }
+    }, 1000);
   }
   $.post({
     url: path,
     data: JSON.stringify(json),
     success: function (data) {
-      if (toastWhile) {
-        M.Toast.dismissAll();
+      returned = true;
+      if (notification != null) {
+        notification.dismiss();
       }
       if (data.hasOwnProperty("message")){
         toast(data.message);
@@ -240,8 +261,9 @@ function postJson(path, json, onSuccess, onFail, toastWhile) {
     contentType: 'application/json'
   }).fail(
       function (e) {
-        if (toastWhile) {
-          M.Toast.dismissAll();
+        returned = true;
+        if (notification != null) {
+          notification.dismiss();
         }
         var info = parseErrorInfo(e);
         if (onFail) {
@@ -369,7 +391,17 @@ function getWindowRootUri() {
   return loc.protocol + "//" + loc.hostname + ":" + loc.port + path;
 }
 
+function cancelSync() {
+  postJson("cancelSync", {}, refreshstats, null, "Canceling...")
+}
+
+function setErrorWatermark() {
+  error_minimum = last_data.last_error_count
+}
+
+sync_toast = null;
 last_data = null;
+error_minimum = 0
 // Refreshes the display with stats from the server.
 function refreshstats() {
   var jqxhr = $.get("getstatus", function (data) {
@@ -503,6 +535,19 @@ function refreshstats() {
       }
     });
 
+    // Update the "syncing" toast message
+    if (data.syncing) {
+      if (sync_toast == null) {
+        sync_toast = M.toast({html: '<span>Syncing...</span><button class="btn-flat toast-action" onclick="cancelSync()">Cancel</button>', displayLength: 999999999})
+      }
+    } else {
+      // Make sure the toast isn't up
+      if (sync_toast != null) {
+        sync_toast.dismiss();
+        sync_toast = null
+      }
+    }
+
 
     if (count == 0) {
       if (!data.firstSync) {
@@ -525,7 +570,7 @@ function refreshstats() {
         if (item.is(":visible")) {
           item.hide();
         }
-      } else if(item.hasClass(error.error_type)) {
+      } else if(item.hasClass(error.error_type) && data.last_error_count != error_minimum && !data.ignore_errors_for_now) {
         found = true;
         if (data.hasOwnProperty('dns_info')) {
           var dns_div = $('.dns_info', item)
@@ -557,7 +602,7 @@ function refreshstats() {
       }
     });
 
-    if (data.last_error != null && !found) {
+    if (data.last_error != null && !found && data.last_error_count != error_minimum && !data.ignore_errors_for_now) {
       var card = $("#error_card")
       populateGitHubInfo(card, data.last_error);
       card.fadeIn();
@@ -686,6 +731,7 @@ function doNewSnapshot() {
 
 function allowDeletion(always) {
   var url = "confirmdelete?always=" + always;
+  // # TODO: Verify this works correctly
   postJson(url, {}, refreshstats, null, "Allowing deletion and syncing...");
 }
 
@@ -694,8 +740,8 @@ function chooseSnapshotFolder() {
 }
 
 function skipLowSpaceWarning() {
-  var url = "skipspacecheck";
-  postJson(url, {}, refreshstats, null, "Syncing...");
+  // TODO: does this work?
+  postJsonCloseErrorDialog("skipspacecheck", "low_space");
 }
 
 

@@ -70,3 +70,10 @@ body {
   .colpick {
     z-index: 9999;
   }
+
+  #toast-container {
+    top: auto !important;
+    left: auto !important;
+    bottom: 10%;
+    right: 7%;
+  }

@@ -9,11 +9,14 @@ from datetime import datetime
 from threading import Lock
 from .trigger import Trigger
 from .settings import Setting
+from injector import inject, singleton
 
 REPORT_DELAY_SECONDS = 5
 
 
+@singleton
 class Watcher(Trigger, LogBase, FileSystemEventHandler):
+    @inject
     def __init__(self, time: Time, config: Config):
         super().__init__()
         self.time = time

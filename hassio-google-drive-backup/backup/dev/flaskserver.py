@@ -1,6 +1,7 @@
 #!/usr/bin/python3.7
 import json
 import threading
+import re
 
 from flask import Flask, request, Response
 from flask_api.status import HTTP_501_NOT_IMPLEMENTED
@@ -50,10 +51,17 @@ class FlaskContext(Context):
         if data_type == str:
             return resp
         else:
-            # surface th error in flask
+            # surface the error in flask
             return resp
 
-    def call(self, callable):
+    def call(self, server, callable):
+        server.urls.append(self._request.url)
+        for error in server.match_errors:
+            if re.match(error['url'], self._request.url):
+                if error['attempts'] <= 0:
+                    return "request failed", error['status']
+                else:
+                    error['attempts'] = error['attempts'] - 1
         try:
             data = callable()
             return self.translate(data)
@@ -112,7 +120,7 @@ def shutdown_server():
 def driveAuthentication() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveAuthentication(context))
+    return context.call(server, lambda: server.driveAuthentication(context))
 
 
 @app.route('/doareset', methods=['POST'])
@@ -127,195 +135,196 @@ def reset() -> Any:
 def uploadfile() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.uploadfile(context))
+    return context.call(server, lambda: server.uploadfile(context))
 
 
 @app.route('/readfile', methods=['GET'])
 def readFile() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.readFile(context))
+    return context.call(server, lambda: server.readFile(context))
 
 
 @app.route('/updatesettings', methods=['POST'])
 def updateSettings() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.updateSettings(context))
+    return context.call(server, lambda: server.updateSettings(context))
 
 
 @app.route('/drive/v3/files/<id>/', methods=['GET'])
 def driveGetItem(id: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveGetItem(context, id))
+    return context.call(server, lambda: server.driveGetItem(context, id))
 
 
 @app.route('/drive/v3/files/<id>/', methods=['PATCH'])
 def driveUpdate(id: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveUpdate(context, id))
+    return context.call(server, lambda: server.driveUpdate(context, id))
 
 
 @app.route('/drive/v3/files/<id>/', methods=['DELETE'])
 def driveDelete(id: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveDelete(context, id))
+    return context.call(server, lambda: server.driveDelete(context, id))
 
 
 @app.route('/drive/v3/files/', methods=['GET'])
 def driveQuery() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveQuery(context))
+    return context.call(server, lambda: server.driveQuery(context))
 
 
 @app.route('/drive/v3/files/', methods=['POST'])
 def driveCreate() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveCreate(context))
+    return context.call(server, lambda: server.driveCreate(context))
 
 
 @app.route('/upload/drive/v3/files/', methods=['POST'])
 def driveStartUpload() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveStartUpload(context))
+    return context.call(server, lambda: server.driveStartUpload(context))
 
 
 @app.route('/upload/drive/v3/files/progress/<id>', methods=['PUT'])
 def driveContinueUpload(id: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveContinueUpload(context, id))
+    return context.call(server, lambda: server.driveContinueUpload(context, id))
 
 
 @app.route('/snapshots', methods=['GET'])
 def hassioSnapshots() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioSnapshots(context))
+    return context.call(server, lambda: server.hassioSnapshots(context))
 
 
 @app.route('/supervisor/info', methods=['GET'])
 def hassioSupervisorInfo() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioSupervisorInfo(context))
+    return context.call(server, lambda: server.hassioSupervisorInfo(context))
 
 
 @app.route('/homeassistant/info', methods=['GET'])
 def haInfo() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.haInfo(context))
+    return context.call(server, lambda: server.haInfo(context))
 
 
 @app.route('/snapshots/new/full', methods=['POST'])
 def hassioNewFullSnapshot() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioNewFullSnapshot(context))
+    return context.call(server, lambda: server.hassioNewFullSnapshot(context))
 
 
 @app.route('/snapshots/new/partial', methods=['POST'])
 def hassioNewPartialSnapshot() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioNewPartialSnapshot(context))
+    return context.call(server, lambda: server.hassioNewPartialSnapshot(context))
 
 
 @app.route('/snapshots/new/upload', methods=['GET', 'POST'])
 def uploadNewSnapshot() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.uploadNewSnapshot(context))
+    return context.call(server, lambda: server.uploadNewSnapshot(context))
 
 
 @app.route('/snapshots/<slug>/remove', methods=['POST'])
 def hassioDelete(slug: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioDelete(context, slug))
+    return context.call(server, lambda: server.hassioDelete(context, slug))
 
 
 @app.route('/snapshots/<slug>/info', methods=['GET'])
 def hassioSnapshotInfo(slug: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioSnapshotInfo(context, slug))
+    return context.call(server, lambda: server.hassioSnapshotInfo(context, slug))
 
 
 @app.route('/snapshots/<slug>/download', methods=['GET'])
 def hassioSnapshotDownload(slug: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioSnapshotDownload(context, slug))
+    return context.call(server, lambda: server.hassioSnapshotDownload(context, slug))
 
 
 @app.route('/addons/self/info', methods=['GET'])
 def hassioSelfInfo() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioSelfInfo(context))
+    return context.call(server, lambda: server.hassioSelfInfo(context))
 
 
 @app.route('/info', methods=['GET'])
 def hassioInfo() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioInfo(context))
+    return context.call(server, lambda: server.hassioInfo(context))
 
 
 @app.route('/auth', methods=['GET', 'POST'])
 def hassioAuthenticate() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioAuthenticate(context))
+    return context.call(server, lambda: server.hassioAuthenticate(context))
 
 
 @app.route("/homeassistant/api/states/<entity>", methods=['POST'])
 def haStateUpdate(entity: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.haStateUpdate(context, entity))
+    return context.call(server, lambda: server.haStateUpdate(context, entity))
+
 
 @app.route("/homeassistant/api/events/<name>", methods=['POST'])
 def haEventUpdate(name: str) -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.haEventUpdate(context, name))
+    return context.call(server, lambda: server.haEventUpdate(context, name))
 
 
 @app.route("/homeassistant/api/services/persistent_notification/create", methods=['POST'])
 def createNotification() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.createNotification(context))
+    return context.call(server, lambda: server.createNotification(context))
 
 
 @app.route("/homeassistant/api/services/persistent_notification/dismiss", methods=['POST'])
 def dismissNotification() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.dismissNotification(context))
+    return context.call(server, lambda: server.dismissNotification(context))
 
 
 @app.route('/addons/self/options', methods=['POST'])
 def hassioUpdateOptions() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.hassioUpdateOptions(context))
+    return context.call(server, lambda: server.hassioUpdateOptions(context))
 
 
 @app.route('/external/drivecreds/', methods=['POST', "GET"])
 def driveCredGenerate() -> Any:
     context = getContext()
     server = getState(context)
-    return context.call(lambda: server.driveCredsRedirect(context))
+    return context.call(server, lambda: server.driveCredsRedirect(context))
 
 
 def main():

@@ -69,6 +69,7 @@ class Setting(Enum):
     SECRETS_FILE_PATH = "secrets_file_path"
     BACKUP_DIRECTORY_PATH = "backup_directory_path"
     INGRESS_TOKEN_FILE_PATH = "ingress_token_file_path"
+    CONFIG_FILE_PATH = "config_file_path"
 
     # endpoints
     HASSIO_URL = "hassio_url"
@@ -77,6 +78,8 @@ class Setting(Enum):
     HASSIO_TOKEN = "hassio_header"
     AUTHENTICATE_URL = "authenticate_url"
     CHOOSE_FOLDER_URL = "choose_folder_url"
+    ERROR_REPORT_URL = "error_report_url"
+    DRIVE_HOST_NAME = "drive_host_name"
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
@@ -84,6 +87,7 @@ class Setting(Enum):
     PENDING_SNAPSHOT_TIMEOUT_SECONDS = "pending_snapshot_timeout_seconds"
     FAILED_SNAPSHOT_TIMEOUT_SECONDS = "failed_snapshot_timeout_seconds"
     NEW_SNAPSHOT_TIMEOUT_SECONDS = "new_snapshot_timeout_seconds"
+    DEFAULT_CHUNK_SIZE = "default_chunk_size"
 
     def default(self):
         return _DEFAULTS[self]
@@ -158,6 +162,8 @@ _DEFAULTS = {
     Setting.DRIVE_URL: "https://www.googleapis.com",
     Setting.AUTHENTICATE_URL: "https://philosophyofpen.com/login/backup.py",
     Setting.CHOOSE_FOLDER_URL: "https://philosophyofpen.com/hassiodrivebackup/picker/",
+    Setting.ERROR_REPORT_URL: "https://philosophyofpen.com/login/error.py",
+    Setting.DRIVE_HOST_NAME: "www.googleapis.com",
 
     # File locations used to store things
     Setting.FOLDER_FILE_PATH: "/data/folder.dat",
@@ -166,14 +172,16 @@ _DEFAULTS = {
     Setting.RETAINED_FILE_PATH: "/data/retained.json",
     Setting.SECRETS_FILE_PATH: "/config/secrets.yaml",
     Setting.INGRESS_TOKEN_FILE_PATH: "/data/ingress.dat",
+    Setting.CONFIG_FILE_PATH: "/data/options.json",
 
     # Various timeouts and intervals
     Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,
-    Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS: 60 * 60 * 3,
-    Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: 60 * 30,
+    Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS: 60 * 60 * 5,
+    Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: 60 * 15,
     Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: 5,
     Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60,
-    Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com"
+    Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com",
+    Setting.DEFAULT_CHUNK_SIZE: 1024 * 1024 * 5
 }
 
 _LOOKUP = {}

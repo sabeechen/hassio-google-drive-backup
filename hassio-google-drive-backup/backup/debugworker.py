@@ -1,19 +1,27 @@
 import json
-import requests
+import socket
+import asyncio
+import subprocess
 
+from os.path import join, abspath
 from .worker import Worker
 from .time import Time
 from .globalinfo import GlobalInfo
 from .config import Config
 from .settings import Setting
 from datetime import timedelta, datetime
-from .helpers import getPingInfo, formatException
 from .exceptions import KnownError
+from .resolver import SubvertingResolver
+from .helpers import formatException
 from urllib.parse import quote
+from injector import inject, singleton
+from aiohttp import ClientSession
 
 
+@singleton
 class DebugWorker(Worker):
-    def __init__(self, time: Time, info: GlobalInfo, config: Config):
+    @inject
+    def __init__(self, time: Time, info: GlobalInfo, config: Config, resolver: SubvertingResolver, session: ClientSession):
         super().__init__("Debug Worker", self.doWork, time, interval=10)
         self.time = time
         self._info = info
@@ -24,18 +32,25 @@ class DebugWorker(Worker):
 
         self.last_sent_error = None
         self.last_sent_error_time = None
+        self.resolver = resolver
+        self.session = session
+        self.version = None
 
-    def doWork(self):
+    async def doWork(self):
+        if self.version is None:
+            with open(abspath(join(__file__, "..", "..", "config.json"))) as f:
+                addon_config = json.load(f)
+                self.version = addon_config['version']
         if not self.last_dns_update or self.time.now() > self.last_dns_update + timedelta(hours=12):
-            self.updateDns()
+            await self.updateDns()
         if self.config.get(Setting.SEND_ERROR_REPORTS):
             try:
-                self.maybeSendErrorReport()
+                await self.maybeSendErrorReport()
             except Exception as e:
                 # just eat the error
                 pass
 
-    def maybeSendErrorReport(self):
+    async def maybeSendErrorReport(self):
         error = self._info._last_error
         if error is not None:
             if isinstance(error, KnownError):
@@ -45,17 +60,21 @@ class DebugWorker(Worker):
         if error != self.last_sent_error:
             self.last_sent_error = error
             if error is not None:
+                self.last_sent_error_time = self.time.now()
                 package = self.buildErrorReport(error)
             else:
                 package = self.buildClearReport()
             self.info("Sending error report (see settings to disable)")
-            url: str = "https://philosophyofpen.com/login/error.py?error={0}&version=1".format(quote(json.dumps(package, indent=4, sort_keys=True)))
-            requests.get(url)
+            url: str = self.config.get(Setting.ERROR_REPORT_URL) + "?error={0}&version=1".format(quote(json.dumps(package, indent=4, sort_keys=True)))
+            async with self.session.get(url):
+                pass
 
-    def updateDns(self):
+    async def updateDns(self):
         self.last_dns_update = self.time.now()
         try:
-            self.dns_info = getPingInfo(["www.googleapis.com"])
+            # Resolve google's addresses
+            # TODO: maybe this should use the "default" resolver rather than the custom one?.
+            self.dns_info = await self.getPingInfo()
             self._info.setDnsInfo(self.dns_info)
         except Exception as e:
             self.dns_info = formatException(e)
@@ -64,6 +83,7 @@ class DebugWorker(Worker):
         # Someday: Get the supervisor logs
         # Someday: Get the add-on logs
         report = {}
+        report['version'] = self.version
         report['debug'] = self._info.debug
         report['google_dns'] = self.dns_info
         report['error'] = error
@@ -84,9 +104,12 @@ class DebugWorker(Worker):
         return report
 
     def buildClearReport(self):
-        report = {}
-        report['client'] = self.config.clientIdentifier()
-        report['now'] = self.formatDate(self.time.now())
+        duration = self.time.now() - self.last_sent_error_time
+        report = {
+            'client': self.config.clientIdentifier(),
+            'now': self.formatDate(self.time.now()),
+            'duration': str(duration)
+        }
         return report
 
     def formatDate(self, date: datetime):
@@ -94,3 +117,37 @@ class DebugWorker(Worker):
             return "Never"
         else:
             return date.isoformat()
+
+    async def getPingInfo(self):
+        who = self.config.get(Setting.DRIVE_HOST_NAME)
+        ips = await self.resolve(who)
+        pings = {who: {}}
+        for ip in ips:
+            pings[who][ip] = "Unknown"
+        command = "fping -t 5000 " + " ".join(ips)
+
+        # fping each server
+        process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        stdout_data, stderr_data = await process.communicate()
+
+        for line in stdout_data.decode().split("\n"):
+            for host in pings.keys():
+                for address in pings[host].keys():
+                    if line.startswith(address):
+                        response = line[len(address):].strip()
+                        if response.startswith(":"):
+                            response = response[2:].strip()
+                        if response.startswith("is"):
+                            response = response[3:].strip()
+                        pings[host][address] = response
+        return pings
+
+    async def resolve(self, who: str):
+        try:
+            ret = [who]
+            addresses = await self.resolver.resolve(who, 443, socket.AF_INET)
+            for address in addresses:
+                ret.append(address['host'])
+            return ret
+        except Exception:
+            return [who]

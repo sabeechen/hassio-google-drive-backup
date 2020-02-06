@@ -7,7 +7,6 @@ import logging
 
 from .logbase import LogBase, console_handler
 from typing import Dict, List, Any, Optional
-from .resolver import Resolver
 from .settings import Setting, _LOOKUP
 from .backupscheme import GenConfig
 
@@ -24,29 +23,23 @@ KEEP_DEFAULT = {
 
 
 class Config(LogBase):
-    def __init__(self, resolver: Resolver = None):
+    def __init__(self, config_path=None):
         self.overrides = {}
         self.config = {}
         self._clientIdentifier = uuid.uuid4()
-        self.resolver = resolver
         console_handler.setLevel(logging.INFO)
 
         self.retained = self._loadRetained()
-        self._gen_config_cache = self.getGenerationalConfig()
-        self._refreshResolver()
+        if config_path is None:
+            config_path = Setting.CONFIG_FILE_PATH.default()
+        if len(config_path) > 0:
+            with open(config_path, "r") as f:
+                self.config = json.load(f)
 
-    def _refreshResolver(self):
-        if self.resolver is not None:
-            if len(self.get(Setting.DRIVE_IPV4)) > 0:
-                self.resolver.addOverride("www.googleapis.com", [self.get(Setting.DRIVE_IPV4)])
-            else:
-                self.resolver.clearOverrides()
-            self.resolver.addResolveAddress("www.googleapis.com")
-            self.resolver.setIgnoreIpv6(self.get(Setting.IGNORE_IPV6_ADDRESSES))
-            self.resolver.setDnsServers(self.get(Setting.ALTERNATE_DNS_SERVERS).split(","))
+        self._gen_config_cache = self.getGenerationalConfig()
 
     def getConfigFor(self, options):
-        new_config = Config()
+        new_config = Config("")
         new_config.overrides = self.overrides.copy()
         new_config.update(self.validate(options))
         return new_config
@@ -89,7 +82,6 @@ class Config(LogBase):
         self.config = self.validate(new_config)
         self._gen_config_cache = self.getGenerationalConfig()
         console_handler.setLevel(logging.DEBUG if self.get(Setting.VERBOSE) else logging.INFO)
-        self._refreshResolver()
 
     def warnExposeIngressUpgrade(self):
         return False

@@ -1,31 +1,37 @@
 import os
 import pytest
 import tempfile
-import requests
-import re
+import aiohttp
+import socket
+import logging
+import json
 
 from .faketime import FakeTime
+from ..time import Time
 from ..config import Config
 from oauth2client.client import OAuth2Credentials
 from ..drivesource import DriveSource
 from ..hasource import HaSource
 from ..harequests import HaRequests
 from ..driverequests import DriveRequests
-from ..dev.flaskserver import app, cleanupInstance, getInstance, initInstance
-from threading import Thread, Lock
+from ..debugworker import DebugWorker
 from ..coordinator import Coordinator
 from ..globalinfo import GlobalInfo
-from ..model import Model
+from ..model import Model, SnapshotDestination, SnapshotSource
 from ..haupdater import HaUpdater
-from .helpers import HelperTestSource, LockBlocker
-from ..dev.testbackend import HelperTestBackend
-from ..resolver import Resolver
+from .helpers import Uploader
+from ..resolver import SubvertingResolver
 from ..settings import Setting
 from ..logbase import LogBase
 from ..estimator import Estimator
+from ..dev.simulationserver import SimulationServer
+from injector import Injector, Module, singleton, provider, ClassAssistedBuilder, inject
+from aiohttp import ClientSession, TCPConnector
 
 
+@singleton
 class FsFaker():
+    @inject
     def __init__(self):
         self.bytes_free = 1024 * 1024 * 1024
         self.bytes_total = 1024 * 1024 * 1024
@@ -48,271 +54,217 @@ class FsFaker():
             self.bytes_total = self.bytes_free
 
 
-class ServerThread():
-    def __init__(self, port):
-        self.base = "http://localhost:" + str(port)
-        self.thread: Thread = Thread(target=self.run_server, name="server thread")
-        self.thread.setDaemon(True)
-        self.port = port
+# This module should onyl ever have bindings that can also be satisfied by MainModule
+class TestModule(Module):
+    def __init__(self, cleandir, server_url, ui_port, ingress_port):
+        self.cleandir = cleandir
+        self.server_url = server_url
+        self.ui_port = ui_port
+        self.ingress_port = ingress_port
 
-    def startServer(self):
-        self.thread.start()
-        while True:
-            if self._ping():
-                break
+    def configure(self, binder):
+        binder.bind(SnapshotSource, to=HaSource, scope=singleton)
+        binder.bind(SnapshotDestination, to=DriveSource, scope=singleton)
 
-    def _ping(self):
-        try:
-            requests.get(self.base, timeout=0.5)
-            return True
-        except requests.exceptions.ReadTimeout:
-            return False
-        except requests.exceptions.ConnectionError:
-            return False
+    @provider
+    @singleton
+    def getSession(self, resolver: SubvertingResolver) -> ClientSession:
+        conn = TCPConnector(resolver=resolver, family=socket.AF_INET)
+        return ClientSession(connector=conn)
 
-    def run_server(self):
-        try:
-            app.run(debug=False, host='0.0.0.0', threaded=True, port=self.port)
-        except Exception as e:
-            if "[Errno 98] Address already in use" not in str(e):
-                print("TEST ERROR: " + str(e))
+    @provider
+    @singleton
+    def getDriveCreds(self) -> OAuth2Credentials:
+        return OAuth2Credentials("", "test_client_id", "test_client_secret", refresh_token="test_Refresh_token", token_expiry="", token_uri="", user_agent="")
 
+    @provider
+    @singleton
+    def getTime(self) -> Time:
+        return FakeTime()
 
-class ServerInstance():
-    def __init__(self, id, time, port):
-        self.base = "http://localhost:" + str(port)
-        self.id = id
-        initInstance(id, time, port=port)
+    @provider
+    @singleton
+    def getConfig(self, drive_creds: OAuth2Credentials) -> Config:
+        with open(os.path.join(self.cleandir, "secrets.yaml"), "w") as f:
+            f.write("for_unit_tests: \"password value\"\n")
 
-    def reset(self, config={"update": "true"}):
-        self.getServer().reset()
-        self.update(config)
+        with open(os.path.join(self.cleandir, "credentials.dat"), "w") as f:
+            f.write(drive_creds.to_json())
 
-    def getServer(self) -> HelperTestBackend:
-        return getInstance(self.id)
+        with open(os.path.join(self.cleandir, "options.json"), "w") as f:
+            json.dump({}, f)
 
-    def update(self, config):
-        self.getServer().update(config)
+        config = Config(os.path.join(self.cleandir, "options.json"))
+        config.override(Setting.DRIVE_URL, self.server_url)
+        config.override(Setting.HASSIO_URL, self.server_url + "/")
+        config.override(Setting.HOME_ASSISTANT_URL, self.server_url + "/homeassistant/api/")
+        config.override(Setting.AUTHENTICATE_URL, self.server_url + "/external/drivecreds/")
+        config.override(Setting.ERROR_REPORT_URL, self.server_url + "/errorreport")
+        config.override(Setting.HASSIO_TOKEN, "test_header")
+        config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
+        config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")
+        config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
+        config.override(Setting.RETAINED_FILE_PATH, "retained.json")
+        config.override(Setting.INGRESS_TOKEN_FILE_PATH, "ingress.dat")
+        config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "test_client_id")
+        config.override(Setting.BACKUP_DIRECTORY_PATH, self.cleandir)
+        config.override(Setting.PORT, self.ui_port)
+        config.override(Setting.INGRESS_PORT, self.ingress_port)
 
-    def blockSnapshots(self):
-        return LockBlocker().block(self.getServer()._snapshot_lock)
-
-    def getClient(self):
-        return requests
-
-    def cleanup(self):
-        cleanupInstance(self.id)
-
-
-class RequestsMock():
-    def __init__(self):
-        self.lock: Lock = Lock()
-        self.old_method = None
-        self.exception = None
-        self.attempts = None
-        self.url_filter = None
-        self.urls = []
-
-    def __enter__(self):
-        with self.lock:
-            self.old_method = requests.request
-            requests.request = self._override
-        return self
-
-    def __exit__(self, a, b, c):
-        with self.lock:
-            requests.request = self.old_method
-            self.old_method = None
-
-    def _override(self, *args, **kwargs):
-        if len(args) >= 2:
-            self.urls.append(args[1])
-
-        if len(args) >= 2 and self.exception is not None and (self.url_filter is None or re.match(self.url_filter, args[1])):
-            if self.attempts is None or self.attempts <= 0:
-                raise self.exception
-            else:
-                self.attempts -= 1
-
-        return self.old_method(*args, **kwargs)
-
-    def setFailure(self, attempts, url_filter, exception):
-        self.attempts = attempts
-        self.exception = exception
-        self.url_filter = url_filter
+        return config
 
 
 @pytest.fixture
-def snapshot(coord, source, dest):
-    coord.sync()
+async def injector(cleandir, server_url, ui_port, ingress_port):
+    # logging.getLogger('injector').setLevel(logging.DEBUG)
+    return Injector(TestModule(cleandir, server_url, ui_port, ingress_port))
+
+
+@pytest.fixture
+async def uploader(injector: Injector, server_url):
+    return injector.get(ClassAssistedBuilder[Uploader]).build(host=server_url)
+
+
+@pytest.fixture
+async def server(injector, port, drive_creds, session):
+    server = injector.get(ClassAssistedBuilder[SimulationServer]).build(port=port)
+    await server.reset({
+        "drive_refresh_token": drive_creds.refresh_token,
+        "drive_client_id": drive_creds.client_id,
+        "drive_client_secret": drive_creds.client_secret,
+        "hassio_header": "test_header"
+    })
+
+    # start the server
+    logging.getLogger().info("Starting SimulationServer on port " + str(port))
+    runner = aiohttp.web.AppRunner(server.createApp())
+    await runner.setup()
+    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=port)
+    await site.start()
+    yield server
+    await runner.shutdown()
+    await runner.cleanup()
+
+
+@pytest.fixture
+async def session(injector):
+    async with injector.get(ClientSession) as session:
+        yield session
+
+
+@pytest.fixture
+async def snapshot(coord, source, dest):
+    await coord.sync()
     assert len(coord.snapshots()) == 1
     return coord.snapshots()[0]
 
 
 @pytest.fixture
-def fs(config, global_info):
-    faker = FsFaker()
+async def fs(injector):
+    faker = injector.get(FsFaker)
     faker.start()
     yield faker
     faker.stop()
 
 
 @pytest.fixture
-def estimator(config, global_info, fs):
-    yield Estimator(config, global_info)
+async def estimator(injector, fs):
+    return injector.get(Estimator)
 
 
 @pytest.fixture
-def model(source, dest, time, simple_config, global_info, estimator):
-    return Model(simple_config, time, source, dest, global_info, estimator)
+async def model(injector):
+    return injector.get(Model)
 
 
 @pytest.fixture
-def source():
-    return HelperTestSource("Source")
+async def global_info(injector):
+    return injector.get(GlobalInfo)
 
 
 @pytest.fixture
-def dest():
-    return HelperTestSource("Dest")
+async def server_url(port):
+    return "http://localhost:" + str(port)
 
 
 @pytest.fixture
-def simple_config():
-    config = Config()
-    return config
+async def port(unused_tcp_port_factory):
+    return unused_tcp_port_factory()
 
 
 @pytest.fixture
-def blocker():
-    return LockBlocker()
+async def ui_port(unused_tcp_port_factory):
+    return unused_tcp_port_factory()
 
 
 @pytest.fixture
-def global_info(time):
-    return GlobalInfo(time)
+async def ingress_port(unused_tcp_port_factory):
+    return unused_tcp_port_factory()
 
 
 @pytest.fixture
-def port():
-    return 1234
-
-
-@pytest.fixture
-def coord(model, time, simple_config, global_info, estimator):
-    updater = HaUpdater(None, simple_config, time, global_info)
-    return Coordinator(model, time, simple_config, global_info, updater, estimator)
+async def coord(injector):
+    return injector.get(Coordinator)
 
 
 @pytest.fixture()
-def updater(time, config, global_info, ha_requests):
+async def updater(time, config, global_info, ha_requests):
     return HaUpdater(ha_requests, config, time, global_info)
 
 
 @pytest.fixture()
-def cleandir():
+async def cleandir():
     newpath = tempfile.mkdtemp()
     os.chdir(newpath)
     return newpath
 
 
 @pytest.fixture
-def time():
+async def time(injector):
     LogBase.reset()
-    return FakeTime()
+    return injector.get(Time)
 
 
 @pytest.fixture
-def config(cleandir, drive_creds: OAuth2Credentials):
-    with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
-        f.write("for_unit_tests: \"password value\"\n")
-
-    with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
-        f.write(drive_creds.to_json())
-
-    config = Config()
-    config.override(Setting.DRIVE_URL, "http://localhost:1234")
-    config.override(Setting.HASSIO_URL, "http://localhost:1234/")
-    config.override(Setting.HOME_ASSISTANT_URL, "http://localhost:1234/homeassistant/api/")
-    config.override(Setting.AUTHENTICATE_URL, "http://localhost:1234/external/drivecreds/")
-    config.override(Setting.HASSIO_TOKEN, "test_header")
-    config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
-    config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")
-    config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
-    config.override(Setting.RETAINED_FILE_PATH, "retained.json")
-    config.override(Setting.INGRESS_TOKEN_FILE_PATH, "ingress.dat")
-    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "test_client_id")
-    config.override(Setting.BACKUP_DIRECTORY_PATH, cleandir)
-
-    return config
+async def config(injector):
+    return injector.get(Config)
 
 
 @pytest.fixture
-def drive_creds():
-    return OAuth2Credentials("", "test_client_id", "test_client_secret", refresh_token="test_Refresh_token", token_expiry="", token_uri="", user_agent="")
+async def drive_creds(injector):
+    return injector.get(OAuth2Credentials)
 
 
 @pytest.fixture
-def drive(time, config, drive_creds, drive_requests, global_info):
-    return DriveSource(config, time, drive_requests, global_info)
+async def drive(injector, server, session):
+    return injector.get(DriveSource)
 
 
 @pytest.fixture
-def ha(time, config, ha_requests, global_info):
-    return HaSource(config, time, ha_requests, global_info)
+async def ha(injector, server, session):
+    return injector.get(HaSource)
 
 
 @pytest.fixture
-def ha_requests(config, request_client):
-    return HaRequests(config, request_client)
+async def ha_requests(injector, server):
+    return injector.get(HaRequests)
 
 
 @pytest.fixture
-def drive_requests(config, time, request_client, resolver):
-    return DriveRequests(config, time, request_client, resolver)
+async def drive_requests(injector, server):
+    return injector.get(DriveRequests)
 
 
 @pytest.fixture
-def resolver(time):
-    return Resolver(time)
+async def resolver(injector):
+    return injector.get(SubvertingResolver)
 
 
 @pytest.fixture
-def request_client(requests_mock, server):
-    with requests_mock:
-        yield requests
+async def client_identifier(injector):
+    return injector.get(Config).clientIdentifier()
 
 
 @pytest.fixture
-def requests_mock():
-    return RequestsMock()
-
-
-@pytest.fixture
-def client_identifier(config: Config):
-    return config.clientIdentifier()
-
-
-@pytest.fixture
-def server(drive_creds: OAuth2Credentials, webserver_raw, client_identifier, time, port):
-    instance = ServerInstance(client_identifier, time, port)
-    instance.reset({
-        "drive_refresh_token": drive_creds.refresh_token,
-        "drive_client_id": drive_creds.client_id,
-        "drive_client_secret": drive_creds.client_secret,
-        "hassio_header": "test_header"
-    })
-    yield instance
-    instance.cleanup()
-
-
-@pytest.fixture()
-def webserver_raw(port, cleandir):
-    os.mkdir("www")
-    server = ServerThread(port)
-    server.startServer()
-    return server
-
-
-def run_server():
-    app.run(debug=False, host='0.0.0.0', threaded=True, port=1234)
+async def debug_worker(injector):
+    return injector.get(DebugWorker)

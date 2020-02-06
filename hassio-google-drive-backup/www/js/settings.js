@@ -475,98 +475,99 @@ function handleCloseSettings() {
 
 
 function loadSettings() {
-  var jqxhr = $.get("getconfig",
-    function (data) {
-      config_data = data
-      name_keys = data.name_keys;
-      config = data.config;
-      addons = data.addons;
-      defaults = data.defaults
-      for (key in config) {
-        if (config.hasOwnProperty(key)) {
-          setInputValue(key, config[key]);
-        }
-      }
+  postJson("getconfig", {}, handleSettingsDialog, null, "Loading settings...")
+}
 
-      setInputValue("generational_enabled",
-        config.generational_days > 0 || config.generational_weeks > 0 || config.generational_months > 0 || config.generational_years > 0);
+function handleSettingsDialog(data) {
+  config_data = data
+  name_keys = data.name_keys;
+  config = data.config;
+  addons = data.addons;
+  defaults = data.defaults
+  for (key in config) {
+    if (config.hasOwnProperty(key)) {
+      setInputValue(key, config[key]);
+    }
+  }
 
-      // Set the state of excluded folders.
-      var excluded_folders = [];
-      if (config.hasOwnProperty('exclude_folders') && config.exclude_folders.length > 0) {
-        excluded_folders = config.exclude_folders.split(",");
-      }
-      for (var i = 0; i < all_folder_slugs.length; i++) {
-        setInputValue(slugToId(all_folder_slugs[i]), !excluded_folders.includes(all_folder_slugs[i]));
-      }
+  setInputValue("generational_enabled",
+    config.generational_days > 0 || config.generational_weeks > 0 || config.generational_months > 0 || config.generational_years > 0);
 
-      var exclude_addons = [];
-      if (config.hasOwnProperty('exclude_addons') && config.exclude_addons.length > 0) {
-        exclude_addons = config.exclude_addons.split(",");
-      }
+  // Set the state of excluded folders.
+  var excluded_folders = [];
+  if (config.hasOwnProperty('exclude_folders') && config.exclude_folders.length > 0) {
+    excluded_folders = config.exclude_folders.split(",");
+  }
+  for (var i = 0; i < all_folder_slugs.length; i++) {
+    setInputValue(slugToId(all_folder_slugs[i]), !excluded_folders.includes(all_folder_slugs[i]));
+  }
 
-      setInputValue("partial_snapshots", excluded_folders.length > 0 || exclude_addons.length > 0);
+  var exclude_addons = [];
+  if (config.hasOwnProperty('exclude_addons') && config.exclude_addons.length > 0) {
+    exclude_addons = config.exclude_addons.split(",");
+  }
 
-      // Set the state of excluded addons.
-      $("#settings_addons").html("");
-      for (addon in addons) {
-        addon = addons[addon];
-        template = `<li class="indented-li">
-                        <label>
-                          <input class="filled-in settings_addon_checkbox" type="checkbox" name="{id}" id="{id}" settings_ignore='true' {checked} />
-                          <span>{name} <span class="helper-text">(v{version})</span></span>
-                          <br />
-                          <span class="helper-text">{description}</span>
-                        </label>
-                      </li>`;
-        template = template
-          .replace("{id}", slugToId(addon.slug))
-          .replace("{id}", slugToId(addon.slug))
-          .replace("{description}", addon.description)
-          .replace("{name}", addon.name)
-          .replace("{version}", addon.installed)
-          .replace("{checked}", exclude_addons.includes(addon.slug) ? "" : "checked");
-        $("#settings_addons").append(template);
-      }
+  setInputValue("partial_snapshots", excluded_folders.length > 0 || exclude_addons.length > 0);
 
-      $("#settings_error_div").hide();
-      M.updateTextFields();
-      $("#use_ssl").trigger("change");
-      $("#generational_enabled").trigger("change");
-      $("#partial_snapshots").trigger("change");
-      $("#expose_extra_server").trigger("change");
-      settingsChanged = false;
-      snapshotNameExample();
+  // Set the state of excluded addons.
+  $("#settings_addons").html("");
+  for (addon in addons) {
+    addon = addons[addon];
+    template = `<li class="indented-li">
+                    <label>
+                      <input class="filled-in settings_addon_checkbox" type="checkbox" name="{id}" id="{id}" settings_ignore='true' {checked} />
+                      <span>{name} <span class="helper-text">(v{version})</span></span>
+                      <br />
+                      <span class="helper-text">{description}</span>
+                    </label>
+                  </li>`;
+    template = template
+      .replace("{id}", slugToId(addon.slug))
+      .replace("{id}", slugToId(addon.slug))
+      .replace("{description}", addon.description)
+      .replace("{name}", addon.name)
+      .replace("{version}", addon.installed)
+      .replace("{checked}", exclude_addons.includes(addon.slug) ? "" : "checked");
+    $("#settings_addons").append(template);
+  }
 
-      // Configure the visibility/link of the "current snapshot folder" help text and button.
-      if (data.snapshot_folder && data.snapshot_folder.length > 0) {
-        $("#current_folder_span").show()
-        $('#current_folder_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.snapshot_folder);
-      } else {
-        $("#current_folder_span").hide();
-      }
+  $("#settings_error_div").hide();
+  M.updateTextFields();
+  $("#use_ssl").trigger("change");
+  $("#generational_enabled").trigger("change");
+  $("#partial_snapshots").trigger("change");
+  $("#expose_extra_server").trigger("change");
+  settingsChanged = false;
+  snapshotNameExample();
 
-      if (config.specify_snapshot_folder && last_data && last_data.drive_enabled) {
-        $("#choose_folder_controls").show();
-      } else {
-        $("#choose_folder_controls").hide();
-      }
+  // Configure the visibility/link of the "current snapshot folder" help text and button.
+  if (data.snapshot_folder && data.snapshot_folder.length > 0) {
+    $("#current_folder_span").show()
+    $('#current_folder_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.snapshot_folder);
+  } else {
+    $("#current_folder_span").hide();
+  }
 
-      $("#settings_specify_folder_id").val(data.snapshot_folder);
+  if (config.specify_snapshot_folder && last_data && last_data.drive_enabled) {
+    $("#choose_folder_controls").show();
+  } else {
+    $("#choose_folder_controls").hide();
+  }
 
-      if (config.hasOwnProperty("snapshot_password")) {
-        $("#snapshot_password").data("old_password", config.snapshot_password);
-      } else {
-        $("#snapshot_password").data("old_password", "");
-      }
-      $("#snapshot_password_reenter").val("");
-      updateColorSelector($("#background_color"), Color.parse(config.background_color));
-      updateColorSelector($("#accent_color"), Color.parse(config.accent_color));
-      checkForSecret();
-      M.Modal.getInstance(document.querySelector('#settings_modal')).open();
-      showPallette($("#background_color"));
-      showPallette($("#accent_color"));
-    }, "json")
+  $("#settings_specify_folder_id").val(data.snapshot_folder);
+
+  if (config.hasOwnProperty("snapshot_password")) {
+    $("#snapshot_password").data("old_password", config.snapshot_password);
+  } else {
+    $("#snapshot_password").data("old_password", "");
+  }
+  $("#snapshot_password_reenter").val("");
+  updateColorSelector($("#background_color"), Color.parse(config.background_color));
+  updateColorSelector($("#accent_color"), Color.parse(config.accent_color));
+  checkForSecret();
+  M.Modal.getInstance(document.querySelector('#settings_modal')).open();
+  showPallette($("#background_color"));
+  showPallette($("#accent_color"));
 }
 
 function chooseFolderChanged() {

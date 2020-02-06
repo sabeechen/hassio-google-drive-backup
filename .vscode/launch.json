@@ -28,8 +28,17 @@
             "type": "python",
             "request": "launch",
             "pythonPath": "/usr/bin/python3.7",
-            "module": "backup.dev.flaskserver",
+            "module": "backup.dev.simulationserver",
             "cwd": "${workspaceFolder}/hassio-google-drive-backup"
+        },
+
+        {
+            "name": "Run Buggy Test",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "/usr/bin/python3.7",
+            "module": "pytest",
+            "args": ["hassio-google-drive-backup/backup/tests/test_uiserver.py::test_retain"],
         },
         {
             "name": "Python: Current File (External Terminal)",

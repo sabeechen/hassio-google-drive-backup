@@ -75,6 +75,8 @@
     "drive_url": "url?",
     "authenticate_url": "url?",
     "choose_folder_url": "url?",
+    "error_report_url": "url?",
+    "drive_host_name": "str?",
 
     "snapshot_stale_seconds": "float(0,)?",
     "max_sync_interval_seconds": "float(0,)?",
@@ -86,12 +88,14 @@
     "port": "int(0,)?",
 
     "folder_file_path": "str?",
+    "config_file_path": "str?",
     "retained_file_path": "str?",
     "secrets_file_path": "str?",
     "backup_directory_path": "str?",
     "credentials_file_path": "str?",
     "ingress_token_file_path": "str?",
-    "default_drive_client_id": "str?"
+    "default_drive_client_id": "str?",
+    "default_chunk_size": "int(1,)"
   },
   "ports": {
     "1627/tcp": 1627

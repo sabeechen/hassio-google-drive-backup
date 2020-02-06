@@ -2,9 +2,8 @@ import os.path
 import os
 
 from datetime import datetime
-from requests.exceptions import HTTPError
 from oauth2client.client import Credentials
-from .model import SnapshotSource, CreateOptions
+from .model import CreateOptions, SnapshotDestination
 from datetime import timedelta
 from .snapshots import DriveSnapshot, AbstractSnapshot
 from io import IOBase
@@ -27,6 +26,10 @@ from .exceptions import LogicError, BackupFolderMissingError, ExistingBackupFold
 from .globalinfo import GlobalInfo
 from .const import SOURCE_GOOGLE_DRIVE
 from .settings import Setting
+from .asynchttpgetter import AsyncHttpGetter
+from aiohttp import ClientSession
+from aiohttp.client_exceptions import ClientResponseError
+from injector import inject, singleton
 
 MIME_TYPE = "application/tar"
 THUMBNAIL_MIME_TYPE = "image/png"
@@ -35,10 +38,13 @@ FOLDER_NAME = 'Hass.io Snapshots'
 FOLDER_CACHE_SECONDS = 30
 
 
-class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
+@singleton
+class DriveSource(SnapshotDestination, LogBase):
     # SOMEDAY: read snapshots all in one big batch request, then sort the folder and child addons from that.  Would need to add test verifying the "current" backup directory is used instead of the "latest"
-    def __init__(self, config: Config, time: Time, drive_requests, info: GlobalInfo):
+    @inject
+    def __init__(self, config: Config, time: Time, drive_requests: DriveRequests, info: GlobalInfo, session: ClientSession):
         super().__init__()
+        self.session = session
         self.config = config
         self.drivebackend: DriveRequests = drive_requests
         self.time = time
@@ -72,46 +78,47 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
     def enabled(self) -> bool:
         return self.drivebackend.enabled()
 
-    def create(self, options: CreateOptions) -> DriveSnapshot:
+    async def create(self, options: CreateOptions) -> DriveSnapshot:
         raise LogicError("Snapshots can't be created in Drive")
 
-    def getFolderId(self) -> str:
-        return self._getParentFolderId()
+    async def getFolderId(self) -> str:
+        return await self._getParentFolderId()
 
     def checkBeforeChanges(self):
         if self._existing_folder_id:
             raise ExistingBackupFolderError(self._existing_folder_id, self._existing_folder_name)
 
-    def get(self) -> Dict[str, DriveSnapshot]:
-        self._info.drive_folder_id = self.getFolderId()
+    async def get(self) -> Dict[str, DriveSnapshot]:
+        parent = await self.getFolderId()
+        self._info.drive_folder_id = parent
         snapshots: Dict[str, DriveSnapshot] = {}
         try:
-            for child in self.drivebackend.query("'{}' in parents".format(self._getParentFolderId())):
+            async for child in self.drivebackend.query("'{}' in parents".format(parent)):
                 properties = child.get('appProperties')
                 if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties:
                     snapshot = DriveSnapshot(child)
                     snapshots[snapshot.slug()] = snapshot
-        except HTTPError as e:
-            if e.response.status_code == 404:
+        except ClientResponseError as e:
+            if e.status == 404:
                 # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
-                raise BackupFolderInaccessible(self._getParentFolderId())
+                raise BackupFolderInaccessible(parent)
             raise e
         except GoogleDrivePermissionDenied:
             # This should always mean we lost permission on the backup folder, but at least it still exists.
-            raise BackupFolderInaccessible(self._getParentFolderId())
+            raise BackupFolderInaccessible(parent)
         return snapshots
 
-    def delete(self, snapshot: Snapshot):
+    async def delete(self, snapshot: Snapshot):
         item = self._validateSnapshot(snapshot)
         self.info("Deleting '{}' From Google Drive".format(item.name()))
-        self.drivebackend.delete(item.id())
+        await self.drivebackend.delete(item.id())
         snapshot.removeSource(self.name())
 
-    def save(self, snapshot: AbstractSnapshot, bytes: IOBase) -> DriveSnapshot:
+    async def save(self, snapshot: AbstractSnapshot, source: AsyncHttpGetter) -> DriveSnapshot:
         retain = snapshot.getOptions() and snapshot.getOptions().retain_sources.get(self.name(), False)
         file_metadata = {
             'name': str(snapshot.name()) + ".tar",
-            'parents': [self._getParentFolderId()],
+            'parents': [await self._getParentFolderId()],
             'description': 'A Hass.io snapshot file uploaded by Hass.io Google Drive Backup',
             'appProperties': {
                 PROP_KEY_SLUG: snapshot.slug(),
@@ -133,31 +140,34 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
             'modifiedTime': self._timeToRfc3339String(snapshot.date())
         }
 
-        try:
-            self._info.upload(bytes.size())
-            snapshot.overrideStatus("Uploading {0}%", bytes)
-            for progress in self.drivebackend.create(bytes, file_metadata, MIME_TYPE):
-                if isinstance(progress, float):
-                    self.debug("Uploading {1} {0:.2f}%".format(progress * 100, snapshot.name()))
-                else:
-                    return DriveSnapshot(progress)
-            raise LogicError("Google Drive snapshot upload didn't return a completed item before exiting")
-        except HTTPError as e:
-            if e.response.status_code == 404:
-                # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
-                raise BackupFolderInaccessible(self._getParentFolderId())
-            raise e
-        except GoogleDrivePermissionDenied:
-            # This shoudl always mean we lost permission on the backup folder, but at least it still exists.
-            raise BackupFolderInaccessible(self._getParentFolderId())
-        finally:
-            snapshot.clearStatus()
+        async with source:
+            try:
+                self.info("Uploading '{}' to Google Drive".format(snapshot.name()))
+                size = source.size()
+                self._info.upload(size)
+                snapshot.overrideStatus("Uploading {0}%", source)
+                async for progress in self.drivebackend.create(source, file_metadata, MIME_TYPE):
+                    if isinstance(progress, float):
+                        self.debug("Uploading {1} {0:.2f}%".format(progress * 100, snapshot.name()))
+                    else:
+                        return DriveSnapshot(progress)
+                raise LogicError("Google Drive snapshot upload didn't return a completed item before exiting")
+            except ClientResponseError as e:
+                if e.status == 404:
+                    # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
+                    raise BackupFolderInaccessible(await self._getParentFolderId())
+                raise e
+            except GoogleDrivePermissionDenied:
+                # This shoudl always mean we lost permission on the backup folder, but at least it still exists.
+                raise BackupFolderInaccessible(await self._getParentFolderId())
+            finally:
+                snapshot.clearStatus()
 
-    def read(self, snapshot: Snapshot) -> IOBase:
+    async def read(self, snapshot: Snapshot) -> IOBase:
         item = self._validateSnapshot(snapshot)
-        return self.drivebackend.download(item.id())
+        return await self.drivebackend.download(item.id(), item.size())
 
-    def retain(self, snapshot: Snapshot, retain: bool) -> None:
+    async def retain(self, snapshot: Snapshot, retain: bool) -> None:
         item = self._validateSnapshot(snapshot)
         if item.retained() == retain:
             return
@@ -166,7 +176,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 PROP_RETAINED: str(retain),
             },
         }
-        self.drivebackend.update(item.id(), file_metadata)
+        await self.drivebackend.update(item.id(), file_metadata)
         item.setRetained(retain)
 
     def changeBackupFolder(self, id):
@@ -176,7 +186,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
         self._existing_folder_id = None
         self._existing_folder_name = None
 
-    def _verifyBackupFolderWithQuery(self, id):
+    async def _verifyBackupFolderWithQuery(self, id):
         if self.isCustomCreds():
             # If the user is using custom creds and specifying the snapshot folder, then chances are the
             # app doesn't have permission to access the parent folder directly.  Ironically, we can still
@@ -186,22 +196,22 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
             return True
         # Query drive for the folder to make sure it still exists and we have the right permission on it.
         try:
-            folder = self._get(id)
+            folder = await self._get(id)
             if not self._isValidFolder(folder):
                 self.info("Provided snapshot folder {0} is invalid".format(id))
                 return False
             return True
-        except HTTPError as e:
+        except ClientResponseError as e:
             # 404 means the folder doesn't exist (maybe it got moved?)
-            if e.response.status_code == 404:
+            if e.status == 404:
                 self.info("Provided snapshot folder {0} is gone".format(id))
                 return False
             else:
                 raise e
 
-    def _getParentFolderId(self):
+    async def _getParentFolderId(self):
         if not self._folder_queryied_last or self._folder_queryied_last + timedelta(seconds=FOLDER_CACHE_SECONDS) < self.time.now():
-            self._folderId = self._validateFolderId()
+            self._folderId = await self._validateFolderId()
             self._folder_queryied_last = self.time.now()
         return self._folderId
 
@@ -214,12 +224,12 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
     def _timeToRfc3339String(self, time: datetime) -> str:
         return time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    def _validateFolderId(self) -> str:
+    async def _validateFolderId(self) -> str:
         # First, check if we cached the drive folder
         if os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
             with open(self.config.get(Setting.FOLDER_FILE_PATH), "r") as folder_file:
                 folder_id: str = folder_file.readline()
-            if self._verifyBackupFolderWithQuery(folder_id):
+            if await self._verifyBackupFolderWithQuery(folder_id):
                 return folder_id
             elif self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
                 # Raise a special exception about losing access.
@@ -227,15 +237,15 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
 
         if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
             raise BackupFolderMissingError()
-        return self._findDriveFolder()
+        return await self._findDriveFolder()
 
-    def _get(self, id):
-        return self.drivebackend.get(id)
+    async def _get(self, id):
+        return await self.drivebackend.get(id)
 
-    def _findDriveFolder(self) -> str:
+    async def _findDriveFolder(self) -> str:
         folders = []
 
-        for child in self.drivebackend.query("mimeType='" + FOLDER_MIME_TYPE + "'"):
+        async for child in self.drivebackend.query("mimeType='" + FOLDER_MIME_TYPE + "'"):
             if self._isValidFolder(child):
                 folders.append(child)
 
@@ -253,7 +263,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                     return self._saveFolderId(folder.get('id'))
                 else:
                     # Create a new folder
-                    new_id = self._createDriveFolder()
+                    new_id = await self._createDriveFolder()
                     self._info.resolveFolder(None)
                     return new_id
             self._folderId = folder.get("id")
@@ -262,7 +272,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
             return self._folderId
 
         # Create a new folder since one doesn't already exist.
-        return self._createDriveFolder()
+        return await self._createDriveFolder()
 
     def _isValidFolder(self, folder) -> bool:
         try:
@@ -281,7 +291,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
             return False
         return True
 
-    def _createDriveFolder(self) -> str:
+    async def _createDriveFolder(self) -> str:
         self.info('Creating folder "{}" in "My Drive"'.format(FOLDER_NAME))
         file_metadata: Dict[str, str] = {
             'name': FOLDER_NAME,
@@ -290,7 +300,7 @@ class DriveSource(SnapshotSource[DriveSnapshot], LogBase):
                 "backup_folder": "true",
             },
         }
-        folder = self.drivebackend.createFolder(file_metadata)
+        folder = await self.drivebackend.createFolder(file_metadata)
         return self._saveFolder(folder)
 
     def _saveFolder(self, folder: Any) -> str:

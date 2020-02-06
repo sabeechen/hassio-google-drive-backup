@@ -289,3 +289,22 @@ class LowSpaceError(KnownError):
             "pct_used": self.pct_used,
             "space_remaining": self.space_remaining
         }
+
+
+class SupervisorConnectionError(KnownError):
+    def message(self):
+        return "The addon couldn't connect to the Hass.io supervisor.  Backups can't continue until the supervisor is responding."
+
+    def code(self):
+        return "supervisor_connection"
+
+
+class UserCancelledError(KnownError):
+    def message(self):
+        return "Sync was cancelled by you"
+
+    def code(self):
+        return "cancelled"
+
+    def retrySoon(self):
+        return False

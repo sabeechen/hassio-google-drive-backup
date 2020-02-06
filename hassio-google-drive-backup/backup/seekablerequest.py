@@ -1,7 +1,5 @@
 from io import IOBase
 from io import SEEK_SET, SEEK_END, SEEK_CUR
-from urllib.request import urlopen
-from urllib.request import Request
 from .logbase import LogBase
 from .exceptions import LogicError, ProtocolError, ensureKey
 from typing import Dict
@@ -18,7 +16,7 @@ class WrappedException(Exception):
 
 
 class SeekableRequest(IOBase, LogBase):
-    def __init__(self, url, headers: Dict[str, str], size: int = -1, chunk_size=1024 * 1024 * 10):
+    def __init__(self, url, headers: Dict[str, str], size, session, chunk_size=1024 * 1024 * 10):
         self.url: str = url
         self.offset: int = 0
         self._size: int = size
@@ -26,42 +24,43 @@ class SeekableRequest(IOBase, LogBase):
         self.buffer: bytearray = bytearray()
         self.bufferStart = 0
         self.chunk_size = chunk_size
+        self.session = session
 
-    def prepare(self):
-        self.size()
+    async def prepare(self):
+        await self.size()
         return self
 
-    def size(self) -> int:
+    async def size(self) -> int:
         if self._size < 0:
-            self._size = self._getContentLength()
+            self._size = await self._getContentLength()
         return self._size
 
-    def _readFromServer(self, count=-1) -> bytearray:
+    async def _readFromServer(self, count=-1) -> bytearray:
         if count == 0:
             return bytearray()
         if count < 0:
-            count = self.size() - self.offset
+            count = await self.size() - self.offset
 
         end = self.offset + count - 1
-        return self._getByteRange(self.offset, end)
+        return await self._getByteRange(self.offset, end)
 
-    def read(self, count=1):
-        ret = self._read(count)
+    async def read(self, count=1):
+        ret = await self._read(count)
         if len(ret) == 0:
             return bytes(ret)
         while(len(ret) < count):
             needed = count - len(ret)
-            additional = self._read(needed)
+            additional = await self._read(needed)
             if len(additional) == 0:
                 return bytes(ret)
             else:
                 ret.extend(additional)
         return bytes(ret)
 
-    def _read(self, count):
-        if self.offset + count >= self.size():
-            count = self.size() - self.offset
-        if count == 0 or self.offset >= self.size():
+    async def _read(self, count):
+        if self.offset + count >= await self.size():
+            count = await self.size() - self.offset
+        if count == 0 or self.offset >= await self.size():
             return bytearray()
 
         if self.bufferStart + count < len(self.buffer):
@@ -76,8 +75,8 @@ class SeekableRequest(IOBase, LogBase):
             data = bytearray(self.buffer[self.bufferStart:])
 
             self.offset += len(data)
-            left = self.size() - self.offset
-            self.buffer = self._readFromServer(min(self.chunk_size, left))
+            left = await self.size() - self.offset
+            self.buffer = await self._readFromServer(min(self.chunk_size, left))
             self.bufferStart = 0
 
             needed = count - len(data)
@@ -106,27 +105,21 @@ class SeekableRequest(IOBase, LogBase):
     def tell(self):
         return self.offset
 
-    def progress(self):
-        return 100 * float(self.tell()) / float(self.size())
+    async def progress(self):
+        return 100 * float(self.tell()) / float(await self.size())
 
-    def __format__(self, format_spec: str) -> str:
-        return str(int(self.progress()))
+    async def __format__(self, format_spec: str) -> str:
+        return str(int(await self.progress()))
 
-    def _getContentLength(self):
-        req: Request = Request(self.url)
-        for header in self.headers:
-            req.headers[header] = self.headers[header]
-        f = urlopen(req)
-        return int(ensureKey('Content-length', f.headers, "web server get request's headers"))
+    async def _getContentLength(self):
+        async with self.session.get(self.url, headers=self.headers) as resp:
+            return int(ensureKey('Content-length', resp.headers, "web server get request's headers"))
 
-    def _getByteRange(self, start, end):
-        req: Request = Request(self.url)
-        for header in self.headers:
-            req.headers[header] = self.headers[header]
-        req.headers.update(self.headers)
-        req.headers['range'] = "bytes=%s-%s" % (self.offset, end)
-        f = urlopen(req)
-        data = f.read()
-        if len(data) != (end - start + 1):
-            raise ProtocolError("Asked for range [{1}, {2}] at url {0}, but got back data length={3}".format(self.url, start, end, len(data)))
-        return data
+    async def _getByteRange(self, start, end):
+        headers = self.headers.copy()
+        headers['range'] = "bytes=%s-%s" % (self.offset, end)
+        async with self.session.get(self.url, headers=headers) as resp:
+            data = await resp.read()
+            if len(data) != (end - start + 1):
+                raise ProtocolError("Asked for range [{1}, {2}] at url {0}, but got back data length={3}".format(self.url, start, end, len(data)))
+            return data

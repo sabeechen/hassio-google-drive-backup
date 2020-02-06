@@ -7,9 +7,12 @@ from .logbase import LogBase
 from .helpers import asSizeString
 from .globalinfo import GlobalInfo
 from typing import List
+from injector import inject, singleton
 
 
+@singleton
 class Estimator(LogBase):
+    @inject
     def __init__(self, config: Config, global_info: GlobalInfo):
         super().__init__()
         self.config = config

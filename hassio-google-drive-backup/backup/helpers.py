@@ -1,7 +1,4 @@
-import traceback
-import socket
-import subprocess
-
+from traceback import TracebackException
 from dateutil.tz import tzutc
 from dateutil.parser import parse
 from datetime import datetime
@@ -93,48 +90,88 @@ def formatException(e: Exception) -> str:
     trace = None
     if (hasattr(e, "__traceback__")):
         trace = e.__traceback__
-    exc = traceback.format_exception(type(e), e, trace, chain=False)
-    return'\n%s\n' % ''.join(exc)
+    tbe = TracebackException(type(e), e, trace, limit=None)
+    lines = list(_format(tbe))
+    return'\n%s' % ''.join(lines)
 
 
-def resolveHostname(host: str):
-    try:
-        ret = []
-        for info in socket.getaddrinfo(host, 443, 0, 0, socket.IPPROTO_TCP):
-            ret.append(info[4][0])
-        return ret
-    except Exception:
-        return []
+def _format(tbe):
+    if (tbe.__context__ is not None and not tbe.__suppress_context__):
+        yield from _format(tbe.__context__)
+        yield "Whose handling caused:\n"
+    is_addon, stack = _formatStack(tbe)
+    yield from stack
+    yield from tbe.format_exception_only()
 
 
-def getPingInfo(servers):
-    pings = {}
-    for server in servers:
-        pings[server] = {
-            server: 'Unknown'
-        }
-    ips = servers.copy()
-    for address in pings.keys():
-        for ip in resolveHostname(address):
-            pings[address][ip] = "Unknown"
-            if ip not in ips:
-                ips.append(ip)
-    command = "fping -t 1000 " + " ".join(ips)
+def _formatStack(tbe):
+    _RECURSIVE_CUTOFF = 3
+    result = []
+    last_file = None
+    last_line = None
+    last_name = None
+    count = 0
+    is_addon = False
+    buffer = []
+    for frame in tbe.stack:
+        line_internal = True
+        if (last_file is None or last_file != frame.filename or last_line is None or last_line != frame.lineno or last_name is None or last_name != frame.name):
+            if count > _RECURSIVE_CUTOFF:
+                count -= _RECURSIVE_CUTOFF
+                result.append(
+                    f'  [Previous line repeated {count} more '
+                    f'time{"s" if count > 1 else ""}]\n'
+                )
+            last_file = frame.filename
+            last_line = frame.lineno
+            last_name = frame.name
+            count = 0
+        count += 1
+        if count > _RECURSIVE_CUTOFF:
+            continue
+        fileName = frame.filename
+        pos = fileName.rfind("hassio-google-drive-backup/backup")
+        if pos > 0:
+            is_addon = True
+            line_internal = False
+            fileName = "/addon" + fileName[pos + len("hassio-google-drive-backup/backup"):]
 
-    # fping each server
-    output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, encoding="utf-8")
+        pos = fileName.rfind("site-packages")
+        if pos > 0:
+            fileName = fileName[pos - 1:]
 
-    for line in output.stdout.split("\n"):
-        for host in pings.keys():
-            for address in pings[host].keys():
-                if line.startswith(address):
-                    response = line[len(address):].strip()
-                    if response.startswith(":"):
-                        response = response[2:].strip()
-                    if response.startswith("is"):
-                        response = response[3:].strip()
-                    pings[host][address] = response
-    return pings
+        pos = fileName.rfind("python3.7")
+        if pos > 0:
+            fileName = fileName[pos - 1:]
+            pass
+        line = '  {}:{} ({})\n'.format(fileName, frame.lineno, frame.name)
+        if line_internal:
+            buffer.append(line)
+        else:
+            result.extend(_compressFrames(buffer))
+            buffer = []
+            result.append(line)
+    if count > _RECURSIVE_CUTOFF:
+        count -= _RECURSIVE_CUTOFF
+        result.append(
+            f'  [Previous line repeated {count} more '
+            f'time{"s" if count > 1 else ""}]\n'
+        )
+    result.extend(_compressFrames(buffer))
+    return is_addon, result
+
+
+def _compressFrames(buffer):
+    if len(buffer) > 1:
+        yield buffer[0]
+        if len(buffer) == 3:
+            yield buffer[1]
+        elif len(buffer) > 2:
+            yield "  [{} hidden frames]\n".format(len(buffer) - 2)
+        yield buffer[len(buffer) - 1]
+    elif len(buffer) > 0:
+        yield buffer[len(buffer) - 1]
+        pass
 
 
 def touch(file):

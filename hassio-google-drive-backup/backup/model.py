@@ -12,6 +12,7 @@ from .estimator import Estimator
 from datetime import datetime, timedelta
 from typing import TypeVar, Generic, List, Dict, Optional, Tuple
 from io import IOBase
+from injector import inject, singleton
 
 T = TypeVar('T')
 
@@ -37,22 +38,22 @@ class SnapshotSource(Trigger, Generic[T]):
     def upload(self) -> bool:
         return True
 
-    def create(self, options: CreateOptions) -> T:
+    async def create(self, options: CreateOptions) -> T:
         pass
 
-    def get(self) -> Dict[str, T]:
+    async def get(self) -> Dict[str, T]:
         pass
 
-    def delete(self, snapshot: T):
+    async def delete(self, snapshot: T):
         pass
 
-    def save(self, snapshot: AbstractSnapshot, bytes: IOBase) -> T:
+    async def save(self, snapshot: AbstractSnapshot, bytes: IOBase) -> T:
         pass
 
-    def read(self, snapshot: T) -> IOBase:
+    async def read(self, snapshot: T) -> IOBase:
         pass
 
-    def retain(self, snapshot: T, retain: bool) -> None:
+    async def retain(self, snapshot: T, retain: bool) -> None:
         pass
 
     def maxCount(self) -> None:
@@ -64,8 +65,14 @@ class SnapshotSource(Trigger, Generic[T]):
         pass
 
 
+class SnapshotDestination(SnapshotSource):
+    pass
+
+
+@singleton
 class Model(LogBase):
-    def __init__(self, config: Config, time: Time, source: SnapshotSource[AbstractSnapshot], dest: SnapshotSource[AbstractSnapshot], info: GlobalInfo, estimator: Estimator):
+    @inject
+    def __init__(self, config: Config, time: Time, source: SnapshotSource, dest: SnapshotDestination, info: GlobalInfo, estimator: Estimator):
         self.config: Config = config
         self.time = time
         self.source: SnapshotSource = source
@@ -118,25 +125,25 @@ class Model(LogBase):
             latest = latest.date()
         return self._nextSnapshot(now, latest)
 
-    def sync(self, now: datetime):
+    async def sync(self, now: datetime):
         if self.simulate_error is not None:
             if self.simulate_error.startswith("test"):
                 raise Exception(self.simulate_error)
             else:
                 raise SimulatedError(self.simulate_error)
-        self._syncSnapshots([self.source, self.dest])
+        await self._syncSnapshots([self.source, self.dest])
 
         self.source.checkBeforeChanges()
         self.dest.checkBeforeChanges()
 
         if self.dest.enabled():
-            self._purge(self.source)
-            self._purge(self.dest)
+            await self._purge(self.source)
+            await self._purge(self.dest)
 
         next_snapshot = self.nextSnapshot(now)
         if next_snapshot and now >= next_snapshot and self.source.enabled() and self.dest.enabled():
-            self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
-            self._purge(self.source)
+            await self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
+            await self._purge(self.source)
 
         if self.dest.enabled() and self.dest.upload():
             # get the snapshots we should upload
@@ -152,26 +159,26 @@ class Model(LogBase):
                 proposed = list(self.snapshots.values())
                 proposed.append(dummy)
                 if self._nextPurge(self.dest, proposed) != dummy:
-                    upload.addSource(self.dest.save(upload, self.source.read(upload)))
-                    self._purge(self.dest)
+                    upload.addSource(await self.dest.save(upload, await self.source.read(upload)))
+                    await self._purge(self.dest)
                 else:
                     break
 
-    def createSnapshot(self, options):
+    async def createSnapshot(self, options):
         if not self.source.enabled():
             return
 
         self.estimator.refresh()
         self.estimator.checkSpace(list(self.snapshots.values()))
-        created = self.source.create(options)
+        created = await self.source.create(options)
         snapshot = Snapshot(created)
         self.snapshots[snapshot.slug()] = snapshot
 
-    def deleteSnapshot(self, snapshot, source):
+    async def deleteSnapshot(self, snapshot, source):
         if not snapshot.getSource(source.name()):
             return
         slug = snapshot.slug()
-        source.delete(snapshot)
+        await source.delete(snapshot)
         snapshot.removeSource(source.name())
         if snapshot.isDeleted():
             del self.snapshots[slug]
@@ -199,10 +206,10 @@ class Model(LogBase):
             # Parse error
             return None
 
-    def _syncSnapshots(self, sources: List[SnapshotSource]):
+    async def _syncSnapshots(self, sources: List[SnapshotSource]):
         for source in sources:
             if source.enabled():
-                from_source: Dict[str, AbstractSnapshot] = source.get()
+                from_source: Dict[str, AbstractSnapshot] = await source.get()
             else:
                 from_source: Dict[str, AbstractSnapshot] = {}
             for snapshot in from_source.values():
@@ -240,14 +247,14 @@ class Model(LogBase):
             return None
         return scheme.getOldest(consider_purging)
 
-    def _purge(self, source: SnapshotSource):
+    async def _purge(self, source: SnapshotSource):
         while True:
             purge = self._getPurgeList(source)
             if len(purge) <= 0:
                 return
             if len(purge) > 1 and (self.config.get(Setting.CONFIRM_MULTIPLE_DELETES) and not self.info.isPermitMultipleDeletes()):
                 raise DeleteMutlipleSnapshotsError(self._getPurgeStats())
-            self.deleteSnapshot(purge[0], source)
+            await self.deleteSnapshot(purge[0], source)
 
     def _getPurgeStats(self):
         ret = {}

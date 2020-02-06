@@ -1,5 +1,3 @@
-import requests
-
 from .logbase import LogBase
 from .config import Config
 from .harequests import HaRequests
@@ -10,6 +8,8 @@ from .backoff import Backoff
 from .worker import Worker
 from .settings import Setting
 from datetime import timedelta
+from injector import inject, singleton
+from aiohttp.client_exceptions import ClientResponseError
 
 NOTIFICATION_TITLE = "Hass.io Google Drive Backup is Having Trouble"
 NOTIFICATION_DESC_LINK = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page]({0}) for details."
@@ -22,7 +22,9 @@ FIRST_BACKOFF = 60  # 1 minute
 NOTIFY_DELAY = 60 * 5  # 5 minute
 
 
+@singleton
 class HaUpdater(Worker, LogBase):
+    @inject
     def __init__(self, requests: HaRequests, config: Config, time: Time, global_info: GlobalInfo):
         super().__init__("Sensor Updater", self.update, time, 5)
         self._time = time
@@ -35,12 +37,12 @@ class HaUpdater(Worker, LogBase):
         self._backoff = Backoff(max=MAX_BACKOFF, base=FIRST_BACKOFF)
         self._first_error = None
 
-    def update(self):
+    async def update(self):
         try:
             if self._config.get(Setting.ENABLE_SNAPSHOT_STALE_SENSOR):
-                self._requests.updateSnapshotStaleSensor(self._stale())
+                await self._requests.updateSnapshotStaleSensor(self._stale())
             if self._config.get(Setting.ENABLE_SNAPSHOT_STATE_SENSOR) and self._snapshots_stale:
-                self._requests.updateSnapshotsSensor(self._state(), self._cache)
+                await self._requests.updateSnapshotsSensor(self._state(), self._cache)
                 self._snapshots_stale = False
             if self._config.get(Setting.NOTIFY_FOR_STALE_SNAPSHOTS):
                 if self._stale() and not self._notified:
@@ -48,29 +50,29 @@ class HaUpdater(Worker, LogBase):
                         message = NOTIFICATION_DESC_STATIC
                     else:
                         message = NOTIFICATION_DESC_LINK.format(self._info.url)
-                    self._requests.sendNotification(NOTIFICATION_TITLE, message)
+                    await self._requests.sendNotification(NOTIFICATION_TITLE, message)
                     self._notified = True
                 elif not self._stale() and self._notified:
-                    self._requests.dismissNotification()
+                    await self._requests.dismissNotification()
                     self._notified = False
             self._backoff.reset()
             self._first_error = None
-        except requests.exceptions.HTTPError as e:
+        except ClientResponseError as e:
             if self._first_error is None:
                 self._first_error = self._time.now()
-            if int(e.response.status_code / 100) == 5:
+            if int(e.status / 100) == 5:
                 if self._time.now() > self._first_error + timedelta(seconds=NOTIFY_DELAY):
-                    self.error("Unable to reach Home Assistant (HTTP {0}).  Is it restarting?".format(e.response.status_code))
+                    self.error("Unable to reach Home Assistant (HTTP {0}).  Is it restarting?".format(e.status))
             else:
                 self.error("Trouble updating Home Assistant sensors.")
                 self.error(formatException(e))
             self._snapshots_stale = True
-            self._time.sleep(self._backoff.backoff(e))
+            await self._time.sleepAsync(self._backoff.backoff(e))
         except Exception as e:
             self._snapshots_stale = True
             self.error("Trouble updating Home Assistant sensors.")
             self.error(formatException(e))
-            self._time.sleep(self._backoff.backoff(e))
+            await self._time.sleepAsync(self._backoff.backoff(e))
 
     def updateSnapshots(self, snapshots):
         self._cache = snapshots

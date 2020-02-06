@@ -8,8 +8,8 @@ cgitb.enable()
 
 SCOPE = 'https://www.googleapis.com/auth/drive.file'
 AUTHORIZED_REDIRECT = "https://philosophyofpen.com/login/backup.py"
-CLIENT_ID = 'TODO'
-CLIENT_SECRET = 'TODO'
+CLIENT_ID = 'FILLLATER'
+CLIENT_SECRET = 'FILLLATER'
 
 args = cgi.FieldStorage()
 if 'redirectbacktoken' in args:

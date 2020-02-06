@@ -29,6 +29,6 @@ class FakeTime(Time):
     def nowLocal(self) -> datetime:
         return self.toLocal(self._now)
 
-    def sleep(self, seconds: int):
+    async def sleepAsync(self, seconds: float):
         self.sleeps.append(seconds)
         self._now = self._now + timedelta(seconds=seconds)

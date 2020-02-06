@@ -251,8 +251,8 @@ The config option `snapshot_name` can be changed to give snapshots a different n
 * `{hostname}`: The Home Assistant machine's hostname 
 
 
-### Will this ever upload to Dropbox/FTP/SMB/MyFavoriteProtocol?
-Most likely no.  I started this project to solve a specific problem I had, storing snapshot in a redundant cloud provider without having to write a bunch of buggy logic and automations.  I don't have the personal bandwidth available to make this work well with other storage providers.
+### Will this ever upload to Dropbox/OnDrive/FTP/SMB/MyFavoriteProtocol?
+Most likely no.  I started this project to solve a specific problem I had, storing snapshot in a redundant cloud provider without having to write a bunch of buggy logic and automations.  It might seem like a small change to make this work with another cloud provider, but trust me.  I wrote this version of it, and its not a simple change.  I don't have the time to do.
 
 ### But Google reads my emails!
 Maybe.  You can encrypt your snapshots by giving a password in the add-on's options.

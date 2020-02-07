@@ -9,7 +9,7 @@
             "name": "Run Addon (Dev Backends)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.7",
+            "pythonPath": "/usr/bin/python3.8",
             "module": "backup",
             "cwd": "${workspaceFolder}/hassio-google-drive-backup",
             "args": ["dev"]
@@ -18,7 +18,7 @@
             "name": "Run Addon (Real Google Drive)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.7",
+            "pythonPath": "/usr/bin/python3.8",
             "module": "backup",
             "cwd": "${workspaceFolder}/hassio-google-drive-backup",
             "args": ["drive"]
@@ -27,7 +27,7 @@
             "name": "Run Mock Backend Server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.7",
+            "pythonPath": "/usr/bin/python3.8",
             "module": "backup.dev.simulationserver",
             "cwd": "${workspaceFolder}/hassio-google-drive-backup"
         },
@@ -36,7 +36,7 @@
             "name": "Run Buggy Test",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.7",
+            "pythonPath": "/usr/bin/python3.8",
             "module": "pytest",
             "args": ["hassio-google-drive-backup/backup/tests/test_uiserver.py::test_retain"],
         },

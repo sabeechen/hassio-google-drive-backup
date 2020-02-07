@@ -33,9 +33,7 @@ class Worker(LogBase):
             await self._time.sleepAsync(self._interval)
 
     def start(self):
-        # TODO: when updating to python 3.8, include the name for the task
-        # self._task = asyncio.create_task(self.work(), name=self._name)
-        self._task = asyncio.create_task(self.work())
+        self._task = asyncio.create_task(self.work(), name=self._name)
         return self._task
 
     def isRunning(self):

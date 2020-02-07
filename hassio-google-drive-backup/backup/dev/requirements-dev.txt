@@ -15,10 +15,12 @@ pytest
 pytest_mock
 pytest-timeout
 pytest-rerunfailures
+pytest-asyncio
 mock
 flake8
 mypy
 aiorun
 aiohttp
-asyncio-pytest
 aiodns
+aiofiles
+injector

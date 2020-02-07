@@ -11,3 +11,5 @@ dnspython
 aiorun
 aiohttp
 aiodns
+injector
+aiofiles

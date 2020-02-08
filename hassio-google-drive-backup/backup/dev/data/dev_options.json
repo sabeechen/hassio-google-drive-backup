@@ -1,8 +1,8 @@
 {
     "snapshot_stale_seconds": 5,
-    "drive_url": "http://localhost:2567",
-    "hassio_url": "http://localhost:2567/",
-    "home_assistant_url": "http://localhost:2567/homeassistant/api/",
+    "drive_url": "http://localhost:56154",
+    "hassio_url": "http://localhost:56154/",
+    "home_assistant_url": "http://localhost:56154/homeassistant/api/",
     "hassio_header": "test_header",
     "retained_file_path": "backup/dev/data/retained.json",
     "backup_directory_path": "backup/dev/backup",
@@ -11,8 +11,9 @@
     "secrets_file_path": "backup/dev/data/secrets.yaml",
     "credentials_file_path": "backup/dev/data/credentials.dat",
     "folder_file_path": "backup/dev/data/folder.dat",
-    "authenticate_url": "http://hassio.local:2567/external/drivecreds/",
+    "authenticate_url": "http://hassio.local:56154/external/drivecreds/",
     "ingress_token_file_path": "backup/dev/data/ingress.dat",
     "default_drive_client_id": "test_client_id",
-    "low_space_threshold": 1099511627776000
+    "ingress_port": 56155,
+    "port": 56156
 }

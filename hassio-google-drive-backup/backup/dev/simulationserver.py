@@ -789,7 +789,7 @@ class SimulationServer(LogBase):
 
 
 async def main():
-    server = SimulationServer(2567, Time())
+    server = SimulationServer(56154, Time())
     await server.reset({
         'snapshot_min_size': 1024 * 1024 * 3,
         'snapshot_max_size': 1024 * 1024 * 5,
@@ -804,7 +804,7 @@ async def main():
     # start the server
     runner = aiohttp.web.AppRunner(server.createApp())
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=2567)
+    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=56154)
     await site.start()
     print("Server started")
 

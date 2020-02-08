@@ -1,6 +1,6 @@
 {
-    "hassio_url": "http://localhost:2567/",
-    "home_assistant_url": "http://localhost:2567/homeassistant/api/",
+    "hassio_url": "http://localhost:56154/",
+    "home_assistant_url": "http://localhost:56154/homeassistant/api/",
     "hassio_header": "test_header",
     "retained_file_path": "backup/dev/data/retained.json",
     "backup_directory_path": "backup/dev/backup",
@@ -9,5 +9,7 @@
     "secrets_file_path": "backup/dev/data/secrets.yaml",
     "credentials_file_path": "backup/dev/data/credentials.dat",
     "folder_file_path": "backup/dev/data/folder.dat",
-    "ingress_token_file_path": "backup/dev/data/ingress.dat"
+    "ingress_token_file_path": "backup/dev/data/ingress.dat",
+    "ingress_port": 56155,
+    "port": 56156
 }

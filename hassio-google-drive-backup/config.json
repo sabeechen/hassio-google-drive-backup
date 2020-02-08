@@ -95,7 +95,7 @@
     "credentials_file_path": "str?",
     "ingress_token_file_path": "str?",
     "default_drive_client_id": "str?",
-    "default_chunk_size": "int(1,)"
+    "default_chunk_size": "int(1,)?"
   },
   "ports": {
     "1627/tcp": 1627

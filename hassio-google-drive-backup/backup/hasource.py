@@ -179,7 +179,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             # Create the snapshot palceholder object
             self.pending_snapshot = PendingSnapshot(type_name, protected, options, request, self.config, self.time)
             self.info("Requesting a new snapshot")
-            self._pending_snapshot_task = asyncio.create_task(self._requestAsync(self.pending_snapshot))
+            self._pending_snapshot_task = asyncio.create_task(self._requestAsync(self.pending_snapshot), name="Pending Snapshot Requester")
             await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
             self.pending_snapshot.raiseIfNeeded()
             if self.pending_snapshot.isComplete():

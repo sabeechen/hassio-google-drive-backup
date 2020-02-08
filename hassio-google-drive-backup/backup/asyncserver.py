@@ -1,6 +1,5 @@
 import os.path
 import os
-import cherrypy
 import ssl
 import aiofiles
 import asyncio
@@ -35,7 +34,7 @@ from .resolver import SubvertingResolver
 from os.path import join, abspath
 from urllib.parse import quote
 from aiohttp import BasicAuth, web, hdrs
-from aiohttp.web import Request, HTTPBadRequest, HTTPException, static
+from aiohttp.web import Request, HTTPBadRequest, HTTPException
 from injector import inject, singleton
 
 # Used to Google's oauth verification
@@ -72,6 +71,49 @@ class AsyncServer(Trigger, LogBase):
 
     def name(self):
         return "UI Server"
+
+    async def getTasks(self, request):
+        resp = []
+        for task in asyncio.all_tasks():
+            data = {
+                "name": task.get_name(),
+                "state": str(task._state),
+                "coroutine": str(task.get_coro())
+            }
+
+            # Get exception
+            try:
+                ex = task.exception()
+                if ex is None:
+                    data['exception'] = "None"
+                else:
+                    data['exception'] = formatException(ex)
+            except asyncio.CancelledError:
+                data['exception'] = "CancelledError"
+            except asyncio.InvalidStateError:
+                data['exception'] = "Unfinished"
+            except Exception:
+                pass
+
+            # Get result
+            try:
+                ret = task.result()
+                if ex is None:
+                    data['result'] = "None"
+                else:
+                    data['result'] = str(ret)
+            except asyncio.CancelledError:
+                data['result'] = "CancelledError"
+            except asyncio.InvalidStateError:
+                data['result'] = "Unfinished"
+            except Exception:
+                pass
+            data['stack'] = []
+            for frame in task.get_stack():
+                data['stack'].append(str(frame))
+            resp.append(data)
+
+        return web.json_response(resp)
 
     async def getstatus(self, request) -> Dict[Any, Any]:
         status: Dict[Any, Any] = {}
@@ -288,7 +330,8 @@ class AsyncServer(Trigger, LogBase):
             self._global_info.setIngoreErrorsForNow(True)
             self._coord.saveCreds(creds)
         try:
-            if cherrypy.request.local.port == self.config.get(Setting.INGRESS_PORT):
+            # TODO: Need a test to verify the conditional redirect url here
+            if request.url.port == self.config.get(Setting.INGRESS_PORT):
                 return await self.redirect(self._ha_source.getAddonUrl())
         except:  # noqa: E722
             # eat the error
@@ -301,6 +344,7 @@ class AsyncServer(Trigger, LogBase):
         self._global_info.setIngoreErrorsForNow(True)
         self.trigger()
         try:
+            # TODO: Need a test to verify the conditional redirect url here
             if request.url.port == self.config.get(Setting.INGRESS_PORT):
                 return await self.redirect(self._ha_source.getAddonUrl())
         except:  # noqa: E722
@@ -337,7 +381,7 @@ class AsyncServer(Trigger, LogBase):
         return await self.getstatus(request)
 
     async def startSync(self, request) -> Any:
-        asyncio.create_task(self._coord.sync())
+        asyncio.create_task(self._coord.sync(), name="Sync from web request")
         await asyncio.sleep(0.5)
         return await self.getstatus(request)
 
@@ -397,6 +441,7 @@ class AsyncServer(Trigger, LogBase):
         self.restart_trigger.set()
         redirect = ""
         try:
+            # TODO: need a test to verify this redirect
             if request.url.port != self.config.get(Setting.INGRESS_PORT):
                 redirect = self._ha_source.getFullAddonUrl()
         except:  # noqa: E722
@@ -518,7 +563,7 @@ class AsyncServer(Trigger, LogBase):
         self.running = True
         self._starts += 1
         if self.server_restarter is None:
-            self.server_restarter = asyncio.create_task(self._waitForRestart())
+            self.server_restarter = asyncio.create_task(self._waitForRestart(), name="UI Server Restarter")
 
     def _addRoutes(self, app):
         app.add_routes([web.static('/static', os.path.join(os.getcwd(), "www"), append_version=True)])
@@ -551,6 +596,7 @@ class AsyncServer(Trigger, LogBase):
         self._addRoute(app, self.download)
         self._addRoute(app, self.theme)
         self._addRoute(app, self.cancelSync)
+        self._addRoute(app, self.getTasks)
 
     def _addRoute(self, app, method):
         app.add_routes([

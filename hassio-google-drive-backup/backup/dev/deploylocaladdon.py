@@ -28,9 +28,12 @@ def main():
     shutil.copytree(src, "/addons/hassio-google-drive-backup")
 
     # remove the image file
+    print("Updating config.json with debug options")
     with open("/addons/hassio-google-drive-backup/config.json") as f:
         config = json.load(f)
     del config['image']
+    config['envrionment'] = {'DEBUGGER': "true"}
+    config['ports']['3000/tcp'] = 3000
     with open("/addons/hassio-google-drive-backup/config.json", "w+") as f:
         json.dump(config, f)
 

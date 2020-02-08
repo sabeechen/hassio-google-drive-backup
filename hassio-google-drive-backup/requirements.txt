@@ -13,3 +13,4 @@ aiohttp
 aiodns
 injector
 aiofiles
+ptvsd

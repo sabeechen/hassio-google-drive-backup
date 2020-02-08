@@ -319,9 +319,9 @@ class AsyncServer(Trigger, LogBase):
 
     async def index(self, request: Request):
         if not self._coord.enabled():
-            return web.FileResponse(self.filePath("index.html"))
+            return web.FileResponse(self.filePath("index.html"), headers={'cache-control': 'no-store'})
         else:
-            return web.FileResponse(self.filePath("working.html"))
+            return web.FileResponse(self.filePath("working.html"), headers={'cache-control': 'no-store'})
 
     async def pp(self, request: Request):
         return web.FileResponse(self.filePath("privacy_policy.html"))

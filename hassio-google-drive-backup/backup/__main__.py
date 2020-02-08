@@ -1,6 +1,8 @@
 import sys
 import aiohttp
 import socket
+import os
+import ptvsd
 from .starter import Starter
 from aiorun import run
 from .config import Config
@@ -11,6 +13,7 @@ from .resolver import SubvertingResolver
 from .model import SnapshotSource, SnapshotDestination
 from injector import Module, provider, Injector, singleton
 from aiohttp import ClientSession
+from .logbase import LogBase
 
 
 class MainModule(Module):
@@ -48,4 +51,7 @@ async def main():
     await Injector(MainModule()).get(Starter).startup()
 
 if __name__ == '__main__':
+    if os.environ.get("DEBUGGER") == "true":
+        LogBase().info("Starting debugger on port 3000")
+        ptvsd.enable_attach(('0.0.0.0', 3000))
     run(main())

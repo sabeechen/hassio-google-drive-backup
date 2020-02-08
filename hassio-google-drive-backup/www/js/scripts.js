@@ -230,8 +230,6 @@ function htmlEntities(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace("'", "&#39;");
 }
 
-errorToasted = false;
-
 function postJson(path, json, onSuccess, onFail=null, toastWhile=null) {
   var notification = null
   var returned = false
@@ -400,6 +398,7 @@ function setErrorWatermark() {
 }
 
 sync_toast = null;
+error_toast = null
 last_data = null;
 error_minimum = 0
 // Refreshes the display with stats from the server.
@@ -649,18 +648,19 @@ function refreshstats() {
     last_data = data;
 
     $('.tooltipped').tooltip({ "exitDelay": 1000 });
-    if (errorToasted) {
-      errorToasted = false;
-      M.Toast.dismissAll();
+    if (error_toast != null) {
+      error_toast.dismiss();
+      error_toast = null;
     }
   }, "json").fail(
     function (e) {
       console.log("Status update failed: ");
       console.log(e);
       $("#snapshots_loading").show();
-      if (!errorToasted) {
-        errorToasted = true;
-        M.toast({ html: 'Lost connection to add-on, will keep trying to connect...', displayLength: 9999999 })
+      if (error_toast == null) {
+        M.Toast.dismissAll();
+        sync_toast = null;
+        error_toast = M.toast({ html: 'Lost connection to add-on, will keep trying to connect...', displayLength: 9999999 })
       }
     }
   )

@@ -65,10 +65,12 @@ class Coordinator(Trigger, LogBase):
         return task is not None and not task.done()
 
     async def cancel(self):
+        # TODO: Add tests for cancel
         task = self._sync_task
         if task is not None and not task.done():
             task.cancel()
             await wait([task])
+            str(task)
 
     def nextSyncAttempt(self):
         if self._global_info._last_error is not None:
@@ -117,7 +119,7 @@ class Coordinator(Trigger, LogBase):
         return info
 
     async def _sync_wrapper(self):
-        self._sync_task = create_task(self._sync())
+        self._sync_task = create_task(self._sync(), name="Internal sync worker")
         await wait([self._sync_task])
 
     async def _sync(self):
@@ -129,35 +131,39 @@ class Coordinator(Trigger, LogBase):
             self._global_info.success()
             self._backoff.reset()
             self._global_info.setSkipSpaceCheckOnce(False)
-        except Exception as e:
-            if isinstance(e, CancelledError):
-                e = UserCancelledError()
-            if isinstance(e, KnownError):
-                known: KnownError = e
-                self.error(known.message())
-                if known.retrySoon():
-                    self._backoff.backoff(e)
-                else:
-                    self._backoff.maxOut()
-            else:
-                self.error(formatException(e))
+        except BaseException as e:
+            self.handleError(e)
+        finally:
+            self._updateFreshness()
+
+    def handleError(self, e):
+        if isinstance(e, CancelledError):
+            e = UserCancelledError()
+        if isinstance(e, KnownError):
+            known: KnownError = e
+            self.error(known.message())
+            if known.retrySoon():
                 self._backoff.backoff(e)
-            self._global_info.failed(e)
-
-            seconds = self._backoff.peek()
-            if seconds < 1:
-                text = "right now"
-            elif seconds < 60:
-                text = "in {0} seconds".format(seconds)
-            elif seconds < 60 * 60:
-                text = "in {0}(ish) minutes".format(int(seconds / 60))
-            elif seconds == 60 * 60:
-                text = "in an hour"
             else:
-                text = "much later"
+                self._backoff.maxOut()
+        else:
+            self.error(formatException(e))
+            self._backoff.backoff(e)
+        self._global_info.failed(e)
 
-            self.info("I'll try again {0}".format(text))
-        self._updateFreshness()
+        seconds = self._backoff.peek()
+        if seconds < 1:
+            text = "right now"
+        elif seconds < 60:
+            text = "in {0} seconds".format(seconds)
+        elif seconds < 60 * 60:
+            text = "in {0}(ish) minutes".format(int(seconds / 60))
+        elif seconds == 60 * 60:
+            text = "in an hour"
+        else:
+            text = "much later"
+
+        self.info("I'll try again {0}".format(text))
 
     def snapshots(self) -> List[Snapshot]:
         ret = list(self._model.snapshots.values())

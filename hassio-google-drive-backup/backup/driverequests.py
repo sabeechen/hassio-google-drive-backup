@@ -376,6 +376,9 @@ class DriveRequests(LogBase):
                     # 111 means connection refused
                     # Can't connect
                     raise GoogleCantConnect()
+                elif "Could not contact DNS serve" in str(e.os_error):
+                    # Wish there was a better way to identify this exception
+                    raise GoogleDnsFailure()
                 raise e
             except ServerTimeoutError:
                 raise GoogleTimeoutError()

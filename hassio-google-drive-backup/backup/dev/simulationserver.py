@@ -11,10 +11,10 @@ from urllib.parse import quote
 from oauth2client.client import OAuth2Credentials
 import re
 import random
-import string
 import asyncio
 import logging
 import aiohttp
+import io
 
 
 mimeTypeQueryPattern = re.compile("^mimeType='.*'$")
@@ -36,6 +36,7 @@ class SimulationServer(LogBase):
     @inject
     def __init__(self, port, time: Time):
         self.items: Dict[str, Any] = {}
+        self.id_counter = 0
         self.upload_info: Dict[str, Any] = {}
         self.simulate_drive_errors = False
         self.simulate_out_of_drive_space = False
@@ -269,7 +270,7 @@ class SimulationServer(LogBase):
                 resp.headers["Content-length"] = str(len(bytes))
             return resp
         else:
-            resp = Response(body=bytes)
+            resp = Response(body=io.BytesIO(bytes))
             resp.headers["Content-length"] = str(len(bytes))
             return resp
 
@@ -756,7 +757,10 @@ class SimulationServer(LogBase):
         ]
 
     def generateId(self, length: int = 30) -> Any:
-        return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
+        self.id_counter += 1
+        ret = str(self.id_counter)
+        return ret + ''.join(map(lambda x: str(x), range(0, length - len(ret))))
+        # return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
 
     def timeToRfc3339String(self, time) -> Any:
         return time.strftime("%Y-%m-%dT%H:%M:%SZ")

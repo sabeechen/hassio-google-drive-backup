@@ -250,12 +250,12 @@ async def test_delete(reader, ui_server, snapshot):
     await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format("bad_slug"), error_type=ERROR_NO_SNAPSHOT)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
-    assert await reader.getjson("deleteSnapshot?slug={}&drive=true&ha=false".format(slug)) == {"message": "Its gone!"}
+    assert await reader.getjson("deleteSnapshot?slug={}&drive=true&ha=false".format(slug)) == {"message": "Deleted from Google Drive"}
     await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 0
-    assert await reader.getjson("deleteSnapshot?slug={}&drive=false&ha=true".format(slug)) == {"message": "Its gone!"}
+    assert await reader.getjson("deleteSnapshot?slug={}&drive=false&ha=true".format(slug)) == {"message": "Deleted from Home Assistant"}
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 0
     await reader.assertError("deleteSnapshot?slug={}&drive=false&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)

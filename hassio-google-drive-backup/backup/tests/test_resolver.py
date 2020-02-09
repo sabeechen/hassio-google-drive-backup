@@ -18,6 +18,7 @@ async def test_empty_name_server(resolver: SubvertingResolver, config: Config):
     assert resolver._alt_dns is prev
 
 
+@pytest.mark.asyncio
 async def test_toggle(resolver: SubvertingResolver):
     assert resolver._resolver is resolver._original_dns
     resolver.toggle()

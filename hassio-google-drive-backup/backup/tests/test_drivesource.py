@@ -183,6 +183,7 @@ async def test_upload_resume(drive: DriveSource, time, server, snapshot_helper):
 
     # Retry the upload, which shoudl now pass
     server.update({"drive_upload_error": None})
+    data.position(0)
     drive_snapshot = await drive.save(from_snapshot, data)
     from_snapshot.addSource(drive_snapshot)
     assert server.chunks == [BASE_CHUNK_SIZE, BASE_CHUNK_SIZE, (data.size()) - BASE_CHUNK_SIZE * 2]
@@ -224,6 +225,7 @@ async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time
     last_location = drive.drivebackend.last_attempt_location
 
     for x in range(1, 11):
+        data.position(0)
         with pytest.raises(GoogleInternalError):
             await drive.save(from_snapshot, data)
         assert drive.drivebackend.last_attempt_count == x
@@ -233,6 +235,7 @@ async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time
 
     # Another attempt should use another location url
     with pytest.raises(GoogleInternalError):
+        data.position(0)
         await drive.save(from_snapshot, data)
     assert drive.drivebackend.last_attempt_count == 0
     assert drive.drivebackend.last_attempt_location is not None
@@ -240,6 +243,7 @@ async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time
 
     # Now let it succeed
     server.update({"drive_upload_error": None})
+    data.position(0)
     drive_snapshot = await drive.save(from_snapshot, data)
     from_snapshot.addSource(drive_snapshot)
 
@@ -294,6 +298,7 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
     # upload again, which should retry
     server.urls.clear()
     server.match_errors.clear()
+    data.position(0)
     snapshot = await drive.save(from_snapshot, data)
     assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
@@ -330,6 +335,7 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
         server.urls.clear()
         server.match_errors.clear()
         server.setError(".*upload/drive/v3/files/progress.*", 0, 501)
+        data.position(0)
         with pytest.raises(ClientResponseError):
             await drive.save(from_snapshot, data)
         assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
@@ -342,6 +348,7 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
     server.urls.clear()
     server.match_errors.clear()
     server.setError(".*upload/drive/v3/files/progress.*", 1, 501)
+    data.position(0)
     with pytest.raises(ClientResponseError):
         await drive.save(from_snapshot, data)
     assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
@@ -351,6 +358,7 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
     # upload again, which should retry
     server.urls.clear()
     server.match_errors.clear()
+    data.position(0)
     snapshot = await drive.save(from_snapshot, data)
     assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
@@ -378,6 +386,7 @@ async def verify_upload_resumed(time, drive: DriveSource, config: Config, server
     # Retry the upload and let is succeed
     server.urls.clear()
     server.match_errors.clear()
+    data.position(0)
     snapshot = await drive.save(from_snapshot, data)
 
     # We shoudl nto see the upload "initialize" url

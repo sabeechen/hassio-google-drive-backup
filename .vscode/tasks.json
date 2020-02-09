@@ -4,27 +4,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "RUN: Mock Backend Server",
-            "type": "shell",
-            "command": "python3.7 -m backup.dev.flaskserver",
-            "options": {
-                "cwd": "${workspaceFolder}/hassio-google-drive-backup"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "RUN: Add-on in Docker locally",
-            "type": "shell",
-            "command": "./run_local_docker.py",
-            "problemMatcher": []
-        },
-        {
-            "label": "STOP: Add-on in docker locally",
-            "type": "shell",
-            "command": "docker kill $(docker ps -q --filter \"label=run-from-vscode=1\")",
-            "problemMatcher": []
-        },
-        {
             "label": "PUBLISH: New version to Docker Hub",
             "type": "shell",
             "command": "./deploy.sh",

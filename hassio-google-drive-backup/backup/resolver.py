@@ -19,6 +19,7 @@ class SubvertingResolver(AsyncResolver):
         self._original_dns = self._resolver
         self.setAlternateResolver()
 
+    # TODO: Add tests for this method
     async def resolve(self, host: str, port: int = 0,
                       family: int = socket.AF_INET) -> List[Dict[str, Any]]:
         # TODO: add readme for "How do I know this won't do anything sketchy" along the lines of Tron's FAQ.  Caveat Emptor, explain the environment (docker, images, etc) for peace of mind.

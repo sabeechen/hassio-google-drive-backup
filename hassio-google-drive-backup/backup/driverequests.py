@@ -1,24 +1,32 @@
-from .logbase import LogBase
-from .asynchttpgetter import AsyncHttpGetter
-from .config import Config
-from .time import Time
-from .resolver import SubvertingResolver
-from .settings import Setting
-from .exceptions import GoogleDrivePermissionDenied, LogicError, GoogleCredentialsExpired, ProtocolError, ensureKey, GoogleInternalError, DriveQuotaExceeded, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError, GoogleSessionError
-from datetime import timedelta
-from dns.exception import DNSException
-from urllib.parse import urlencode
+import io
 import json
+import math
 import os
 import re
-import math
-import io
-from oauth2client.client import Credentials
-from typing import Dict, Any, Optional
-from aiohttp.client import ClientTimeout
-from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError, ServerTimeoutError, ContentTypeError
-from injector import inject, singleton
+from datetime import timedelta
+from typing import Any, Dict, Optional
+from urllib.parse import urlencode
+
 from aiohttp import ClientSession
+from aiohttp.client import ClientTimeout
+from aiohttp.client_exceptions import (ClientConnectorError,
+                                       ClientResponseError, ContentTypeError,
+                                       ServerTimeoutError)
+from dns.exception import DNSException
+from injector import inject, singleton
+from oauth2client.client import Credentials
+
+from .asynchttpgetter import AsyncHttpGetter
+from .config import Config
+from .exceptions import (DriveQuotaExceeded, GoogleCantConnect,
+                         GoogleCredentialsExpired, GoogleDnsFailure,
+                         GoogleDrivePermissionDenied, GoogleInternalError,
+                         GoogleSessionError, GoogleTimeoutError, LogicError,
+                         ProtocolError, ensureKey)
+from .logbase import LogBase
+from .resolver import SubvertingResolver
+from .settings import Setting
+from .time import Time
 
 MIME_TYPE = "application/tar"
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
@@ -38,8 +46,10 @@ CHUNK_SIZE = 5 * 262144
 RANGE_RE = re.compile("^bytes=0-\\d+$")
 
 BASE_CHUNK_SIZE = 262144  # Google's api requires uploading chunks in multiples of 256kb
-MAX_CHUNK_SIZE = BASE_CHUNK_SIZE * 40  # Never try to uplod mroe than 10mb at once
-CHUNK_UPLOAD_TARGET_SECONDS = 10  # During upload, chunks get sized to complete upload after 10s so we can give status updates on progress.
+# Never try to uplod mroe than 10mb at once
+MAX_CHUNK_SIZE = BASE_CHUNK_SIZE * 40
+# During upload, chunks get sized to complete upload after 10s so we can give status updates on progress.
+CHUNK_UPLOAD_TARGET_SECONDS = 10
 
 # don't attempt to resue a session mroe than this many times.  Just in case something is broken on Google's
 # # end so we don't retry the same broken session indefinitely.
@@ -100,7 +110,8 @@ class DriveRequests(LogBase):
 
     def _enabledCheck(self):
         if not self.enabled():
-            raise LogicError("Attempt to use Google Drive before credentials are configured")
+            raise LogicError(
+                "Attempt to use Google Drive before credentials are configured")
 
     def tryLoadCredentials(self):
         if os.path.isfile(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
@@ -112,7 +123,8 @@ class DriveRequests(LogBase):
                     self.cred_secret = loaded['client_secret']
                     self.cred_id = loaded['client_id']
                     try:
-                        self.cred_expiration = self.time.parse(loaded['token_expiry'])
+                        self.cred_expiration = \
+                            self.time.parse(loaded['token_expiry'])
                     except Exception:
                         # just eat the error, refresh now
                         self.cred_expiration = self.time.now() - timedelta(minutes=1)
@@ -147,8 +159,10 @@ class DriveRequests(LogBase):
             if e.status != 401:
                 raise e
             raise GoogleCredentialsExpired()
-        self.cred_expiration = self.time.now() + timedelta(seconds=int(ensureKey('expires_in', resp, "Google Drive's credential Response")))
-        self.cred_bearer = ensureKey('access_token', resp, "Google Drive's Credential Response")
+        self.cred_expiration = self.time.now() + timedelta(seconds=int(ensureKey('expires_in',
+                                                                                 resp, "Google Drive's credential Response")))
+        self.cred_bearer = \
+            ensureKey('access_token', resp, "Google Drive's Credential Response")
         return self.cred_bearer
 
     async def get(self, id):
@@ -199,7 +213,8 @@ class DriveRequests(LogBase):
         total_size = stream.size()
         location = None
         if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS:
-            self.debug("Attempting to resume a previosuly failed upload where we left off")
+            self.debug(
+                "Attempting to resume a previosuly failed upload where we left off")
             self.last_attempt_count += 1
             # Attempt to resume from a partially completed upload.
             headers = {
@@ -216,10 +231,12 @@ class DriveRequests(LogBase):
                     else:
                         # No range header in the response means no bytes have been uploaded yet.
                         stream.position(0)
-                    self.debug("Resuming upload at byte {0} of {1}".format(stream.position(), total_size))
+                    self.debug("Resuming upload at byte {0} of {1}".format(
+                        stream.position(), total_size))
                     location = self.last_attempt_location
                 else:
-                    self.debug("Drive returned status code {0}, so we'll have to start the upload over again.".format(initial.status))
+                    self.debug("Drive returned status code {0}, so we'll have to start the upload over again.".format(
+                        initial.status))
 
         if location is None:
             # There is no session resume, so start a new one.
@@ -232,7 +249,8 @@ class DriveRequests(LogBase):
             async with initial:
                 # Google returns a url in the header "Location", which is where subsequent requests to upload
                 # the snapshot's bytes should be sent.  Logic below handles uploading the file bytes in chunks.
-                location = ensureKey('Location', initial.headers, "Google Drive's Upload headers")
+                location = ensureKey(
+                    'Location', initial.headers, "Google Drive's Upload headers")
                 self.last_attempt_count = 0
                 stream.position(0)
 
@@ -250,18 +268,21 @@ class DriveRequests(LogBase):
             data: io.IOBaseBytesio = await stream.read(current_chunk_size)
             chunk_size = len(data.getbuffer())
             if chunk_size == 0:
-                raise LogicError("Snapshot file stream ended prematurely while uploading to Google Drive")
+                raise LogicError(
+                    "Snapshot file stream ended prematurely while uploading to Google Drive")
             headers = {
                 "Content-Length": str(chunk_size),
                 "Content-Range": "bytes {0}-{1}/{2}".format(start, start + chunk_size - 1, total_size)
             }
             try:
                 startTime = self.time.now()
-                self.debug("Sending {0} bytes to Google Drive".format(current_chunk_size))
+                self.debug("Sending {0} bytes to Google Drive".format(
+                    current_chunk_size))
                 partial = await self.retryRequest("PUT", location, headers=headers, data=data, patch_url=False)
 
                 # Base the next chunk size on how long it took to send the last chunk.
-                current_chunk_size = self._getNextChunkSize(current_chunk_size, (self.time.now() - startTime).total_seconds())
+                current_chunk_size = self._getNextChunkSize(
+                    current_chunk_size, (self.time.now() - startTime).total_seconds())
             except ClientResponseError as e:
                 if math.floor(e.status / 100) == 4:
                     # clear the cached session location URI, since this usually
@@ -282,9 +303,11 @@ class DriveRequests(LogBase):
                 break
             elif partial.status == 308:
                 # Upload partially complete, seek to the new requested position
-                range_bytes = ensureKey("Range", partial.headers, "Google Drive's upload response headers")
+                range_bytes = ensureKey(
+                    "Range", partial.headers, "Google Drive's upload response headers")
                 if not RANGE_RE.match(range_bytes):
-                    raise ProtocolError("Range", partial.headers, "Google Drive's upload response headers")
+                    raise ProtocolError(
+                        "Range", partial.headers, "Google Drive's upload response headers")
                 position = int(partial.headers["Range"][len("bytes=0-"):])
                 stream.position(position + 1)
             else:
@@ -328,7 +351,8 @@ class DriveRequests(LogBase):
                     data.close = lambda: str("")
                     data.seek(0)
                 timeout = ClientTimeout(
-                    sock_connect=self.config.get(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS),
+                    sock_connect=self.config.get(
+                        Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS),
                     sock_read=self.config.get(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS))
                 response = await self.session.request(method, url, headers=send_headers, json=json, timeout=timeout, data=data)
 
@@ -342,7 +366,8 @@ class DriveRequests(LogBase):
                         return response
                 try:
                     await self.raiseForKnownErrors(response)
-                    # Only retry 403 and 5XX error, see https://developers.google.com/drive/api/v3/manage-uploads
+                    # Only retry 403 and 5XX error,
+                    # see https://developers.google.com/drive/api/v3/manage-uploads
                     if attempts > DRIVE_MAX_RETRIES:
                         # out of retries, give up if it failed.
                         if response.status == 500 or response.status == 503:
@@ -350,12 +375,14 @@ class DriveRequests(LogBase):
                         response.raise_for_status()
                     elif response.status == 401 and cred_retry:
                         # retry with fresh creds
-                        self.debug("Google Drive credentials expired.  We'll retry with new ones.")
+                        self.debug(
+                            "Google Drive credentials expired.  We'll retry with new ones.")
                         refresh_token = True
                         await self.time.sleepAsync(backoff)
                         backoff *= DRIVE_EXPONENTIAL_BACKOFF
                     elif response.status == RATE_LIMIT_EXCEEDED or response.status == TOO_MANY_REQUESTS or int(response.status / 100) == 5:
-                        self.error("Google Drive returned HTTP code: {0}: we'll retry in {1} seconds".format(response.status, backoff))
+                        self.error("Google Drive returned HTTP code: {0}: we'll retry in {1} seconds".format(
+                            response.status, backoff))
                         await self.time.sleepAsync(backoff)
                         # backoff exponentially, a good practice in general but also helps resolve rate limit errors.
                         backoff *= DRIVE_EXPONENTIAL_BACKOFF
@@ -365,7 +392,8 @@ class DriveRequests(LogBase):
                     await response.release()
 
             except ClientConnectorError as e:
-                self.debug("Ran into trouble reaching Google Drive's servers.  We'll use alternate DNS servers on the next attempt.")
+                self.debug(
+                    "Ran into trouble reaching Google Drive's servers.  We'll use alternate DNS servers on the next attempt.")
                 self.resolver.toggle()
                 if e.os_error.errno == -2:
                     # -2 means dns lookup failed.
@@ -384,7 +412,8 @@ class DriveRequests(LogBase):
                 raise GoogleTimeoutError()
             except DNSException as e:
                 self.debug(str(e))
-                self.debug("Ran into trouble resolving Google Drive's servers.  We'll use normal DNS servers on the next attempt.")
+                self.debug(
+                    "Ran into trouble resolving Google Drive's servers.  We'll use normal DNS servers on the next attempt.")
                 self.resolver.toggle()
                 raise GoogleDnsFailure()
 

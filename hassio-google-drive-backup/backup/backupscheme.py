@@ -1,10 +1,10 @@
-from typing import List, Sequence, Optional
 from abc import ABC, abstractmethod
+from calendar import monthrange
+from datetime import datetime, timedelta
+from typing import List, Optional, Sequence
+
 from .snapshots import Snapshot
 from .time import Time
-from datetime import datetime
-from datetime import timedelta
-from calendar import monthrange
 
 
 class BackupScheme(ABC):
@@ -39,11 +39,14 @@ class Partition(object):
             if snapshot.date() >= self.start and snapshot.date() < self.end:
                 options.append(snapshot)
 
-        preferred = list(filter(lambda s: self.day(s.date()) == self.day(self.prefer), options))
-        if len(preferred) > 0:
-            return max(preferred, default=None, key=lambda s: s.date())
+        def findDay(s):
+            return self.day(s.date()) == self.day(self.prefer)
 
-        return min(options, default=None, key=lambda s: s.date())
+        preferred = list(filter(findDay, options))
+        if len(preferred) > 0:
+            return max(preferred, default=None, key=Snapshot.date)
+
+        return min(options, default=None, key=Snapshot.date)
 
     def day(self, date: datetime):
         local = self.time.toLocal(date)
@@ -103,13 +106,18 @@ class GenerationalScheme(BackupScheme):
         lookups: List[Partition] = []
         currentDay = self.day(last)
         for x in range(0, self.config.days):
-            lookups.append(Partition(currentDay, currentDay + timedelta(days=1), currentDay, self.time))
+            nextDay = currentDay + timedelta(days=1)
+            lookups.append(
+                Partition(currentDay, nextDay, currentDay, self.time))
             currentDay = self.day(currentDay - timedelta(hours=12))
 
         for x in range(0, self.config.weeks):
-            start = self.time.local(last.year, last.month, last.day) - timedelta(days=last.weekday()) - timedelta(weeks=x)
+            start = self.time.local(last.year, last.month, last.day)
+            start -= timedelta(days=last.weekday())
+            start -= timedelta(weeks=x)
             end = start + timedelta(days=7)
-            lookups.append(Partition(start, end, start + timedelta(days=day_of_week), self.time))
+            start += timedelta(days=day_of_week)
+            lookups.append(Partition(start, end, start, self.time))
 
         for x in range(0, self.config.months):
             year_offset = int(x / 12)
@@ -117,15 +125,18 @@ class GenerationalScheme(BackupScheme):
             if last.month - month_offset < 1:
                 year_offset = year_offset + 1
                 month_offset = month_offset - 12
-            start = self.time.local(last.year - year_offset, last.month - month_offset, 1)
+            start = self.time.local(
+                last.year - year_offset, last.month - month_offset, 1)
             weekday, days = monthrange(start.year, start.month)
             end = start + timedelta(days=days)
-            lookups.append(Partition(start, end, start + timedelta(days=self.config.day_of_month - 1), self.time))
+            lookups.append(Partition(
+                start, end, start + timedelta(days=self.config.day_of_month - 1), self.time))
 
         for x in range(0, self.config.years):
             start = self.time.local(last.year - x, 1, 1)
             end = self.time.local(last.year - x + 1, 1, 1)
-            lookups.append(Partition(start, end, start + timedelta(days=self.config.day_of_year - 1), self.time))
+            lookups.append(Partition(
+                start, end, start + timedelta(days=self.config.day_of_year - 1), self.time))
 
         keepers = set()
         for lookup in lookups:

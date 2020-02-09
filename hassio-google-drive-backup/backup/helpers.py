@@ -1,9 +1,11 @@
-from traceback import TracebackException
-from dateutil.tz import tzutc
-from dateutil.parser import parse
 from datetime import datetime
+from traceback import TracebackException
+from typing import Callable, Dict, Generator, Sequence, TypeVar
+
+from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
-from typing import Generator, Sequence, TypeVar, Callable, Dict
+from dateutil.tz import tzutc
+
 """
 Some helper functions because I find python's API's intolerable
 """
@@ -134,7 +136,8 @@ def _formatStack(tbe):
         if pos > 0:
             is_addon = True
             line_internal = False
-            fileName = "/addon" + fileName[pos + len("hassio-google-drive-backup/backup"):]
+            fileName = "/addon" + \
+                fileName[pos + len("hassio-google-drive-backup/backup"):]
 
         pos = fileName.rfind("site-packages")
         if pos > 0:

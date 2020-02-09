@@ -1,10 +1,12 @@
+from datetime import datetime, timedelta
+
 import pytest
-from ..time import Time
-from ..backupscheme import GenerationalScheme, GenConfig
-from ..snapshots import Snapshot, DummySnapshot
-from datetime import timedelta, datetime
 from dateutil.tz import tzutc
 from pytest import fail
+
+from ..backupscheme import GenConfig, GenerationalScheme
+from ..snapshots import DummySnapshot, Snapshot
+from ..time import Time
 
 
 def test_timezone(time) -> None:
@@ -103,7 +105,8 @@ def test_duplicate_years(time):
 
 
 def test_removal_order(time) -> None:
-    config = GenConfig(days=5, weeks=2, months=2, years=2, day_of_week='mon', day_of_month=15, day_of_year=1)
+    config = GenConfig(days=5, weeks=2, months=2, years=2,
+                       day_of_week='mon', day_of_month=15, day_of_year=1)
 
     scheme = GenerationalScheme(time, config, count=0)
 
@@ -154,9 +157,11 @@ def test_removal_order(time) -> None:
 
 @pytest.mark.timeout(60)
 def test_simulate_daily_backup_for_4_years(time):
-    config = GenConfig(days=4, weeks=4, months=4, years=4, day_of_week='mon', day_of_month=1, day_of_year=1)
+    config = GenConfig(days=4, weeks=4, months=4, years=4,
+                       day_of_week='mon', day_of_month=1, day_of_year=1)
     scheme = GenerationalScheme(time, config, count=16)
-    snapshots = simulate(time.local(2019, 1, 1), time.local(2022, 12, 31), scheme)
+    snapshots = simulate(time.local(2019, 1, 1),
+                         time.local(2022, 12, 31), scheme)
     assertRemovalOrder(GenerationalScheme(time, config, count=0), snapshots, [
         # 4 years
         time.local(2019, 1, 1),
@@ -186,9 +191,11 @@ def test_simulate_daily_backup_for_4_years(time):
 
 @pytest.mark.timeout(60)
 def test_simulate_agressive_daily_backup_for_4_years(time):
-    config = GenConfig(days=4, weeks=4, months=4, years=4, day_of_week='mon', day_of_month=1, day_of_year=1, aggressive=True)
+    config = GenConfig(days=4, weeks=4, months=4, years=4,
+                       day_of_week='mon', day_of_month=1, day_of_year=1, aggressive=True)
     scheme = GenerationalScheme(time, config, count=16)
-    snapshots = simulate(time.local(2019, 1, 1), time.local(2022, 12, 31), scheme)
+    snapshots = simulate(time.local(2019, 1, 1),
+                         time.local(2022, 12, 31), scheme)
 
     assertRemovalOrder(GenerationalScheme(time, config, count=0), snapshots, [
         # 4 years
@@ -382,10 +389,12 @@ def assertRemovalOrder(scheme, toCheck, expected):
         oldest = scheme.getOldest(snapshots)
         if index >= len(expected):
             if oldest is not None:
-                fail("at index {0}, expected 'None' but got {1}".format(index, time.toLocal(oldest.date())))
+                fail("at index {0}, expected 'None' but got {1}".format(
+                    index, time.toLocal(oldest.date())))
             break
         if oldest.date() != expected[index]:
-            fail("at index {0}, expected {1} but got {2}".format(index, time.toLocal(expected[index]), time.toLocal(oldest.date())))
+            fail("at index {0}, expected {1} but got {2}".format(
+                index, time.toLocal(expected[index]), time.toLocal(oldest.date())))
         removed.append(oldest.date())
         snapshots.remove(oldest)
         index += 1

@@ -1,21 +1,22 @@
+import asyncio
 import json
 import socket
-import asyncio
 import subprocess
-
-from os.path import join, abspath
-from .worker import Worker
-from .time import Time
-from .globalinfo import GlobalInfo
-from .config import Config
-from .settings import Setting
-from datetime import timedelta, datetime
-from .exceptions import KnownError
-from .resolver import SubvertingResolver
-from .helpers import formatException
+from datetime import datetime, timedelta
+from os.path import abspath, join
 from urllib.parse import quote
-from injector import inject, singleton
+
 from aiohttp import ClientSession
+from injector import inject, singleton
+
+from .config import Config
+from .exceptions import KnownError
+from .globalinfo import GlobalInfo
+from .helpers import formatException
+from .resolver import SubvertingResolver
+from .settings import Setting
+from .time import Time
+from .worker import Worker
 
 
 @singleton
@@ -46,7 +47,7 @@ class DebugWorker(Worker):
         if self.config.get(Setting.SEND_ERROR_REPORTS):
             try:
                 await self.maybeSendErrorReport()
-            except Exception as e:
+            except Exception:
                 # just eat the error
                 pass
 
@@ -65,7 +66,8 @@ class DebugWorker(Worker):
             else:
                 package = self.buildClearReport()
             self.info("Sending error report (see settings to disable)")
-            url: str = self.config.get(Setting.ERROR_REPORT_URL) + "?error={0}&version=1".format(quote(json.dumps(package, indent=4, sort_keys=True)))
+            url: str = self.config.get(Setting.ERROR_REPORT_URL) + "?error={0}&version=1".format(
+                quote(json.dumps(package, indent=4, sort_keys=True)))
             async with self.session.get(url):
                 pass
 

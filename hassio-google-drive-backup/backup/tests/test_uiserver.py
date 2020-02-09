@@ -8,22 +8,22 @@ import aiohttp
 import pytest
 from aiohttp import BasicAuth
 
+from ..asynchttpgetter import AsyncHttpGetter
 from ..asyncserver import AsyncServer
 from ..config import Config
 from ..const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                      ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
                      SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from ..coordinator import Coordinator
+from ..drivesource import DriveSource
 from ..globalinfo import GlobalInfo
 from ..hasource import HaSource
 from ..helpers import touch
 from ..model import CreateOptions
-from ..drivesource import DriveSource
 from ..settings import Setting
 from ..snapshots import Snapshot
-from ..asynchttpgetter import AsyncHttpGetter
-from .helpers import compareStreams
 from .faketime import FakeTime
+from .helpers import compareStreams
 
 
 class ReaderHelper:
@@ -118,8 +118,10 @@ async def test_getstatus(reader, config: Config, ha, server):
     assert data['folder_id'] is None
     assert data['last_error'] is None
     assert data['last_snapshot'] == "Never"
-    assert data['maxSnapshotsInDrive'] == config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
-    assert data['maxSnapshotsInHasssio'] == config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
+    assert data['maxSnapshotsInDrive'] == config.get(
+        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
+    assert data['maxSnapshotsInHasssio'] == config.get(
+        Setting.MAX_SNAPSHOTS_IN_HASSIO)
     assert data['next_snapshot'] == "right now"
     assert data['restore_link'] == "http://{host}:1337/hassio/snapshots"
     assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
@@ -322,7 +324,8 @@ async def test_config(reader, ui_server, config: Config, server):
 
 @pytest.mark.asyncio
 async def test_auth_and_restart(reader, ui_server, config: Config, server):
-    update = {"config": {"require_login": True, "expose_extra_server": True}, "snapshot_folder": "unused"}
+    update = {"config": {"require_login": True,
+                         "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
@@ -489,7 +492,8 @@ async def test_drive_cred_generation(reader, ui_server, snapshot, server, config
 @pytest.mark.asyncio
 async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
-    server._options.update({"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
+    server._options.update(
+        {"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
     config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
     config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
 
@@ -647,7 +651,8 @@ async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, h
     # download the item from Google Drive
     from_drive = await drive.read(snapshot)
     # Download rom the web server
-    from_server = AsyncHttpGetter(reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+    from_server = AsyncHttpGetter(
+        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
     await compareStreams(from_drive, from_server)
 
 
@@ -657,5 +662,6 @@ async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot
     # download the item from Google Drive
     from_ha = await ha.read(snapshot)
     # Download rom the web server
-    from_server = AsyncHttpGetter(reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+    from_server = AsyncHttpGetter(
+        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
     await compareStreams(from_ha, from_server)

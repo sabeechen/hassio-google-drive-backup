@@ -1,10 +1,11 @@
 import os
+
 import yaml
 
-from .logbase import LogBase
-from .exceptions import SnapshotPasswordKeyInvalid
-from .settings import Setting
 from .config import Config
+from .exceptions import SnapshotPasswordKeyInvalid
+from .logbase import LogBase
+from .settings import Setting
 
 
 class Password(LogBase):

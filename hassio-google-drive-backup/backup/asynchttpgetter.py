@@ -1,10 +1,15 @@
 import io
 from typing import Dict
-from .exceptions import LogicError, ensureKey
-from aiohttp.client import ClientResponse
+
 from aiohttp import ClientSession
+from aiohttp.client import ClientResponse
+
+from .exceptions import LogicError, ensureKey
 
 CONTENT_LENGTH_HEADER = "content-length"
+CONTENT_LENGTH_ERROR = "Content size must be provided if the webserver doesn't provide it"
+SERVER_CONTENT_LENGTH_ERROR = "Server returned a content length that didn't match the requested size"
+POSITION_ERROR_MESSAGE = "AsyncHttpGetter must also be set up at position 0"
 
 
 class AsyncHttpGetter:
@@ -31,12 +36,14 @@ class AsyncHttpGetter:
 
     async def setup(self):
         if not self._position == 0:
-            raise LogicError("AsyncHttpGetter must also be set up at position 0")
+            raise LogicError(POSITION_ERROR_MESSAGE)
         await self._startReadRemoteAt(0)
         if CONTENT_LENGTH_HEADER in self._response.headers:
-            self._size = int(ensureKey(CONTENT_LENGTH_HEADER, self._response.headers, "web server get request's headers"))
+            self._size = int(ensureKey(
+                CONTENT_LENGTH_HEADER, self._response.headers, "web server get request's headers"))
         elif self._size is None:
-            raise LogicError("Content size must be provided if the webserver doesn't provide it")
+            raise LogicError(
+                CONTENT_LENGTH_ERROR)
         return self._size
 
     def _ensureSetup(self):
@@ -82,7 +89,7 @@ class AsyncHttpGetter:
         resp = await self._session.get(self._url, headers=headers)
         resp.raise_for_status()
         if where == 0 and self._size is not None and CONTENT_LENGTH_HEADER in resp.headers and int(resp.headers[CONTENT_LENGTH_HEADER]) != self._size:
-            raise LogicError("Server returned a content length that didn't match the requested size")
+            raise LogicError(SERVER_CONTENT_LENGTH_ERROR)
         self._response = resp
         self._responseStart = where
 

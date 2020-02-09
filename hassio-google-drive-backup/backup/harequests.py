@@ -1,16 +1,17 @@
+import os
+from typing import Any, Dict, List
+
+from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientResponseError
-from .exceptions import HomeAssistantDeleteError
-from .snapshots import HASnapshot
-from .snapshots import Snapshot
+from injector import inject
+
+from .asynchttpgetter import AsyncHttpGetter
 from .config import Config
 from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
+from .exceptions import HomeAssistantDeleteError
 from .logbase import LogBase
-from .asynchttpgetter import AsyncHttpGetter
 from .settings import Setting
-from typing import Any, List, Dict
-from injector import inject
-from aiohttp import ClientSession
-import os
+from .snapshots import HASnapshot, Snapshot
 
 NOTIFICATION_ID = "backup_broken"
 EVENT_SNAPSHOT_START = "snapshot_started"
@@ -29,9 +30,11 @@ class HaRequests(LogBase):
 
     async def createSnapshot(self, info):
         if 'folders' in info or 'addons' in info:
-            url = "{0}snapshots/new/partial".format(self.config.get(Setting.HASSIO_URL))
+            url = "{0}snapshots/new/partial".format(
+                self.config.get(Setting.HASSIO_URL))
         else:
-            url = "{0}snapshots/new/full".format(self.config.get(Setting.HASSIO_URL))
+            url = "{0}snapshots/new/full".format(
+                self.config.get(Setting.HASSIO_URL))
         return await self._postHassioData(url, info)
 
     async def auth(self, user: str, password: str) -> None:
@@ -44,7 +47,8 @@ class HaRequests(LogBase):
             return await self._postHassioData(url, data=stream.generator(self.config.get(Setting.DEFAULT_CHUNK_SIZE)))
 
     async def delete(self, slug) -> None:
-        delete_url: str = "{0}snapshots/{1}/remove".format(self.config.get(Setting.HASSIO_URL), slug)
+        delete_url: str = "{0}snapshots/{1}/remove".format(
+            self.config.get(Setting.HASSIO_URL), slug)
         if slug in self.cache:
             del self.cache[slug]
         try:
@@ -66,7 +70,8 @@ class HaRequests(LogBase):
         return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "snapshots")
 
     async def haInfo(self):
-        url = "{0}homeassistant/info".format(self.config.get(Setting.HASSIO_URL))
+        url = "{0}homeassistant/info".format(
+            self.config.get(Setting.HASSIO_URL))
         return await self._getHassioData(url)
 
     async def selfInfo(self) -> Dict[str, Any]:
@@ -87,14 +92,16 @@ class HaRequests(LogBase):
         return await self._getHassioData(url)
 
     async def restore(self, slug: str, password: str = None) -> None:
-        url: str = "{0}snapshots/{1}/restore/full".format(self.config.get(Setting.HASSIO_URL), slug)
+        url: str = "{0}snapshots/{1}/restore/full".format(
+            self.config.get(Setting.HASSIO_URL), slug)
         if password:
             await self._postHassioData(url, {'password': password})
         else:
             await self._postHassioData(url, {})
 
     async def download(self, slug) -> AsyncHttpGetter:
-        url = "{0}snapshots/{1}/download".format(self.config.get(Setting.HASSIO_URL), slug)
+        url = "{0}snapshots/{1}/download".format(
+            self.config.get(Setting.HASSIO_URL), slug)
         ret = AsyncHttpGetter(url, self._getHassioHeaders(), self.session)
         return ret
 

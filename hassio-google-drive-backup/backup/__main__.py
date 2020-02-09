@@ -1,19 +1,21 @@
-import sys
-import aiohttp
-import socket
 import os
+import socket
+import sys
+
+import aiohttp
 import ptvsd
-from .starter import Starter
-from aiorun import run
-from .config import Config
-from .settings import _LOOKUP
-from .hasource import HaSource
-from .drivesource import DriveSource
-from .resolver import SubvertingResolver
-from .model import SnapshotSource, SnapshotDestination
-from injector import Module, provider, Injector, singleton
 from aiohttp import ClientSession
+from aiorun import run
+from injector import Injector, Module, provider, singleton
+
+from .config import Config
+from .drivesource import DriveSource
+from .hasource import HaSource
 from .logbase import LogBase
+from .model import SnapshotDestination, SnapshotSource
+from .resolver import SubvertingResolver
+from .settings import _LOOKUP
+from .starter import Starter
 
 
 class MainModule(Module):
@@ -22,7 +24,8 @@ class MainModule(Module):
     def getConfig(self) -> Config:
         config_path = None
         if len(sys.argv) > 1:
-            config_path = "backup/dev/data/{0}_options.json".format(sys.argv[1])
+            config_path = "backup/dev/data/{0}_options.json".format(
+                sys.argv[1])
         config = Config(config_path)
 
         if len(sys.argv) > 1:

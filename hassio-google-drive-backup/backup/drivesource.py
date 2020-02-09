@@ -1,35 +1,31 @@
-import os.path
 import os
-
-from datetime import datetime
-from oauth2client.client import Credentials
-from .model import CreateOptions, SnapshotDestination
-from datetime import timedelta
-from .snapshots import DriveSnapshot, AbstractSnapshot
+import os.path
+from datetime import datetime, timedelta
 from io import IOBase
-from .snapshots import Snapshot
-from .snapshots import PROP_KEY_DATE
-from .snapshots import PROP_KEY_SLUG
-from .snapshots import PROP_KEY_NAME
-from .snapshots import PROP_TYPE
-from .snapshots import PROP_VERSION
-from .snapshots import PROP_PROTECTED
-from .snapshots import PROP_RETAINED
-from typing import Dict, Any
-from .config import Config
-from .logbase import LogBase
-from .thumbnail import THUMBNAIL_IMAGE
-from .helpers import parseDateTime
-from .driverequests import DriveRequests
-from .time import Time
-from .exceptions import LogicError, BackupFolderMissingError, ExistingBackupFolderError, BackupFolderInaccessible, GoogleDrivePermissionDenied
-from .globalinfo import GlobalInfo
-from .const import SOURCE_GOOGLE_DRIVE
-from .settings import Setting
-from .asynchttpgetter import AsyncHttpGetter
+from typing import Any, Dict
+
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
+from oauth2client.client import Credentials
+
+from .asynchttpgetter import AsyncHttpGetter
+from .config import Config
+from .const import SOURCE_GOOGLE_DRIVE
+from .driverequests import DriveRequests
+from .exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
+                         ExistingBackupFolderError,
+                         GoogleDrivePermissionDenied, LogicError)
+from .globalinfo import GlobalInfo
+from .helpers import parseDateTime
+from .logbase import LogBase
+from .model import CreateOptions, SnapshotDestination
+from .settings import Setting
+from .snapshots import (PROP_KEY_DATE, PROP_KEY_NAME, PROP_KEY_SLUG,
+                        PROP_PROTECTED, PROP_RETAINED, PROP_TYPE, PROP_VERSION,
+                        AbstractSnapshot, DriveSnapshot, Snapshot)
+from .thumbnail import THUMBNAIL_IMAGE
+from .time import Time
 
 MIME_TYPE = "application/tar"
 THUMBNAIL_MIME_TYPE = "image/png"
@@ -86,7 +82,8 @@ class DriveSource(SnapshotDestination, LogBase):
 
     def checkBeforeChanges(self):
         if self._existing_folder_id:
-            raise ExistingBackupFolderError(self._existing_folder_id, self._existing_folder_name)
+            raise ExistingBackupFolderError(
+                self._existing_folder_id, self._existing_folder_name)
 
     async def get(self) -> Dict[str, DriveSnapshot]:
         parent = await self.getFolderId()
@@ -115,7 +112,8 @@ class DriveSource(SnapshotDestination, LogBase):
         snapshot.removeSource(self.name())
 
     async def save(self, snapshot: AbstractSnapshot, source: AsyncHttpGetter) -> DriveSnapshot:
-        retain = snapshot.getOptions() and snapshot.getOptions().retain_sources.get(self.name(), False)
+        retain = snapshot.getOptions() and snapshot.getOptions(
+        ).retain_sources.get(self.name(), False)
         file_metadata = {
             'name': str(snapshot.name()) + ".tar",
             'parents': [await self._getParentFolderId()],
@@ -142,16 +140,19 @@ class DriveSource(SnapshotDestination, LogBase):
 
         async with source:
             try:
-                self.info("Uploading '{}' to Google Drive".format(snapshot.name()))
+                self.info("Uploading '{}' to Google Drive".format(
+                    snapshot.name()))
                 size = source.size()
                 self._info.upload(size)
                 snapshot.overrideStatus("Uploading {0}%", source)
                 async for progress in self.drivebackend.create(source, file_metadata, MIME_TYPE):
                     if isinstance(progress, float):
-                        self.debug("Uploading {1} {0:.2f}%".format(progress * 100, snapshot.name()))
+                        self.debug("Uploading {1} {0:.2f}%".format(
+                            progress * 100, snapshot.name()))
                     else:
                         return DriveSnapshot(progress)
-                raise LogicError("Google Drive snapshot upload didn't return a completed item before exiting")
+                raise LogicError(
+                    "Google Drive snapshot upload didn't return a completed item before exiting")
             except ClientResponseError as e:
                 if e.status == 404:
                     # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
@@ -218,7 +219,8 @@ class DriveSource(SnapshotDestination, LogBase):
     def _validateSnapshot(self, snapshot: Snapshot) -> DriveSnapshot:
         drive_item: DriveSnapshot = snapshot.getSource(self.name())
         if not drive_item:
-            raise LogicError("Requested to do something with a snapshot from Google Drive, but the snapshot has no Google Drive source")
+            raise LogicError(
+                "Requested to do something with a snapshot from Google Drive, but the snapshot has no Google Drive source")
         return drive_item
 
     def _timeToRfc3339String(self, time: datetime) -> str:

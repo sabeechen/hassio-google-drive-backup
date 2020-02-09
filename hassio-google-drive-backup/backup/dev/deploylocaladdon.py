@@ -1,10 +1,10 @@
-import os
-import requests
-import shutil
 import json
+import os
+import shutil
 import time
-import pprint
-from os.path import join, abspath
+from os.path import abspath, join
+
+import requests
 
 
 def main():

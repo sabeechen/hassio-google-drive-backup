@@ -1,10 +1,12 @@
-import pytest
 import json
-from ..debugworker import DebugWorker
+
+import pytest
+
 from ..config import Config
-from ..settings import Setting
+from ..debugworker import DebugWorker
 from ..globalinfo import GlobalInfo
 from ..helpers import formatException
+from ..settings import Setting
 
 
 @pytest.mark.asyncio

@@ -1,10 +1,11 @@
 import socket
+from typing import Any, Dict, List
+
 import aiodns
+from aiohttp.resolver import AsyncResolver
+from injector import inject, singleton
 
 from .config import Config
-from typing import Dict, List, Any
-from injector import inject, singleton
-from aiohttp.resolver import AsyncResolver
 from .settings import Setting
 
 TTL_HOURS = 12
@@ -43,7 +44,8 @@ class SubvertingResolver(AsyncResolver):
 
     def setAlternateResolver(self):
         if len(self.config.get(Setting.ALTERNATE_DNS_SERVERS)) > 0:
-            self._alt_dns = aiodns.DNSResolver(loop=self._loop, nameservers=self.config.get(Setting.ALTERNATE_DNS_SERVERS).split(","))
+            self._alt_dns = aiodns.DNSResolver(loop=self._loop, nameservers=self.config.get(
+                Setting.ALTERNATE_DNS_SERVERS).split(","))
         else:
             self._alt_dns = self._original_dns
         self._alt_ns = self.config.get(Setting.ALTERNATE_DNS_SERVERS)

@@ -1,7 +1,8 @@
 import asyncio
-from .time import Time
+
 from .helpers import formatException
 from .logbase import LogBase
+from .time import Time
 
 
 class StopWorkException(Exception):
@@ -28,7 +29,8 @@ class Worker(LogBase):
                 break
             except Exception as e:
                 self._last_error = e
-                self.error("Worker {0} got an unexpected error".format(self._name))
+                self.error(
+                    "Worker {0} got an unexpected error".format(self._name))
                 self.error(formatException(e))
             await self._time.sleepAsync(self._interval)
 

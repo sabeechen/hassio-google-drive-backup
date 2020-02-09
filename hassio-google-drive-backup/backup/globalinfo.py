@@ -1,8 +1,10 @@
 
-from .time import Time
-from .logbase import LogBase
 from threading import Lock
+
 from injector import inject, singleton
+
+from .logbase import LogBase
+from .time import Time
 
 
 @singleton

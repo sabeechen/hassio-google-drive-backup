@@ -1,18 +1,19 @@
-from .snapshots import AbstractSnapshot, Snapshot, DummySnapshot
-from .config import Config
-from .time import Time
-from .logbase import LogBase
+from datetime import datetime, timedelta
+from io import IOBase
+from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+
+from injector import inject, singleton
+
 from .backupscheme import GenerationalScheme, OldestScheme
-from .trigger import Trigger
+from .config import Config
+from .estimator import Estimator
 from .exceptions import DeleteMutlipleSnapshotsError, SimulatedError
 from .globalinfo import GlobalInfo
+from .logbase import LogBase
 from .settings import Setting
-from .estimator import Estimator
-
-from datetime import datetime, timedelta
-from typing import TypeVar, Generic, List, Dict, Optional, Tuple
-from io import IOBase
-from injector import inject, singleton
+from .snapshots import AbstractSnapshot, DummySnapshot, Snapshot
+from .time import Time
+from .trigger import Trigger
 
 T = TypeVar('T')
 
@@ -107,20 +108,23 @@ class Model(LogBase):
             return last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS))
 
         newest_local: datetime = self.time.toLocal(last_snapshot)
-        time_that_day_local = datetime(newest_local.year, newest_local.month, newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
+        time_that_day_local = datetime(newest_local.year, newest_local.month,
+                                       newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
         if newest_local < time_that_day_local:
             # Latest snapshot is before the snapshot time for that day
             next = self.time.toUtc(time_that_day_local)
         else:
             # return the next snapshot after the delta
-            next = self.time.toUtc(time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
+            next = self.time.toUtc(
+                time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
         if next < now:
             return now
         else:
             return next
 
     def nextSnapshot(self, now: datetime):
-        latest = max(self.snapshots.values(), default=None, key=lambda s: s.date())
+        latest = max(self.snapshots.values(),
+                     default=None, key=lambda s: s.date())
         if latest:
             latest = latest.date()
         return self._nextSnapshot(now, latest)
@@ -155,7 +159,8 @@ class Model(LogBase):
             uploads.reverse()
             for upload in uploads:
                 # only upload if doing so won't result in it being deleted next
-                dummy = DummySnapshot("", upload.date(), self.dest.name(), "dummy_slug_name")
+                dummy = DummySnapshot(
+                    "", upload.date(), self.dest.name(), "dummy_slug_name")
                 proposed = list(self.snapshots.values())
                 proposed.append(dummy)
                 if self._nextPurge(self.dest, proposed) != dummy:
@@ -186,7 +191,8 @@ class Model(LogBase):
     def getNextPurges(self):
         purges = {}
         for source in [self.source, self.dest]:
-            purges[source.name()] = self._nextPurge(source, self.snapshots.values(), findNext=True)
+            purges[source.name()] = self._nextPurge(
+                source, self.snapshots.values(), findNext=True)
         return purges
 
     def _parseTimeOfDay(self) -> Optional[Tuple[int, int]]:
@@ -235,7 +241,8 @@ class Model(LogBase):
         if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
             return None
         if self.generational_config:
-            scheme = GenerationalScheme(self.time, self.generational_config, count=count)
+            scheme = GenerationalScheme(
+                self.time, self.generational_config, count=count)
         else:
             scheme = OldestScheme(count=count)
         consider_purging = []

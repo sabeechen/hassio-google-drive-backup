@@ -1,41 +1,38 @@
-import os.path
-import os
-import ssl
-import aiofiles
 import asyncio
-
+import os
+import os.path
+import ssl
 from datetime import timedelta
-from oauth2client.client import OAuth2WebServerFlow
-from oauth2client.client import OAuth2Credentials
-from .helpers import formatTimeSince
-from .helpers import formatException
-from .helpers import strToBool
-from .helpers import touch, asSizeString
-from .exceptions import ensureKey
-from .config import Config
-from .snapshotname import SNAPSHOT_NAME_KEYS
-from .exceptions import KnownError
-from .logbase import LogBase
-from typing import Dict, Any
-from .model import CreateOptions
-from .time import Time
-from .coordinator import Coordinator
-from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
-from .harequests import HaRequests
-from .hasource import PendingSnapshot, HaSource
-from .snapshots import Snapshot
-from .globalinfo import GlobalInfo
-from .password import Password
-from .trigger import Trigger
-from .settings import Setting
-from .color import Color
-from .estimator import Estimator
-from .resolver import SubvertingResolver
-from os.path import join, abspath
+from os.path import abspath, join
+from typing import Any, Dict
 from urllib.parse import quote
-from aiohttp import BasicAuth, web, hdrs
-from aiohttp.web import Request, HTTPBadRequest, HTTPException
+
+import aiofiles
+from aiohttp import BasicAuth, hdrs, web
+from aiohttp.web import HTTPBadRequest, HTTPException, Request
 from injector import inject, singleton
+from oauth2client.client import OAuth2Credentials, OAuth2WebServerFlow
+
+from .color import Color
+from .config import Config
+from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
+from .coordinator import Coordinator
+from .estimator import Estimator
+from .exceptions import KnownError, ensureKey
+from .globalinfo import GlobalInfo
+from .harequests import HaRequests
+from .hasource import HaSource, PendingSnapshot
+from .helpers import (asSizeString, formatException, formatTimeSince,
+                      strToBool, touch)
+from .logbase import LogBase
+from .model import CreateOptions
+from .password import Password
+from .resolver import SubvertingResolver
+from .settings import Setting
+from .snapshotname import SNAPSHOT_NAME_KEYS
+from .snapshots import Snapshot
+from .time import Time
+from .trigger import Trigger
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -124,7 +121,8 @@ class AsyncServer(Trigger, LogBase):
             status['snapshots'].append(self.getSnapshotDetails(snapshot))
         status['restore_link'] = self._ha_source.getFullRestoreLink()
         status['drive_enabled'] = self._coord.enabled()
-        status['ask_error_reports'] = not self.config.isExplicit(Setting.SEND_ERROR_REPORTS)
+        status['ask_error_reports'] = not self.config.isExplicit(
+            Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = self._ha_source.runTemporaryServer()
         status['cred_version'] = self._global_info.credVersion
         status['free_space'] = asSizeString(self._estimator.getBytesFree())
@@ -132,33 +130,42 @@ class AsyncServer(Trigger, LogBase):
         if next is None:
             status['next_snapshot'] = "Disabled"
         elif (next < self._time.now()):
-            status['next_snapshot'] = formatTimeSince(self._time.now(), self._time.now())
+            status['next_snapshot'] = formatTimeSince(
+                self._time.now(), self._time.now())
         else:
             status['next_snapshot'] = formatTimeSince(next, self._time.now())
 
         if len(snapshots) > 0:
-            status['last_snapshot'] = formatTimeSince(snapshots[len(snapshots) - 1].date(), self._time.now())
+            status['last_snapshot'] = formatTimeSince(
+                snapshots[len(snapshots) - 1].date(), self._time.now())
         else:
             status['last_snapshot'] = "Never"
 
         status['last_error'] = None
         if self._global_info._last_error is not None and self._global_info.isErrorSuppressed():
-            status['last_error'] = AsyncServer.processError(self._global_info._last_error)
+            status['last_error'] = AsyncServer.processError(
+                self._global_info._last_error)
         status["last_error_count"] = self._global_info.failureCount()
         status["ignore_errors_for_now"] = self._global_info.ignoreErrorsForNow()
         status["syncing"] = self._coord.isSyncing()
         status["firstSync"] = self._global_info._first_sync
-        status["maxSnapshotsInHasssio"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
-        status["maxSnapshotsInDrive"] = self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
-        status["snapshot_name_template"] = self.config.get(Setting.SNAPSHOT_NAME)
+        status["maxSnapshotsInHasssio"] = self.config.get(
+            Setting.MAX_SNAPSHOTS_IN_HASSIO)
+        status["maxSnapshotsInDrive"] = self.config.get(
+            Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
+        status["snapshot_name_template"] = self.config.get(
+            Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
         status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
-        status['choose_folder_url'] = self.config.get(Setting.CHOOSE_FOLDER_URL) + "?bg={0}&ac={1}".format(quote(self.config.get(Setting.BACKGROUND_COLOR)), quote(self.config.get(Setting.ACCENT_COLOR)))
+        status['choose_folder_url'] = self.config.get(Setting.CHOOSE_FOLDER_URL) + "?bg={0}&ac={1}".format(
+            quote(self.config.get(Setting.BACKGROUND_COLOR)), quote(self.config.get(Setting.ACCENT_COLOR)))
         status['dns_info'] = self._global_info.getDnsInfo()
-        status['enable_drive_upload'] = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
+        status['enable_drive_upload'] = self.config.get(
+            Setting.ENABLE_DRIVE_UPLOAD)
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['drive_client'] = self._coord._model.dest.drivebackend.cred_id
-        status['is_specify_folder'] = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
+        status['is_specify_folder'] = self.config.get(
+            Setting.SPECIFY_SNAPSHOT_FOLDER)
         return web.json_response(status)
 
     def getSnapshotDetails(self, snapshot: Snapshot):
@@ -206,7 +213,8 @@ class AsyncServer(Trigger, LogBase):
                 })
         elif code != "":
             try:
-                self._coord.saveCreds(self.oauth_flow_manual.step2_exchange(code))
+                self._coord.saveCreds(
+                    self.oauth_flow_manual.step2_exchange(code))
                 self._global_info.setIngoreErrorsForNow(True)
                 # TODO: this redirects back to the reauth page if user already has drive creds!
                 return web.json_response({'auth_url': "index"})
@@ -283,7 +291,8 @@ class AsyncServer(Trigger, LogBase):
         self._global_info.allowMultipleDeletes()
         self._global_info.setIngoreErrorsForNow(True)
         if always:
-            validated = self.config.validateUpdate({"confirm_multiple_deletes": False})
+            validated = self.config.validateUpdate(
+                {"confirm_multiple_deletes": False})
             await self._updateConfiguration(validated)
             await self.sync()
             return web.json_response({'message': 'Configuration updated, I\'ll never ask again'})
@@ -393,7 +402,8 @@ class AsyncServer(Trigger, LogBase):
         await self._ha_source.refresh()
         name_keys = {}
         for key in SNAPSHOT_NAME_KEYS:
-            name_keys[key] = SNAPSHOT_NAME_KEYS[key]("Full", self._time.now(), self._ha_source.getHostInfo())
+            name_keys[key] = SNAPSHOT_NAME_KEYS[key](
+                "Full", self._time.now(), self._ha_source.getHostInfo())
         current_config = {}
         for setting in Setting:
             current_config[setting.key()] = self.config.get(setting)
@@ -518,7 +528,8 @@ class AsyncServer(Trigger, LogBase):
         await stream.setup()
         resp = web.StreamResponse()
         resp.content_type = 'application/tar'
-        resp.headers['Content-Disposition'] = 'attachment; filename="{}.tar"'.format(snapshot.name())
+        resp.headers['Content-Disposition'] = 'attachment; filename="{}.tar"'.format(
+            snapshot.name())
         resp.headers['Content-Length'] = str(stream.size())
 
         await resp.prepare(request)
@@ -538,22 +549,27 @@ class AsyncServer(Trigger, LogBase):
         self._addRoutes(app)
 
         # The ingress port is considered secured by Home Assistant, so it doesn't get SSL or basic HTTP auth
-        self.info("Starting server on port {}".format(self.config.get(Setting.INGRESS_PORT)))
+        self.info("Starting server on port {}".format(
+            self.config.get(Setting.INGRESS_PORT)))
         await self._start_site(app, self.config.get(Setting.INGRESS_PORT))
 
         try:
             if self.config.get(Setting.EXPOSE_EXTRA_SERVER) or self._ha_source.runTemporaryServer():
                 ssl_context = None
                 if self.config.get(Setting.USE_SSL):
-                    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                    ssl_context.load_cert_chain(self.config.get(Setting.CERTFILE), self.config.get(Setting.KEYFILE))
+                    ssl_context = ssl.create_default_context(
+                        ssl.Purpose.CLIENT_AUTH)
+                    ssl_context.load_cert_chain(self.config.get(
+                        Setting.CERTFILE), self.config.get(Setting.KEYFILE))
                 middleware = [AsyncServer.error_middleware]
                 if self.config.get(Setting.REQUIRE_LOGIN):
-                    middleware.append(HomeAssistantLoginAuth(self._time, self._harequests))
+                    middleware.append(HomeAssistantLoginAuth(
+                        self._time, self._harequests))
 
                 extra_app = web.Application(middlewares=middleware)
                 self._addRoutes(extra_app)
-                self.info("Starting server on port {}".format(self.config.get(Setting.PORT)))
+                self.info("Starting server on port {}".format(
+                    self.config.get(Setting.PORT)))
                 await self._start_site(extra_app, self.config.get(Setting.PORT), ssl_context=ssl_context)
         except FileNotFoundError:
             self.error("The configured SSL key or certificate files couldn't be found and so \nan SSL server couldn't be started, please check your settings. \nThe addon web-ui is still available through ingress.")
@@ -563,10 +579,12 @@ class AsyncServer(Trigger, LogBase):
         self.running = True
         self._starts += 1
         if self.server_restarter is None:
-            self.server_restarter = asyncio.create_task(self._waitForRestart(), name="UI Server Restarter")
+            self.server_restarter = asyncio.create_task(
+                self._waitForRestart(), name="UI Server Restarter")
 
     def _addRoutes(self, app):
-        app.add_routes([web.static('/static', os.path.join(os.getcwd(), "www"), append_version=True)])
+        app.add_routes(
+            [web.static('/static', os.path.join(os.getcwd(), "www"), append_version=True)])
         app.add_routes([web.get('/', self.index)])
         app.add_routes([web.get('/index.html', self.index)])
 
@@ -696,10 +714,12 @@ class AsyncServer(Trigger, LogBase):
         shadow2 = text.withAlpha(0.12)
         shadow3 = text.withAlpha(0.2)
         shadowbmc = background.withAlpha(0.2)
-        bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
+        bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + \
+            shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
 
         bg_modal = background.tint(text, 0.02)
-        shadow_modal = "box-shadow: 0 24px 38px 3px " + shadow1.toCss() + ", 0 9px 46px 8px " + shadow2.toCss() + ", 0 11px 15px -7px " + shadow3.toCss()
+        shadow_modal = "box-shadow: 0 24px 38px 3px " + shadow1.toCss() + ", 0 9px 46px 8px " + \
+            shadow2.toCss() + ", 0 11px 15px -7px " + shadow3.toCss()
 
         ret = ""
         ret += self.cssElement("html", {
@@ -931,7 +951,8 @@ class HomeAssistantLoginAuth(LogBase):
             return True
         try:
             await self._harequests.auth(username, password)
-            self.auth_cache[username] = {'password': password, 'timeout': (self._time.now() + timedelta(minutes=10))}
+            self.auth_cache[username] = {'password': password, 'timeout': (
+                self._time.now() + timedelta(minutes=10))}
             return True
         except Exception as e:
             self.error(formatException(e))

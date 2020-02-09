@@ -1,6 +1,6 @@
 import logging
-from logging import LogRecord
 import sys
+from logging import LogRecord
 
 HISTORY_SIZE = 1000
 
@@ -40,7 +40,8 @@ class HistoryHandler(logging.Handler):
                     style = "console-warning"
                 else:
                     style = "console-default"
-                line = "<span class='" + style + "'>" + self.format(item) + "</span>"
+                line = "<span class='" + style + \
+                    "'>" + self.format(item) + "</span>"
                 yield (x + 1, line)
             else:
                 yield (x + 1, self.format(item))
@@ -61,7 +62,8 @@ logger: logging.Logger = logging.getLogger("appwide")
 logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s', '%m-%d %H:%M:%S')
+formatter = logging.Formatter(
+    '%(asctime)s %(levelname)s %(message)s', '%m-%d %H:%M:%S')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 

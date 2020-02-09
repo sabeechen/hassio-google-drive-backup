@@ -109,8 +109,7 @@ async def test_sync_error(coord: Coordinator, global_info: GlobalInfo, time: Fak
     assert global_info._last_error is None
     assert global_info._successes == 1
     assert global_info._last_success == time.now()
-    # await coord.sync()
-    coord.sync()
+    await coord.sync()
 
 
 def doRaise(error):

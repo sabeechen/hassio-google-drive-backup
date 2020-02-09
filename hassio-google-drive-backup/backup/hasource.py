@@ -1,26 +1,28 @@
-import os.path
 import asyncio
-from .snapshots import HASnapshot, Snapshot, AbstractSnapshot
-from .config import Config
-from .time import Time
-from .model import SnapshotSource, CreateOptions
-from typing import Optional, List, Dict
-from threading import Lock, Thread
-from .harequests import HaRequests
-from .exceptions import LogicError
-from .helpers import formatException, touch
-from .exceptions import SnapshotInProgress, UploadFailed, ensureKey, SupervisorConnectionError
-from .globalinfo import GlobalInfo
-from .const import SOURCE_HA
+import os.path
 from datetime import timedelta
 from io import IOBase
-from .settings import Setting
-from .password import Password
-from .snapshotname import SnapshotName
-from .asynchttpgetter import AsyncHttpGetter
-from .resolver import SubvertingResolver
+from threading import Lock, Thread
+from typing import Dict, List, Optional
+
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
+
+from .asynchttpgetter import AsyncHttpGetter
+from .config import Config
+from .const import SOURCE_HA
+from .exceptions import (LogicError, SnapshotInProgress,
+                         SupervisorConnectionError, UploadFailed, ensureKey)
+from .globalinfo import GlobalInfo
+from .harequests import HaRequests
+from .helpers import formatException, touch
+from .model import CreateOptions, SnapshotSource
+from .password import Password
+from .resolver import SubvertingResolver
+from .settings import Setting
+from .snapshotname import SnapshotName
+from .snapshots import AbstractSnapshot, HASnapshot, Snapshot
+from .time import Time
 
 
 class PendingSnapshot(AbstractSnapshot):
@@ -94,12 +96,14 @@ class PendingSnapshot(AbstractSnapshot):
 
     def isStale(self):
         if self._pending_subverted:
-            delta = timedelta(seconds=self._config.get(Setting.SNAPSHOT_STALE_SECONDS))
+            delta = timedelta(seconds=self._config.get(
+                Setting.SNAPSHOT_STALE_SECONDS))
             if self._time.now() > self.startTime() + delta:
                 return True
         if not self.isFailed():
             return False
-        delta = timedelta(seconds=self._config.get(Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS))
+        delta = timedelta(seconds=self._config.get(
+            Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS))
         staleTime = self.getFailureTime() + delta
         return self._time.now() >= staleTime
 
@@ -167,7 +171,8 @@ class HaSource(SnapshotSource[HASnapshot]):
             options.name_template = self.config.get(Setting.SNAPSHOT_NAME)
 
         # Build the snapshot request json, get type, etc
-        request, options, type_name, protected = self._buildSnapshotInfo(options)
+        request, options, type_name, protected = self._buildSnapshotInfo(
+            options)
 
         async with self._pending_snapshot_lock:
             # Check if a snapshot is already in progress
@@ -177,9 +182,11 @@ class HaSource(SnapshotSource[HASnapshot]):
                     raise SnapshotInProgress()
 
             # Create the snapshot palceholder object
-            self.pending_snapshot = PendingSnapshot(type_name, protected, options, request, self.config, self.time)
+            self.pending_snapshot = PendingSnapshot(
+                type_name, protected, options, request, self.config, self.time)
             self.info("Requesting a new snapshot")
-            self._pending_snapshot_task = asyncio.create_task(self._requestAsync(self.pending_snapshot), name="Pending Snapshot Requester")
+            self._pending_snapshot_task = asyncio.create_task(self._requestAsync(
+                self.pending_snapshot), name="Pending Snapshot Requester")
             await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
             self.pending_snapshot.raiseIfNeeded()
             if self.pending_snapshot.isComplete():
@@ -217,7 +224,8 @@ class HaSource(SnapshotSource[HASnapshot]):
                         self._killPending()
                     elif self.pending_snapshot.isComplete() and self.pending_snapshot.createdSlug() in snapshots:
                         # Copy over options if we got the requested snapshot.
-                        snapshots[self.pending_snapshot.createdSlug()].setOptions(self.pending_snapshot.getOptions())
+                        snapshots[self.pending_snapshot.createdSlug()].setOptions(
+                            self.pending_snapshot.getOptions())
                         self._killPending()
                     elif self.last_slugs.symmetric_difference(slugs).intersection(slugs):
                         # New snapshot added, ignore pending snapshot.
@@ -285,13 +293,18 @@ class HaSource(SnapshotSource[HASnapshot]):
             self.host_info = await self.harequests.info()
             self.ha_info = await self.harequests.haInfo()
             self.super_info = await self.harequests.supervisorInfo()
-            self.config.update(ensureKey("options", self.self_info, "addon metdata"))
+            self.config.update(
+                ensureKey("options", self.self_info, "addon metdata"))
             self.resolver.updateConfig()
 
-            self._info.ha_port = ensureKey("port", self.ha_info, "Home Assistant metadata")
-            self._info.ha_ssl = ensureKey("ssl", self.ha_info, "Home Assistant metadata")
-            self._info.addons = ensureKey("addons", self.super_info, "Supervisor metadata")
-            self._info.slug = ensureKey("slug", self.self_info, "addon metdata")
+            self._info.ha_port = ensureKey(
+                "port", self.ha_info, "Home Assistant metadata")
+            self._info.ha_ssl = ensureKey(
+                "ssl", self.ha_info, "Home Assistant metadata")
+            self._info.addons = ensureKey(
+                "addons", self.super_info, "Supervisor metadata")
+            self._info.slug = ensureKey(
+                "slug", self.self_info, "addon metdata")
             self._info.url = self.getAddonUrl()
 
             self._info.addDebugInfo("self_info", self.self_info)
@@ -336,7 +349,8 @@ class HaSource(SnapshotSource[HASnapshot]):
     def _validateSnapshot(self, snapshot) -> HASnapshot:
         item: HASnapshot = snapshot.getSource(self.name())
         if not item:
-            raise LogicError("Requested to do something with a snapshot from Home Assistant, but the snapshot has no Home Assistant source")
+            raise LogicError(
+                "Requested to do something with a snapshot from Home Assistant, but the snapshot has no Home Assistant source")
         return item
 
     def _killPending(self):
@@ -347,9 +361,11 @@ class HaSource(SnapshotSource[HASnapshot]):
     async def _requestAsync(self, pending: PendingSnapshot) -> None:
         try:
             result = await asyncio.wait_for(self.harequests.createSnapshot(pending._request_info), timeout=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS))
-            slug = ensureKey("slug", result, "Hass.io's create snapshot response")
+            slug = ensureKey(
+                "slug", result, "Hass.io's create snapshot response")
             pending.complete(slug)
-            self.config.setRetained(slug, pending.getOptions().retain_sources.get(self.name(), False))
+            self.config.setRetained(
+                slug, pending.getOptions().retain_sources.get(self.name(), False))
             self.info("Snapshot finished")
         except Exception as e:
             if self._isHttp400(e):
@@ -388,6 +404,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         password = Password(self.config).resolve()
         if password:
             request_info['password'] = password
-        name = SnapshotName().resolve(type_name, options.name_template, self.time.toLocal(options.when), self.host_info)
+        name = SnapshotName().resolve(type_name, options.name_template,
+                                      self.time.toLocal(options.when), self.host_info)
         request_info['name'] = name
         return request_info, options, type_name, protected

@@ -1,15 +1,14 @@
-from .config import Config
-from .hasource import HaSource
-from .drivesource import DriveSource
+from injector import ClassAssistedBuilder, Injector, inject
+
 from .asyncserver import AsyncServer
 from .coordinator import Coordinator
-from .time import Time
+from .debugworker import DebugWorker
+from .drivesource import DriveSource
+from .hasource import HaSource
+from .haupdater import HaUpdater
 from .logbase import LogBase
 from .syncer import Scyncer
-from .haupdater import HaUpdater
 from .watcher import Watcher
-from .debugworker import DebugWorker
-from injector import inject, ClassAssistedBuilder, Injector
 
 
 class Starter(LogBase):
@@ -36,4 +35,5 @@ class Starter(LogBase):
             self.injector.get(Watcher),
             self.injector.get(AsyncServer)
         ]
-        self.injector.get(ClassAssistedBuilder[Scyncer]).build(triggers=triggers).start()
+        self.injector.get(ClassAssistedBuilder[Scyncer]).build(
+            triggers=triggers).start()

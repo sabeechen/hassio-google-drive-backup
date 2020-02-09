@@ -1,22 +1,25 @@
-from .logbase import LogBase
-from .trigger import Trigger
-from .model import Model, CreateOptions
-from .time import Time
-from .config import Config
-from .snapshots import Snapshot, AbstractSnapshot
-from .exceptions import NoSnapshot, PleaseWait, LogicError, KnownError, UserCancelledError
-from oauth2client.client import Credentials
-from typing import List, Dict
-from .globalinfo import GlobalInfo
-from threading import Lock
-from .helpers import formatException, asSizeString
-from .haupdater import HaUpdater
-from .backoff import Backoff
+from asyncio import CancelledError, Task, create_task, wait
 from datetime import timedelta
-from .settings import Setting
-from .estimator import Estimator
+from threading import Lock
+from typing import Dict, List
+
 from injector import inject, singleton
-from asyncio import CancelledError, create_task, Task, wait
+from oauth2client.client import Credentials
+
+from .backoff import Backoff
+from .config import Config
+from .estimator import Estimator
+from .exceptions import (KnownError, LogicError, NoSnapshot, PleaseWait,
+                         UserCancelledError)
+from .globalinfo import GlobalInfo
+from .haupdater import HaUpdater
+from .helpers import asSizeString, formatException
+from .logbase import LogBase
+from .model import CreateOptions, Model
+from .settings import Setting
+from .snapshots import AbstractSnapshot, Snapshot
+from .time import Time
+from .trigger import Trigger
 
 
 @singleton
@@ -84,7 +87,8 @@ class Coordinator(Trigger, LogBase):
             if scheduled is None:
                 scheduled = self._time.now() - timedelta(minutes=1)
             else:
-                scheduled += timedelta(seconds=self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS))
+                scheduled += timedelta(seconds=self._config.get(
+                    Setting.MAX_SYNC_INTERVAL_SECONDS))
             next_snapshot = self.nextSnapshotTime()
             if next_snapshot is None:
                 return scheduled
@@ -119,7 +123,8 @@ class Coordinator(Trigger, LogBase):
         return info
 
     async def _sync_wrapper(self):
-        self._sync_task = create_task(self._sync(), name="Internal sync worker")
+        self._sync_task = create_task(
+            self._sync(), name="Internal sync worker")
         await wait([self._sync_task])
 
     async def _sync(self):

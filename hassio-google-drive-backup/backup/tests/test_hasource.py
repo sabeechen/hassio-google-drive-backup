@@ -1,20 +1,23 @@
-import pytest
 import asyncio
-from aiohttp.client_exceptions import ClientResponseError
-from os.path import exists
 from os import remove
-from ..hasource import HaSource, PendingSnapshot
-from ..snapshots import HASnapshot, DummySnapshot
-from .faketime import FakeTime
-from ..exceptions import SnapshotInProgress, SnapshotPasswordKeyInvalid, UploadFailed, HomeAssistantDeleteError
-from ..model import CreateOptions
+from os.path import exists
+
+import pytest
+from aiohttp.client_exceptions import ClientResponseError
+
 from ..config import Config
-from .helpers import createSnapshotTar, getTestStream, all_folders, all_addons
 from ..const import SOURCE_HA
-from ..settings import Setting
-from ..password import Password
+from ..exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
+                          SnapshotPasswordKeyInvalid, UploadFailed)
 from ..globalinfo import GlobalInfo
-from ..harequests import EVENT_SNAPSHOT_START, EVENT_SNAPSHOT_END
+from ..harequests import EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START
+from ..hasource import HaSource, PendingSnapshot
+from ..model import CreateOptions
+from ..password import Password
+from ..settings import Setting
+from ..snapshots import DummySnapshot, HASnapshot
+from .faketime import FakeTime
+from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
 
 
 @pytest.mark.asyncio
@@ -45,7 +48,8 @@ async def test_CRUD(ha, time, server) -> None:
     assert len(snapshots) == 1
     assert snapshot.slug() in snapshots
 
-    full = DummySnapshot(from_ha.name(), from_ha.date(), from_ha.size(), from_ha.slug(), "dummy")
+    full = DummySnapshot(from_ha.name(), from_ha.date(),
+                         from_ha.size(), from_ha.slug(), "dummy")
     full.addSource(snapshot)
 
     # download the item, its bytes should match up
@@ -185,7 +189,8 @@ async def test_partial_snapshot(ha, time, server, config: Config):
                 assert search in list_of_addons
 
     # excluding addon/folders that don't exist should actually make a full snapshot
-    server._options.update({'exclude_addons': "none,of.these,are.addons", 'exclude_folders': "not,folders,either"})
+    server._options.update(
+        {'exclude_addons': "none,of.these,are.addons", 'exclude_folders': "not,folders,either"})
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert snapshot.snapshotType() == "full"
 
@@ -467,7 +472,8 @@ async def test_immediate_snapshot_failure(time: FakeTime, ha: HaSource, server, 
     # Failed snapshot should go away after it times out
     assert ha.check()
     assert not ha.check()
-    time.advance(seconds=config.get(Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS) + 1)
+    time.advance(seconds=config.get(
+        Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS) + 1)
     assert ha.check()
 
     assert len(await ha.get()) == 0
@@ -477,7 +483,8 @@ async def test_immediate_snapshot_failure(time: FakeTime, ha: HaSource, server, 
 @pytest.mark.asyncio
 async def test_delete_error(time, ha: HaSource, server):
     snapshot = await ha.create(CreateOptions(time.now(), "Some Name"))
-    full = DummySnapshot(snapshot.name(), snapshot.date(), snapshot.size(), snapshot.slug(), "dummy")
+    full = DummySnapshot(snapshot.name(), snapshot.date(),
+                         snapshot.size(), snapshot.slug(), "dummy")
     full.addSource(snapshot)
     server.update({"hassio_error": 400})
     with pytest.raises(HomeAssistantDeleteError):

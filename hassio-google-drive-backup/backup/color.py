@@ -100,7 +100,10 @@ class Color:
         Pr = 0.299
         Pg = 0.587
         Pb = 0.114
-        P = math.sqrt(self.r * self.r * Pr + self.g * self.g * Pg + self.b * self.b * Pb)
+        rSq = self.r * self.r
+        gSq = self.g * self.g
+        bSq = self.b * self.b
+        P = math.sqrt(rSq * Pr + gSq * Pg + bSq * Pb)
 
         R = self._clamp(P + (self.r - P) * change)
         G = self._clamp(P + (self.g - P) * change)
@@ -125,9 +128,20 @@ class Color:
             return Color.white()
 
     def luminance(self):
-        rg = self.r / 3294.0 if math.floor(self.r) <= 10 else math.pow(self.r / 269.0 + 0.0513, 2.4)
-        gg = self.g / 3294.0 if math.floor(self.g) <= 10 else math.pow(self.g / 269.0 + 0.0513, 2.4)
-        bg = self.b / 3294.0 if math.floor(self.b) <= 10 else math.pow(self.b / 269.0 + 0.0513, 2.4)
+        if math.floor(self.r) <= 10:
+            rg = self.r / 3294.0
+        else:
+            rg = math.pow(self.r / 269.0 + 0.0513, 2.4)
+
+        if math.floor(self.g) <= 10:
+            gg = self.g / 3294.0
+        else:
+            gg = math.pow(self.g / 269.0 + 0.0513, 2.4)
+
+        if math.floor(self.b) <= 10:
+            bg = self.b / 3294.0
+        else:
+            bg = math.pow(self.b / 269.0 + 0.0513, 2.4)
         return 0.2126 * rg + 0.7152 * gg + 0.0722 * bg
 
     def contrast(self, other):

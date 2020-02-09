@@ -1,7 +1,9 @@
 import json
 from enum import Enum, unique
-from .validation import BoolValidator, FloatValidator, IntValidator, StringValidator, RegexValidator
-from os.path import join, abspath
+from os.path import abspath, join
+
+from .validation import (BoolValidator, FloatValidator, IntValidator,
+                         RegexValidator, StringValidator)
 
 
 @unique

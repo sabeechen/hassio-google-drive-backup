@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
-from dateutil.tz import tzutc
-from dateutil.tz import tzlocal
-from .helpers import parseDateTime
-from injector import inject, singleton
 import asyncio
+from datetime import datetime, timedelta
+
+from dateutil.tz import tzlocal, tzutc
+from injector import inject, singleton
+
+from .helpers import parseDateTime
 
 
 @singleton
@@ -53,7 +54,8 @@ class FakeTime(Time):
         return self.advance(days=1)
 
     def advance(self, days=0, hours=0, seconds=0):
-        self._now = self._now + timedelta(days=days, hours=hours, seconds=seconds)
+        self._now = self._now + \
+            timedelta(days=days, hours=hours, seconds=seconds)
         return self
 
     def now(self) -> datetime:

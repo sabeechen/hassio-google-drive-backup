@@ -1,6 +1,7 @@
 import pytest
-from ..resolver import SubvertingResolver
+
 from ..config import Config
+from ..resolver import SubvertingResolver
 from ..settings import Setting
 
 

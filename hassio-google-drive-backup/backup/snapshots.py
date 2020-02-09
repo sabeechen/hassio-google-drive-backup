@@ -1,9 +1,11 @@
 
 from datetime import datetime
-from .helpers import parseDateTime, strToBool, nowutc, asSizeString
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
+
 from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from .exceptions import ensureKey
+from .helpers import asSizeString, nowutc, parseDateTime, strToBool
+
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"
 PROP_KEY_NAME = "snapshot_name"
@@ -91,13 +93,15 @@ class DriveSnapshot(AbstractSnapshot):
     """
     Represents a Hass.io snapshot stored on Google Drive
     """
+
     def __init__(self, data: Dict[Any, Any]):
         props = ensureKey('appProperties', data, DRIVE_KEY_TEXT)
         retained = strToBool(props.get(PROP_RETAINED, "False"))
         super().__init__(
             name=ensureKey(PROP_KEY_NAME, props, DRIVE_KEY_TEXT),
             slug=ensureKey(PROP_KEY_SLUG, props, DRIVE_KEY_TEXT),
-            date=parseDateTime(ensureKey(PROP_KEY_DATE, props, DRIVE_KEY_TEXT)),
+            date=parseDateTime(
+                ensureKey(PROP_KEY_DATE, props, DRIVE_KEY_TEXT)),
             size=int(ensureKey("size", data, DRIVE_KEY_TEXT)),
             source=SOURCE_GOOGLE_DRIVE,
             snapshotType=props.get(PROP_TYPE, "?"),
@@ -125,6 +129,7 @@ class HASnapshot(AbstractSnapshot):
     """
     Represents a Hass.io snapshot stored locally in Home Assistant
     """
+
     def __init__(self, data: Dict[str, Any], retained=False):
         super().__init__(
             name=ensureKey('name', data, HA_KEY_TEXT),
@@ -154,6 +159,7 @@ class Snapshot(object):
     Represents a Hass.io snapshot stored on Google Drive, locally in
     Home Assistant, or a pending snapshot we expect to see show up later
     """
+
     def __init__(self, snapshot: Optional[AbstractSnapshot] = None):
         self.sources: Dict[str, AbstractSnapshot] = {}
         self._purgeNext: Dict[str, bool] = {}

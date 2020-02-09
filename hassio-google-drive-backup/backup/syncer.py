@@ -1,9 +1,11 @@
-from .worker import Worker
+from typing import List
+
+from injector import inject, singleton
+
+from .coordinator import Coordinator
 from .time import Time
 from .trigger import Trigger
-from .coordinator import Coordinator
-from typing import List
-from injector import inject, singleton
+from .worker import Worker
 
 
 @singleton

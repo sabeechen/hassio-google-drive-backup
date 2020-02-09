@@ -1,11 +1,14 @@
+import json
+import tarfile
 from datetime import datetime
 from io import BytesIO
-from ..simulation import SimulatedSource
-from ..asynchttpgetter import AsyncHttpGetter
-import tarfile
-import json
-from injector import singleton, inject
+
 from aiohttp import ClientSession
+from injector import inject, singleton
+
+from ..asynchttpgetter import AsyncHttpGetter
+from ..simulation import SimulatedSource
+
 all_folders = [
     "share",
     "ssl",
@@ -96,7 +99,8 @@ def parseSnapshotInfo(stream: BytesIO):
         info = tar.getmember("snapshot.json")
         with tar.extractfile(info) as f:
             snapshot_data = json.load(f)
-            snapshot_data['size'] = float(round(len(stream.getbuffer()) / 1024.0 / 1024.0, 2))
+            snapshot_data['size'] = float(
+                round(len(stream.getbuffer()) / 1024.0 / 1024.0, 2))
             snapshot_data['version'] = 'dev'
             return snapshot_data
 

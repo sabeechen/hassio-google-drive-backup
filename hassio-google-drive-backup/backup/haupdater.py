@@ -1,15 +1,17 @@
-from .logbase import LogBase
-from .config import Config
-from .harequests import HaRequests
-from .time import Time
-from .globalinfo import GlobalInfo
-from .helpers import formatException
-from .backoff import Backoff
-from .worker import Worker
-from .settings import Setting
 from datetime import timedelta
-from injector import inject, singleton
+
 from aiohttp.client_exceptions import ClientResponseError
+from injector import inject, singleton
+
+from .backoff import Backoff
+from .config import Config
+from .globalinfo import GlobalInfo
+from .harequests import HaRequests
+from .helpers import formatException
+from .logbase import LogBase
+from .settings import Setting
+from .time import Time
+from .worker import Worker
 
 NOTIFICATION_TITLE = "Hass.io Google Drive Backup is Having Trouble"
 NOTIFICATION_DESC_LINK = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page]({0}) for details."
@@ -62,7 +64,8 @@ class HaUpdater(Worker, LogBase):
                 self._first_error = self._time.now()
             if int(e.status / 100) == 5:
                 if self._time.now() > self._first_error + timedelta(seconds=NOTIFY_DELAY):
-                    self.error("Unable to reach Home Assistant (HTTP {0}).  Is it restarting?".format(e.status))
+                    self.error(
+                        "Unable to reach Home Assistant (HTTP {0}).  Is it restarting?".format(e.status))
             else:
                 self.error("Trouble updating Home Assistant sensors.")
                 self.error(formatException(e))

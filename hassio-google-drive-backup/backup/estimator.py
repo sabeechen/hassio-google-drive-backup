@@ -1,13 +1,15 @@
 import os
-from .config import Config
-from .settings import Setting
-from .exceptions import LowSpaceError
-from .snapshots import Snapshot
-from .logbase import LogBase
-from .helpers import asSizeString
-from .globalinfo import GlobalInfo
 from typing import List
+
 from injector import inject, singleton
+
+from .config import Config
+from .exceptions import LowSpaceError
+from .globalinfo import GlobalInfo
+from .helpers import asSizeString
+from .logbase import LogBase
+from .settings import Setting
+from .snapshots import Snapshot
 
 
 @singleton
@@ -45,7 +47,8 @@ class Estimator(LogBase):
             if isinstance(e, LowSpaceError):
                 raise e
             # Just log the error and continue otherwise
-            self.error("Encountered an error while trying to check disk space remaining: " + str(e))
+            self.error(
+                "Encountered an error while trying to check disk space remaining: " + str(e))
 
     def _checkSpace(self, snapshots: List[Snapshot]):
         # get the most recent snapshot size
@@ -59,7 +62,8 @@ class Estimator(LogBase):
                 break
 
         if space_needed > self.getBytesFree() and not self._global_info.isSkipSpaceCheckOnce():
-            raise LowSpaceError("{0}%".format(int(self.getUsagePercent())), asSizeString(self.getBytesFree()))
+            raise LowSpaceError("{0}%".format(
+                int(self.getUsagePercent())), asSizeString(self.getBytesFree()))
 
     def getUsagePercent(self):
         return 100.0 * float(self.getBlocksUsed()) / float(self.getBlocksTotal())

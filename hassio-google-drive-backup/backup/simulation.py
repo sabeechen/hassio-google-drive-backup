@@ -1,14 +1,15 @@
-from .logbase import LogBase
-from .model import SnapshotSource, Model, CreateOptions
-from .snapshots import Snapshot, DummySnapshotSource
-from typing import Dict
-from io import IOBase
 from datetime import datetime
+from io import IOBase
+from typing import Dict
+
 from .const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
-from .settings import Setting
-from .time import Time, FakeTime
 from .globalinfo import GlobalInfo
+from .logbase import LogBase
+from .model import CreateOptions, Model, SnapshotSource
+from .settings import Setting
 from .snapshotname import SnapshotName
+from .snapshots import DummySnapshotSource, Snapshot
+from .time import FakeTime, Time
 
 
 class SimulatedSource(SnapshotSource[DummySnapshotSource]):
@@ -69,7 +70,8 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
         assert self.enabled
         new_snapshot = DummySnapshotSource(
             # TODO: time shoudl be local
-            self.snapshot_name.resolve(self.snapshot_type, options.name_template, options.when, self.host_info),
+            self.snapshot_name.resolve(
+                self.snapshot_type, options.name_template, options.when, self.host_info),
             options.when,
             self._name,
             "{0}slug{1}".format(self._name, self.index))
@@ -95,7 +97,8 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
     async def save(self, snapshot: Snapshot, bytes: IOBase = None) -> DummySnapshotSource:
         assert self.enabled
         assert snapshot.slug() not in self.current
-        new_snapshot = DummySnapshotSource(snapshot.name(), snapshot.date(), self._name, snapshot.slug())
+        new_snapshot = DummySnapshotSource(
+            snapshot.name(), snapshot.date(), self._name, snapshot.slug())
         snapshot.addSource(new_snapshot)
         self.current[new_snapshot.slug()] = new_snapshot
         self.saved.append(new_snapshot)
@@ -128,9 +131,11 @@ class Simulation(LogBase):
             for source in sources:
                 exists = snapshot.getSource(source.name())
                 if exists:
-                    source.insert(exists.name(), exists.date(), exists.slug(), exists.retained())
+                    source.insert(exists.name(), exists.date(),
+                                  exists.slug(), exists.retained())
         fake_time = FakeTime(now)
-        model = Model(self.config, fake_time, source, dest, GlobalInfo(fake_time))
+        model = Model(self.config, fake_time, source,
+                      dest, GlobalInfo(fake_time))
         while fake_time.now() <= until:
             model.sync()
             next = model.nextSnapshot(fake_time.now())

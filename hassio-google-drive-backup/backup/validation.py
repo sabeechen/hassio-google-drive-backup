@@ -1,7 +1,8 @@
+import re
 from abc import ABC, abstractmethod
+
 from .exceptions import InvalidConfigurationValue
 from .helpers import strToBool
-import re
 
 
 class Validator(ABC):

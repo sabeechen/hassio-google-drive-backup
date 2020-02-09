@@ -1,32 +1,34 @@
-import os
-import pytest
-import tempfile
-import aiohttp
-import socket
-import logging
 import json
+import logging
+import os
+import socket
+import tempfile
 
-from .faketime import FakeTime
-from ..time import Time
-from ..config import Config
+import aiohttp
+import pytest
+from aiohttp import ClientSession, TCPConnector
+from injector import (ClassAssistedBuilder, Injector, Module, inject, provider,
+                      singleton)
 from oauth2client.client import OAuth2Credentials
-from ..drivesource import DriveSource
-from ..hasource import HaSource
-from ..harequests import HaRequests
-from ..driverequests import DriveRequests
-from ..debugworker import DebugWorker
+
+from ..config import Config
 from ..coordinator import Coordinator
+from ..debugworker import DebugWorker
+from ..dev.simulationserver import SimulationServer
+from ..driverequests import DriveRequests
+from ..drivesource import DriveSource
+from ..estimator import Estimator
 from ..globalinfo import GlobalInfo
-from ..model import Model, SnapshotDestination, SnapshotSource
+from ..harequests import HaRequests
+from ..hasource import HaSource
 from ..haupdater import HaUpdater
-from .helpers import Uploader
+from ..logbase import LogBase
+from ..model import Model, SnapshotDestination, SnapshotSource
 from ..resolver import SubvertingResolver
 from ..settings import Setting
-from ..logbase import LogBase
-from ..estimator import Estimator
-from ..dev.simulationserver import SimulationServer
-from injector import Injector, Module, singleton, provider, ClassAssistedBuilder, inject
-from aiohttp import ClientSession, TCPConnector
+from ..time import Time
+from .faketime import FakeTime
+from .helpers import Uploader
 
 
 @singleton
@@ -97,9 +99,12 @@ class TestModule(Module):
         config = Config(os.path.join(self.cleandir, "options.json"))
         config.override(Setting.DRIVE_URL, self.server_url)
         config.override(Setting.HASSIO_URL, self.server_url + "/")
-        config.override(Setting.HOME_ASSISTANT_URL, self.server_url + "/homeassistant/api/")
-        config.override(Setting.AUTHENTICATE_URL, self.server_url + "/external/drivecreds/")
-        config.override(Setting.ERROR_REPORT_URL, self.server_url + "/errorreport")
+        config.override(Setting.HOME_ASSISTANT_URL,
+                        self.server_url + "/homeassistant/api/")
+        config.override(Setting.AUTHENTICATE_URL,
+                        self.server_url + "/external/drivecreds/")
+        config.override(Setting.ERROR_REPORT_URL,
+                        self.server_url + "/errorreport")
         config.override(Setting.HASSIO_TOKEN, "test_header")
         config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
         config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")
@@ -127,7 +132,8 @@ async def uploader(injector: Injector, server_url):
 
 @pytest.fixture
 async def server(injector, port, drive_creds, session):
-    server = injector.get(ClassAssistedBuilder[SimulationServer]).build(port=port)
+    server = injector.get(
+        ClassAssistedBuilder[SimulationServer]).build(port=port)
     await server.reset({
         "drive_refresh_token": drive_creds.refresh_token,
         "drive_client_id": drive_creds.client_id,

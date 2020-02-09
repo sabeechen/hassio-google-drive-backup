@@ -1,7 +1,9 @@
-from ..worker import Worker, StopWorkException
-from .faketime import FakeTime
-import pytest
 import asyncio
+
+import pytest
+
+from ..worker import StopWorkException, Worker
+from .faketime import FakeTime
 
 
 @pytest.mark.asyncio

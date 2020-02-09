@@ -1,5 +1,6 @@
-from ..helpers import parseDateTime
 import datetime
+
+from ..helpers import parseDateTime
 
 
 def test_parse(mocker) -> None:

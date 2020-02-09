@@ -1,8 +1,9 @@
 import pytest
-from ..haupdater import HaUpdater
+
 from ..globalinfo import GlobalInfo
-from .faketime import FakeTime
+from ..haupdater import HaUpdater
 from ..logbase import LogBase
+from .faketime import FakeTime
 
 STALE_ATTRIBUTES = {
     "friendly_name": "Snapshots Stale"
@@ -14,7 +15,8 @@ async def test_init(updater: HaUpdater, global_info, server):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
-    verifyEntity(server, "binary_sensor.snapshots_stale", False, STALE_ATTRIBUTES)
+    verifyEntity(server, "binary_sensor.snapshots_stale",
+                 False, STALE_ATTRIBUTES)
     verifyEntity(server, "sensor.snapshot_backup", "waiting", {
         'friendly_name': 'Snapshot State',
         'last_snapshot': 'Never',
@@ -91,7 +93,8 @@ async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
-    verifyEntity(server, "binary_sensor.snapshots_stale", False, STALE_ATTRIBUTES)
+    verifyEntity(server, "binary_sensor.snapshots_stale",
+                 False, STALE_ATTRIBUTES)
     verifyEntity(server, "sensor.snapshot_backup", "waiting", {
         'friendly_name': 'Snapshot State',
         'last_snapshot': 'Never',
@@ -106,7 +109,8 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
-    verifyEntity(server, "binary_sensor.snapshots_stale", False, STALE_ATTRIBUTES)
+    verifyEntity(server, "binary_sensor.snapshots_stale",
+                 False, STALE_ATTRIBUTES)
     verifyEntity(server, "sensor.snapshot_backup", "waiting", {
         'friendly_name': 'Snapshot State',
         'last_snapshot': 'Never',

@@ -1,15 +1,16 @@
-from .config import Config
-from .time import Time
-from .logbase import LogBase
-from typing import Optional, List
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from datetime import timedelta
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Lock
-from .trigger import Trigger
-from .settings import Setting
+from typing import List, Optional
+
 from injector import inject, singleton
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+from .config import Config
+from .logbase import LogBase
+from .settings import Setting
+from .time import Time
+from .trigger import Trigger
 
 REPORT_DELAY_SECONDS = 5
 
@@ -27,7 +28,8 @@ class Watcher(Trigger, LogBase, FileSystemEventHandler):
         self.report: bool = False
         self.report_debug: bool = True
         self.lock: Lock = Lock()
-        self.observer.schedule(self, self.config.get(Setting.BACKUP_DIRECTORY_PATH), recursive=False)
+        self.observer.schedule(self, self.config.get(
+            Setting.BACKUP_DIRECTORY_PATH), recursive=False)
         self.observer.start()
 
     def name(self):
@@ -43,7 +45,8 @@ class Watcher(Trigger, LogBase, FileSystemEventHandler):
             self.report = True
 
             if self.report_debug:
-                self.info("Backup directory was written to, we'll reload snapshots from Hassio soon")
+                self.info(
+                    "Backup directory was written to, we'll reload snapshots from Hassio soon")
                 self.report_debug = False
         finally:
             self.lock.release()

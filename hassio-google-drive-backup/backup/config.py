@@ -1,14 +1,13 @@
 import json
+import logging
 import os
 import os.path
-import os
 import uuid
-import logging
+from typing import Any, Dict, List, Optional
 
-from .logbase import LogBase, console_handler
-from typing import Dict, List, Any, Optional
-from .settings import Setting, _LOOKUP
 from .backupscheme import GenConfig
+from .logbase import LogBase, console_handler
+from .settings import _LOOKUP, Setting
 
 ALWAYS_KEEP = {
     Setting.DAYS_BETWEEN_SNAPSHOTS,
@@ -81,7 +80,8 @@ class Config(LogBase):
     def update(self, new_config):
         self.config = self.validate(new_config)
         self._gen_config_cache = self.getGenerationalConfig()
-        console_handler.setLevel(logging.DEBUG if self.get(Setting.VERBOSE) else logging.INFO)
+        console_handler.setLevel(logging.DEBUG if self.get(
+            Setting.VERBOSE) else logging.INFO)
 
     def warnExposeIngressUpgrade(self):
         return False

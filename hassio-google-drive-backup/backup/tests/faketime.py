@@ -1,6 +1,8 @@
-from ..time import Time
-from dateutil.tz import gettz
 from datetime import datetime, timedelta
+
+from dateutil.tz import gettz
+
+from ..time import Time
 
 
 class FakeTime(Time):
@@ -9,7 +11,8 @@ class FakeTime(Time):
         if now:
             self._now = now
         else:
-            self._now = self.toUtc(datetime(1985, 12, 6, 0, 0, 0, tzinfo=gettz('EST')))
+            self._now = self.toUtc(
+                datetime(1985, 12, 6, 0, 0, 0, tzinfo=gettz('EST')))
         self.sleeps = []
 
     def setNow(self, now: datetime):
@@ -20,7 +23,8 @@ class FakeTime(Time):
         return self.advance(days=1)
 
     def advance(self, days=0, hours=0, minutes=0, seconds=0):
-        self._now = self._now + timedelta(days=days, hours=hours, seconds=seconds, minutes=minutes)
+        self._now = self._now + \
+            timedelta(days=days, hours=hours, seconds=seconds, minutes=minutes)
         return self
 
     def now(self) -> datetime:

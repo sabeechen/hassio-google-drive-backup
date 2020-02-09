@@ -1,18 +1,24 @@
 import os
+from time import sleep
 
 import pytest
-from ..exceptions import DriveQuotaExceeded, ExistingBackupFolderError, GoogleCredentialsExpired, GoogleDnsFailure, GoogleCantConnect, GoogleSessionError, GoogleTimeoutError, GoogleInternalError, BackupFolderInaccessible, BackupFolderMissingError
-from ..drivesource import FOLDER_MIME_TYPE, DriveSource
-from ..driverequests import BASE_CHUNK_SIZE, MAX_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS, RETRY_SESSION_ATTEMPTS
-from ..snapshots import DriveSnapshot, DummySnapshot
-from ..globalinfo import GlobalInfo
-from time import sleep
-from .helpers import createSnapshotTar, compareStreams
+from aiohttp.client_exceptions import ClientResponseError
+
 from ..config import Config
 from ..dev.simulationserver import SimulationServer
-from .faketime import FakeTime
+from ..driverequests import (BASE_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS,
+                             MAX_CHUNK_SIZE, RETRY_SESSION_ATTEMPTS)
+from ..drivesource import FOLDER_MIME_TYPE, DriveSource
+from ..exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
+                          DriveQuotaExceeded, ExistingBackupFolderError,
+                          GoogleCantConnect, GoogleCredentialsExpired,
+                          GoogleDnsFailure, GoogleInternalError,
+                          GoogleSessionError, GoogleTimeoutError)
+from ..globalinfo import GlobalInfo
 from ..settings import Setting
-from aiohttp.client_exceptions import ClientResponseError
+from ..snapshots import DriveSnapshot, DummySnapshot
+from .faketime import FakeTime
+from .helpers import compareStreams, createSnapshotTar
 
 RETRY_EXHAUSTION_SLEEPS = [2, 4, 8, 16, 32]
 
@@ -146,7 +152,8 @@ async def test_out_of_space(snapshot_helper, drive: DriveSource, server: Simulat
 
 @pytest.mark.asyncio
 async def test_drive_dns_resolution_error(drive: DriveSource, config: Config, time):
-    config.override(Setting.DRIVE_URL, "http://fsdfsdasdasdf.saasdsdfsdfsd.com:2567")
+    config.override(Setting.DRIVE_URL,
+                    "http://fsdfsdasdasdf.saasdsdfsdfsd.com:2567")
     with pytest.raises(GoogleDnsFailure):
         await drive.get()
     assert time.sleeps == []
@@ -172,7 +179,8 @@ async def test_upload_session_expired(drive, time, server, snapshot_helper):
 @pytest.mark.asyncio
 async def test_upload_resume(drive: DriveSource, time, server, snapshot_helper):
     from_snapshot, data = await snapshot_helper.createFile()
-    server.update({"drive_upload_error": 500, "drive_upload_error_attempts": 1})
+    server.update({"drive_upload_error": 500,
+                   "drive_upload_error_attempts": 1})
 
     # Upload, which will fail
     with pytest.raises(GoogleInternalError):
@@ -186,7 +194,8 @@ async def test_upload_resume(drive: DriveSource, time, server, snapshot_helper):
     data.position(0)
     drive_snapshot = await drive.save(from_snapshot, data)
     from_snapshot.addSource(drive_snapshot)
-    assert server.chunks == [BASE_CHUNK_SIZE, BASE_CHUNK_SIZE, (data.size()) - BASE_CHUNK_SIZE * 2]
+    assert server.chunks == [BASE_CHUNK_SIZE,
+                             BASE_CHUNK_SIZE, (data.size()) - BASE_CHUNK_SIZE * 2]
 
     # Verify the data is correct
     data.position(0)
@@ -194,12 +203,18 @@ async def test_upload_resume(drive: DriveSource, time, server, snapshot_helper):
 
 
 def test_chunk_size(drive: DriveSource):
-    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == MAX_CHUNK_SIZE
-    assert drive.drivebackend._getNextChunkSize(1, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
-    assert drive.drivebackend._getNextChunkSize(1000000000, CHUNK_UPLOAD_TARGET_SECONDS) == MAX_CHUNK_SIZE
-    assert drive.drivebackend._getNextChunkSize(BASE_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
-    assert drive.drivebackend._getNextChunkSize(BASE_CHUNK_SIZE, 1) == BASE_CHUNK_SIZE * CHUNK_UPLOAD_TARGET_SECONDS
-    assert drive.drivebackend._getNextChunkSize(BASE_CHUNK_SIZE, 1.01) == BASE_CHUNK_SIZE * (CHUNK_UPLOAD_TARGET_SECONDS - 1)
+    assert drive.drivebackend._getNextChunkSize(
+        1000000000, 0) == MAX_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(
+        1, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(
+        1000000000, CHUNK_UPLOAD_TARGET_SECONDS) == MAX_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(
+        BASE_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(
+        BASE_CHUNK_SIZE, 1) == BASE_CHUNK_SIZE * CHUNK_UPLOAD_TARGET_SECONDS
+    assert drive.drivebackend._getNextChunkSize(
+        BASE_CHUNK_SIZE, 1.01) == BASE_CHUNK_SIZE * (CHUNK_UPLOAD_TARGET_SECONDS - 1)
 
 
 @pytest.mark.asyncio
@@ -214,7 +229,8 @@ async def test_drive_timeout(drive, config, time: FakeTime):
 async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time, snapshot_helper):
     # Allow an upload to update one chunk and then fail.
     from_snapshot, data = await snapshot_helper.createFile()
-    server.update({"drive_upload_error": 500, "drive_upload_error_attempts": 1})
+    server.update({"drive_upload_error": 500,
+                   "drive_upload_error_attempts": 1})
     with pytest.raises(GoogleInternalError):
         await drive.save(from_snapshot, data)
     assert server.chunks == [BASE_CHUNK_SIZE]
@@ -290,7 +306,8 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
         await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload but not cached
-    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
     assert drive.drivebackend.last_attempt_count == 0
     assert drive.drivebackend.last_attempt_location is None
     assert drive.drivebackend.last_attempt_metadata is None
@@ -300,7 +317,8 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
     server.match_errors.clear()
     data.position(0)
     snapshot = await drive.save(from_snapshot, data)
-    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
@@ -325,7 +343,8 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
         await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload but not cached
-    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
     assert drive.drivebackend.last_attempt_count == 0
     assert drive.drivebackend.last_attempt_location is not None
     assert drive.drivebackend.last_attempt_metadata is not None
@@ -338,7 +357,8 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
         data.position(0)
         with pytest.raises(ClientResponseError):
             await drive.save(from_snapshot, data)
-        assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+        assert not server.wasUrlRequested(
+            "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
         assert server.wasUrlRequested(last_location)
         assert drive.drivebackend.last_attempt_count == x
         assert drive.drivebackend.last_attempt_location is last_location
@@ -351,7 +371,8 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
     data.position(0)
     with pytest.raises(ClientResponseError):
         await drive.save(from_snapshot, data)
-    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
     assert not server.wasUrlRequested(last_location)
     assert drive.drivebackend.last_attempt_count == 0
 
@@ -360,7 +381,8 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
     server.match_errors.clear()
     data.position(0)
     snapshot = await drive.save(from_snapshot, data)
-    assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert not server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
@@ -378,7 +400,8 @@ async def verify_upload_resumed(time, drive: DriveSource, config: Config, server
         await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload
-    assert server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
     assert drive.drivebackend.last_attempt_location is not None
     assert drive.drivebackend.last_attempt_metadata is not None
     last_location = drive.drivebackend.last_attempt_location
@@ -390,7 +413,8 @@ async def verify_upload_resumed(time, drive: DriveSource, config: Config, server
     snapshot = await drive.save(from_snapshot, data)
 
     # We shoudl nto see the upload "initialize" url
-    assert not server.wasUrlRequested("/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert not server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
 
     # We should see the last location url (which has a unique token) reused to resume the upload
     assert server.wasUrlRequested(last_location)
@@ -577,6 +601,7 @@ class SnapshotHelper():
         self.uploader = uploader
 
     async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name"):
-        from_snapshot: DummySnapshot = DummySnapshot(name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug)
+        from_snapshot: DummySnapshot = DummySnapshot(
+            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug)
         data = await self.uploader.upload(createSnapshotTar(slug, name, self.time.now(), size))
         return from_snapshot, data

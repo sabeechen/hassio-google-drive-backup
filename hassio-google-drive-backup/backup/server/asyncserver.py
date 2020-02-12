@@ -110,7 +110,7 @@ class AsyncServer(Trigger, LogBase, Startable):
         status['drive_enabled'] = self._coord.enabled()
         status['ask_error_reports'] = not self.config.isExplicit(
             Setting.SEND_ERROR_REPORTS)
-        status['warn_ingress_upgrade'] = self._ha_source.runTemporaryServer()
+        status['warn_ingress_upgrade'] = False
         status['cred_version'] = self._global_info.credVersion
         status['free_space'] = Estimator.asSizeString(self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
@@ -529,7 +529,7 @@ class AsyncServer(Trigger, LogBase, Startable):
         await self._start_site(app, self.config.get(Setting.INGRESS_PORT))
 
         try:
-            if self.config.get(Setting.EXPOSE_EXTRA_SERVER) or self._ha_source.runTemporaryServer():
+            if self.config.get(Setting.EXPOSE_EXTRA_SERVER):
                 ssl_context = None
                 if self.config.get(Setting.USE_SSL):
                     ssl_context = ssl.create_default_context(

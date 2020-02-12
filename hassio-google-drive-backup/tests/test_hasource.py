@@ -1,6 +1,4 @@
 import asyncio
-from os import remove
-from os.path import exists
 
 import pytest
 from aiohttp.client_exceptions import ClientResponseError
@@ -495,54 +493,3 @@ async def test_delete_error(time, ha: HaSource, server):
 async def test_hostname(time, ha: HaSource, server, global_info: GlobalInfo):
     await ha.init()
     assert global_info.url == "/hassio/ingress/self_slug"
-
-
-@pytest.mark.asyncio
-async def test_ingress_upgrade(time, ha: HaSource, config: Config):
-    # check the default before init
-    assert exists(config.get(Setting.CREDENTIALS_FILE_PATH))
-    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-    assert not ha.runTemporaryServer()
-    await ha.init()
-
-    # should run the server, since this is an upgrade
-    assert ha.runTemporaryServer()
-    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-
-    await ha.init()
-    assert ha.runTemporaryServer()
-    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-
-
-@pytest.mark.asyncio
-async def test_ingress_upgrade_new_install(time, ha: HaSource, config: Config):
-    # check the default before init
-    remove(config.get(Setting.CREDENTIALS_FILE_PATH))
-    assert not exists(config.get(Setting.CREDENTIALS_FILE_PATH))
-    assert not exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-    assert not ha.runTemporaryServer()
-    await ha.init()
-
-    # should run the server, since this is an upgrade
-    assert not ha.runTemporaryServer()
-    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-
-    await ha.init()
-    assert not ha.runTemporaryServer()
-    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-
-
-@pytest.mark.asyncio
-async def test_ingress_upgrade_file_exists(time, ha: HaSource, config: Config):
-    with open(config.get(Setting.INGRESS_TOKEN_FILE_PATH), "x"):
-        pass
-
-    # check the default before init
-    assert exists(config.get(Setting.CREDENTIALS_FILE_PATH))
-    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
-    assert not ha.runTemporaryServer()
-    await ha.init()
-
-    # should run the server, since this is an upgrade
-    assert not ha.runTemporaryServer()
-    assert exists(config.get(Setting.INGRESS_TOKEN_FILE_PATH))

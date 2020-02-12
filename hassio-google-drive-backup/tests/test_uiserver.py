@@ -361,7 +361,7 @@ async def test_auth_and_restart(reader, ui_server, config: Config, server, resta
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(100)
 @pytest.mark.flaky(5)
 async def test_expose_extra_server_option(reader, ui_server: AsyncServer, config: Config):
     with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
@@ -376,90 +376,6 @@ async def test_expose_extra_server_option(reader, ui_server: AsyncServer, config
     with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
         await reader.getjson("sync", ingress=False)
     await reader.getjson("sync")
-
-
-@pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_expose_extra_server_override(reader, ui_server: AsyncServer, config: Config, ha: HaSource):
-    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
-        await reader.getjson("sync", ingress=False)
-    ha._temporary_extra_server = True
-    await ui_server.run()
-    await reader.getjson("sync", ingress=False)
-    await ui_server.run()
-    await reader.getjson("sync", ingress=False)
-    ha._temporary_extra_server = False
-    await ui_server.run()
-    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
-        await reader.getjson("sync", ingress=False)
-    await reader.getjson("sync")
-
-
-@pytest.mark.asyncio
-async def test_update_ingress_true(reader, ui_server: AsyncServer, ha: HaSource, config: Config, restarter):
-    # Simulate a user who upgraded from a non-ingress aware version
-    await ha.init()
-    assert ha.runTemporaryServer()
-    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
-    await ui_server.run()
-    assert (await reader.getjson('getstatus'))['warn_ingress_upgrade']
-    assert (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
-
-    # Expose the extra server, verify its still available
-    assert await reader.getjson('exposeserver?expose=true') == {'message': 'Configuration updated', 'redirect': ''}
-    assert config.get(Setting.EXPOSE_EXTRA_SERVER)
-    await restarter.waitForRestart()
-    assert not (await reader.getjson('getstatus'))['warn_ingress_upgrade']
-    assert not (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
-
-
-@pytest.mark.asyncio
-async def test_update_ingress_false(reader, ui_server: AsyncServer, ha: HaSource, config: Config, restarter: Restarter):
-    # Simulate a user who upgraded from a non-ingress aware version
-    await ha.init()
-    update = {
-        "config": {
-            "require_login": True,
-            "ues_ssl": True,
-            "expose_extra_server": False
-        },
-        "snapshot_folder": "unused"
-    }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
-
-    await restarter.waitForRestart()
-
-    assert ha.runTemporaryServer()
-    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
-    await ui_server.run()
-    assert (await reader.getjson('getstatus', auth=BasicAuth("user", "pass")))['warn_ingress_upgrade']
-    assert (await reader.getjson('getstatus', auth=BasicAuth("user", "pass"), ingress=False))['warn_ingress_upgrade']
-
-    # Turn off the extra server, verify its off
-    assert await reader.getjson('exposeserver?expose=false', auth=BasicAuth("user", "pass")) == {'message': 'Configuration updated', 'redirect': ''}
-    await restarter.waitForRestart()
-    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
-    assert not config.get(Setting.USE_SSL)
-    assert not config.get(Setting.REQUIRE_LOGIN)
-    assert not (await reader.getjson('getstatus'))['warn_ingress_upgrade']
-    with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
-        assert not (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
-
-
-@pytest.mark.asyncio
-async def test_update_expose_server_redirect(reader, ui_server: AsyncServer, ha: HaSource, config: Config):
-    await ha.init()
-    assert ha.runTemporaryServer()
-    assert not config.get(Setting.EXPOSE_EXTRA_SERVER)
-    await ui_server.run()
-    assert (await reader.getjson('getstatus'))['warn_ingress_upgrade']
-
-    # Verify the extra server is running
-    assert (await reader.getjson('getstatus', ingress=False))['warn_ingress_upgrade']
-
-    assert await reader.getjson('exposeserver?expose=true', ingress=False) == {
-        'message': 'Configuration updated',
-        'redirect': 'http://{host}:1337/hassio/ingress/self_slug'}
 
 
 @pytest.mark.asyncio

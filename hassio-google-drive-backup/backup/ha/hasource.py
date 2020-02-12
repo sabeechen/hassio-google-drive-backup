@@ -127,7 +127,6 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.cached_retention = {}
         self._info = info
         self.pending_options = {}
-        self._temporary_extra_server = False
 
         # This lock should be used for _ANYTHING_ that interacts with self._pending_snapshot
         self._pending_snapshot_lock = asyncio.Lock()
@@ -138,8 +137,6 @@ class HaSource(SnapshotSource[HASnapshot]):
     def isInitialized(self):
         return self._initialized
 
-    def runTemporaryServer(self):
-        return self._temporary_extra_server
 
     def check(self) -> bool:
         pending = self.pending_snapshot
@@ -271,17 +268,6 @@ class HaSource(SnapshotSource[HASnapshot]):
 
     async def init(self):
         await self._refreshInfo()
-
-        # check if the upgrade file is present.
-        self._temporary_extra_server = False
-        if not os.path.exists(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH)):
-            # No upgrade file, so check if drive creds are saved.
-            if os.path.exists(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
-                # its an upgrade, so add the extra server option.
-                self._temporary_extra_server = True
-            else:
-                # Its a new install, write the upgrde file so we never check again.
-                File.touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
         self._initialized = True
 
     async def refresh(self):

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
-from ..util import AsyncHttpGetter, GlobalInfo, Resolver
+from ..util import AsyncHttpGetter, GlobalInfo, Resolver, File
 from ..config import Config, Setting, CreateOptions
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
@@ -277,7 +277,7 @@ class HaSource(SnapshotSource[HASnapshot]):
                 self._temporary_extra_server = True
             else:
                 # Its a new install, write the upgrde file so we never check again.
-                touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+                File.touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
         self._initialized = True
 
     async def refresh(self):

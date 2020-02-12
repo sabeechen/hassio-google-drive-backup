@@ -4,3 +4,4 @@ from .color import Color
 from .estimator import Estimator
 from .globalinfo import GlobalInfo
 from .resolver import Resolver
+from .file import File

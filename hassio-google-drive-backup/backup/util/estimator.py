@@ -5,7 +5,7 @@ from injector import inject, singleton
 from ..config import Config, Setting
 from ..exceptions import LowSpaceError
 from .globalinfo import GlobalInfo
-from ..helpers import asSizeString
+from ..model import Snapshot
 from ..logbase import LogBase
 
 # TODO: Add tests for this class
@@ -60,7 +60,7 @@ class Estimator(LogBase):
 
         if space_needed > self.getBytesFree() and not self._global_info.isSkipSpaceCheckOnce():
             raise LowSpaceError("{0}%".format(
-                int(self.getUsagePercent())), asSizeString(self.getBytesFree()))
+                int(self.getUsagePercent())), Snapshot.asSizeString(self.getBytesFree()))
 
     def getUsagePercent(self):
         return 100.0 * float(self.getBlocksUsed()) / float(self.getBlocksTotal())

@@ -15,9 +15,9 @@ from ..config import Config, Setting, CreateOptions, BoolValidator
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..model import Coordinator, Snapshot
 from ..exceptions import KnownError, ensureKey
-from ..util import GlobalInfo, Estimator, Color, Resolver
+from ..util import GlobalInfo, Estimator, Color, Resolver, File
 from ..ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
-from ..helpers import asSizeString, touch
+from ..helpers import touch
 from ..logbase import LogBase
 from ..ha import Password
 from ..time import Time
@@ -111,7 +111,7 @@ class AsyncServer(Trigger, LogBase):
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = self._ha_source.runTemporaryServer()
         status['cred_version'] = self._global_info.credVersion
-        status['free_space'] = asSizeString(self._estimator.getBytesFree())
+        status['free_space'] = Snapshot.asSizeString(self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
             status['next_snapshot'] = "Disabled"
@@ -429,7 +429,7 @@ class AsyncServer(Trigger, LogBase):
         validated = self.config.validateUpdate(update)
         await self._updateConfiguration(validated)
 
-        touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+        File.touch(self.config.get(Setting.INGRESS_TOKEN_FILE_PATH))
         await self._ha_source.init()
 
         redirect = ""

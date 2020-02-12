@@ -8,7 +8,7 @@ import aiohttp
 import pytest
 from aiohttp import BasicAuth
 
-from backup.util import AsyncHttpGetter, GlobalInfo
+from backup.util import AsyncHttpGetter, GlobalInfo, File
 from backup.server import AsyncServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
@@ -115,7 +115,7 @@ async def test_AsyncServer_static_files(reader):
 
 @pytest.mark.asyncio
 async def test_getstatus(reader, config: Config, ha, server):
-    touch(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
+    File.touch(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
     await ha.init()
     data = await reader.getjson("getstatus")
     assert data['ask_error_reports'] is True

@@ -10,7 +10,6 @@ from ..config import Config, Setting, CreateOptions
 from ..exceptions import (KnownError, LogicError, NoSnapshot, PleaseWait,
                           UserCancelledError)
 from ..util import GlobalInfo, Backoff, Estimator
-from ..helpers import asSizeString
 from ..logbase import LogBase
 from .snapshots import AbstractSnapshot, Snapshot
 from ..time import Time
@@ -113,7 +112,7 @@ class Coordinator(Trigger, LogBase):
                 else:
                     source_info['deletable'] += 1
                 size += int(data.sizeInt())
-            source_info['size'] = asSizeString(size)
+            source_info['size'] = Snapshot.asSizeString(size)
             info[source] = source_info
         return info
 

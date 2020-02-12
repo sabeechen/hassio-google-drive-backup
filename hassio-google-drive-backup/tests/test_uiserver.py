@@ -8,6 +8,8 @@ import aiohttp
 import pytest
 from aiohttp import BasicAuth
 
+from oauth2client.client import OAuth2Credentials
+
 from backup.util import AsyncHttpGetter, GlobalInfo, File
 from backup.server import AsyncServer, Restarter
 from backup.config import Config, Setting, CreateOptions
@@ -685,10 +687,34 @@ async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot
 
 
 @pytest.mark.asyncio
-async def test_cancel(reader: ReaderHelper, coord: Coordinator):
+async def test_cancel_and_startsync(reader: ReaderHelper, coord: Coordinator):
     coord._sync_wait.set()
     status = await reader.getjson("startSync")
     assert status["syncing"]
     cancel = await reader.getjson('cancelSync')
     assert not cancel["syncing"]
     assert cancel["last_error"]["error_type"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_token(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveSource):
+    creds = OAuth2Credentials("new_access_token", "client_credentials", "new_client_secret", "new_refresh_token", "token_expiry", "token_uri", "user_agent")
+    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("token?creds=" + quote(creds.to_json()))
+    assert drive.drivebackend.cred_bearer == 'new_access_token'
+    assert drive.drivebackend.cred_refresh == 'new_refresh_token'
+    assert drive.drivebackend.cred_secret == 'new_client_secret'
+
+
+@pytest.mark.asyncio
+async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveSource, restarter):
+    update = {
+        "config": {
+            "expose_extra_server": True
+        },
+        "snapshot_folder": "unused"
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    await restarter.waitForRestart()
+    creds = OAuth2Credentials("a", "b", "c", "d", "e", "f", "g")
+    resp = await reader.get("token?creds=" + quote(creds.to_json()), ingress=False)
+    assert "window.location.assign(\"/\")" in resp

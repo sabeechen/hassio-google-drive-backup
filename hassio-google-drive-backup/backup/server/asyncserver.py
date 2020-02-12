@@ -375,7 +375,7 @@ class AsyncServer(Trigger, LogBase):
 
     async def startSync(self, request) -> Any:
         asyncio.create_task(self._coord.sync(), name="Sync from web request")
-        await asyncio.sleep(0.5)
+        await self._coord._sync_start.wait()
         return await self.getstatus(request)
 
     async def cancelSync(self, request: Request):

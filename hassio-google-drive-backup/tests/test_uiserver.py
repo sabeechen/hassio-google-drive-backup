@@ -503,6 +503,7 @@ async def test_drive_cred_generation(reader, ui_server, snapshot, server, config
 
 
 @pytest.mark.asyncio
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
     server._options.update(
@@ -681,3 +682,13 @@ async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot
     from_server = AsyncHttpGetter(
         reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
     await compareStreams(from_ha, from_server)
+
+
+@pytest.mark.asyncio
+async def test_cancel(reader: ReaderHelper, coord: Coordinator):
+    coord._sync_wait.set()
+    status = await reader.getjson("startSync")
+    assert status["syncing"]
+    cancel = await reader.getjson('cancelSync')
+    assert not cancel["syncing"]
+    assert cancel["last_error"]["error_type"] == "cancelled"

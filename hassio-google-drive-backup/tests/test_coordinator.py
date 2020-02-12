@@ -5,7 +5,7 @@ import pytest
 from pytest import raises
 
 from backup.config import Config, Setting, CreateOptions
-from backup.exceptions import LogicError, LowSpaceError, NoSnapshot, PleaseWait
+from backup.exceptions import LogicError, LowSpaceError, NoSnapshot, PleaseWait, UserCancelledError
 from backup.util import GlobalInfo
 from backup.model import Coordinator, Model, Snapshot
 from .conftest import FsFaker
@@ -342,3 +342,12 @@ async def test_check_size_sync(coord: Coordinator, source: HelperTestSource, des
     await coord.sync()
     assert len(coord.snapshots()) == 1
     assert global_info._last_error is not None
+
+
+@pytest.mark.asyncio
+async def test_cancel(coord: Coordinator, global_info: GlobalInfo):
+    coord._sync_wait.clear()
+    asyncio.create_task(coord.sync())
+    await coord._sync_start.wait()
+    await coord.cancel()
+    assert isinstance(global_info._last_error, UserCancelledError)

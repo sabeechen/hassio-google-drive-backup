@@ -1,4 +1,4 @@
-from asyncio import CancelledError, Task, create_task, wait
+from asyncio import CancelledError, Task, create_task, wait, Event
 from datetime import timedelta
 from threading import Lock
 from typing import Dict, List
@@ -35,6 +35,9 @@ class Coordinator(Trigger, LogBase):
         self._estimator = estimator
         self._busy = False
         self._sync_task: Task = None
+        self._sync_start = Event()
+        self._sync_wait = Event()
+        self._sync_wait.set()
         self.trigger()
 
     def saveCreds(self, creds: Credentials):
@@ -62,12 +65,10 @@ class Coordinator(Trigger, LogBase):
         return task is not None and not task.done()
 
     async def cancel(self):
-        # TODO: Add tests for cancel
         task = self._sync_task
         if task is not None and not task.done():
             task.cancel()
             await wait([task])
-            str(task)
 
     def nextSyncAttempt(self):
         if self._global_info._last_error is not None:
@@ -112,7 +113,7 @@ class Coordinator(Trigger, LogBase):
                 else:
                     source_info['deletable'] += 1
                 size += int(data.sizeInt())
-            source_info['size'] = Snapshot.asSizeString(size)
+            source_info['size'] = Estimator.asSizeString(size)
             info[source] = source_info
         return info
 
@@ -123,6 +124,8 @@ class Coordinator(Trigger, LogBase):
 
     async def _sync(self):
         try:
+            self._sync_start.set()
+            await self._sync_wait.wait()
             self.info("Syncing Snapshots")
             self._global_info.sync()
             self._estimator.refresh()

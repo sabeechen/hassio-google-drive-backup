@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
-from ..util import AsyncHttpGetter, GlobalInfo, Resolver, File
+from ..util import AsyncHttpGetter, GlobalInfo, File
 from ..config import Config, Setting, CreateOptions
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
@@ -109,10 +109,9 @@ class HaSource(SnapshotSource[HASnapshot]):
     Stores logic for interacting with the Hass.io add-on API
     """
     @inject
-    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo, resolver: Resolver):
+    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo):
         super().__init__()
         self.config: Config = config
-        self.resolver = resolver
         self.snapshot_thread: Thread = None
         self.pending_snapshot_error: Optional[Exception] = None
         self.pending_snapshot_slug: Optional[str] = None
@@ -290,7 +289,6 @@ class HaSource(SnapshotSource[HASnapshot]):
             self.super_info = await self.harequests.supervisorInfo()
             self.config.update(
                 ensureKey("options", self.self_info, "addon metdata"))
-            self.resolver.updateConfig()
 
             self._info.ha_port = ensureKey(
                 "port", self.ha_info, "Home Assistant metadata")

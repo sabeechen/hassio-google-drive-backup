@@ -15,7 +15,7 @@ from ..config import Config, Setting, CreateOptions, BoolValidator
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..model import Coordinator, Snapshot
 from ..exceptions import KnownError, ensureKey
-from ..util import GlobalInfo, Estimator, Color, Resolver, File
+from ..util import GlobalInfo, Estimator, Color, File
 from ..ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
 from ..logbase import LogBase
 from ..ha import Password
@@ -30,7 +30,7 @@ MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 @singleton
 class AsyncServer(Trigger, LogBase):
     @inject
-    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator, resolver: Resolver):
+    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
 
         # Currently running server tasks
@@ -49,7 +49,6 @@ class AsyncServer(Trigger, LogBase):
         self._ha_source = ha_source
         self._starts = 0
         self._estimator = estimator
-        self.resolver = resolver
 
     def name(self):
         return "UI Server"
@@ -472,7 +471,6 @@ class AsyncServer(Trigger, LogBase):
                 self._coord._model.dest.changeBackupFolder(snapshot_folder_id)
             else:
                 self._coord._model.dest.resetFolder()
-        self.resolver.updateConfig()
         self.trigger()
         return {'message': 'Settings saved'}
 

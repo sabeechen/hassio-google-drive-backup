@@ -18,6 +18,7 @@ class Resolver(AsyncResolver):
         self.config = config
         self._original_dns = self._resolver
         self.setAlternateResolver()
+        config.subscribe(self.updateConfig)
 
     # TODO: Add tests for this method
     async def resolve(self, host: str, port: int = 0,

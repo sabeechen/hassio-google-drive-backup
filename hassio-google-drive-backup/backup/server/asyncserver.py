@@ -11,7 +11,7 @@ from aiohttp.web import HTTPBadRequest, HTTPException, Request
 from injector import inject, singleton
 from oauth2client.client import OAuth2Credentials, OAuth2WebServerFlow
 
-from ..config import Config, Setting, CreateOptions, strToBool
+from ..config import Config, Setting, CreateOptions, BoolValidator
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..model import Coordinator, Snapshot
 from ..exceptions import KnownError, ensureKey
@@ -209,8 +209,8 @@ class AsyncServer(Trigger, LogBase):
 
     async def snapshot(self, request: Request) -> Any:
         custom_name = request.query.get("custom_name", None)
-        retain_drive = strToBool(request.query.get("retain_drive", False))
-        retain_ha = strToBool(request.query.get("retain_ha", False))
+        retain_drive = BoolValidator.strToBool(request.query.get("retain_drive", False))
+        retain_ha = BoolValidator.strToBool(request.query.get("retain_ha", False))
         options = CreateOptions(self._time.now(), custom_name, {
             SOURCE_GOOGLE_DRIVE: retain_drive,
             SOURCE_HA: retain_ha
@@ -219,8 +219,8 @@ class AsyncServer(Trigger, LogBase):
         return web.json_response({"message": "Requested snapshot '{0}'".format(snapshot.name())})
 
     async def deleteSnapshot(self, request: Request):
-        drive = strToBool(request.query.get("drive", False))
-        ha = strToBool(request.query.get("ha", False))
+        drive = BoolValidator.strToBool(request.query.get("drive", False))
+        ha = BoolValidator.strToBool(request.query.get("ha", False))
         slug = request.query.get("slug", "")
         self._coord.getSnapshot(slug)
         sources = []
@@ -235,29 +235,29 @@ class AsyncServer(Trigger, LogBase):
         return web.json_response({"message": "Deleted from " + " and ".join(messages)})
 
     async def retain(self, request: Request):
-        drive = strToBool(request.query.get("drive", False))
-        ha = strToBool(request.query.get("ha", False))
+        drive = BoolValidator.strToBool(request.query.get("drive", False))
+        ha = BoolValidator.strToBool(request.query.get("ha", False))
         slug = request.query.get("slug", "")
 
         snapshot: Snapshot = self._coord.getSnapshot(slug)
 
         # override create options for future uploads
         options = CreateOptions(self._time.now(), self.config.get(Setting.SNAPSHOT_NAME), {
-            SOURCE_GOOGLE_DRIVE: strToBool(drive),
-            SOURCE_HA: strToBool(ha)
+            SOURCE_GOOGLE_DRIVE: BoolValidator.strToBool(drive),
+            SOURCE_HA: BoolValidator.strToBool(ha)
         })
         snapshot.setOptions(options)
 
         retention = {}
         if snapshot.getSource(SOURCE_GOOGLE_DRIVE) is not None:
-            retention[SOURCE_GOOGLE_DRIVE] = strToBool(drive)
+            retention[SOURCE_GOOGLE_DRIVE] = BoolValidator.strToBool(drive)
         if snapshot.getSource(SOURCE_HA) is not None:
-            retention[SOURCE_HA] = strToBool(ha)
+            retention[SOURCE_HA] = BoolValidator.strToBool(ha)
         await self._coord.retain(retention, slug)
         return web.json_response({'message': "Updated the snapshot's settings"})
 
     async def resolvefolder(self, request: Request):
-        use_existing = strToBool(request.query.get("use_existing", False))
+        use_existing = BoolValidator.strToBool(request.query.get("use_existing", False))
         self._global_info.resolveFolder(use_existing)
         self._global_info.suppressError()
         self._coord._model.dest.resetFolder()
@@ -272,7 +272,7 @@ class AsyncServer(Trigger, LogBase):
         return web.json_response({'message': 'Done'})
 
     async def confirmdelete(self, request: Request):
-        always = strToBool(request.query.get("always", False))
+        always = BoolValidator.strToBool(request.query.get("always", False))
         self._global_info.allowMultipleDeletes()
         self._global_info.setIngoreErrorsForNow(True)
         if always:
@@ -287,7 +287,7 @@ class AsyncServer(Trigger, LogBase):
 
     async def log(self, request: Request) -> Any:
         format = request.query.get("format", "download")
-        catchup = strToBool(request.query.get("catchup", "False"))
+        catchup = BoolValidator.strToBool(request.query.get("catchup", "False"))
 
         if not catchup:
             self.last_log_index = 0
@@ -405,7 +405,7 @@ class AsyncServer(Trigger, LogBase):
         })
 
     async def errorreports(self, request: Request):
-        send = strToBool(request.query.get("send", False))
+        send = BoolValidator.strToBool(request.query.get("send", False))
 
         update = {
             "send_error_reports": send
@@ -415,7 +415,7 @@ class AsyncServer(Trigger, LogBase):
         return web.json_response({'message': 'Configuration updated'})
 
     async def exposeserver(self, request: Request):
-        expose = strToBool(request.query.get("expose", False))
+        expose = BoolValidator.strToBool(request.query.get("expose", False))
         if expose:
             update = {
                 Setting.EXPOSE_EXTRA_SERVER: True

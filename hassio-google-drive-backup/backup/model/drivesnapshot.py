@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 from ..const import SOURCE_GOOGLE_DRIVE
 from ..exceptions import ensureKey
-from ..config import strToBool
+from ..config import BoolValidator
 from ..time import Time
 
 PROP_KEY_SLUG = "snapshot_slug"
@@ -24,7 +24,7 @@ class DriveSnapshot(AbstractSnapshot):
 
     def __init__(self, data: Dict[Any, Any]):
         props = ensureKey('appProperties', data, DRIVE_KEY_TEXT)
-        retained = strToBool(props.get(PROP_RETAINED, "False"))
+        retained = BoolValidator.strToBool(props.get(PROP_RETAINED, "False"))
         super().__init__(
             name=ensureKey(PROP_KEY_NAME, props, DRIVE_KEY_TEXT),
             slug=ensureKey(PROP_KEY_SLUG, props, DRIVE_KEY_TEXT),
@@ -34,7 +34,7 @@ class DriveSnapshot(AbstractSnapshot):
             source=SOURCE_GOOGLE_DRIVE,
             snapshotType=props.get(PROP_TYPE, "?"),
             version=props.get(PROP_VERSION, "?"),
-            protected=strToBool(props.get(PROP_PROTECTED, "?")),
+            protected=BoolValidator.strToBool(props.get(PROP_PROTECTED, "?")),
             retained=retained,
             uploadable=False,
             details=data)

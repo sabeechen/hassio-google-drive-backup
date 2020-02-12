@@ -2,8 +2,11 @@ import json
 from enum import Enum, unique
 from os.path import abspath, join
 
-from .validation import (BoolValidator, FloatValidator, IntValidator,
-                         RegexValidator, StringValidator)
+from .boolvalidator import BoolValidator
+from .floatvalidator import FloatValidator
+from .intvalidator import IntValidator
+from .regexvalidator import RegexValidator
+from .stringvalidator import StringValidator
 
 
 @unique

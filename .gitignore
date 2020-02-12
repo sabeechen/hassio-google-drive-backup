@@ -10,3 +10,4 @@ hassio-google-drive-backup/backup/__pycache__/server.cpython-37.pyc.16291344
 .vscode/tags
 dev/error.py
 dev/data/retained.json
+*.egg-info

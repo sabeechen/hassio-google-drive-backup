@@ -1,14 +1,11 @@
 from injector import ClassAssistedBuilder, Injector, inject
 
-from .asyncserver import AsyncServer
-from .coordinator import Coordinator
-from .debugworker import DebugWorker
-from .drivesource import DriveSource
-from .hasource import HaSource
-from .haupdater import HaUpdater
+from .server import AsyncServer, Restarter
+from .model import Coordinator, Scyncer
+from .worker import DebugWorker, Watcher
+from .drive import DriveSource
+from .ha import HaSource, HaUpdater
 from .logbase import LogBase
-from .syncer import Scyncer
-from .watcher import Watcher
 
 
 class Starter(LogBase):
@@ -20,13 +17,13 @@ class Starter(LogBase):
         self.injector.get(HaUpdater).start()
         self.injector.get(DebugWorker).start()
 
-        # TODO: Relaoding settings (eg by web request) always possibly trigger reloading the server and reloading the resolver
         try:
             await self.injector.get(HaSource).init()
         except Exception:
             pass
 
         await self.injector.get(AsyncServer).run()
+        self.injector.get(Restarter).init()
 
         triggers = [
             self.injector.get(Coordinator),

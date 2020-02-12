@@ -10,8 +10,7 @@
             "type": "python",
             "request": "launch",
             "pythonPath": "/usr/bin/python3.8",
-            "module": "backup",
-            "cwd": "${workspaceFolder}/hassio-google-drive-backup",
+            "module": "hassio-google-drive-backup",
             "args": ["dev"]
         },
         {
@@ -19,8 +18,7 @@
             "type": "python",
             "request": "launch",
             "pythonPath": "/usr/bin/python3.8",
-            "module": "backup",
-            "cwd": "${workspaceFolder}/hassio-google-drive-backup",
+            "module": "hassio-google-drive-backup",
             "args": ["drive"]
         },
         {
@@ -28,17 +26,7 @@
             "type": "python",
             "request": "launch",
             "pythonPath": "/usr/bin/python3.8",
-            "module": "backup.dev.simulationserver",
-            "cwd": "${workspaceFolder}/hassio-google-drive-backup"
-        },
-
-        {
-            "name": "Run Buggy Test",
-            "type": "python",
-            "request": "launch",
-            "pythonPath": "/usr/bin/python3.8",
-            "module": "pytest",
-            "args": ["hassio-google-drive-backup/backup/tests/test_uiserver.py::test_retain"],
+            "module": "hassio-google-drive-backup.dev.simulationserver",
         },
         {
             "name": "Python: Current File (External Terminal)",

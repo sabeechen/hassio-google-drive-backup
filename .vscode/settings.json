@@ -12,8 +12,7 @@
         "--verbose"
     ],
     "python.autoComplete.addBrackets": true,
-    "python.envFile": "${workspaceFolder}/.env",
     "python.testing.pytestArgs": [
-        "hassio-google-drive-backup"
+        "${workspaceFolder}/hassio-google-drive-backup/tests"
     ]
 }

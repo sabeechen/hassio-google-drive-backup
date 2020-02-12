@@ -1,0 +1,19 @@
+{
+    "snapshot_stale_seconds": 5,
+    "drive_url": "http://localhost:56154",
+    "hassio_url": "http://localhost:56154/",
+    "home_assistant_url": "http://localhost:56154/homeassistant/api/",
+    "hassio_header": "test_header",
+    "retained_file_path": "hassio-google-drive-backup/dev/data/retained.json",
+    "backup_directory_path": "hassio-google-drive-backup/dev/backup",
+    "certfile": "hassio-google-drive-backup/dev/ssl/fullchain.pem",
+    "keyfile": "hassio-google-drive-backup/dev/ssl/privkey.pem",
+    "secrets_file_path": "hassio-google-drive-backup/dev/data/secrets.yaml",
+    "credentials_file_path": "hassio-google-drive-backup/dev/data/credentials.dat",
+    "folder_file_path": "hassio-google-drive-backup/dev/data/folder.dat",
+    "authenticate_url": "http://hassio.local:56154/external/drivecreds/",
+    "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
+    "default_drive_client_id": "test_client_id",
+    "ingress_port": 56155,
+    "port": 56156
+}

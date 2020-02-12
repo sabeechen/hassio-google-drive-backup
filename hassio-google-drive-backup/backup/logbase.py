@@ -1,6 +1,7 @@
 import logging
 import sys
 from logging import LogRecord
+from traceback import TracebackException
 
 HISTORY_SIZE = 1000
 
@@ -107,3 +108,88 @@ class LogBase(object):
     @classmethod
     def reset(cls) -> None:
         return history_handler.reset()
+
+    def formatException(self, e: Exception) -> str:
+        trace = None
+        if (hasattr(e, "__traceback__")):
+            trace = e.__traceback__
+        tbe = TracebackException(type(e), e, trace, limit=None)
+        lines = list(self._format(tbe))
+        return'\n%s' % ''.join(lines)
+
+    def _format(self, tbe):
+        if (tbe.__context__ is not None and not tbe.__suppress_context__):
+            yield from self._format(tbe.__context__)
+            yield "Whose handling caused:\n"
+        is_addon, stack = self._formatStack(tbe)
+        yield from stack
+        yield from tbe.format_exception_only()
+
+    def _formatStack(self, tbe):
+        _RECURSIVE_CUTOFF = 3
+        result = []
+        last_file = None
+        last_line = None
+        last_name = None
+        count = 0
+        is_addon = False
+        buffer = []
+        for frame in tbe.stack:
+            line_internal = True
+            if (last_file is None or last_file != frame.filename or last_line is None or last_line != frame.lineno or last_name is None or last_name != frame.name):
+                if count > _RECURSIVE_CUTOFF:
+                    count -= _RECURSIVE_CUTOFF
+                    result.append(
+                        f'  [Previous line repeated {count} more '
+                        f'time{"s" if count > 1 else ""}]\n'
+                    )
+                last_file = frame.filename
+                last_line = frame.lineno
+                last_name = frame.name
+                count = 0
+            count += 1
+            if count > _RECURSIVE_CUTOFF:
+                continue
+            fileName = frame.filename
+            pos = fileName.rfind("hassio-google-drive-backup/backup")
+            if pos > 0:
+                is_addon = True
+                line_internal = False
+                fileName = "/addon" + \
+                    fileName[pos + len("hassio-google-drive-backup/backup"):]
+
+            pos = fileName.rfind("site-packages")
+            if pos > 0:
+                fileName = fileName[pos - 1:]
+
+            pos = fileName.rfind("python3.7")
+            if pos > 0:
+                fileName = fileName[pos - 1:]
+                pass
+            line = '  {}:{} ({})\n'.format(fileName, frame.lineno, frame.name)
+            if line_internal:
+                buffer.append(line)
+            else:
+                result.extend(self._compressFrames(buffer))
+                buffer = []
+                result.append(line)
+        if count > _RECURSIVE_CUTOFF:
+            count -= _RECURSIVE_CUTOFF
+            result.append(
+                f'  [Previous line repeated {count} more '
+                f'time{"s" if count > 1 else ""}]\n'
+            )
+        result.extend(self._compressFrames(buffer))
+        return is_addon, result
+
+    def _compressFrames(self, buffer):
+        if len(buffer) > 1:
+            yield buffer[0]
+            if len(buffer) == 3:
+                yield buffer[1]
+            elif len(buffer) > 2:
+                yield "  [{} hidden frames]\n".format(len(buffer) - 2)
+            yield buffer[len(buffer) - 1]
+        elif len(buffer) > 0:
+            yield buffer[len(buffer) - 1]
+            pass

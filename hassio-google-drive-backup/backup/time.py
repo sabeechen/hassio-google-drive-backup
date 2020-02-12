@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 from dateutil.tz import tzlocal, tzutc
 from injector import inject, singleton
-
-from .helpers import parseDateTime
+from dateutil.relativedelta import relativedelta
+from dateutil.parser import parse
 
 
 @singleton
@@ -19,8 +19,12 @@ class Time(object):
     def nowLocal(self) -> datetime:
         return datetime.now(self.local_tz)
 
-    def parse(self, text: str) -> datetime:
-        return parseDateTime(text)
+    @classmethod
+    def parse(cls, text: str) -> datetime:
+        ret = parse(text)
+        if ret.tzinfo is None:
+            ret = ret.replace(tzinfo=tzutc())
+        return ret
 
     def toLocal(self, dt: datetime) -> datetime:
         return dt.astimezone(self.local_tz)
@@ -34,36 +38,36 @@ class Time(object):
     def local(self, year, month, day, hour=0, minute=0, second=0, ms=0):
         return datetime(year, month, day, hour, minute, second, ms, tzinfo=self.local_tz)
 
+    def formatDelta(self, time: datetime, now=None) -> str:
+        if not now:
+            now = self.now()
 
-class FakeTime(Time):
-    def __init__(self, now: datetime = None, tz=None):
-        super().__init__()
-        if now:
-            self._now = now
+        delta: relativedelta = None
+        flavor = ""
+        if time < now:
+            delta = relativedelta(now, time)
+            flavor = " ago"
         else:
-            self._now = self.toUtc(datetime(1985, 12, 6, 0, 0, 0))
-        if tz:
-            self.local_tz = tz
-        self.sleeps = []
-
-    def setNow(self, now: datetime):
-        self._now = now
-        return self
-
-    def advanceDay(self, days=1):
-        return self.advance(days=1)
-
-    def advance(self, days=0, hours=0, seconds=0):
-        self._now = self._now + \
-            timedelta(days=days, hours=hours, seconds=seconds)
-        return self
-
-    def now(self) -> datetime:
-        return self._now
-
-    def nowLocal(self) -> datetime:
-        return self.toLocal(self._now)
-
-    def sleep(self, seconds: int):
-        self.sleeps.append(seconds)
-        self._now = self._now + timedelta(seconds=seconds)
+            delta = relativedelta(time, now)
+            flavor = ""
+        if delta.years > 0:
+            return "{0} years{1}".format(delta.years, flavor)
+        if (delta.months != 0):
+            if delta.days > 15:
+                return "{0} months{1}".format(delta.months + 1, flavor)
+            return "{0} months{1}".format(delta.months, flavor)
+        if (delta.days != 0):
+            if delta.hours >= 12:
+                return "{0} days{1}".format(delta.days + 1, flavor)
+            return "{0} days{1}".format(delta.days, flavor)
+        if (delta.hours != 0):
+            if delta.minutes >= 30:
+                return "{0} hours{1}".format(delta.hours + 1, flavor)
+            return "{0} hours{1}".format(delta.hours, flavor)
+        if (delta.minutes != 0):
+            if delta.minutes >= 30:
+                return "{0} minutes{1}".format(delta.minutes + 1, flavor)
+            return "{0} minutes{1}".format(delta.minutes, flavor)
+        if (delta.seconds != 0):
+            return "{0} seconds{1}".format(delta.seconds, flavor)
+        return "right now"

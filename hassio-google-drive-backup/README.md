@@ -9,4 +9,4 @@ A complete and easy way to back up Hass.io to Google Drive.
 * Comprehensive documentation.
 * *Most certainly* doesn't mine bitcoin on your home automation server.  Definitely no.
 
-See the [readme on GitHub](https://github.com/sabeechen/hassio-google-drive-backup) for all the details, or just install the add-on and open the Web UI.
+See the [readme on GitHub](https://github.com/sabeechen/hassio-google-drive-backup) for all the details, or just install the add-on and open the Web UI.  The Web-UI explains everything you have to do.

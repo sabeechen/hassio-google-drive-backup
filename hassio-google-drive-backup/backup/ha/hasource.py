@@ -15,7 +15,6 @@ from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
 from ..exceptions import (LogicError, SnapshotInProgress,
                           SupervisorConnectionError, UploadFailed, ensureKey)
 from .harequests import HaRequests
-from ..helpers import touch
 from .password import Password
 from .snapshotname import SnapshotName
 from ..time import Time

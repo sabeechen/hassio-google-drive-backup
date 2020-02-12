@@ -3,9 +3,9 @@ from datetime import datetime
 from typing import Dict, Optional
 from datetime import datetime
 from dateutil.tz import tzutc
+from ..util import Estimator
 
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
-from ..helpers import nowutc
 
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"
@@ -17,7 +17,6 @@ PROP_RETAINED = "retained"
 
 DRIVE_KEY_TEXT = "Google Drive's snapshot metadata"
 HA_KEY_TEXT = "Hass.io's snapshot metadata"
-SIZE_SI = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 
 
 class AbstractSnapshot():
@@ -180,7 +179,7 @@ class Snapshot(object):
         size_string = self.size()
         if type(size_string) == str:
             return size_string
-        return Snapshot.asSizeString(size_string)
+        return Estimator.asSizeString(size_string)
 
     def status(self) -> str:
         if self._status_override is not None:
@@ -222,11 +221,3 @@ class Snapshot(object):
     def __repr__(self) -> str:
         return self.__str__()
 
-    @classmethod
-    def asSizeString(cls, size):
-        current = float(size)
-        for id in SIZE_SI:
-            if current < 1024:
-                return "{0} {1}".format(round(current, 1), id)
-            current /= 1024
-        return "Beyond mortal comprehension"

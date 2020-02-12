@@ -17,7 +17,6 @@ from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource
 from backup.ha import HaSource
-from backup.helpers import touch
 from .faketime import FakeTime
 from .helpers import compareStreams
 

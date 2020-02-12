@@ -17,7 +17,6 @@ from ..model import Coordinator, Snapshot
 from ..exceptions import KnownError, ensureKey
 from ..util import GlobalInfo, Estimator, Color, Resolver, File
 from ..ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
-from ..helpers import touch
 from ..logbase import LogBase
 from ..ha import Password
 from ..time import Time
@@ -111,7 +110,7 @@ class AsyncServer(Trigger, LogBase):
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = self._ha_source.runTemporaryServer()
         status['cred_version'] = self._global_info.credVersion
-        status['free_space'] = Snapshot.asSizeString(self._estimator.getBytesFree())
+        status['free_space'] = Estimator.asSizeString(self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
             status['next_snapshot'] = "Disabled"

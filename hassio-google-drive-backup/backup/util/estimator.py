@@ -5,8 +5,10 @@ from injector import inject, singleton
 from ..config import Config, Setting
 from ..exceptions import LowSpaceError
 from .globalinfo import GlobalInfo
-from ..model import Snapshot
 from ..logbase import LogBase
+
+SIZE_SI = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+
 
 # TODO: Add tests for this class
 @singleton
@@ -60,7 +62,7 @@ class Estimator(LogBase):
 
         if space_needed > self.getBytesFree() and not self._global_info.isSkipSpaceCheckOnce():
             raise LowSpaceError("{0}%".format(
-                int(self.getUsagePercent())), Snapshot.asSizeString(self.getBytesFree()))
+                int(self.getUsagePercent())), Estimator.asSizeString(self.getBytesFree()))
 
     def getUsagePercent(self):
         return 100.0 * float(self.getBlocksUsed()) / float(self.getBlocksTotal())
@@ -82,3 +84,12 @@ class Estimator(LogBase):
 
     def getBytesTotal(self):
         return self._blockSize * self.getBlocksTotal()
+
+    @classmethod
+    def asSizeString(cls, size):
+        current = float(size)
+        for id in SIZE_SI:
+            if current < 1024:
+                return "{0} {1}".format(round(current, 1), id)
+            current /= 1024
+        return "Beyond mortal comprehension"

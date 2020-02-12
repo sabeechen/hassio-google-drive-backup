@@ -1,18 +1,29 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
+    // See https://go.microsoft.com/fwlink/?LinkId=733558 for help with task definitions
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "PUBLISH: New version to Docker Hub",
+            "label": "PUBLISH: New version to Docker Hub (requires working docker)",
             "type": "shell",
             "command": "./deploy.sh",
             "problemMatcher": []
         },
         {
-            "label": "DEPLOY: Dev docker image",
-            "type": "shell",
-            "command": "./deploy_dev.sh",
+            "label": "Install addon libraries",
+            "type": "process",
+            "command": "python3.8",
+            "args": ["-m", "pip", "install", "-e", "hassio-google-drive-backup/"],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "[Re]create and run local addon",
+            "type": "process",
+            "command": "python3.8",
+            "args": ["-m", "dev.deploy_local_addon"],
             "problemMatcher": [],
             "group": {
                 "kind": "build",

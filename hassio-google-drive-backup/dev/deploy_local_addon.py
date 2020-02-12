@@ -8,17 +8,15 @@ import requests
 
 
 def main():
-    import pprint
-    pprint.pprint(get("snapshots/a1966c6a/info"))
-    return
     installed = get("supervisor/info")["addons"]
     is_installed = False
     for addon in installed:
-        if addon['slug'] == "local_hassio_google_drive_backup" and addon['state'] != 'stopped':
-            # Stop the addon
-            print("Stopping the old addon")
-            post("addons/local_hassio_google_drive_backup/stop")
+        if addon['slug'] == "local_hassio_google_drive_backup":
             is_installed = True
+            if addon['state'] != 'stopped':
+                # Stop the addon
+                print("Stopping the old addon")
+                post("addons/local_hassio_google_drive_backup/stop")
 
     # install the addon
     if os.path.exists("/addons/hassio-google-drive-backup"):
@@ -26,7 +24,7 @@ def main():
         shutil.rmtree("/addons/hassio-google-drive-backup")
 
     # copy in addon files
-    src = abspath(join(__file__, "..", "..", ".."))
+    src = abspath(join(__file__, "..", ".."))
     print("Copying new files")
     shutil.copytree(src, "/addons/hassio-google-drive-backup")
 
@@ -42,10 +40,10 @@ def main():
 
     post("addons/reload")
     if not is_installed:
-        print("Installing docker image (this can take a few minutes)")
+        print("Installing docker image (this can take a while)")
         post("addons/local_hassio_google_drive_backup/install")
     else:
-        print("Rebuilding docker image (this can take a few minutes)")
+        print("Rebuilding docker image (this can take a while)")
         post("addons/local_hassio_google_drive_backup/rebuild")
 
     time.sleep(5)

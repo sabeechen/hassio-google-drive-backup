@@ -10,7 +10,7 @@
             "type": "python",
             "request": "launch",
             "pythonPath": "/usr/bin/python3.8",
-            "module": "hassio-google-drive-backup",
+            "module": "hassio-google-drive-backup.backup",
             "args": ["dev"]
         },
         {
@@ -18,7 +18,7 @@
             "type": "python",
             "request": "launch",
             "pythonPath": "/usr/bin/python3.8",
-            "module": "hassio-google-drive-backup",
+            "module": "hassio-google-drive-backup.backup",
             "args": ["drive"]
         },
         {

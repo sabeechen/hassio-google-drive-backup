@@ -1,12 +1,12 @@
 from .asyncserver import AsyncServer
 from ..logbase import LogBase
-from ..config import Config
+from ..config import Config, Startable
 from asyncio import create_task, Event
 from injector import inject, singleton
 
 
 @singleton
-class Restarter(LogBase):
+class Restarter(LogBase, Startable):
     @inject
     def __init__(self, server: AsyncServer, config: Config):
         self._server = server
@@ -14,7 +14,7 @@ class Restarter(LogBase):
         self._old_options = config.getServerOptions()
         self._restarted = Event()
 
-    def init(self):
+    async def start(self):
         self._config.subscribe(self.trigger)
 
     async def check(self):

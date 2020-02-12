@@ -2,13 +2,14 @@ import asyncio
 
 from ..logbase import LogBase
 from ..time import Time
+from ..config import Startable
 
 
 class StopWorkException(Exception):
     pass
 
 
-class Worker(LogBase):
+class Worker(LogBase, Startable):
     def __init__(self, name, method, time: Time, interval=1):
         super().__init__()
         self._method = method
@@ -33,7 +34,7 @@ class Worker(LogBase):
                 self.error(self.formatException(e))
             await self._time.sleepAsync(self._interval)
 
-    def start(self):
+    async def start(self):
         self._task = asyncio.create_task(self.work(), name=self._name)
         return self._task
 

@@ -10,7 +10,7 @@ from ..worker import Worker, Trigger
 @singleton
 class Scyncer(Worker):
     @inject
-    def __init__(self, time: Time, coord: Coordinator, triggers):
+    def __init__(self, time: Time, coord: Coordinator, triggers: List[Trigger]):
         super().__init__("Sync Worker", self.checkforSync, time, 0.5)
         self.coord = coord
         self.triggers: List[Trigger] = triggers

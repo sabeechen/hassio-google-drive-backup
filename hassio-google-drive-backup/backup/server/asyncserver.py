@@ -11,7 +11,7 @@ from aiohttp.web import HTTPBadRequest, HTTPException, Request
 from injector import inject, singleton
 from oauth2client.client import OAuth2Credentials, OAuth2WebServerFlow
 
-from ..config import Config, Setting, CreateOptions, BoolValidator
+from ..config import Config, Setting, CreateOptions, BoolValidator, Startable
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..model import Coordinator, Snapshot
 from ..exceptions import KnownError, ensureKey
@@ -28,7 +28,7 @@ MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 
 
 @singleton
-class AsyncServer(Trigger, LogBase):
+class AsyncServer(Trigger, LogBase, Startable):
     @inject
     def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
@@ -52,6 +52,9 @@ class AsyncServer(Trigger, LogBase):
 
     def name(self):
         return "UI Server"
+
+    async def start(self):
+        await self.run()
 
     async def getTasks(self, request):
         resp = []

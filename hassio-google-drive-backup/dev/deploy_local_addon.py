@@ -33,10 +33,10 @@ def main():
     with open("/addons/hassio-google-drive-backup/config.json") as f:
         config = json.load(f)
     del config['image']
-    config['envrionment'] = {'DEBUGGER': "true"}
+    config['environment'] = {'DEBUGGER': "true"}
     config['ports']['3000/tcp'] = 3000
     with open("/addons/hassio-google-drive-backup/config.json", "w+") as f:
-        json.dump(config, f)
+        json.dump(config, f, indent=4)
 
     post("addons/reload")
     if not is_installed:

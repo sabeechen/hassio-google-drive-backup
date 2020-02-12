@@ -1,26 +1,26 @@
 import json
 import logging
 import os
-import socket
 import tempfile
 
 import aiohttp
 import pytest
-from aiohttp import ClientSession, TCPConnector
+from aiohttp import ClientSession
 from injector import (ClassAssistedBuilder, Injector, Module, inject, provider,
                       singleton)
 from oauth2client.client import OAuth2Credentials
 
 from backup.config import Config, Setting
 from backup.model import Coordinator
-from backup.worker import DebugWorker
 from dev.simulationserver import SimulationServer
 from backup.drive import DriveRequests, DriveSource
 from backup.util import GlobalInfo, Estimator, Resolver
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logbase import LogBase
-from backup.model import Model, SnapshotDestination, SnapshotSource
+from backup.model import Model
 from backup.time import Time
+from backup.module import BaseModule
+from backup.worker import DebugWorker
 from .faketime import FakeTime
 from .helpers import Uploader
 
@@ -58,16 +58,6 @@ class TestModule(Module):
         self.ui_port = ui_port
         self.ingress_port = ingress_port
 
-    def configure(self, binder):
-        binder.bind(SnapshotSource, to=HaSource, scope=singleton)
-        binder.bind(SnapshotDestination, to=DriveSource, scope=singleton)
-
-    @provider
-    @singleton
-    def getSession(self, resolver: Resolver) -> ClientSession:
-        conn = TCPConnector(resolver=resolver, family=socket.AF_INET)
-        return ClientSession(connector=conn)
-
     @provider
     @singleton
     def getDriveCreds(self) -> OAuth2Credentials:
@@ -78,49 +68,45 @@ class TestModule(Module):
     def getTime(self) -> Time:
         return FakeTime()
 
-    @provider
-    @singleton
-    def getConfig(self, drive_creds: OAuth2Credentials) -> Config:
-        with open(os.path.join(self.cleandir, "secrets.yaml"), "w") as f:
-            f.write("for_unit_tests: \"password value\"\n")
-
-        with open(os.path.join(self.cleandir, "credentials.dat"), "w") as f:
-            f.write(drive_creds.to_json())
-
-        with open(os.path.join(self.cleandir, "options.json"), "w") as f:
-            json.dump({}, f)
-
-        config = Config(os.path.join(self.cleandir, "options.json"))
-        config.override(Setting.DRIVE_URL, self.server_url)
-        config.override(Setting.HASSIO_URL, self.server_url + "/")
-        config.override(Setting.HOME_ASSISTANT_URL,
-                        self.server_url + "/homeassistant/api/")
-        config.override(Setting.AUTHENTICATE_URL,
-                        self.server_url + "/external/drivecreds/")
-        config.override(Setting.ERROR_REPORT_URL,
-                        self.server_url + "/errorreport")
-        config.override(Setting.HASSIO_TOKEN, "test_header")
-        config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
-        config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")
-        config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
-        config.override(Setting.RETAINED_FILE_PATH, "retained.json")
-        config.override(Setting.INGRESS_TOKEN_FILE_PATH, "ingress.dat")
-        config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "test_client_id")
-        config.override(Setting.BACKUP_DIRECTORY_PATH, self.cleandir)
-        config.override(Setting.PORT, self.ui_port)
-        config.override(Setting.INGRESS_PORT, self.ingress_port)
-
-        # TODO: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
-        # taking waaaaaaaay too long.  Remove this line and the @pytest.mark.flaky annotations once the problem is identified.
-        config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 5)
-
-        return config
-
 
 @pytest.fixture
 async def injector(cleandir, server_url, ui_port, ingress_port):
+    drive_creds = OAuth2Credentials("", "test_client_id", "test_client_secret", refresh_token="test_Refresh_token", token_expiry="", token_uri="", user_agent="")
+    with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
+        f.write("for_unit_tests: \"password value\"\n")
+
+    with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
+        f.write(drive_creds.to_json())
+
+    with open(os.path.join(cleandir, "options.json"), "w") as f:
+        json.dump({}, f)
+
+    config = Config(os.path.join(cleandir, "options.json"))
+    config.override(Setting.DRIVE_URL, server_url)
+    config.override(Setting.HASSIO_URL, server_url + "/")
+    config.override(Setting.HOME_ASSISTANT_URL,
+                    server_url + "/homeassistant/api/")
+    config.override(Setting.AUTHENTICATE_URL,
+                    server_url + "/external/drivecreds/")
+    config.override(Setting.ERROR_REPORT_URL,
+                    server_url + "/errorreport")
+    config.override(Setting.HASSIO_TOKEN, "test_header")
+    config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
+    config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")
+    config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
+    config.override(Setting.RETAINED_FILE_PATH, "retained.json")
+    config.override(Setting.INGRESS_TOKEN_FILE_PATH, "ingress.dat")
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "test_client_id")
+    config.override(Setting.BACKUP_DIRECTORY_PATH, cleandir)
+    config.override(Setting.PORT, ui_port)
+    config.override(Setting.INGRESS_PORT, ingress_port)
+
+    # TODO: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
+    # taking waaaaaaaay too long.  Remove this line and the @pytest.mark.flaky annotations once the problem is identified.
+    config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 5)
+
     # logging.getLogger('injector').setLevel(logging.DEBUG)
-    return Injector(TestModule(cleandir, server_url, ui_port, ingress_port))
+    return Injector([BaseModule(config), TestModule(cleandir, server_url, ui_port, ingress_port)])
 
 
 @pytest.fixture

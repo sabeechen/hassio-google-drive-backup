@@ -194,6 +194,12 @@ class HaSource(SnapshotSource[HASnapshot]):
             return e.status == 400
         return False
 
+    async def start(self):
+        try:
+            await self.init()
+        except Exception:
+            pass
+
     async def get(self) -> Dict[str, HASnapshot]:
         if not self._initialized:
             await self.init()

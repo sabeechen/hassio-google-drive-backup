@@ -6,7 +6,7 @@ from injector import inject, singleton
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from ..config import Config, Setting
+from ..config import Config, Setting, Startable
 from ..logbase import LogBase
 from ..time import Time
 from .trigger import Trigger
@@ -15,7 +15,7 @@ REPORT_DELAY_SECONDS = 5
 
 
 @singleton
-class Watcher(Trigger, LogBase, FileSystemEventHandler):
+class Watcher(Trigger, LogBase, FileSystemEventHandler, Startable):
     @inject
     def __init__(self, time: Time, config: Config):
         super().__init__()
@@ -27,9 +27,16 @@ class Watcher(Trigger, LogBase, FileSystemEventHandler):
         self.report: bool = False
         self.report_debug: bool = True
         self.lock: Lock = Lock()
+        self.started = False
+
+    async def start(self):
         self.observer.schedule(self, self.config.get(
             Setting.BACKUP_DIRECTORY_PATH), recursive=False)
         self.observer.start()
+        self.started = True
+
+    def isStarted(self):
+        return self.started
 
     def name(self):
         return "Backup Directory Watcher"

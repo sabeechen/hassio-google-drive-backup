@@ -60,13 +60,21 @@ class Config(LogBase):
         console_handler.setLevel(logging.INFO)
 
         self.retained = self._loadRetained()
+        self._gen_config_cache = self.getGenerationalConfig()
+
+    def loadDefaults(self, config_path=None):
         if config_path is None:
             config_path = Setting.CONFIG_FILE_PATH.default()
         if len(config_path) > 0:
             with open(config_path, "r") as f:
                 self.config = json.load(f)
-
         self._gen_config_cache = self.getGenerationalConfig()
+
+    def loadOverrides(self, config_path):
+        self.loadDefaults(config_path)
+
+        for key in list(self.config.keys()):
+            self.override(_LOOKUP[key], self.config[key])
 
     def getConfigFor(self, options):
         new_config = Config("")

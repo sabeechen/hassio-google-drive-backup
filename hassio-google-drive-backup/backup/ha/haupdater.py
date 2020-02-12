@@ -4,7 +4,7 @@ from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
 from ..model import Coordinator, Snapshot
-from ..config import Config, Setting
+from ..config import Config, Setting, Startable
 from ..util import GlobalInfo, Backoff
 from .harequests import HaRequests
 from ..logbase import LogBase

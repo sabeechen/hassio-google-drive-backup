@@ -336,7 +336,6 @@ class AsyncServer(Trigger, LogBase):
         self._global_info.setIngoreErrorsForNow(True)
         self.trigger()
         try:
-            # TODO: Need a test to verify the conditional redirect url here
             if request.url.port == self.config.get(Setting.INGRESS_PORT):
                 return await self.redirect(self._ha_source.getAddonUrl())
         except:  # noqa: E722

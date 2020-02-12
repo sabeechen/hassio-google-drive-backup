@@ -718,3 +718,24 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
     creds = OAuth2Credentials("a", "b", "c", "d", "e", "f", "g")
     resp = await reader.get("token?creds=" + quote(creds.to_json()), ingress=False)
     assert "window.location.assign(\"/\")" in resp
+
+
+@pytest.mark.asyncio
+async def test_changefolder(reader: ReaderHelper, coord: Coordinator, ha, ui_server):
+    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("changefolder?id=12345")
+    assert ui_server._coord._model.dest._folderId == "12345"
+
+
+@pytest.mark.asyncio
+async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveSource, restarter, ui_server):
+    update = {
+        "config": {
+            "expose_extra_server": True
+        },
+        "snapshot_folder": "unused"
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    await restarter.waitForRestart()
+    resp = await reader.get("changefolder?id=12345", ingress=False)
+    assert "window.location.assign(\"/\")" in resp
+    assert ui_server._coord._model.dest._folderId == "12345"

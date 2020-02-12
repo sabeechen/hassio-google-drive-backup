@@ -91,7 +91,7 @@ async def ui_server(injector, server):
 @pytest.fixture
 async def restarter(injector, server):
     restarter = injector.get(Restarter)
-    restarter.init()
+    await restarter.start()
     return restarter
 
 

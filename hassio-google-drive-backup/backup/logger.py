@@ -1,6 +1,7 @@
 import logging
 from logging import LogRecord, Formatter
 from traceback import TracebackException
+from colorlog import ColoredFormatter
 
 HISTORY_SIZE = 1000
 
@@ -52,7 +53,19 @@ class HistoryHandler(logging.Handler):
 
 CONSOLE = logging.StreamHandler()
 CONSOLE.setLevel(logging.INFO)
-CONSOLE.setFormatter(Formatter('%(asctime)s %(levelname)s %(message)s', '%m-%d %H:%M:%S'))
+formatter_color = ColoredFormatter(
+    '%(log_color)s%(asctime)s %(levelname)s %(message)s%(reset)s',
+    datefmt='%m-%d %H:%M:%S',
+    reset=True,
+    log_colors={
+        "DEBUG": "cyan",
+        "INFO": "green",
+        "WARNING": "yellow",
+        "ERROR": "red",
+        "CRITICAL": "red",
+    },
+)
+CONSOLE.setFormatter(formatter_color)
 
 HISTORY = HistoryHandler()
 HISTORY.setLevel(logging.DEBUG)
@@ -169,4 +182,3 @@ def getLast() -> LogRecord:
 
 def reset() -> None:
     return HISTORY.reset()
-

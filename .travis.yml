@@ -1,0 +1,9 @@
+language: python
+python:
+  - "3.8"
+
+install:
+  - pip install -r hassio-google-drive-backup/dev/requirements-dev.txt
+
+script:
+  - pytest

@@ -21,6 +21,7 @@ from ..logbase import LogBase
 from ..ha import Password
 from ..time import Time
 from ..worker import Trigger
+from .debug import Debug
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -30,7 +31,7 @@ MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 @singleton
 class AsyncServer(Trigger, LogBase, Startable):
     @inject
-    def __init__(self, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
+    def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
 
         # Currently running server tasks
@@ -49,55 +50,10 @@ class AsyncServer(Trigger, LogBase, Startable):
         self._ha_source = ha_source
         self._starts = 0
         self._estimator = estimator
+        self._debug = debug
 
     def name(self):
         return "UI Server"
-
-    async def start(self):
-        await self.run()
-
-    async def getTasks(self, request):
-        resp = []
-        for task in asyncio.all_tasks():
-            data = {
-                "name": task.get_name(),
-                "state": str(task._state),
-                "coroutine": str(task.get_coro())
-            }
-
-            # Get exception
-            try:
-                ex = task.exception()
-                if ex is None:
-                    data['exception'] = "None"
-                else:
-                    data['exception'] = self.formatException(ex)
-            except asyncio.CancelledError:
-                data['exception'] = "CancelledError"
-            except asyncio.InvalidStateError:
-                data['exception'] = "Unfinished"
-            except Exception:
-                pass
-
-            # Get result
-            try:
-                ret = task.result()
-                if ex is None:
-                    data['result'] = "None"
-                else:
-                    data['result'] = str(ret)
-            except asyncio.CancelledError:
-                data['result'] = "CancelledError"
-            except asyncio.InvalidStateError:
-                data['result'] = "Unfinished"
-            except Exception:
-                pass
-            data['stack'] = []
-            for frame in task.get_stack():
-                data['stack'].append(str(frame))
-            resp.append(data)
-
-        return web.json_response(resp)
 
     async def getstatus(self, request) -> Dict[Any, Any]:
         status: Dict[Any, Any] = {}
@@ -345,30 +301,6 @@ class AsyncServer(Trigger, LogBase, Startable):
             pass
         return await self.redirect("/")
 
-    async def simerror(self, request: Request):
-        error = request.query.get("error", "")
-        if len(error) == 0:
-            self._coord._model.simulate_error = None
-        else:
-            self._coord._model.simulate_error = error
-        self.trigger()
-        return web.json_response({})
-
-    async def index(self, request: Request):
-        if not self._coord.enabled():
-            return web.FileResponse(self.filePath("index.html"), headers={'cache-control': 'no-store'})
-        else:
-            return web.FileResponse(self.filePath("working.html"), headers={'cache-control': 'no-store'})
-
-    async def pp(self, request: Request):
-        return web.FileResponse(self.filePath("privacy_policy.html"))
-
-    async def tos(self, request: Request):
-        return web.FileResponse(self.filePath("terms_of_service.html"))
-
-    async def reauthenticate(self, request: Request) -> Any:
-        return web.FileResponse(self.filePath("index.html"))
-
     async def sync(self, request: Request = None) -> Any:
         await self._coord.sync()
         return await self.getstatus(request)
@@ -509,7 +441,7 @@ class AsyncServer(Trigger, LogBase, Startable):
 
         await resp.prepare(request)
 
-        # SOMEDAY: consider re-streaming a decompressed tar file for the sake of convenience
+        # SOMEDAY: consider re-streaming a decrypted tar file for the sake of convenience
 
         async for chunk in stream.generator(self.config.get(Setting.DEFAULT_CHUNK_SIZE)):
             await resp.write(chunk)
@@ -555,44 +487,52 @@ class AsyncServer(Trigger, LogBase, Startable):
         self._starts += 1
 
     def _addRoutes(self, app):
+        # TODO: Separate these groups fo test paths into separate files
         app.add_routes(
             [web.static('/static', abspath(join(__file__, "..", "..", "..", "static")), append_version=True)])
         app.add_routes([web.get('/', self.index)])
         app.add_routes([web.get('/index.html', self.index)])
-
         self._addRoute(app, self.reauthenticate)
         self._addRoute(app, self.tos)
         self._addRoute(app, self.pp)
+        self._addRoute(app, self.theme)
 
         self._addRoute(app, self.getstatus)
         self._addRoute(app, self.snapshot)
         self._addRoute(app, self.manualauth)
-        self._addRoute(app, self.deleteSnapshot)
-        self._addRoute(app, self.retain)
-        self._addRoute(app, self.resolvefolder)
-        self._addRoute(app, self.skipspacecheck)
-        self._addRoute(app, self.confirmdelete)
-        self._addRoute(app, self.log)
         self._addRoute(app, self.token)
-        self._addRoute(app, self.simerror)
-        self._addRoute(app, self.changefolder)
+
+        self._addRoute(app, self.log)
+
         self._addRoute(app, self.sync)
         self._addRoute(app, self.startSync)
+        self._addRoute(app, self.cancelSync)
+
         self._addRoute(app, self.getconfig)
         self._addRoute(app, self.errorreports)
         self._addRoute(app, self.exposeserver)
         self._addRoute(app, self.saveconfig)
+        self._addRoute(app, self.changefolder)
+        self._addRoute(app, self.confirmdelete)
+        self._addRoute(app, self.resolvefolder)
+        self._addRoute(app, self.skipspacecheck)
+
         self._addRoute(app, self.upload)
         self._addRoute(app, self.download)
-        self._addRoute(app, self.theme)
-        self._addRoute(app, self.cancelSync)
-        self._addRoute(app, self.getTasks)
+        self._addRoute(app, self.deleteSnapshot)
+        self._addRoute(app, self.retain)
+
+        self._addRoute(app, self._debug.simerror)
+        self._addRoute(app, self._debug.getTasks)
 
     def _addRoute(self, app, method):
         app.add_routes([
             web.get("/" + method.__name__, method),
             web.post("/" + method.__name__, method)
         ])
+
+    async def start(self):
+        await self.run()
 
     async def _start_site(self, app, port, ssl_context=None):
         runner = web.AppRunner(app)
@@ -866,6 +806,21 @@ class AsyncServer(Trigger, LogBase, Startable):
         ret += self.cssElement(".bmc-button span", {'color': text.toCss()})
 
         return web.Response(text=ret, content_type='text/css')
+
+    async def index(self, request: Request):
+        if not self._coord.enabled():
+            return web.FileResponse(self.filePath("index.html"), headers={'cache-control': 'no-store'})
+        else:
+            return web.FileResponse(self.filePath("working.html"), headers={'cache-control': 'no-store'})
+
+    async def pp(self, request: Request):
+        return web.FileResponse(self.filePath("privacy_policy.html"))
+
+    async def tos(self, request: Request):
+        return web.FileResponse(self.filePath("terms_of_service.html"))
+
+    async def reauthenticate(self, request: Request) -> Any:
+        return web.FileResponse(self.filePath("index.html"))
 
 
 @web.middleware

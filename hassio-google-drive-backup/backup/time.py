@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from dateutil.tz import tzlocal, tzutc
 from injector import inject, singleton

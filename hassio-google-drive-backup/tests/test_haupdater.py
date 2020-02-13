@@ -118,6 +118,7 @@ async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime):
 
 
 @pytest.mark.asyncio
+@pytest.mark.flaky(5)
 async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime, snapshot):
     await updater.update()
     assert not updater._stale()

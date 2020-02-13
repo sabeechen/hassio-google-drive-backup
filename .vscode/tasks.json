@@ -23,7 +23,7 @@
             "label": "[Re]create and run local addon",
             "type": "process",
             "command": "python3.8",
-            "args": ["-m", "dev.deploy_local_addon"],
+            "args": ["-m", "hassio-google-drive-backup.dev.deploy_local_addon"],
             "problemMatcher": [],
             "group": {
                 "kind": "build",

@@ -1,6 +1,0 @@
-{
-    "client_secret": "secret",
-    "client_id": "id",
-    "error_table": "errors",
-    "login_table": "logins"
-}

@@ -4,6 +4,9 @@ from .dummysnapshotsource import DummySnapshotSource
 from typing import Dict
 from io import IOBase
 from ..ha import SnapshotName
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 

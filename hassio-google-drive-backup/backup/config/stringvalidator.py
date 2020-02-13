@@ -1,4 +1,7 @@
 from .validator import Validator
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class StringValidator(Validator):

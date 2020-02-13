@@ -7,15 +7,17 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 from ..config import Config, Setting, Startable
-from ..logbase import LogBase
 from ..time import Time
 from .trigger import Trigger
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 REPORT_DELAY_SECONDS = 5
 
 
 @singleton
-class Watcher(Trigger, LogBase, FileSystemEventHandler, Startable):
+class Watcher(Trigger, FileSystemEventHandler, Startable):
     @inject
     def __init__(self, time: Time, config: Config):
         super().__init__()
@@ -51,7 +53,7 @@ class Watcher(Trigger, LogBase, FileSystemEventHandler, Startable):
             self.report = True
 
             if self.report_debug:
-                self.info(
+                logger.info(
                     "Backup directory was written to, we'll reload snapshots from Hassio soon")
                 self.report_debug = False
         finally:
@@ -61,7 +63,7 @@ class Watcher(Trigger, LogBase, FileSystemEventHandler, Startable):
         try:
             self.lock.acquire()
             if self.report and self.time.now() > self.last_change + timedelta(seconds=REPORT_DELAY_SECONDS):
-                self.info("Backup directory changed")
+                logger.info("Backup directory changed")
                 self.report = False
                 self.report_debug = True
                 return True

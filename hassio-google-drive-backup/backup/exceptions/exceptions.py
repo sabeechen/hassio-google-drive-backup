@@ -10,6 +10,9 @@ from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_LOW_SPACE, ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
                      ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL,
                      ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED)
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 def ensureKey(key, target, name):

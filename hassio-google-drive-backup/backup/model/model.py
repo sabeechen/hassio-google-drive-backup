@@ -8,11 +8,13 @@ from .backupscheme import GenerationalScheme, OldestScheme
 from ..config import Config, Setting, CreateOptions
 from ..exceptions import DeleteMutlipleSnapshotsError, SimulatedError
 from ..util import GlobalInfo, Estimator
-from ..logbase import LogBase
 from .snapshots import AbstractSnapshot, Snapshot
 from .dummysnapshot import DummySnapshot
 from ..time import Time
 from ..worker import Trigger
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 T = TypeVar('T')
 
@@ -63,7 +65,7 @@ class SnapshotDestination(SnapshotSource):
 
 
 @singleton
-class Model(LogBase):
+class Model():
     @inject
     def __init__(self, config: Config, time: Time, source: SnapshotSource, dest: SnapshotDestination, info: GlobalInfo, estimator: Estimator):
         self.config: Config = config

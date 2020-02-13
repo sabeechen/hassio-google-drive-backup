@@ -4,6 +4,9 @@ from ..const import SOURCE_HA
 from ..exceptions import ensureKey
 from ..time import Time
 from .snapshots import AbstractSnapshot
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 HA_KEY_TEXT = "Hass.io's snapshot metadata"
 

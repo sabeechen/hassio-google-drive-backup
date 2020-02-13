@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from ..logbase import LogBase
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 SNAPSHOT_NAME_KEYS = {
     "{type}": lambda snapshot_type, now_local, host_info: snapshot_type,
@@ -29,7 +31,7 @@ SNAPSHOT_NAME_KEYS = {
 }
 
 
-class SnapshotName(LogBase):
+class SnapshotName():
     def resolve(self, snapshot_type: str, template: str, now_local: datetime, host_info) -> str:
         for key in SNAPSHOT_NAME_KEYS:
             template = template.replace(key, SNAPSHOT_NAME_KEYS[key](

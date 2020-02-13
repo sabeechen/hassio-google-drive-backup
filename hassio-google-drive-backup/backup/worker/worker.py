@@ -1,15 +1,17 @@
 import asyncio
 
-from ..logbase import LogBase
 from ..time import Time
 from ..config import Startable
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class StopWorkException(Exception):
     pass
 
 
-class Worker(LogBase, Startable):
+class Worker(Startable):
     def __init__(self, name, method, time: Time, interval=1):
         super().__init__()
         self._method = method
@@ -29,9 +31,9 @@ class Worker(LogBase, Startable):
                 break
             except Exception as e:
                 self._last_error = e
-                self.error(
+                logger.error(
                     "Worker {0} got an unexpected error".format(self._name))
-                self.error(self.formatException(e))
+                logger.printException(e)
             await self._time.sleepAsync(self._interval)
 
     async def start(self):

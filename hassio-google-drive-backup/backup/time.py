@@ -5,6 +5,9 @@ from dateutil.tz import tzlocal, tzutc
 from injector import inject, singleton
 from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse
+from .logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @singleton

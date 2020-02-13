@@ -1,5 +1,8 @@
 from .snapshots import Snapshot
 from .dummysnapshotsource import DummySnapshotSource
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class DummySnapshot(Snapshot):

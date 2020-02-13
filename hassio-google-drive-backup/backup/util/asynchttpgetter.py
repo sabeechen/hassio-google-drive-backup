@@ -5,6 +5,9 @@ from aiohttp import ClientSession
 from aiohttp.client import ClientResponse
 
 from ..exceptions import LogicError, ensureKey
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 CONTENT_LENGTH_HEADER = "content-length"
 CONTENT_LENGTH_ERROR = "Content size must be provided if the webserver doesn't provide it"

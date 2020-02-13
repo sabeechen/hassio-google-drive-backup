@@ -13,6 +13,9 @@ from .util import Resolver
 from .model import Coordinator
 from .worker import Trigger, Watcher, DebugWorker
 from .server import AsyncServer, Restarter
+from .logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class BaseModule(Module):

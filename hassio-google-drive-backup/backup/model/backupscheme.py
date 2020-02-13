@@ -6,6 +6,9 @@ from typing import List, Optional, Sequence
 from .snapshots import Snapshot
 from ..time import Time
 from ..config import GenConfig
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class BackupScheme(ABC):

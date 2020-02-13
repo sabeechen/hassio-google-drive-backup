@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 
 from ..exceptions import InvalidConfigurationValue
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class Validator(ABC):

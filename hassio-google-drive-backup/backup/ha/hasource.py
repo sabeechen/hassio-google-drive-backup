@@ -1,5 +1,4 @@
 import asyncio
-import os.path
 from datetime import timedelta
 from io import IOBase
 from threading import Lock, Thread
@@ -8,7 +7,7 @@ from typing import Dict, List, Optional
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
-from ..util import AsyncHttpGetter, GlobalInfo, File
+from ..util import AsyncHttpGetter, GlobalInfo
 from ..config import Config, Setting, CreateOptions
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
@@ -18,6 +17,9 @@ from .harequests import HaRequests
 from .password import Password
 from .snapshotname import SnapshotName
 from ..time import Time
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class PendingSnapshot(AbstractSnapshot):
@@ -137,7 +139,6 @@ class HaSource(SnapshotSource[HASnapshot]):
     def isInitialized(self):
         return self._initialized
 
-
     def check(self) -> bool:
         pending = self.pending_snapshot
         if pending and pending.isStale():
@@ -169,13 +170,13 @@ class HaSource(SnapshotSource[HASnapshot]):
             # Check if a snapshot is already in progress
             if self.pending_snapshot:
                 if not self.pending_snapshot.isFailed() and not self.pending_snapshot.isComplete():
-                    self.info("A snapshot was already in progress")
+                    logger.info("A snapshot was already in progress")
                     raise SnapshotInProgress()
 
             # Create the snapshot palceholder object
             self.pending_snapshot = PendingSnapshot(
                 type_name, protected, options, request, self.config, self.time)
-            self.info("Requesting a new snapshot")
+            logger.info("Requesting a new snapshot")
             self._pending_snapshot_task = asyncio.create_task(self._requestAsync(
                 self.pending_snapshot), name="Pending Snapshot Requester")
             await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
@@ -236,12 +237,12 @@ class HaSource(SnapshotSource[HASnapshot]):
 
     async def delete(self, snapshot: Snapshot):
         slug = self._validateSnapshot(snapshot).slug()
-        self.info("Deleting '{0}' from Home Assistant".format(snapshot.name()))
+        logger.info("Deleting '{0}' from Home Assistant".format(snapshot.name()))
         await self.harequests.delete(slug)
         snapshot.removeSource(self.name())
 
     async def save(self, snapshot: Snapshot, source: AsyncHttpGetter) -> HASnapshot:
-        self.info("Downloading '{0}'".format(snapshot.name()))
+        logger.info("Downloading '{0}'".format(snapshot.name()))
         self._info.upload(0)
         resp = None
         try:
@@ -249,7 +250,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             resp = await self.harequests.upload(source)
             snapshot.clearStatus()
         except Exception as e:
-            self.error(self.formatException(e))
+            logger.printException(e)
             snapshot.overrideStatus("Failed!")
         if resp and 'slug' in resp and resp['slug'] == snapshot.slug():
             self.config.setRetained(snapshot.slug(), True)
@@ -297,8 +298,8 @@ class HaSource(SnapshotSource[HASnapshot]):
             self._info.addDebugInfo("ha_info", self.ha_info)
             self._info.addDebugInfo("super_info", self.super_info)
         except Exception as e:
-            self.debug("Failed to connect to supervisor")
-            self.debug(self.formatException(e))
+            logger.debug("Failed to connect to supervisor")
+            logger.debug(logger.formatException(e))
             raise SupervisorConnectionError()
 
     def getAddonUrl(self):
@@ -351,14 +352,14 @@ class HaSource(SnapshotSource[HASnapshot]):
             pending.complete(slug)
             self.config.setRetained(
                 slug, pending.getOptions().retain_sources.get(self.name(), False))
-            self.info("Snapshot finished")
+            logger.info("Snapshot finished")
         except Exception as e:
             if self._isHttp400(e):
-                self.warn("A snapshot was already in progress")
+                logger.warn("A snapshot was already in progress")
                 pending.setPendingUnknown()
             else:
-                self.error("Snapshot failed:")
-                self.error(self.formatException(e))
+                logger.error("Snapshot failed:")
+                logger.printException(e)
                 pending.failed(e, self.time.now())
         self.trigger()
 

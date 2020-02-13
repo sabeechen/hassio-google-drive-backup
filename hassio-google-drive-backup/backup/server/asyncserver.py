@@ -17,11 +17,13 @@ from ..model import Coordinator, Snapshot
 from ..exceptions import KnownError, ensureKey
 from ..util import GlobalInfo, Estimator, Color, File
 from ..ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
-from ..logbase import LogBase
 from ..ha import Password
 from ..time import Time
 from ..worker import Trigger
 from .debug import Debug
+from ..logger import getLogger, getHistory
+
+logger = getLogger(__name__)
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
@@ -29,7 +31,7 @@ MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 
 
 @singleton
-class AsyncServer(Trigger, LogBase, Startable):
+class AsyncServer(Trigger, Startable):
     @inject
     def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
@@ -264,7 +266,7 @@ class AsyncServer(Trigger, LogBase, Startable):
             html = format == "colored"
             if format == "html":
                 yield "<html><head><title>Hass.io Google Drive Backup Log</title></head><body><pre>\n"
-            for line in LogBase.getHistory(self.last_log_index, html):
+            for line in getHistory(self.last_log_index, html):
                 self.last_log_index = line[0]
                 if line:
                     yield line[1].replace("\n", "   \n") + "\n"
@@ -456,7 +458,7 @@ class AsyncServer(Trigger, LogBase, Startable):
         self._addRoutes(app)
 
         # The ingress port is considered secured by Home Assistant, so it doesn't get SSL or basic HTTP auth
-        self.info("Starting server on port {}".format(
+        logger.info("Starting server on port {}".format(
             self.config.get(Setting.INGRESS_PORT)))
         await self._start_site(app, self.config.get(Setting.INGRESS_PORT))
 
@@ -475,14 +477,14 @@ class AsyncServer(Trigger, LogBase, Startable):
 
                 extra_app = web.Application(middlewares=middleware)
                 self._addRoutes(extra_app)
-                self.info("Starting server on port {}".format(
+                logger.info("Starting server on port {}".format(
                     self.config.get(Setting.PORT)))
                 await self._start_site(extra_app, self.config.get(Setting.PORT), ssl_context=ssl_context)
         except FileNotFoundError:
-            self.error("The configured SSL key or certificate files couldn't be found and so \nan SSL server couldn't be started, please check your settings. \nThe addon web-ui is still available through ingress.")
+            logger.error("The configured SSL key or certificate files couldn't be found and so \nan SSL server couldn't be started, please check your settings. \nThe addon web-ui is still available through ingress.")
         except ssl.SSLError:
-            self.error("Your SSL certificate or key couldn't be loaded and so an SSL server couldn't be started.  Please verify that your SSL settings are correctly configured.  The addon web-ui is still available through ingress.")
-        self.info("Server started")
+            logger.error("Your SSL certificate or key couldn't be loaded and so an SSL server couldn't be started.  Please verify that your SSL settings are correctly configured.  The addon web-ui is still available through ingress.")
+        logger.info("Server started")
         self.running = True
         self._starts += 1
 
@@ -548,11 +550,11 @@ class AsyncServer(Trigger, LogBase, Startable):
             try:
                 await runner.shutdown()
             except Exception as e:
-                self.error("Error while trying to shut down server: " + str(e))
+                logger.error("Error while trying to shut down server: " + str(e))
             try:
                 await runner.cleanup()
             except Exception as e:
-                self.error("Error while trying to shut down server: " + str(e))
+                logger.error("Error while trying to shut down server: " + str(e))
         self.runners = []
 
     async def shutdown(self):
@@ -575,7 +577,7 @@ class AsyncServer(Trigger, LogBase, Startable):
                 'http_status': known.httpStatus(),
                 'error_type': known.code(),
                 'message': known.message(),
-                'details': self.formatException(e),
+                'details': logger.formatException(e),
                 'data': known.data()
             }
         else:
@@ -583,7 +585,7 @@ class AsyncServer(Trigger, LogBase, Startable):
                 'http_status': 500,
                 'error_type': "generic_error",
                 'message': "An unexpected error occurred: " + str(e),
-                'details': self.formatException(e)
+                'details': logger.formatException(e)
             }
 
     def filePath(self, name):
@@ -824,7 +826,7 @@ class AsyncServer(Trigger, LogBase, Startable):
 
 
 @web.middleware
-class HomeAssistantLoginAuth(LogBase):
+class HomeAssistantLoginAuth():
     def __init__(self, time, harequests):
         self._time = time
         self._harequests = harequests
@@ -860,7 +862,7 @@ class HomeAssistantLoginAuth(LogBase):
                 self._time.now() + timedelta(minutes=10))}
             return True
         except Exception as e:
-            self.error(self.formatException(e))
+            logger.printException(e)
             return False
 
     def challenge(self):

@@ -1,7 +1,9 @@
-from ..logbase import LogBase
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
-class Trigger(LogBase):
+class Trigger():
     def __init__(self):
         self._triggered = False
 

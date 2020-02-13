@@ -9,15 +9,17 @@ from ..util import AsyncHttpGetter
 from ..config import Config, Setting
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..exceptions import HomeAssistantDeleteError
-from ..logbase import LogBase
 from ..model import HASnapshot, Snapshot
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 NOTIFICATION_ID = "backup_broken"
 EVENT_SNAPSHOT_START = "snapshot_started"
 EVENT_SNAPSHOT_END = "snapshot_ended"
 
 
-class HaRequests(LogBase):
+class HaRequests():
     """
     Stores logic for interacting with the Hass.io add-on API
     """
@@ -139,11 +141,11 @@ class HaRequests(LogBase):
         }
 
     async def _getHassioData(self, url: str) -> Dict[str, Any]:
-        self.debug("Making Hassio request: " + url)
+        logger.debug("Making Hassio request: " + url)
         return await self._validateHassioReply(await self.session.get(url, headers=self._getHassioHeaders()))
 
     async def _postHassioData(self, url: str, json=None, file=None, data=None) -> Dict[str, Any]:
-        self.debug("Making Hassio request: " + url)
+        logger.debug("Making Hassio request: " + url)
         return await self._validateHassioReply(await self.session.post(url, headers=self._getHassioHeaders(), json=json, data=data))
 
     async def _postHaData(self, path: str, data: Dict[str, Any]) -> None:

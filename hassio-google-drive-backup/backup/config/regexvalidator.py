@@ -1,5 +1,8 @@
 from .validator import Validator
 import re
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class RegexValidator(Validator):

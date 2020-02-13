@@ -4,10 +4,12 @@ import yaml
 
 from ..config import Config, Setting
 from ..exceptions import SnapshotPasswordKeyInvalid
-from ..logbase import LogBase
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
-class Password(LogBase):
+class Password():
     def __init__(self, config: Config):
         self.config = config
 

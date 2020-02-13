@@ -10,15 +10,17 @@ from ..config import Config, Setting, CreateOptions
 from ..exceptions import (KnownError, LogicError, NoSnapshot, PleaseWait,
                           UserCancelledError)
 from ..util import GlobalInfo, Backoff, Estimator
-from ..logbase import LogBase
 from .snapshots import AbstractSnapshot, Snapshot
 from ..time import Time
 from ..worker import Trigger
 from .model import Model
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @singleton
-class Coordinator(Trigger, LogBase):
+class Coordinator(Trigger):
     @inject
     def __init__(self, model: Model, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
@@ -126,7 +128,7 @@ class Coordinator(Trigger, LogBase):
         try:
             self._sync_start.set()
             await self._sync_wait.wait()
-            self.info("Syncing Snapshots")
+            logger.info("Syncing Snapshots")
             self._global_info.sync()
             self._estimator.refresh()
             await self._buildModel().sync(self._time.now())
@@ -143,13 +145,13 @@ class Coordinator(Trigger, LogBase):
             e = UserCancelledError()
         if isinstance(e, KnownError):
             known: KnownError = e
-            self.error(known.message())
+            logger.error(known.message())
             if known.retrySoon():
                 self._backoff.backoff(e)
             else:
                 self._backoff.maxOut()
         else:
-            self.error(self.formatException(e))
+            logger.printException(e)
             self._backoff.backoff(e)
         self._global_info.failed(e)
 
@@ -165,7 +167,7 @@ class Coordinator(Trigger, LogBase):
         else:
             text = "much later"
 
-        self.info("I'll try again {0}".format(text))
+        logger.info("I'll try again {0}".format(text))
 
     def snapshots(self) -> List[Snapshot]:
         ret = list(self._model.snapshots.values())

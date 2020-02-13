@@ -7,6 +7,9 @@ from .floatvalidator import FloatValidator
 from .intvalidator import IntValidator
 from .regexvalidator import RegexValidator
 from .stringvalidator import StringValidator
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @unique

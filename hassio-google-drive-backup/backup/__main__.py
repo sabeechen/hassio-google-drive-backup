@@ -4,13 +4,14 @@ import ptvsd
 from aiorun import run
 from injector import Injector
 
-
-from backup.logbase import LogBase
 from backup.config import Config
 from backup.module import MainModule, BaseModule
 from backup.starter import Starter
 from sys import argv
 from os.path import join, abspath
+from .logger import getLogger
+
+logger = getLogger(__name__)
 
 
 async def main(config):
@@ -19,7 +20,7 @@ async def main(config):
 
 if __name__ == '__main__':
     if os.environ.get("DEBUGGER") == "true":
-        LogBase().info("Starting debugger on port 3000")
+        logger.info("Starting debugger on port 3000")
         ptvsd.enable_attach(('0.0.0.0', 3000))
 
     config = Config()

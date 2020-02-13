@@ -6,6 +6,9 @@ from aiohttp.resolver import AsyncResolver
 from injector import inject, singleton
 
 from ..config import Config, Setting
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 TTL_HOURS = 12
 

@@ -1,12 +1,14 @@
 from .asyncserver import AsyncServer
-from ..logbase import LogBase
 from ..config import Config, Startable
 from asyncio import create_task, Event
 from injector import inject, singleton
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @singleton
-class Restarter(LogBase, Startable):
+class Restarter(Startable):
     @inject
     def __init__(self, server: AsyncServer, config: Config):
         self._server = server
@@ -24,11 +26,11 @@ class Restarter(LogBase, Startable):
         self._old_options = self._config.getServerOptions()
         try:
             # Restart the server
-            self.info("Restarting Web-UI server")
+            logger.info("Restarting Web-UI server")
             await self._server.run()
             self._restarted.set()
         except Exception as e:
-            self.error("Problem while restarting the Web-UI server " + self.formatException(e))
+            logger.error("Problem while restarting the Web-UI server " + logger.formatException(e))
 
     def trigger(self):
         create_task(self.check(), name="Web-UI Restarter")

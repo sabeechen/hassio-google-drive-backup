@@ -5,6 +5,9 @@ from injector import inject, singleton
 from .coordinator import Coordinator
 from ..time import Time
 from ..worker import Worker, Trigger
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @singleton
@@ -19,7 +22,7 @@ class Scyncer(Worker):
         doSync = False
         for trigger in self.triggers:
             if trigger.check():
-                self.debug("Sync requested by " + str(trigger.name()))
+                logger.debug("Sync requested by " + str(trigger.name()))
                 doSync = True
         if doSync:
             await self.coord.sync()

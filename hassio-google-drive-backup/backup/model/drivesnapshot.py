@@ -5,6 +5,9 @@ from ..const import SOURCE_GOOGLE_DRIVE
 from ..exceptions import ensureKey
 from ..config import BoolValidator
 from ..time import Time
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"

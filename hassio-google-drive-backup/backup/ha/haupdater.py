@@ -7,10 +7,12 @@ from ..model import Coordinator, Snapshot
 from ..config import Config, Setting, Startable
 from ..util import GlobalInfo, Backoff
 from .harequests import HaRequests
-from ..logbase import LogBase
 from ..time import Time
 from ..worker import Worker
 from ..const import SOURCE_HA, SOURCE_GOOGLE_DRIVE
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 NOTIFICATION_TITLE = "Hass.io Google Drive Backup is Having Trouble"
 NOTIFICATION_DESC_LINK = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page]({0}) for details."
@@ -29,7 +31,7 @@ REASSURING_MESSAGE = "Unable to reach Home Assistant (HTTP {0}).  This is normal
 
 
 @singleton
-class HaUpdater(Worker, LogBase):
+class HaUpdater(Worker):
     @inject
     def __init__(self, requests: HaRequests, coordinator: Coordinator, config: Config, time: Time, global_info: GlobalInfo):
         super().__init__("Sensor Updater", self.update, time, 10)
@@ -69,16 +71,16 @@ class HaUpdater(Worker, LogBase):
                 self._first_error = self._time.now()
             if int(e.status / 100) == 5:
                 if self._time.now() > self._first_error + timedelta(seconds=NOTIFY_DELAY):
-                    self.error(
+                    logger.error(
                         "Unable to reach Home Assistant (HTTP {0}).  This is normal if Home Assistant is restarting.  You will probably see some errors in the supervisor logs until it comes back online.".format(e.status))
             else:
-                self.error("Trouble updating Home Assistant sensors.")
+                logger.error("Trouble updating Home Assistant sensors.")
             self._last_snapshot_update = None
             await self._time.sleepAsync(self._backoff.backoff(e))
         except Exception as e:
             self._last_snapshot_update = None
-            self.error("Trouble updating Home Assistant sensors.")
-            self.error(self.formatException(e))
+            logger.error("Trouble updating Home Assistant sensors.")
+            logger.printException(e)
             await self._time.sleepAsync(self._backoff.backoff(e))
 
     async def _maybeSendSnapshotUpdate(self):

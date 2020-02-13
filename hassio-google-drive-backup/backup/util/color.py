@@ -1,4 +1,7 @@
 import math
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class Color:

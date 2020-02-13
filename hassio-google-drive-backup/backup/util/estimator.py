@@ -5,14 +5,16 @@ from injector import inject, singleton
 from ..config import Config, Setting
 from ..exceptions import LowSpaceError
 from .globalinfo import GlobalInfo
-from ..logbase import LogBase
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 SIZE_SI = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 
 
 # TODO: Add tests for this class
 @singleton
-class Estimator(LogBase):
+class Estimator():
     @inject
     def __init__(self, config: Config, global_info: GlobalInfo):
         super().__init__()
@@ -46,7 +48,7 @@ class Estimator(LogBase):
             if isinstance(e, LowSpaceError):
                 raise e
             # Just log the error and continue otherwise
-            self.error(
+            logger.error(
                 "Encountered an error while trying to check disk space remaining: " + str(e))
 
     def _checkSpace(self, snapshots):

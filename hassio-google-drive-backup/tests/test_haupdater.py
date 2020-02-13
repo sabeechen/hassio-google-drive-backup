@@ -3,10 +3,10 @@ import pytest
 from backup.util import GlobalInfo
 from backup.ha import HaUpdater
 from backup.ha.haupdater import REASSURING_MESSAGE
-from backup.logbase import LogBase
 from .faketime import FakeTime
 from .helpers import HelperTestSource
 from dev.simulationserver import SimulationServer
+from backup.logger import getLast
 
 STALE_ATTRIBUTES = {
     "friendly_name": "Snapshots Stale"
@@ -209,28 +209,28 @@ async def test_publish_for_failure(updater: HaUpdater, server, time: FakeTime, g
 @pytest.mark.asyncio
 async def test_failure_logging(updater: HaUpdater, server, time: FakeTime):
     server.setHomeAssistantError(501)
-    assert LogBase.getLast() is None
+    assert getLast() is None
     await updater.update()
-    assert LogBase.getLast() is None
+    assert getLast() is None
 
     time.advance(minutes=1)
     await updater.update()
-    assert LogBase.getLast() is None
+    assert getLast() is None
 
     time.advance(minutes=5)
     await updater.update()
-    assert LogBase.getLast().msg == REASSURING_MESSAGE.format(501)
+    assert getLast().msg == REASSURING_MESSAGE.format(501)
 
-    last_log = LogBase.getLast()
+    last_log = getLast()
     time.advance(minutes=5)
     await updater.update()
-    assert LogBase.getLast() is not last_log
-    assert LogBase.getLast().msg == REASSURING_MESSAGE.format(501)
+    assert getLast() is not last_log
+    assert getLast().msg == REASSURING_MESSAGE.format(501)
 
-    last_log = LogBase.getLast()
+    last_log = getLast()
     server.setHomeAssistantError(None)
     await updater.update()
-    assert LogBase.getLast() is last_log
+    assert getLast() is last_log
 
 
 @pytest.mark.asyncio

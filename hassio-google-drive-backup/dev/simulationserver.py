@@ -16,9 +16,11 @@ from aiohttp.web import (Application, HTTPBadRequest, HTTPClientError,
 from injector import inject, singleton
 from oauth2client.client import OAuth2Credentials
 
-from backup.logbase import LogBase
 from backup.time import Time
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
+from backup.logger import getLogger
+
+logger = getLogger(__name__)
 
 mimeTypeQueryPattern = re.compile("^mimeType='.*'$")
 parentsQueryPattern = re.compile("^'.*' in parents$")
@@ -35,7 +37,7 @@ class HttpMultiException(HTTPClientError):
 
 
 @singleton
-class SimulationServer(LogBase):
+class SimulationServer():
     @inject
     def __init__(self, port, time: Time):
         self.items: Dict[str, Any] = {}
@@ -716,7 +718,7 @@ class SimulationServer(LogBase):
             elif isinstance(ex, HTTPException):
                 raise
             else:
-                self.error(self.formatException(ex))
+                logger.printException(ex)
             return json_response(str(ex), status=502)
 
     def createApp(self):

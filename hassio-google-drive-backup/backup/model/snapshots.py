@@ -6,6 +6,9 @@ from dateutil.tz import tzutc
 from ..util import Estimator
 
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 PROP_KEY_SLUG = "snapshot_slug"
 PROP_KEY_DATE = "snapshot_date"

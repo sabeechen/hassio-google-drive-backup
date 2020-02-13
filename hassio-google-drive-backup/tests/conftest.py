@@ -16,7 +16,7 @@ from dev.simulationserver import SimulationServer
 from backup.drive import DriveRequests, DriveSource
 from backup.util import GlobalInfo, Estimator, Resolver
 from backup.ha import HaRequests, HaSource, HaUpdater
-from backup.logbase import LogBase
+from backup.logger import reset
 from backup.model import Model
 from backup.time import Time
 from backup.module import BaseModule
@@ -211,7 +211,7 @@ async def cleandir():
 
 @pytest.fixture
 async def time(injector):
-    LogBase.reset()
+    reset()
     return injector.get(Time)
 
 

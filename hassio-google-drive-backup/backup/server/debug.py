@@ -3,6 +3,9 @@ from aiohttp import web
 from aiohttp.web import Request
 from injector import inject, singleton
 from ..model import Model, Coordinator
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @singleton
@@ -27,7 +30,7 @@ class Debug():
                 if ex is None:
                     data['exception'] = "None"
                 else:
-                    data['exception'] = self.formatException(ex)
+                    data['exception'] = logger.formatException(ex)
             except asyncio.CancelledError:
                 data['exception'] = "CancelledError"
             except asyncio.InvalidStateError:

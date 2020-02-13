@@ -3,12 +3,14 @@ from threading import Lock
 
 from injector import inject, singleton
 
-from ..logbase import LogBase
 from ..time import Time
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @singleton
-class GlobalInfo(LogBase):
+class GlobalInfo():
     @inject
     def __init__(self, time: Time):
         self._time = time

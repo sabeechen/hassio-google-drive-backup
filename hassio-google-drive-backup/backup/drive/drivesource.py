@@ -15,7 +15,6 @@ from ..const import SOURCE_GOOGLE_DRIVE
 from ..exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
                           ExistingBackupFolderError,
                           GoogleDrivePermissionDenied, LogicError)
-from ..logbase import LogBase
 from ..model.snapshots import (PROP_KEY_DATE, PROP_KEY_NAME, PROP_KEY_SLUG,
                                PROP_PROTECTED, PROP_RETAINED, PROP_TYPE,
                                PROP_VERSION)
@@ -23,6 +22,9 @@ from ..time import Time
 from .driverequests import DriveRequests
 from .thumbnail import THUMBNAIL_IMAGE
 from ..model import SnapshotDestination, AbstractSnapshot, DriveSnapshot, Snapshot
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 MIME_TYPE = "application/tar"
 THUMBNAIL_MIME_TYPE = "image/png"
@@ -32,7 +34,7 @@ FOLDER_CACHE_SECONDS = 30
 
 
 @singleton
-class DriveSource(SnapshotDestination, LogBase):
+class DriveSource(SnapshotDestination):
     # SOMEDAY: read snapshots all in one big batch request, then sort the folder and child addons from that.  Would need to add test verifying the "current" backup directory is used instead of the "latest"
     @inject
     def __init__(self, config: Config, time: Time, drive_requests: DriveRequests, info: GlobalInfo, session: ClientSession):
@@ -52,7 +54,7 @@ class DriveSource(SnapshotDestination, LogBase):
         self._existing_folders = {}
 
     def saveCreds(self, creds: Credentials) -> None:
-        self.info("Saving new Google Drive credentials")
+        logger.info("Saving new Google Drive credentials")
         self.drivebackend.saveCredentials(creds)
         self.trigger()
 
@@ -104,7 +106,7 @@ class DriveSource(SnapshotDestination, LogBase):
 
     async def delete(self, snapshot: Snapshot):
         item = self._validateSnapshot(snapshot)
-        self.info("Deleting '{}' From Google Drive".format(item.name()))
+        logger.info("Deleting '{}' From Google Drive".format(item.name()))
         await self.drivebackend.delete(item.id())
         snapshot.removeSource(self.name())
 
@@ -137,14 +139,14 @@ class DriveSource(SnapshotDestination, LogBase):
 
         async with source:
             try:
-                self.info("Uploading '{}' to Google Drive".format(
+                logger.info("Uploading '{}' to Google Drive".format(
                     snapshot.name()))
                 size = source.size()
                 self._info.upload(size)
                 snapshot.overrideStatus("Uploading {0}%", source)
                 async for progress in self.drivebackend.create(source, file_metadata, MIME_TYPE):
                     if isinstance(progress, float):
-                        self.debug("Uploading {1} {0:.2f}%".format(
+                        logger.debug("Uploading {1} {0:.2f}%".format(
                             progress * 100, snapshot.name()))
                     else:
                         return DriveSnapshot(progress)
@@ -196,13 +198,13 @@ class DriveSource(SnapshotDestination, LogBase):
         try:
             folder = await self._get(id)
             if not self._isValidFolder(folder):
-                self.info("Provided snapshot folder {0} is invalid".format(id))
+                logger.info("Provided snapshot folder {0} is invalid".format(id))
                 return False
             return True
         except ClientResponseError as e:
             # 404 means the folder doesn't exist (maybe it got moved?)
             if e.status == 404:
-                self.info("Provided snapshot folder {0} is gone".format(id))
+                logger.info("Provided snapshot folder {0} is gone".format(id))
                 return False
             else:
                 raise e
@@ -254,7 +256,7 @@ class DriveSource(SnapshotDestination, LogBase):
             # previous (or duplicate) installation.  Record and return the id but don't
             # persist it until the user chooses to do so.
             folder = folders[len(folders) - 1]
-            self.info("Found " + folder.get('name'))
+            logger.info("Found " + folder.get('name'))
 
             if self._info.getUseExistingFolder() is not None:
                 if self._info.getUseExistingFolder():
@@ -291,7 +293,7 @@ class DriveSource(SnapshotDestination, LogBase):
         return True
 
     async def _createDriveFolder(self) -> str:
-        self.info('Creating folder "{}" in "My Drive"'.format(FOLDER_NAME))
+        logger.info('Creating folder "{}" in "My Drive"'.format(FOLDER_NAME))
         file_metadata: Dict[str, str] = {
             'name': FOLDER_NAME,
             'mimeType': FOLDER_MIME_TYPE,
@@ -306,7 +308,7 @@ class DriveSource(SnapshotDestination, LogBase):
         return self._saveFolderId(folder.get('id'))
 
     def _saveFolderId(self, folder_id: str) -> str:
-        self.info("Saving snapshot folder: " + folder_id)
+        logger.info("Saving snapshot folder: " + folder_id)
         with open(self.config.get(Setting.FOLDER_FILE_PATH), "w") as folder_file:
             folder_file.write(folder_id)
         self._existing_folder_name = None

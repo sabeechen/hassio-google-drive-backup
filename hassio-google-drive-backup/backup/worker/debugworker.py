@@ -14,6 +14,9 @@ from ..exceptions import KnownError
 from ..util import GlobalInfo, Resolver
 from ..time import Time
 from .worker import Worker
+from ..logger import getLogger
+
+logger = getLogger(__name__)
 
 
 @singleton
@@ -54,7 +57,7 @@ class DebugWorker(Worker):
             if isinstance(error, KnownError):
                 error = error.code()
             else:
-                error = self.formatException(error)
+                error = logger.formatException(error)
         if error != self.last_sent_error:
             self.last_sent_error = error
             if error is not None:
@@ -62,7 +65,7 @@ class DebugWorker(Worker):
                 package = self.buildErrorReport(error)
             else:
                 package = self.buildClearReport()
-            self.info("Sending error report (see settings to disable)")
+            logger.info("Sending error report (see settings to disable)")
             url: str = self.config.get(Setting.ERROR_REPORT_URL) + "?error={0}&version=1".format(
                 quote(json.dumps(package, indent=4, sort_keys=True)))
             async with self.session.get(url):
@@ -76,7 +79,7 @@ class DebugWorker(Worker):
             self.dns_info = await self.getPingInfo()
             self._info.setDnsInfo(self.dns_info)
         except Exception as e:
-            self.dns_info = self.formatException(e)
+            self.dns_info = logger.formatException(e)
 
     def buildErrorReport(self, error):
         # Someday: Get the supervisor logs

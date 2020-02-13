@@ -4,7 +4,7 @@ python:
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get -y fping
+  - sudo apt-get -y install fping
 
 install:
   - pip install -r hassio-google-drive-backup/dev/requirements-dev.txt

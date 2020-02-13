@@ -2,6 +2,10 @@ language: python
 python:
   - "3.8"
 
+before_install:
+  - sudo apt-get update
+  - sudo apt-get -y fping
+
 install:
   - pip install -r hassio-google-drive-backup/dev/requirements-dev.txt
 

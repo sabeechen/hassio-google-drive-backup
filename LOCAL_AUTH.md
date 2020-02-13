@@ -3,7 +3,7 @@ You've arrived here because you'd like to use your own client ID and client secr
 * You'd like to avoid having your account's credentials go through a server maintained by me.  The typical authentication workflow never sees your Google account password, but it does recieve a token from Google that, if I were malicious, I could use to see the snapshots you've backed up to Drive.  I don't store this token anywhere and instead just pass it back to you, but becase of how Google oauth tokens are generated there is no way you could verify that.  I tip my tinfoil hat to yours and respect your desire to protect your personal information :)
 * The typical authentication flow didn't work.  This may be because of a bug, or because the server I set up to handle it is down or broken.  Its just me back here providing this as a free service to the community, so applogogies if things fall into disrepair.
 
-These instructions are current as of April 2019.  If you do this and notice they're out of date, Please file an issue on this projects issue page so I can be made aware of it.  Thanks!
+These instructions are current as of Feb 2020.  If you do this and notice they're out of date, Please file an issue on this projects issue page so I can be made aware of it.  Thanks!
 
 ## Step 1 - Create a Google Cloud Project
 * Go to http://console.developers.google.com and log in with your Google account.

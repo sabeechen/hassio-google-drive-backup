@@ -4,19 +4,13 @@ google-auth-oauthlib
 oauth2client
 requests
 python-dateutil==2.6.1
-CherryPy
-colored
 watchdog
 pyyaml
 dnspython
-flask
-flask-api
 pytest
-pytest_mock
 pytest-timeout
 pytest-rerunfailures
 pytest-asyncio
-mock
 flake8
 mypy
 aiorun
@@ -25,3 +19,4 @@ aiodns
 aiofiles
 injector
 autopep8
+colorlog

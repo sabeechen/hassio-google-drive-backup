@@ -3,7 +3,7 @@ import datetime
 from backup.time import Time
 
 
-def test_parse(mocker) -> None:
+def test_parse() -> None:
     time = Time.parse("1985-12-06 01:01:01.0001")
     assert str(time) == "1985-12-06 01:01:01.000100+00:00"
 

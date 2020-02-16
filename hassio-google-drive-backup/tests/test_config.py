@@ -148,7 +148,7 @@ def defaultAnd(config={}):
     return ret
 
 
-def test_GenerationalConfig(mocker) -> None:
+def test_GenerationalConfig() -> None:
     assert Config("").getGenerationalConfig() is None
 
     assert Config("").override(Setting.GENERATIONAL_DAYS,

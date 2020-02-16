@@ -4,7 +4,6 @@ from threading import Lock
 from typing import Dict, List
 
 from injector import inject, singleton
-from oauth2client.client import Credentials
 
 from ..config import Config, Setting, CreateOptions
 from ..exceptions import (KnownError, LogicError, NoSnapshot, PleaseWait,
@@ -42,7 +41,7 @@ class Coordinator(Trigger):
         self._sync_wait.set()
         self.trigger()
 
-    def saveCreds(self, creds: Credentials):
+    def saveCreds(self, creds):
         self._model.dest.saveCreds(creds)
         self._global_info.credsSaved()
 

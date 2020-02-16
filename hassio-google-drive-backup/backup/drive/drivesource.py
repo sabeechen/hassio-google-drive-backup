@@ -7,7 +7,6 @@ from typing import Any, Dict
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
-from oauth2client.client import Credentials
 
 from ..util import AsyncHttpGetter, GlobalInfo
 from ..config import Config, Setting, CreateOptions
@@ -53,7 +52,7 @@ class DriveSource(SnapshotDestination):
         self._existing_folder_name = None
         self._existing_folders = {}
 
-    def saveCreds(self, creds: Credentials) -> None:
+    def saveCreds(self, creds) -> None:
         logger.info("Saving new Google Drive credentials")
         self.drivebackend.saveCredentials(creds)
         self.trigger()

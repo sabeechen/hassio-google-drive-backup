@@ -1,4 +1,5 @@
 import os
+import json
 from time import sleep
 
 import pytest
@@ -287,7 +288,7 @@ async def test_google_internal_error(drive, server, time: FakeTime):
 @pytest.mark.asyncio
 async def test_check_time(drive: DriveSource, drive_creds):
     assert not drive.check()
-    drive.saveCreds(drive_creds)
+    drive.saveCreds(json.dumps(drive_creds.to_json()))
     assert drive.check()
 
 

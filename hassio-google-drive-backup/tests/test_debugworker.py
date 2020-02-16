@@ -7,6 +7,7 @@ from backup.worker import DebugWorker
 from backup.util import GlobalInfo
 from backup.logger import getLogger
 
+
 @pytest.mark.asyncio
 async def test_dns_info(debug_worker: DebugWorker, config: Config):
     config.override(Setting.SEND_ERROR_REPORTS, True)

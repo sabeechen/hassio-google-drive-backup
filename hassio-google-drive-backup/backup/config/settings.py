@@ -88,6 +88,7 @@ class Setting(Enum):
     CHOOSE_FOLDER_URL = "choose_folder_url"
     ERROR_REPORT_URL = "error_report_url"
     DRIVE_HOST_NAME = "drive_host_name"
+    DRIVE_REFRESH_URL = "drive_refresh_url"
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
@@ -168,9 +169,10 @@ _DEFAULTS = {
     Setting.HASSIO_TOKEN: "",
     Setting.HOME_ASSISTANT_URL: "http://hassio/homeassistant/api/",
     Setting.DRIVE_URL: "https://www.googleapis.com",
-    Setting.AUTHENTICATE_URL: "https://philosophyofpen.com/login/backup.py",
-    Setting.CHOOSE_FOLDER_URL: "https://philosophyofpen.com/hassiodrivebackup/picker/",
-    Setting.ERROR_REPORT_URL: "https://philosophyofpen.com/login/error.py",
+    Setting.DRIVE_REFRESH_URL: "https://backup.beechens.com/drive/refresh",
+    Setting.AUTHENTICATE_URL: "https://backup.beechens.com/drive/authorize",
+    Setting.CHOOSE_FOLDER_URL: "https://backup.beechens.com/drive/picker",
+    Setting.ERROR_REPORT_URL: "https://backup.beechens.com/logerror",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
 
     # File locations used to store things

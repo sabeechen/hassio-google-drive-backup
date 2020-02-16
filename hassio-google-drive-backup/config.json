@@ -74,6 +74,7 @@
     "hassio_header": "str?",
     "drive_url": "url?",
     "authenticate_url": "url?",
+    "drive_refresh_url": "url?",
     "choose_folder_url": "url?",
     "error_report_url": "url?",
     "drive_host_name": "str?",

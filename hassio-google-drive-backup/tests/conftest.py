@@ -87,7 +87,9 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
     config.override(Setting.HOME_ASSISTANT_URL,
                     server_url + "/homeassistant/api/")
     config.override(Setting.AUTHENTICATE_URL,
-                    server_url + "/external/drivecreds/")
+                    server_url + "/drive/authorize")
+    config.override(Setting.DRIVE_REFRESH_URL,
+                    server_url + "/drive/refresh")
     config.override(Setting.ERROR_REPORT_URL,
                     server_url + "/errorreport")
     config.override(Setting.HASSIO_TOKEN, "test_header")

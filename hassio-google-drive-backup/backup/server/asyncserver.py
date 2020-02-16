@@ -1,5 +1,6 @@
 import asyncio
 import ssl
+import json
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
@@ -9,7 +10,7 @@ import aiofiles
 from aiohttp import BasicAuth, hdrs, web
 from aiohttp.web import HTTPBadRequest, HTTPException, Request
 from injector import inject, singleton
-from oauth2client.client import OAuth2Credentials, OAuth2WebServerFlow
+from oauth2client.client import OAuth2WebServerFlow
 
 from ..config import Config, Setting, CreateOptions, BoolValidator, Startable
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
@@ -279,9 +280,8 @@ class AsyncServer(Trigger, Startable):
 
     async def token(self, request: Request) -> None:
         if 'creds' in request.query:
-            creds = OAuth2Credentials.from_json(request.query['creds'])
             self._global_info.setIngoreErrorsForNow(True)
-            self._coord.saveCreds(creds)
+            self._coord.saveCreds(json.loads(request.query['creds']))
         try:
             if request.url.port == self.config.get(Setting.INGRESS_PORT):
                 return await self.redirect(self._ha_source.getAddonUrl())

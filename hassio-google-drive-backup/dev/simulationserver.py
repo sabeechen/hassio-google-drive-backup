@@ -6,19 +6,20 @@ import re
 from io import BytesIO
 from threading import Lock
 from typing import Any, Dict
-from urllib.parse import quote
+from yarl import URL
 
 import aiohttp
 from aiohttp.web import (Application, HTTPBadRequest, HTTPClientError,
-                         HTTPException, HTTPFound, HTTPNotFound,
+                         HTTPException, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, delete, get,
-                         json_response, middleware, patch, post, put)
+                         json_response, middleware, patch, post, put, HTTPSeeOther)
+from aiohttp.client import ClientSession
 from injector import inject, singleton
-from oauth2client.client import OAuth2Credentials
 
 from backup.time import Time
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
 from backup.logger import getLogger
+from server.server import Server
 
 logger = getLogger(__name__)
 
@@ -33,13 +34,12 @@ rangePattern = re.compile("bytes=\\d+-\\d+")
 class HttpMultiException(HTTPClientError):
     def __init__(self, code):
         self.status_code = code
-        self.statu = code
 
 
 @singleton
 class SimulationServer():
     @inject
-    def __init__(self, port, time: Time):
+    def __init__(self, port, time: Time, session: ClientSession):
         self.items: Dict[str, Any] = {}
         self.id_counter = 0
         self.upload_info: Dict[str, Any] = {}
@@ -71,6 +71,15 @@ class SimulationServer():
         self.block_snapshots = False
         self.snapshot_in_progress = False
         self.last_error_report = None
+        self.drive_auth_code = "drive_auth_code"
+        self._authserver = Server(
+            session,
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            url_refresh="http://localhost:{}/oauth2/v4/token".format(port),
+            url_authorize="http://localhost:{}/o/oauth2/v2/auth".format(port),
+            url_token="http://localhost:{}/token".format(port),
+            authorized_redirect="http://localhost:{}/drive/authorize".format(port))
 
     def wasUrlRequested(self, pattern):
         for url in self.urls:
@@ -218,7 +227,7 @@ class SimulationServer():
         if request.headers.get("Authorization", "") != "Bearer " + self.getSetting('drive_auth_token'):
             raise HTTPUnauthorized()
 
-    async def driveAuthentication(self, request: Request):
+    async def driveRefreshToken(self, request: Request):
         self._checkDriveError(request)
         params = await request.post()
         if params['client_id'] != self.getSetting('drive_client_id'):
@@ -230,15 +239,69 @@ class SimulationServer():
         if params['grant_type'] != 'refresh_token':
             raise HTTPUnauthorized()
 
+        self.generateNewAccessToken()
+
+        return json_response({
+            'access_token': self.settings['drive_auth_token'],
+            'expires_in': 3600,
+            'token_type': 'doesn\'t matter'
+        })
+
+    def generateNewAccessToken(self):
         new_token = self.generateId(20)
         with self._settings_lock:
             self.settings['drive_auth_token'] = new_token
 
+    def generateNewRefreshToken(self):
+        new_token = self.generateId(20)
+        with self._settings_lock:
+            self.settings['drive_refresh_token'] = new_token
+
+    async def driveAuthorize(self, request: Request):
+        query = request.query
+        if query.get('client_id') != self.getSetting('drive_client_id'):
+            raise HTTPUnauthorized()
+        if query.get('scope') != 'https://www.googleapis.com/auth/drive.file':
+            raise HTTPUnauthorized()
+        if query.get('response_type') != 'code':
+            raise HTTPUnauthorized()
+        if query.get('include_granted_scopes') != 'true':
+            raise HTTPUnauthorized()
+        if query.get('access_type') != 'offline':
+            raise HTTPUnauthorized()
+        if 'state' not in query:
+            raise HTTPUnauthorized()
+        if 'redirect_uri' not in query:
+            raise HTTPUnauthorized()
+        if query.get('prompt') != 'consent':
+            raise HTTPUnauthorized()
+        url = URL(query.get('redirect_uri')).with_query({'code': self.drive_auth_code, 'state': query.get('state')})
+        raise HTTPSeeOther(str(url))
+
+    async def driveToken(self, request: Request):
+        data = await request.post()
+        if data.get('redirect_uri') != "http://localhost:{}/drive/authorize".format(self._port):
+            raise HTTPUnauthorized()
+        if data.get('grant_type') != 'authorization_code':
+            raise HTTPUnauthorized()
+        if data.get('client_id') != self.getSetting('drive_client_id'):
+            raise HTTPUnauthorized()
+        if data.get('client_secret') != self.getSetting('drive_client_secret'):
+            raise HTTPUnauthorized()
+        if data.get('code') != self.drive_auth_code:
+            raise HTTPUnauthorized()
+        self.generateNewRefreshToken()
         return json_response({
-            'access_token': new_token,
-            'expires_in': 3600,
-            'token_type': 'who_cares'
+            'access_token': self.getSetting('drive_auth_token'),
+            'refresh_token': self.getSetting('drive_refresh_token'),
+            'client_id': self.getSetting('drive_client_id'),
+            'client_sceret': self.getSetting('drive_client_secret'),
+            'token_expiry': self.timeToRfc3339String(self._time.now()),
         })
+
+    def expireCreds(self):
+        self.generateNewAccessToken()
+        self.generateNewRefreshToken()
 
     async def reset(self, request: Request):
         self._reset()
@@ -688,19 +751,6 @@ class SimulationServer():
         self._options = (await request.json())['options'].copy()
         return self.formatDataResponse({})
 
-    async def driveCredGenerate(self, request: Request):
-        # build valid credentials
-        creds = OAuth2Credentials(
-            "",
-            self.getSetting("drive_client_id"),
-            self.getSetting("drive_client_secret"),
-            refresh_token=self.getSetting("drive_refresh_token"),
-            token_expiry="",
-            token_uri="",
-            user_agent="")
-        url = request.query["redirectbacktoken"] + "?creds=" + quote(creds.to_json())
-        raise HTTPFound(location=url)
-
     async def errorReport(self, request: Request):
         self.last_error_report = request.query["error"]
         return Response()
@@ -724,12 +774,11 @@ class SimulationServer():
     def createApp(self):
         app = Application(middlewares=[self.error_middleware])
         app.add_routes(self.routes())
+        self._authserver.buildApp(app)
         return app
 
     def routes(self):
         return [
-            get('/external/drivecreds/', self.driveCredGenerate),
-            post('/external/drivecreds/', self.driveCredGenerate),
             post('/addons/self/options', self.hassioUpdateOptions),
             post("/homeassistant/api/services/persistent_notification/dismiss", self.dismissNotification),
             post("/homeassistant/api/services/persistent_notification/create", self.createNotification),
@@ -760,7 +809,9 @@ class SimulationServer():
             get('/readfile', self.readFile),
             post('/uploadfile', self.uploadfile),
             post('/doareset', self.reset),
-            post('/oauth2/v4/token', self.driveAuthentication),
+            post('/oauth2/v4/token', self.driveRefreshToken),
+            get('/o/oauth2/v2/auth', self.driveAuthorize),
+            post('/token', self.driveToken),
             get('/errorreport', self.errorReport)
         ]
 
@@ -801,31 +852,33 @@ class SimulationServer():
 
 
 async def main():
-    server = SimulationServer(56154, Time())
-    await server.reset({
-        'snapshot_min_size': 1024 * 1024 * 3,
-        'snapshot_max_size': 1024 * 1024 * 5,
-        "drive_refresh_token": "test_refresh_token",
-        "drive_client_id": "test_client_id",
-        "drive_client_secret": "test_client_secret",
-        "drive_upload_sleep": 5,
-        "snapshot_wait_time": 15,
-        "hassio_header": "test_header"
-    })
+    async with ClientSession() as session:
+        server = SimulationServer(56154, Time(), session)
+        await server.reset({
+            'snapshot_min_size': 1024 * 1024 * 3,
+            'snapshot_max_size': 1024 * 1024 * 5,
+            "drive_refresh_token": "test_refresh_token",
+            "drive_client_id": "test_client_id",
+            "drive_client_secret": "test_client_secret",
+            "drive_upload_sleep": 0,
+            "snapshot_wait_time": 0,
+            "hassio_header": "test_header"
+        })
 
-    # start the server
-    runner = aiohttp.web.AppRunner(server.createApp())
-    await runner.setup()
-    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=56154)
-    await site.start()
-    print("Server started")
+        # start the server
+        port = 56154
+        runner = aiohttp.web.AppRunner(server.createApp())
+        await runner.setup()
+        site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=port)
+        await site.start()
+        print("Server started on port " + str(port))
 
-    try:
-        while True:
-            await asyncio.sleep(1)
-    finally:
-        await runner.shutdown()
-        await runner.cleanup()
+        try:
+            while True:
+                await asyncio.sleep(1)
+        finally:
+            await runner.shutdown()
+            await runner.cleanup()
 
 
 if __name__ == '__main__':

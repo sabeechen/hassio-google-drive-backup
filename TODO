@@ -1,0 +1,44 @@
+Some triggers shouldn't make a sync happen if a snapsht is already in progress (eg Watcher, Home Assistant)
+        2-13 01:42:48 INFO I'll try again in an hour
+        02-13 01:42:49 DEBUG Sync requested by HomeAssistant
+        02-13 01:42:49 INFO Syncing Snapshots
+        02-13 01:42:49 DEBUG Making Hassio request: http://hassio/snapshots
+        02-13 01:42:49 DEBUG Making Google Drive request: https://www.googleapis.com/drive/v3/files/?q=%2716DbSDaX0VrebToCU108RRGEuTnaZcyG2%27+in+parents&fields=nextPageToken%2Cfiles%28id%2Cname%2CappProperties%2Csize%2Ctrashed%2CmimeType%2CmodifiedTime%2Ccapabilities%2Cparents%29&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives
+        02-13 01:42:49 DEBUG Making Hassio request: http://hassio/addons/self/info
+        02-13 01:42:49 DEBUG Making Hassio request: http://hassio/info
+        02-13 01:42:49 DEBUG Making Hassio request: http://hassio/homeassistant/info
+        02-13 01:42:49 DEBUG Making Hassio request: http://hassio/supervisor/info
+        02-13 01:42:49 INFO Requesting a new snapshot
+        02-13 01:42:49 DEBUG Making Hassio request: http://hassio/snapshots/new/partial
+        02-13 01:42:49 WARNING A snapshot was already in progress
+        02-13 01:42:49 ERROR A snapshot is already in progress
+        02-13 01:42:49 INFO I'll try again in an hour
+        02-13 01:42:50 DEBUG Sync requested by HomeAssistant
+        02-13 01:42:50 INFO Syncing Snapshots
+        02-13 01:42:50 DEBUG Making Hassio request: http://hassio/snapshots
+        02-13 01:42:51 DEBUG Making Hassio request: http://hassio/addons/self/info
+        02-13 01:42:51 DEBUG Making Hassio request: http://hassio/info
+        02-13 01:42:51 DEBUG Making Hassio request: http://hassio/homeassistant/info
+        02-13 01:42:51 DEBUG Making Hassio request: http://hassio/supervisor/info
+        02-13 01:42:51 INFO Requesting a new snapshot
+        02-13 01:42:51 DEBUG Making Hassio request: http://hassio/snapshots/new/partial
+        02-13 01:42:51 WARNING A snapshot was already in progress
+        02-13 01:42:51 ERROR A snapshot is already in progress
+        02-13 01:42:51 INFO I'll try again in an hour
+        02-13 01:42:51 DEBUG Sync requested by HomeAssistant
+        02-13 01:42:51 INFO Syncing Snapshots
+        02-13 01:42:51 DEBUG Making Hassio request: http://hassio/snapshots
+        02-13 01:42:52 DEBUG Making Hassio request: http://hassio/addons/self/info
+        02-13 01:42:52 DEBUG Making Hassio request: http://hassio/info
+        02-13 01:42:52 DEBUG Making Hassio request: http://hassio/homeassistant/info
+        02-13 01:42:52 DEBUG Making Hassio request: http://hassio/supervisor/info
+        02-13 01:42:52 INFO Requesting a new snapshot
+        02-13 01:42:52 DEBUG Making Hassio request: http://hassio/snapshots/new/partial
+        02-13 01:42:52 WARNING A snapshot was already in progress
+        02-13 01:42:52 ERROR A snapshot is already in progress
+        02-13 01:42:52 INFO I'll try again in an hour
+        02-13 01:42:52 DEBUG Sync requested by HomeAssistant
+        02-13 01:42:52 INFO Syncing Snapshots
+
+Watcher shouldn't ouput to INFO when it sees a change, just debug
+Error reports dialog doesn't go away when you click it for some reason

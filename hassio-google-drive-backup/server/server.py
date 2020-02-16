@@ -16,8 +16,9 @@ URL_REFRESH = "https://www.googleapis.com/oauth2/v4/token"
 URL_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth"
 URL_TOKEN = "https://oauth2.googleapis.com/token"
 
-# tODO: really should log request info here, client-iedntifier, etc
+
 class Server():
+    # TODO: really should log request info here, client-iedntifier, etc
     def __init__(self, session: ClientSession, url_refresh=URL_REFRESH,
                  url_authorize=URL_AUTHORIZE, url_token=URL_TOKEN,
                  client_id=CLIENT_ID, client_secret=CLIENT_SECRET,

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
+  <title>Hass.io Google Drive Backup</title>
+
+  <link href="/static/css/icons.css?version=0.100.0" rel="stylesheet">
+  <link href="/static/css/materialize.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="/static/css/colpick.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="/static/css/static.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link rel="icon" type="image/png" href="static/images/favicon.png?version=0.100.0">
+  <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
+  <script src="/static/js/jquery.js?version=0.100.0"></script>
+  <script src="/static/js/materialize.js?version=0.100.0"></script>
+  <script src="/static/js/colpick.js?version=0.100.0"></script>
+  <script src="/static/js/init.js?version=0.100.0"></script>
+  <script src="/static/js/scripts.js?version=0.100.0"></script>
+  <script src="/static/js/settings.js?version=0.100.0"></script>
+  <script src="/static/js/restore.js?version=0.100.0"></script>
+</head>
+
+<body>
+
+  <header>
+    <nav class="non-ingress ha-blue" role="navigation">
+      <div class="nav-wrapper">
+        <a class="brand-logo"> <img style="vertical-align: middle;" src="static/images/logo.png" width=40 height=40 />
+          <span>Hass.io Google Drive Backup</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+  <main>
+    <div class="section no-pad-bot" id="index-banner">
+      <div class="container">
+        <br><br>
+        <h2 class="header center">Simple Backup for Home Assistant</h1>
+        <div class="row center">
+          <h6 class="header col s12 light">A simple way to backup for Home Assistant snapshots to 
+              <a href="https://drive.google.com/drive/my-drive">Google Drive&trade;</a>.  Keep your snapshots backed up in Google's 
+              highly redundant and super reliable infrastructure.  Stay safe!  You don't want a random hard drive failure to keep you from turning on your lights.
+          </h5>
+        </div>
+        <div class="row">
+          <div>
+            <ul class="browser-default" style="display:table; margin:0 auto;">
+                <li>Super easy setup and install</li>
+                <li>UI targeted towards new users or anyone sick of writing YAML files</li>
+                <li>Privacy-centric design philosophy</li>
+                <li>Highly configurable</li>
+                <li><a href="https://github.com/sabeechen/hassio-google-drive-backup#configuration-options">Thorough documentation</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="row center">
+          <div id="option1" class="col m12 l6 offset-l3 center center-align">
+            <a target="_blank" id="authenticate-button" style="margin: 10px" href="https://github.com/sabeechen/hassio-google-drive-backup#installation"
+              class="btn-large waves-effect waves-light btn ha-blue">Installation Instructions</a>
+
+          </div>
+          <div id="option2" class="col s12 m6 offset-m3 default-hidden">
+            Follow the <a target="_blank"
+              href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md">instructions
+              here</a> to get your own client ID and client secret from Google. This is a much more complicated and time
+            consuming approach, but doesn't require you to authenticate yourself with an external domain.
+            <br />
+      
+          </div>
+        </div>
+        <br><br>
+      </div>
+    </div>
+  </main>
+  <footer class="ha-blue page-footer">
+    <div class="container">
+      <div class="row">
+        <div class="col l3 s12">
+          <h5 class="accent-text">Connect</h5>
+          <ul>
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a>
+            </li>
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue
+                Tracker</a></li>
+            <li><a class="accent-text" href="https://materializecss.com">Materialize</a></li>
+          </ul>
+        </div>
+        <div class="col l6 s12">
+          <h5 class="accent-title">Who did this?</h5>
+          <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
+            like it and would like to support me, you can star my projects on <a
+              href="https://github.com/sabeechen" class="accent-text">Github</a> or just gimme money at
+            <a class="bmc-button" target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img src="static/images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
+        </div>
+      </div>
+      <div class="container left accent-text">
+        © 2020 Stephen Beechen
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

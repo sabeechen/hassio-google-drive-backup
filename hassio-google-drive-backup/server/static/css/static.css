@@ -1,0 +1,259 @@
+body {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+  
+  main {
+    flex: 1 0 auto;
+  }
+  
+  .icon-block .material-icons {
+      font-size: inherit;
+  }
+  
+  .indented-li {
+    padding-left: 15px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  
+  .important-inline {
+    display: inline !important;
+  }
+  
+  .detail-node{ 
+    margin-top: 0px;
+    margin-bottom: 5px;
+  }
+  
+  .top-btn {
+    box-shadow: none;
+    -webkit-box-shadow: none;
+    margin-right: 10px;
+  }
+
+  .danger-button {
+    color: white;
+    background-color: rgb(153, 0, 0);
+  }
+
+  .error_card a {
+    color: white;
+    text-decoration: underline;
+  }
+  
+  .default-hidden {
+    display: none;
+  }
+  
+  .console-error {
+    color: #b30000
+  }
+  
+  .console-warning {
+    color: #a55d00
+  }
+  
+  .console-default {
+    color: #ffffff
+  }
+  
+  .console-debug {
+    color: #3141d1
+  }
+  
+  .console-critical {
+    color: #810000
+  }
+
+  .colpick {
+    z-index: 9999;
+  }
+
+  #toast-container {
+    top: auto !important;
+    left: auto !important;
+    bottom: 10%;
+    right: 7%;
+  }
+
+  html {
+    background-color: rgba(255, 255, 255, 1);
+    color: rgba(0, 0, 0, 1);
+  }
+  
+  label {
+    color: rgba(0, 0, 0, 1);
+  }
+  
+  a {
+    color: rgba(2, 123, 178, 1.0);
+  }
+  
+  input {
+    color: rgba(0, 0, 0, 1);
+  }
+  
+  .helper-text {
+    color: rgba(63, 63, 63, 1.0);
+  }
+  
+  .ha-blue {
+    background-color: rgba(3, 169, 244, 1);
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  nav .brand-logo {
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  nav ul a {
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  .accent-title {
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  footer a:link {
+    text-decoration: underline;
+    color: rgba(242, 242, 242, 1.0);
+  }
+  
+  .accent-text {
+    color: rgba(242, 242, 242, 1.0);
+  }
+  
+  .btn {
+    background-color: rgba(3, 169, 244, 1);
+  }
+  
+  .btn:hover, .btn-large:hover, .btn-small:hover {
+    background-color: rgba(3, 169, 244, 1);
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  .btn:focus, .btn-large:focus, .btn-small:focus, .btn-floating:focus {
+    background-color: rgba(0, 172, 255, 1);
+  }
+  
+  .modal .modal-footer .btn, .modal .modal-footer .btn-large, .modal .modal-footer .btn-small, .modal .modal-footer .btn-flat {
+    margin: 6px 0;
+    background-color: rgba(3, 169, 244, 1);
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  .dropdown-content {
+    background-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12), 0 1px 5px 0 rgba(0, 0, 0, 0.2);
+    webkit-box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12), 0 1px 5px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  .dropdown-content li > a {
+    color: rgba(127, 127, 127, 1.0);
+  }
+  
+  .modal {
+    background-color: rgba(249, 249, 249, 1.0);
+    box-shadow: box-shadow: 0 24px 38px 3px rgba(0, 0, 0, 0.14), 0 9px 46px 8px rgba(0, 0, 0, 0.12), 0 11px 15px -7px rgba(0, 0, 0, 0.2);
+  }
+  
+  .modal .modal-footer {
+    background-color: rgba(249, 249, 249, 1.0);
+  }
+  
+  .modal.modal-fixed-footer .modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  .modal-overlay {
+    background: rgba(0, 0, 0, 1);
+  }
+  
+  [type="checkbox"].filled-in:checked + span:not(.lever)::before {
+    border-right: 2px solid rgba(0, 0, 0, 1);
+    border-bottom: 2px solid rgba(0, 0, 0, 1);
+  }
+  
+  [type="checkbox"].filled-in:checked + span:not(.lever)::after {
+    border: 2px solid rgba(0, 0, 0, 1);
+    background-color: rgba(0, 137, 209, 1);
+  }
+  
+  .input-field .prefix.active {
+    color: rgba(3, 169, 244, 1);
+  }
+  
+  .input-field > label {
+    color: rgba(63, 63, 63, 1.0);
+  }
+  
+  .input-field .helper-text {
+    color: rgba(63, 63, 63, 1.0);
+  }
+  
+  input:not([type]):focus:not([readonly]) + label, input[type="text"]:not(.browser-default):focus:not([readonly]) + label, input[type="password"]:not(.browser-default):focus:not([readonly]) + label, input[type="email"]:not(.browser-default):focus:not([readonly]) + label, input[type="url"]:not(.browser-default):focus:not([readonly]) + label, input[type="time"]:not(.browser-default):focus:not([readonly]) + label, input[type="date"]:not(.browser-default):focus:not([readonly]) + label, input[type="datetime"]:not(.browser-default):focus:not([readonly]) + label, input[type="datetime-local"]:not(.browser-default):focus:not([readonly]) + label, input[type="tel"]:not(.browser-default):focus:not([readonly]) + label, input[type="number"]:not(.browser-default):focus:not([readonly]) + label, input[type="search"]:not(.browser-default):focus:not([readonly]) + label, textarea.materialize-textarea:focus:not([readonly]) + label {
+    color: rgba(0, 0, 0, 1);
+  }
+  
+  input.valid:not([type]), input.valid:not([type]):focus, input[type="text"].valid:not(.browser-default), input[type="text"].valid:not(.browser-default):focus, input[type="password"].valid:not(.browser-default), input[type="password"].valid:not(.browser-default):focus, input[type="email"].valid:not(.browser-default), input[type="email"].valid:not(.browser-default):focus, input[type="url"].valid:not(.browser-default), input[type="url"].valid:not(.browser-default):focus, input[type="time"].valid:not(.browser-default), input[type="time"].valid:not(.browser-default):focus, input[type="date"].valid:not(.browser-default), input[type="date"].valid:not(.browser-default):focus, input[type="datetime"].valid:not(.browser-default), input[type="datetime"].valid:not(.browser-default):focus, input[type="datetime-local"].valid:not(.browser-default), input[type="datetime-local"].valid:not(.browser-default):focus, input[type="tel"].valid:not(.browser-default), input[type="tel"].valid:not(.browser-default):focus, input[type="number"].valid:not(.browser-default), input[type="number"].valid:not(.browser-default):focus, input[type="search"].valid:not(.browser-default), input[type="search"].valid:not(.browser-default):focus, textarea.materialize-textarea.valid, textarea.materialize-textarea.valid:focus, .select-wrapper.valid > input.select-dropdown {
+    border-bottom: 1px solid rgba(3, 169, 244, 1);
+     -webkit-box-shadow:  0 1px 0 0 rgba(3, 169, 244, 1);
+    box-shadow: 0 1px 0 0 rgba(3, 169, 244, 1);
+  }
+  
+  input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default):focus:not([readonly]), input[type="password"]:not(.browser-default):focus:not([readonly]), input[type="email"]:not(.browser-default):focus:not([readonly]), input[type="url"]:not(.browser-default):focus:not([readonly]), input[type="time"]:not(.browser-default):focus:not([readonly]), input[type="date"]:not(.browser-default):focus:not([readonly]), input[type="datetime"]:not(.browser-default):focus:not([readonly]), input[type="datetime-local"]:not(.browser-default):focus:not([readonly]), input[type="tel"]:not(.browser-default):focus:not([readonly]), input[type="number"]:not(.browser-default):focus:not([readonly]), input[type="search"]:not(.browser-default):focus:not([readonly]), textarea.materialize-textarea:focus:not([readonly]) {
+    border-bottom: 1px solid rgba(3, 169, 244, 1);
+    -webkit-box-shadow: 0 1px 0 0 rgba(3, 169, 244, 1);
+    box-shadow: 0 1px 0 0 rgba(3, 169, 244, 1);
+  }
+  
+  .card {
+    background-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12), 0 1px 5px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  nav a {
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  .btn, .btn-large, .btn-small {
+    color: rgba(255, 255, 255, 1);
+  }
+  
+  .bmc-button img {
+    width: 15px;
+    margin-bottom: 1px;
+    box-shadow: none;
+    border: none;
+    vertical-align: middle;
+  }
+  
+  .bmc-button {
+    line-height: 15px;
+    height: 25px;
+    text-decoration: none;
+    display: inline-flex;
+    background-color: rgba(255, 255, 255, 1);
+    border-radius: 3px;
+    border: 1px solid transparent;
+    padding: 3px 2px 3px 2px;
+    letter-spacing: 0.6px;
+    box-shadow: 0px 1px 2px rgba(255, 255, 255, 0.2);
+    -webkit-box-shadow: 0px 1px 2px 2px rgba(255, 255, 255, 0.2);
+    margin: 0 auto;
+    font-family: 'Cookie', cursive;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    -o-transition: 0.3s all linear;
+    -webkit-transition: 0.3s all linear;
+    -moz-transition: 0.3s all linear;
+    -ms-transition: 0.3s all linear;
+    transition: 0.3s all linear;
+    font-size: 17px;
+  }
+  
+  .bmc-button span {
+    color: rgba(0, 0, 0, 1);
+  }

@@ -47,6 +47,18 @@
             ],
             "port": 3000,                   // Set to the remote port.
             "host": "local-hassio-google-drive-backup"               // Set to your remote host's public IP address.
-        }
+        },
+        {
+            "name": "Run Auth Server",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "/usr/bin/python3.8",
+            "module": "hassio-google-drive-backup.server",
+            "env": {
+                "PORT": "12345",
+                "CLIENT_SECRET": "client_secret",
+                "CLIENT_ID": "client_id"
+            }
+        },
     ]
 }

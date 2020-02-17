@@ -114,7 +114,7 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
     config.override(Setting.PORT, ui_port)
     config.override(Setting.INGRESS_PORT, ingress_port)
 
-    # TODO: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
+    # PROBLEM: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
     # taking waaaaaaaay too long.  Remove this line and the @pytest.mark.flaky annotations once the problem is identified.
     config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 5)
 

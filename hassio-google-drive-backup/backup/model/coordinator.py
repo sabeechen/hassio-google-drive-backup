@@ -177,7 +177,6 @@ class Coordinator(Trigger):
         await self._withSoftLock(lambda: self._uploadSnapshot(slug))
 
     async def _uploadSnapshot(self, slug):
-        # TODO: prevent double snapshot upload with its own exception
         snapshot = self._ensureSnapshot(self._model.dest.name(), slug)
         snapshot_dest = snapshot.getSource(self._model.dest.name())
         snapshot_source = snapshot.getSource(self._model.source.name())

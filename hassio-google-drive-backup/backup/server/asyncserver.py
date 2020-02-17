@@ -489,7 +489,6 @@ class AsyncServer(Trigger, Startable):
         self._starts += 1
 
     def _addRoutes(self, app):
-        # TODO: Separate these groups fo test paths into separate files
         app.add_routes(
             [web.static('/static', abspath(join(__file__, "..", "..", "..", "static")), append_version=True)])
         app.add_routes([web.get('/', self.index)])

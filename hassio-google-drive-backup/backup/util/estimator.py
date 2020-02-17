@@ -13,7 +13,6 @@ logger = getLogger(__name__)
 SIZE_SI = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 
 
-# TODO: Add tests for this class
 @singleton
 class Estimator():
     @inject

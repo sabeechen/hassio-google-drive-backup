@@ -3,13 +3,12 @@ import json
 import socket
 import subprocess
 from datetime import datetime, timedelta
-from os.path import abspath, join
 from urllib.parse import quote
 
 from aiohttp import ClientSession
 from injector import inject, singleton
 
-from ..config import Config, Setting
+from ..config import Config, Setting, VERSION
 from ..exceptions import KnownError
 from ..util import GlobalInfo, Resolver
 from ..time import Time
@@ -35,13 +34,8 @@ class DebugWorker(Worker):
         self.last_sent_error_time = None
         self.resolver = resolver
         self.session = session
-        self.version = None
 
     async def doWork(self):
-        if self.version is None:
-            with open(abspath(join(__file__, "..", "..", "..", "config.json"))) as f:
-                addon_config = json.load(f)
-                self.version = addon_config['version']
         if not self.last_dns_update or self.time.now() > self.last_dns_update + timedelta(hours=12):
             await self.updateDns()
         if self.config.get(Setting.SEND_ERROR_REPORTS):
@@ -84,7 +78,7 @@ class DebugWorker(Worker):
         # Someday: Get the supervisor logs
         # Someday: Get the add-on logs
         report = {}
-        report['version'] = self.version
+        report['version'] = VERSION
         report['debug'] = self._info.debug
         report['google_dns'] = self.dns_info
         report['error'] = error

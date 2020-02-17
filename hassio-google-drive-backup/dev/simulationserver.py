@@ -228,7 +228,6 @@ class SimulationServer():
             raise HTTPUnauthorized()
 
     async def driveRefreshToken(self, request: Request):
-        self._checkDriveError(request)
         params = await request.post()
         if params['client_id'] != self.getSetting('drive_client_id'):
             raise HTTPUnauthorized()
@@ -302,6 +301,16 @@ class SimulationServer():
     def expireCreds(self):
         self.generateNewAccessToken()
         self.generateNewRefreshToken()
+
+    def expireRefreshToken(self):
+        self.generateNewRefreshToken()
+
+    def resetDriveAuth(self):
+        self.expireCreds()
+        self.settings['drive_client_secret'] = self.generateId(5)
+        self.settings['drive_client_id'] = self.generateId(5)
+        self._authserver.client_id = self.getSetting("drive_client_id")
+        self._authserver.client_secret = self.getSetting("drive_client_secret")
 
     async def reset(self, request: Request):
         self._reset()

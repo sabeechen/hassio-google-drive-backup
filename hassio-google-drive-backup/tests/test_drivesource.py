@@ -4,7 +4,7 @@ from time import sleep
 
 import pytest
 from aiohttp.client_exceptions import ClientResponseError
-
+from datetime import timedelta
 from backup.config import Config, Setting
 from dev.simulationserver import SimulationServer
 from backup.drive import DriveSource
@@ -16,7 +16,7 @@ from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingErro
                                DriveQuotaExceeded, ExistingBackupFolderError,
                                GoogleCantConnect, GoogleCredentialsExpired,
                                GoogleDnsFailure, GoogleInternalError,
-                               GoogleSessionError, GoogleTimeoutError)
+                               GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError)
 from backup.util import GlobalInfo
 from backup.model import DriveSnapshot, DummySnapshot
 from .faketime import FakeTime
@@ -277,7 +277,7 @@ async def test_google_internal_error(drive, server, time: FakeTime):
     with pytest.raises(GoogleInternalError):
         await drive.get()
     assert time.sleeps == RETRY_EXHAUSTION_SLEEPS
-    time.sleeps = []
+    time.clearSleeps()
 
     server.update({"drive_all_error": 503})
     with pytest.raises(GoogleInternalError):
@@ -598,6 +598,104 @@ async def test_existing_resolved_create_new(time, drive: DriveSource, config: Co
     await drive.get()
     drive.checkBeforeChanges()
     assert await drive.getFolderId() != folder_id
+
+
+@pytest.mark.asyncio
+async def test_cred_refresh_with_secret(drive: DriveSource, server: SimulationServer, time: FakeTime, config: Config):
+    server.resetDriveAuth()
+    with open(config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
+        json.dump({
+            'client_secret': server.getSetting("drive_client_secret"),
+            'client_id': server.getSetting("drive_client_id"),
+            "access_token": server.getSetting("drive_auth_token"),
+            "refresh_token": server.getSetting("drive_refresh_token"),
+            "token_expiry": time.asRfc3339String(time.now() + timedelta(hours=1))
+        }, f)
+    drive.drivebackend.tryLoadCredentials()
+    await drive.get()
+    old_creds = drive.drivebackend.cred_bearer
+
+    # valid creds shoudl be reused
+    await drive.get()
+    assert old_creds == drive.drivebackend.cred_bearer
+
+    # then refreshed when they expire
+    time.advanceDay()
+    await drive.get()
+    assert old_creds != drive.drivebackend.cred_bearer
+    with open(config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
+        assert "client_secret" in json.load(f)
+
+
+@pytest.mark.asyncio
+async def test_cred_refresh_no_secret(drive: DriveSource, server: SimulationServer, time: FakeTime, config: Config):
+    drive.saveCreds({
+        'client_id': server.getSetting("drive_client_id"),
+        "access_token": server.getSetting("drive_auth_token"),
+        "refresh_token": server.getSetting("drive_refresh_token"),
+        "token_expiry": "2020-01-01T00:00:00"
+    })
+    await drive.get()
+    old_creds = drive.drivebackend.cred_bearer
+    await drive.get()
+    assert old_creds == drive.drivebackend.cred_bearer
+    time.advanceDay()
+    await drive.get()
+    assert old_creds != drive.drivebackend.cred_bearer
+    with open(config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
+        assert "client_secret" not in json.load(f)
+
+
+@pytest.mark.asyncio
+async def test_cred_refresh_upgrade_default_client(drive: DriveSource, server: SimulationServer, time: FakeTime, config: Config):
+    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, server.getSetting("drive_client_id"))
+    with open(config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
+        json.dump({
+            'client_secret': server.getSetting("drive_client_secret"),
+            'client_id': server.getSetting("drive_client_id"),
+            "access_token": server.getSetting("drive_auth_token"),
+            "refresh_token": server.getSetting("drive_refresh_token"),
+            "token_expiry": "2020-01-01T00:00:00"
+        }, f)
+
+    # reload the creds
+    drive.drivebackend.tryLoadCredentials()
+
+    # Verify the "client secret" was remove
+    with open(config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
+        saved_creds = json.load(f)
+        assert saved_creds == {
+            'access_token': server.getSetting("drive_auth_token"),
+            'refresh_token': server.getSetting("drive_refresh_token"),
+            'client_id': server.getSetting("drive_client_id"),
+            'token_expiry': "2020-01-01T00:00:00"
+        }
+
+    await drive.get()
+    old_creds = drive.drivebackend.cred_bearer
+    await drive.get()
+    assert old_creds == drive.drivebackend.cred_bearer
+    time.advanceDay()
+    await drive.get()
+    assert old_creds != drive.drivebackend.cred_bearer
+
+
+@pytest.mark.asyncio
+async def test_cant_reach_refresh_server(drive: DriveSource, server: SimulationServer, config: Config, time):
+    config.override(Setting.DRIVE_REFRESH_URL, "http://lkasdpoiwehjhcty.com")
+    time.advanceDay()
+    with pytest.raises(CredRefreshMyError) as error:
+        await drive.get()
+    assert error.value.data() == {"reason": "Unable to connect to https://backup.beechens.com"}
+
+
+@pytest.mark.asyncio
+async def test_refresh_problem_with_google(drive: DriveSource, server: SimulationServer, config: Config, time):
+    time.advanceDay()
+    server.setError(".*/oauth2/v4/token.*", status=510)
+    with pytest.raises(CredRefreshGoogleError) as error:
+        await drive.get()
+    assert error.value.data() == {"from_google": "Google returned HTTP 510"}
 
 
 class SnapshotHelper():

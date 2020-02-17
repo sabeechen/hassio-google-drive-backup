@@ -4,7 +4,7 @@ import json
 from os.path import abspath, join
 from aiohttp.web import Application, json_response, Request, TCPSite, AppRunner, post, Response, static, FileResponse, get
 from aiohttp.client import ClientSession
-from aiohttp.client_exceptions import ClientResponseError
+from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError, ServerConnectionError, ServerDisconnectedError, ServerTimeoutError
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPSeeOther
 from yarl import URL
 
@@ -85,13 +85,15 @@ class Server():
         return Response()
 
     async def refresh(self, request: Request):
-        data = 'client_id={0}&client_secret={1}&refresh_token={2}&grant_type=refresh_token'.format(
-            request.query.get("client_id"),
-            self.client_secret,
-            request.query.get("refresh_token"))
+        data = {
+            'client_id': request.query.get("client_id"),
+            'client_secret': self.client_secret,
+            'refresh_token': request.query.get("refresh_token"),
+            'grant_type': 'refresh_token'
+        }
         try:
-            with self.session.post(self.url_refresh, data=data) as resp:
-                resp.raise_for_errors()
+            async with self.session.post(self.url_refresh, data=data) as resp:
+                resp.raise_for_status()
                 reply = await resp.json()
                 return json_response({
                     "expires_in": reply["expires_in"],
@@ -101,12 +103,30 @@ class Server():
             if e.status == 401:
                 return json_response({
                     "error": "expired"
-                })
+                }, status=401)
             else:
+                # TODO: Make a special user visible error for this
                 return json_response({
-                    "error": e.status
-                }, status=500)
+                    "error": "Google returned HTTP {}".format(e.status)
+                }, status=503)
+        except ClientConnectorError:
+            return json_response({
+                    "error": "Couldn't connect to Google's servers"
+                }, status=503)
+        except ServerConnectionError:
+            return json_response({
+                    "error": "Couldn't connect to Google's servers"
+                }, status=503)
+        except ServerDisconnectedError:
+            return json_response({
+                    "error": "Couldn't connect to Google's servers"
+                }, status=503)
+        except ServerTimeoutError:
+            return json_response({
+                    "error": "Google's servers timed out"
+                }, status=503)
         except Exception as e:
+            # TODO: log this
             return json_response({
                 "error": str(e)
             }, status=500)
@@ -126,7 +146,7 @@ class Server():
             get("/drive/picker", self.picker),
             get("/", self.index),
             get("/drive/authorize", self.authorize),
-            post("/drive/refresh", self.error),
+            post("/drive/refresh", self.refresh),
             post("/logerror", self.error)
         ])
         return app

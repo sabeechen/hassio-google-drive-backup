@@ -321,3 +321,35 @@ class UserCancelledError(KnownError):
 
     def retrySoon(self):
         return False
+
+
+class CredRefreshGoogleError(KnownError):
+    def __init__(self, from_google):
+        self.from_google = from_google
+
+    def message(self):
+        return "Coulnd't refresh your credentials with Google because: '{}'".format(self.from_google)
+
+    def code(self):
+        return "token_refresh_google_error"
+
+    def data(self):
+        return {
+            "from_google": self.from_google
+        }
+
+
+class CredRefreshMyError(KnownError):
+    def __init__(self, reason):
+        self.reason = reason
+
+    def message(self):
+        return "Cloudn't refresh Google Drive credentials because: {}".format(self.reason)
+
+    def code(self):
+        return "token_refresh_my_error"
+
+    def data(self):
+        return {
+            "reason": self.reason
+        }

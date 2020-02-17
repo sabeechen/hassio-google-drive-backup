@@ -93,7 +93,7 @@ class SimulationServer():
     def unBlockSnapshots(self):
         self.block_snapshots = False
 
-    def setError(self, url_regx, attempts, status):
+    def setError(self, url_regx, attempts=0, status=500):
         self.match_errors.append({
             'url': url_regx,
             'attempts': attempts,
@@ -537,7 +537,7 @@ class SimulationServer():
             return json_response({"id": self.upload_info['id']})
         else:
             # Return an incomplete response
-            # TODO: For some reason, the tests like to stop right here
+            # For some reason, the tests like to stop right here
             resp = Response(status=308)
             self.upload_info['next_start'] = end + 1
             resp.headers['Range'] = "bytes=0-{0}".format(end)
@@ -767,6 +767,13 @@ class SimulationServer():
     @middleware
     async def error_middleware(self, request: Request, handler):
         self.urls.append(str(request.url))
+        for error in self.match_errors:
+            if re.match(error['url'], str(request.url)):
+                if error['attempts'] <= 0:
+                    await self.readAll(request)
+                    return Response(status=error['status'])
+                else:
+                    error['attempts'] = error['attempts'] - 1
         try:
             resp = await handler(request)
             return resp

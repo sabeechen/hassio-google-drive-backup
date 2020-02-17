@@ -359,6 +359,8 @@ class SimulationServer():
         with self._settings_lock:
             for key in data:
                 self.settings[key] = data[key]
+            for key in request.query:
+                self.settings[key] = request.query[key]
         return Response(text="updated")
 
     async def driveGetItem(self, request: Request):
@@ -599,8 +601,12 @@ class SimulationServer():
     async def hassioNewFullSnapshot(self, request: Request):
         if (self.block_snapshots or self.snapshot_in_progress) and not self.getSetting('always_hard_lock'):
             raise HTTPBadRequest()
-
-        input_json = await request.json()
+        
+        input_json = {}
+        try:
+            input_json = await request.json()
+        except:
+            pass
         try:
             await self._snapshot_lock.acquire()
             self.snapshot_in_progress = True
@@ -615,7 +621,7 @@ class SimulationServer():
             size = int(random.uniform(float(self.getSetting('snapshot_min_size')), float(
                 self.getSetting('snapshot_max_size'))))
             slug = self.generateId(8)
-            name = input_json['name']
+            name = input_json.get('name', "Default name")
             password = input_json.get('password', None)
             if seconds > 0:
                 await asyncio.sleep(seconds)
@@ -793,6 +799,11 @@ class SimulationServer():
         self._authserver.buildApp(app)
         return app
 
+    def toggleBlockSnapshot(self, request: Request):
+        self.snapshot_in_progress = not self.snapshot_in_progress
+        resp = "Blocking" if self.snapshot_in_progress else "Not Blocking"
+        return Response(text=resp)
+
     def routes(self):
         return [
             post('/addons/self/options', self.hassioUpdateOptions),
@@ -809,8 +820,10 @@ class SimulationServer():
             post('/snapshots/{slug}/remove', self.hassioDelete),
             post('/snapshots/new/upload', self.uploadNewSnapshot),
             get('/snapshots/new/upload', self.uploadNewSnapshot),
+            get('/debug/toggleblock', self.toggleBlockSnapshot),
             post('/snapshots/new/partial', self.hassioNewPartialSnapshot),
             post('/snapshots/new/full', self.hassioNewFullSnapshot),
+            get('/snapshots/new/full', self.hassioNewFullSnapshot),
             get('/homeassistant/info', self.haInfo),
             get('/supervisor/info', self.hassioSupervisorInfo),
             get('/snapshots', self.hassioSnapshots),

@@ -17,6 +17,7 @@ class Scyncer(Worker):
         super().__init__("Sync Worker", self.checkforSync, time, 0.5)
         self.coord = coord
         self.triggers: List[Trigger] = triggers
+        self._time = time
 
     async def checkforSync(self):
         doSync = False
@@ -25,4 +26,6 @@ class Scyncer(Worker):
                 logger.debug("Sync requested by " + str(trigger.name()))
                 doSync = True
         if doSync:
+            while self.coord.isSyncing():
+                await self._time.sleepAsync(3)
             await self.coord.sync()

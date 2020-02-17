@@ -731,7 +731,6 @@ function doNewSnapshot() {
 
 function allowDeletion(always) {
   var url = "confirmdelete?always=" + always;
-  // # TODO: Verify this works correctly
   postJson(url, {}, refreshstats, null, "Allowing deletion and syncing...");
 }
 
@@ -740,7 +739,6 @@ function chooseSnapshotFolder() {
 }
 
 function skipLowSpaceWarning() {
-  // TODO: does this work?
   postJsonCloseErrorDialog("skipspacecheck", "low_space");
 }
 

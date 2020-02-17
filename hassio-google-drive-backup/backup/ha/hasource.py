@@ -355,7 +355,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             logger.info("Snapshot finished")
         except Exception as e:
             if self._isHttp400(e):
-                logger.warn("A snapshot was already in progress")
+                logger.warning("A snapshot was already in progress")
                 pending.setPendingUnknown()
             else:
                 logger.error("Snapshot failed:")

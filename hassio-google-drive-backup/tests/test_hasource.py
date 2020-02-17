@@ -10,6 +10,7 @@ from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
 from backup.util import GlobalInfo
 from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password
 from backup.model import DummySnapshot
+from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
 from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
 
@@ -118,42 +119,29 @@ async def test_pending_snapshot_nowait(ha: HaSource, time, server):
 
 
 @pytest.mark.asyncio
-async def test_pending_snapshot_already_in_progress(ha, time, server):
-    return
-    server._options.update({"new_snapshot_timeout_seconds": 100})
-    with server.blockSnapshots():
-        with pytest.raises(SnapshotInProgress):
-            await ha.create(CreateOptions(time.now(), "Test Name"))
-        snapshots = list((await ha.get()).values())
-        assert len(snapshots) == 1
-        snapshot = snapshots[0]
+async def test_pending_snapshot_already_in_progress(ha, time, server: SimulationServer):
+    await ha.create(CreateOptions(time.now(), "Test Name"))
+    assert len(await ha.get()) == 1
 
-    if False:
-        # Verify we logged events to start/end the snapshot
-        assert server.getEvents() == [
-            (EVENT_SNAPSHOT_START, {
-                'snapshot_name': 'Test Name',
-                'snapshot_time': str(snapshot.date())}),
-            (EVENT_SNAPSHOT_END, {
-                'completed': False,
-                'snapshot_name': "Test Name",
-                'snapshot_time': str(snapshot.date())})]
+    server._options.update({"new_snapshot_timeout_seconds": 100})
+    server.blockSnapshots()
+    with pytest.raises(SnapshotInProgress):
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+    snapshots = list((await ha.get()).values())
+    assert len(snapshots) == 2
+    snapshot = snapshots[1]
 
     assert isinstance(snapshot, PendingSnapshot)
     assert snapshot.name() == "Pending Snapshot"
     assert snapshot.slug() == "pending"
     assert not snapshot.uploadable()
-    assert snapshot.snapshotType() == "Unknown"
+    assert snapshot.snapshotType() == "unknown"
     assert snapshot.source() == SOURCE_HA
     assert snapshot.date() == time.now()
     assert not snapshot.protected()
 
     with pytest.raises(SnapshotInProgress):
         await ha.create(CreateOptions(time.now(), "Test Name"))
-
-    # Shouldn't see another start/fail because the addon already knows
-    # there is a pending snapshot.
-    # assert len(server.getEvents()) == 2
 
 
 @pytest.mark.asyncio

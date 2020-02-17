@@ -233,6 +233,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         for slug in retained:
             if not self.config.isRetained(slug):
                 self.config.setRetained(slug, False)
+        self.last_slugs = slugs
         return snapshots
 
     async def delete(self, snapshot: Snapshot):

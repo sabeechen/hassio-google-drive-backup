@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import tempfile
+import asyncio
+import platform
 
 import aiohttp
 import pytest
@@ -34,11 +36,13 @@ class FsFaker():
         self.old_method = None
 
     def start(self):
-        self.old_method = os.statvfs
-        os.statvfs = self._hijack
+        if platform.system() != "Windows":
+            self.old_method = os.statvfs
+            os.statvfs = self._hijack
 
     def stop(self):
-        os.statvfs = self.old_method
+        if platform.system() != "Windows":
+            os.statvfs = self.old_method
 
     def _hijack(self, path):
         return os.statvfs_result((0, 1, int(self.bytes_total), int(self.bytes_free), 0, 0, 0, 0, 0, 255))
@@ -67,6 +71,13 @@ class TestModule(Module):
     @singleton
     def getTime(self) -> Time:
         return FakeTime()
+
+
+@pytest.yield_fixture()
+def event_loop():
+    if platform.system() == "Windows":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    return asyncio.new_event_loop()
 
 
 @pytest.fixture

@@ -25,7 +25,6 @@ class Resolver(AsyncResolver):
 
     async def resolve(self, host: str, port: int = 0,
                       family: int = socket.AF_INET) -> List[Dict[str, Any]]:
-        # TODO: add readme for "How do I know this won't do anything sketchy" along the lines of Tron's FAQ.  Caveat Emptor, explain the environment (docker, images, etc) for peace of mind.
         if host == self.config.get(Setting.DRIVE_HOST_NAME) and len(self.config.get(Setting.DRIVE_IPV4)) > 0 and family == 0:
             # return the "mocked" drive address instead.
             return [{

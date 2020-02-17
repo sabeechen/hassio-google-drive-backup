@@ -1,4 +1,5 @@
 import os
+import platform
 
 from injector import inject, singleton
 
@@ -25,6 +26,9 @@ class Estimator():
         self._global_info = global_info
 
     def refresh(self):
+        if platform.system() == "Windows":
+            # Unsupported on windows
+            return self
         # This roughly matches the results you get by running "df",
         # except its a bit more conservative, which isn't necessarily
         # correct, but we're aiming for ballpark numbers here so it
@@ -39,6 +43,9 @@ class Estimator():
         return self
 
     def checkSpace(self, snapshots):
+        if platform.system() == "Windows":
+            # Unsupported on windows
+            return
         if not self.config.get(Setting.WARN_FOR_LOW_SPACE):
             # Don't check, just go
             return

@@ -11,8 +11,19 @@
         {
             "label": "Install addon libraries",
             "type": "process",
-            "command": "python3.8",
+            "command": "${config:python.pythonPath}",
             "args": ["-m", "pip", "install", "-e", "hassio-google-drive-backup/"],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Install development dependencies",
+            "type": "process",
+            "command": "${config:python.pythonPath}",
+            "args": ["-m", "pip", "install", "-r", "hassio-google-drive-backup/dev/requirements-dev.txt"],
             "problemMatcher": [],
             "group": {
                 "kind": "build",
@@ -22,7 +33,7 @@
         {
             "label": "[Re]create and run local addon",
             "type": "process",
-            "command": "python3.8",
+            "command": "${config:python.pythonPath}",
             "args": ["-m", "hassio-google-drive-backup.dev.deploy_local_addon"],
             "problemMatcher": [],
             "group": {

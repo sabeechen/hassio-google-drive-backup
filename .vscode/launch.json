@@ -9,7 +9,7 @@
             "name": "Run Addon (Dev Backends)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.8",
+            "pythonPath": "${config:python.pythonPath}",
             "module": "hassio-google-drive-backup.backup",
             "args": ["dev"]
         },
@@ -17,7 +17,7 @@
             "name": "Run Addon (Real Google Drive)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.8",
+            "pythonPath": "${config:python.pythonPath}",
             "module": "hassio-google-drive-backup.backup",
             "args": ["drive"]
         },
@@ -25,7 +25,7 @@
             "name": "Run Mock Backend Server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.8",
+            "pythonPath": "${config:python.pythonPath}",
             "module": "hassio-google-drive-backup.dev.simulationserver",
         },
         {
@@ -52,7 +52,7 @@
             "name": "Run Auth Server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/usr/bin/python3.8",
+            "pythonPath": "${config:python.pythonPath}",
             "module": "hassio-google-drive-backup.server",
             "env": {
                 "PORT": "12345",

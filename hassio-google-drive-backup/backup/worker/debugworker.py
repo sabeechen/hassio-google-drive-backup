@@ -75,7 +75,6 @@ class DebugWorker(Worker):
         self.last_dns_update = self.time.now()
         try:
             # Resolve google's addresses
-            # TODO: maybe this should use the "default" resolver rather than the custom one?.
             self.dns_info = await self.getPingInfo()
             self._info.setDnsInfo(self.dns_info)
         except Exception as e:

@@ -6,10 +6,12 @@ from backup.config import Config, Setting
 from backup.worker import DebugWorker
 from backup.util import GlobalInfo
 from backup.logger import getLogger
+from .helpers import skipForWindows
 
 
 @pytest.mark.asyncio
 async def test_dns_info(debug_worker: DebugWorker, config: Config):
+    skipForWindows()
     config.override(Setting.SEND_ERROR_REPORTS, True)
     config.override(Setting.DRIVE_HOST_NAME, "localhost")
     await debug_worker.doWork()
@@ -23,6 +25,7 @@ async def test_dns_info(debug_worker: DebugWorker, config: Config):
 
 @pytest.mark.asyncio
 async def test_bad_host(debug_worker: DebugWorker, config: Config):
+    skipForWindows()
     config.override(Setting.DRIVE_HOST_NAME, "dasdfdfgvxcvvsoejbr.com")
     await debug_worker.doWork()
     assert debug_worker.dns_info == {

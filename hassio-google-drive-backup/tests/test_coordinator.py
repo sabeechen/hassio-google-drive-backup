@@ -10,7 +10,7 @@ from backup.util import GlobalInfo
 from backup.model import Coordinator, Model, Snapshot
 from .conftest import FsFaker
 from .faketime import FakeTime
-from .helpers import HelperTestSource
+from .helpers import HelperTestSource, skipForWindows
 
 
 @pytest.fixture
@@ -314,6 +314,7 @@ def test_save_creds(coord: Coordinator, source, dest):
 
 @pytest.mark.asyncio
 async def test_check_size_new_snapshot(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker):
+    skipForWindows()
     fs.setFreeBytes(0)
     with(raises(LowSpaceError)):
         await coord.startSnapshot(CreateOptions(time.now(), "Test Name"))
@@ -321,6 +322,7 @@ async def test_check_size_new_snapshot(coord: Coordinator, source: HelperTestSou
 
 @pytest.mark.asyncio
 async def test_check_size_sync(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker, global_info: GlobalInfo):
+    skipForWindows()
     fs.setFreeBytes(0)
     await coord.sync()
     assert len(coord.snapshots()) == 0

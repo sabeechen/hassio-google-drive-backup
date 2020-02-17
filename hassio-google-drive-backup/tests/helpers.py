@@ -1,5 +1,7 @@
 import json
 import tarfile
+import pytest
+import platform
 from datetime import datetime
 from io import BytesIO
 
@@ -38,6 +40,11 @@ all_addons = [
         "size": 0.0
     }
 ]
+
+
+def skipForWindows():
+    if platform.system() == "Windows":
+        pytest.skip("This test can't be run in windows environments")
 
 
 def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:

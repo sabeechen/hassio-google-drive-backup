@@ -36,3 +36,11 @@ class FakeTime(Time):
     async def sleepAsync(self, seconds: float):
         self.sleeps.append(seconds)
         self._now = self._now + timedelta(seconds=seconds)
+
+    def clearSleeps(self):
+        self.sleeps = []
+
+    def asRfc3339String(self, time: datetime) -> str:
+        if time is None:
+            time = self.now()
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ")

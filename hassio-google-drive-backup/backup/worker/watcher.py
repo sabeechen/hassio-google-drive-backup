@@ -15,7 +15,7 @@ logger = getLogger(__name__)
 
 REPORT_DELAY_SECONDS = 5
 
-
+# TODO: Remove the extra logging here once Hass.io's behavior is sorted out
 @singleton
 class Watcher(Trigger, FileSystemEventHandler, Startable):
     @inject
@@ -47,17 +47,32 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
         """
         Backup directory was changed in some way
         """
+        logger.debug("Backup directory changed")
         try:
             self.lock.acquire()
             self.last_change = self.time.now()
             self.report = True
 
             if self.report_debug:
-                logger.info(
+                logger.debug(
                     "Backup directory was written to, we'll reload snapshots from Hassio soon")
                 self.report_debug = False
         finally:
             self.lock.release()
+    
+    def on_moved(self, event):
+        logger.debug("Backup directory moved event")
+
+    def on_created(self, event):
+        logger.debug("Backup directory created event")
+
+    def on_deleted(self, event):
+        # Always trigger on delete, most likely a snapshot was deleted
+        self.trigger()
+        logger.debug("Backup directory deleted event")
+
+    def on_modified(self, event):
+        logger.debug("Backup directory modified event")
 
     def haveFilesChanged(self) -> bool:
         try:

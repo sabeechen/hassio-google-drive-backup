@@ -59,7 +59,7 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
                 self.report_debug = False
         finally:
             self.lock.release()
-    
+
     def on_moved(self, event):
         logger.debug("Backup directory moved event")
 

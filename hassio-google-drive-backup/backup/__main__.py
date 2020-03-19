@@ -26,17 +26,20 @@ async def main(config):
 
 if __name__ == '__main__':
     if os.environ.get("DEBUGGER") == "true":
+        # This is can be used to debug the addon when installaed as a local addon.
         logger.info("Starting debugger on port 3000")
         ptvsd.enable_attach(('0.0.0.0', 3000))
 
     config = Config()
 
     if len(argv) > 1:
+        # Needed to load a different config for dev environments.
         config.loadOverrides(abspath(join(__file__, "../../dev/data", argv[1] + "_options.json")))
     else:
         config.loadDefaults()
 
     if platform.system() == "Windows":
+        # Needed for dev on windows machines
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(main(config))
     else:

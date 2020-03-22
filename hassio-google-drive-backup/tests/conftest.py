@@ -10,7 +10,6 @@ import pytest
 from aiohttp import ClientSession
 from injector import (ClassAssistedBuilder, Injector, Module, inject, provider,
                       singleton)
-from oauth2client.client import OAuth2Credentials
 
 from backup.config import Config, Setting
 from backup.model import Coordinator
@@ -23,6 +22,7 @@ from backup.model import Model
 from backup.time import Time
 from backup.module import BaseModule
 from backup.worker import DebugWorker
+from backup.creds import Creds
 from .faketime import FakeTime
 from .helpers import Uploader
 
@@ -64,8 +64,8 @@ class TestModule(Module):
 
     @provider
     @singleton
-    def getDriveCreds(self) -> OAuth2Credentials:
-        return OAuth2Credentials("", "test_client_id", "test_client_secret", refresh_token="test_Refresh_token", token_expiry="", token_uri="", user_agent="")
+    def getDriveCreds(self, time: Time) -> Creds:
+        return Creds(time, "test_client_id", time.now(), "test_access_token", "test_refresh_token", "test_client_secret")
 
     @provider
     @singleton
@@ -82,12 +82,12 @@ def event_loop():
 
 @pytest.fixture
 async def injector(cleandir, server_url, ui_port, ingress_port):
-    drive_creds = OAuth2Credentials("", "test_client_id", "test_client_secret", refresh_token="test_Refresh_token", token_expiry="", token_uri="", user_agent="")
+    drive_creds = Creds(time, "test_client_id", None, "test_access_token", "test_refresh_token", "test_client_secret")
     with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
         f.write("for_unit_tests: \"password value\"\n")
 
     with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
-        f.write(drive_creds.to_json())
+        f.write(json.dumps(drive_creds.serialize()))
 
     with open(os.path.join(cleandir, "options.json"), "w") as f:
         json.dump({}, f)
@@ -100,6 +100,8 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
     config.override(Setting.AUTHENTICATE_URL,
                     server_url + "/drive/authorize")
     config.override(Setting.DRIVE_REFRESH_URL,
+                    server_url + "/oauth2/v4/token")
+    config.override(Setting.REFRESH_URL,
                     server_url + "/drive/refresh")
     config.override(Setting.ERROR_REPORT_URL,
                     server_url + "/errorreport")
@@ -128,13 +130,13 @@ async def uploader(injector: Injector, server_url):
 
 
 @pytest.fixture
-async def server(injector, port, drive_creds, session):
+async def server(injector, port, drive_creds: Creds, session):
     server = injector.get(
         ClassAssistedBuilder[SimulationServer]).build(port=port)
     await server.reset({
         "drive_refresh_token": drive_creds.refresh_token,
-        "drive_client_id": drive_creds.client_id,
-        "drive_client_secret": drive_creds.client_secret,
+        "drive_client_id": drive_creds.id,
+        "drive_client_secret": drive_creds.secret,
         "hassio_header": "test_header"
     })
 
@@ -235,7 +237,7 @@ async def config(injector):
 
 @pytest.fixture
 async def drive_creds(injector):
-    return injector.get(OAuth2Credentials)
+    return injector.get(Creds)
 
 
 @pytest.fixture

@@ -9,9 +9,9 @@ from aiohttp.web_exceptions import HTTPBadRequest, HTTPSeeOther
 from yarl import URL
 
 SCOPE = 'https://www.googleapis.com/auth/drive.file'
-AUTHORIZED_REDIRECT = "https://backup.beechens.com/drive/authorize"
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+DEFAULT_REDIRECT = os.environ.get("AUTHORIZED_REDIRECT", "https://backup.beechens.com/drive/authorize")
 URL_REFRESH = "https://www.googleapis.com/oauth2/v4/token"
 URL_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth"
 URL_TOKEN = "https://oauth2.googleapis.com/token"
@@ -22,7 +22,7 @@ class Server():
     def __init__(self, session: ClientSession, url_refresh=URL_REFRESH,
                  url_authorize=URL_AUTHORIZE, url_token=URL_TOKEN,
                  client_id=CLIENT_ID, client_secret=CLIENT_SECRET,
-                 authorized_redirect=AUTHORIZED_REDIRECT):
+                 authorized_redirect=DEFAULT_REDIRECT):
         self.session = session
         self.url_token = url_token
         self.url_authorize = url_authorize
@@ -111,20 +111,20 @@ class Server():
                 }, status=503)
         except ClientConnectorError:
             return json_response({
-                    "error": "Couldn't connect to Google's servers"
-                }, status=503)
+                "error": "Couldn't connect to Google's servers"
+            }, status=503)
         except ServerConnectionError:
             return json_response({
-                    "error": "Couldn't connect to Google's servers"
-                }, status=503)
+                "error": "Couldn't connect to Google's servers"
+            }, status=503)
         except ServerDisconnectedError:
             return json_response({
-                    "error": "Couldn't connect to Google's servers"
-                }, status=503)
+                "error": "Couldn't connect to Google's servers"
+            }, status=503)
         except ServerTimeoutError:
             return json_response({
-                    "error": "Google's servers timed out"
-                }, status=503)
+                "error": "Google's servers timed out"
+            }, status=503)
         except Exception as e:
             # TODO: log this
             return json_response({

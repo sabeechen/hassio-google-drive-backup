@@ -40,6 +40,10 @@ class KnownError(Exception, ABC):
         return True
 
 
+class KnownTransient(KnownError):
+    pass
+
+
 class SimulatedError(KnownError):
     def __init__(self, code):
         self._code = code
@@ -198,7 +202,7 @@ class GoogleCantConnect(KnownError):
         return ERROR_GOOGLE_CONNECT
 
 
-class GoogleInternalError(KnownError):
+class GoogleInternalError(KnownTransient):
     def message(self):
         return "Google Drive returned an internal error (HTTP: 5XX)"
 
@@ -212,6 +216,14 @@ class GoogleTimeoutError(KnownError):
 
     def code(self):
         return ERROR_GOOGLE_TIMEOUT
+
+
+class GoogleRateLimitError(KnownTransient):
+    def message(self):
+        return "The addon has made too many requests to Google Drive, and will back off"
+
+    def code(self):
+        return "google_rate_limit"
 
 
 class GoogleSessionError(KnownError):

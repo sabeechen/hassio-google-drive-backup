@@ -18,6 +18,7 @@ from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
                           SOURCE_GOOGLE_DRIVE, SOURCE_HA)
+from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource
 from backup.ha import HaSource
@@ -401,7 +402,6 @@ async def test_update_error_reports_false(reader, ui_server, config: Config, ser
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(1000)
 async def test_drive_cred_generation(reader, ui_server, snapshot, server, config: Config, global_info: GlobalInfo, session: ClientSession):
     status = await reader.getjson("getstatus")
     assert len(status["snapshots"]) == 1
@@ -409,7 +409,7 @@ async def test_drive_cred_generation(reader, ui_server, snapshot, server, config
     # Invalidate the drive creds, sync, then verify we see an error
     server.expireCreds()
     status = await reader.getjson("sync")
-    assert status["last_error"]["error_type"] == "creds_bad"
+    assert status["last_error"]["error_type"] == ERROR_CREDS_EXPIRED
 
     # simulate the user going through the Drive authentication workflow
     async with session.get(config.get(Setting.AUTHENTICATE_URL) + "?redirectbacktoken=" + quote(reader.getUrl(True) + "token")) as resp:
@@ -619,9 +619,9 @@ async def test_token(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveS
         "token_expiry": "2022-01-01T00:00:00"
     }
     assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("token?creds=" + quote(json.dumps(creds)))
-    assert drive.drivebackend.cred_bearer == 'new_access_token'
-    assert drive.drivebackend.cred_refresh == 'new_refresh_token'
-    assert drive.drivebackend.cred_secret is None
+    assert drive.drivebackend.creds.access_token == 'new_access_token'
+    assert drive.drivebackend.creds.refresh_token == 'new_refresh_token'
+    assert drive.drivebackend.creds.secret is None
 
 
 @pytest.mark.asyncio
@@ -634,13 +634,13 @@ async def test_token_with_secret(reader: ReaderHelper, coord: Coordinator, ha, d
         "token_expiry": "2022-01-01T00:00:00"
     }
     assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("token?creds=" + quote(json.dumps(creds)))
-    assert drive.drivebackend.cred_bearer == 'new_access_token'
-    assert drive.drivebackend.cred_refresh == 'new_refresh_token'
-    assert drive.drivebackend.cred_secret == 'new_client_secret'
+    assert drive.drivebackend.creds.access_token == 'new_access_token'
+    assert drive.drivebackend.creds.refresh_token == 'new_refresh_token'
+    assert drive.drivebackend.creds.secret == 'new_client_secret'
 
 
 @pytest.mark.asyncio
-async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveSource, restarter):
+async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveSource, restarter, time):
     update = {
         "config": {
             "expose_extra_server": True
@@ -649,8 +649,8 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     await restarter.waitForRestart()
-    creds = OAuth2Credentials("a", "b", "c", "d", "e", "f", "g")
-    resp = await reader.get("token?creds=" + quote(creds.to_json()), ingress=False)
+    creds = Creds(time, "id", time.now(), "token", "refresh")
+    resp = await reader.get("token?creds=" + quote(json.dumps(creds.serialize())), ingress=False)
     assert "window.location.assign(\"/\")" in resp
 
 

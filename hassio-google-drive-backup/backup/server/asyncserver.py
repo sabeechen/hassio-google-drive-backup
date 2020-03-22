@@ -7,41 +7,44 @@ from typing import Any, Dict
 from urllib.parse import quote
 
 import aiofiles
-from aiohttp import BasicAuth, hdrs, web
+from aiohttp import BasicAuth, hdrs, web, ClientSession
 from aiohttp.web import HTTPBadRequest, HTTPException, Request
-from injector import inject, singleton
-from oauth2client.client import OAuth2WebServerFlow
+from injector import ClassAssistedBuilder, inject, singleton
 
-from ..config import Config, Setting, CreateOptions, BoolValidator, Startable
-from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
-from ..model import Coordinator, Snapshot
-from ..exceptions import KnownError, ensureKey
-from ..util import GlobalInfo, Estimator, Color, File
-from ..ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
-from ..ha import Password
-from ..time import Time
-from ..worker import Trigger
+from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable
+from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
+from backup.model import Coordinator, Snapshot
+from backup.exceptions import KnownError, ensureKey
+from backup.util import GlobalInfo, Estimator, Color, File
+from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
+from backup.ha import Password
+from backup.time import Time
+from backup.worker import Trigger
+from backup.logger import getLogger, getHistory
+from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
+
 from .debug import Debug
-from ..logger import getLogger, getHistory
 
 logger = getLogger(__name__)
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
-MANUAL_CODE_REDIRECT_URI: str = "urn:ietf:wg:oauth:2.0:oob"
 
 
 @singleton
 class AsyncServer(Trigger, Startable):
     @inject
-    def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
+    def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests,
+                 time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
+                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger]):
         super().__init__()
 
         # Currently running server tasks
         self.runners = []
+        self.exchanger_builder = exchanger_builder
         self._coord = coord
         self._time = time
-        self.oauth_flow_manual: OAuth2WebServerFlow = None
+        self.manual_exchanger: Exchanger = None
         self.config: Config = config
         self.auth_cache: Dict[str, Any] = {}
         self.last_log_index = 0
@@ -54,6 +57,7 @@ class AsyncServer(Trigger, Startable):
         self._starts = 0
         self._estimator = estimator
         self._debug = debug
+        self.session = session
 
     def name(self):
         return "UI Server"
@@ -108,7 +112,6 @@ class AsyncServer(Trigger, Startable):
         status['enable_drive_upload'] = self.config.get(
             Setting.ENABLE_DRIVE_UPLOAD)
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
-        status['drive_client'] = self._coord._model.dest.drivebackend.cred_id
         status['is_specify_folder'] = self.config.get(
             Setting.SPECIFY_SNAPSHOT_FOLDER)
         return web.json_response(status)
@@ -141,16 +144,12 @@ class AsyncServer(Trigger, Startable):
         if client_id != "" and client_secret != "":
             try:
                 # Redirect to the webpage that takes you to the google auth page.
-                self.oauth_flow_manual = OAuth2WebServerFlow(
+                self.manual_exchanger = self.exchanger_builder.build(
                     client_id=client_id.strip(),
                     client_secret=client_secret.strip(),
-                    scope=SCOPE,
-                    redirect_uri=MANUAL_CODE_REDIRECT_URI,
-                    include_granted_scopes='true',
-                    prompt='consent',
-                    access_type='offline')
+                    redirect_uri=MANUAL_CODE_REDIRECT_URI)
                 return web.json_response({
-                    'auth_url': self.oauth_flow_manual.step1_get_authorize_url()
+                    'auth_url': await self.manual_exchanger.getAuthorizationUrl()
                 })
             except Exception as e:
                 return web.json_response({
@@ -158,8 +157,7 @@ class AsyncServer(Trigger, Startable):
                 })
         elif code != "":
             try:
-                self._coord.saveCreds(
-                    self.oauth_flow_manual.step2_exchange(code))
+                self._coord.saveCreds(await self.manual_exchanger.exchange(code))
                 self._global_info.setIngoreErrorsForNow(True)
                 # TODO: this redirects back to the reauth page if user already has drive creds!
                 return web.json_response({'auth_url': "index"})
@@ -281,7 +279,7 @@ class AsyncServer(Trigger, Startable):
     async def token(self, request: Request) -> None:
         if 'creds' in request.query:
             self._global_info.setIngoreErrorsForNow(True)
-            self._coord.saveCreds(json.loads(request.query['creds']))
+            self._coord.saveCreds(Creds.load(self._time, json.loads(request.query['creds'])))
         try:
             if request.url.port == self.config.get(Setting.INGRESS_PORT):
                 return await self.redirect(self._ha_source.getAddonUrl())

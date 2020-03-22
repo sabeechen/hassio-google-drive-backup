@@ -14,6 +14,7 @@ from ..time import Time
 from ..worker import Trigger
 from .model import Model
 from ..logger import getLogger
+from ..creds.creds import Creds
 
 logger = getLogger(__name__)
 
@@ -41,7 +42,7 @@ class Coordinator(Trigger):
         self._sync_wait.set()
         self.trigger()
 
-    def saveCreds(self, creds):
+    def saveCreds(self, creds: Creds):
         self._model.dest.saveCreds(creds)
         self._global_info.credsSaved()
 

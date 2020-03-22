@@ -85,10 +85,13 @@ class Setting(Enum):
     HOME_ASSISTANT_URL = "home_assistant_url"
     HASSIO_TOKEN = "hassio_header"
     AUTHENTICATE_URL = "authenticate_url"
+    REFRESH_URL = "refresh_url"
     CHOOSE_FOLDER_URL = "choose_folder_url"
     ERROR_REPORT_URL = "error_report_url"
     DRIVE_HOST_NAME = "drive_host_name"
     DRIVE_REFRESH_URL = "drive_refresh_url"
+    DRIVE_AUTHORIZE_URL = "drive_authorize_url"
+    DRIVE_TOKEN_URL = "drive_token_url"
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
@@ -169,8 +172,11 @@ _DEFAULTS = {
     Setting.HASSIO_TOKEN: "",
     Setting.HOME_ASSISTANT_URL: "http://hassio/homeassistant/api/",
     Setting.DRIVE_URL: "https://www.googleapis.com",
-    Setting.DRIVE_REFRESH_URL: "https://backup.beechens.com/drive/refresh",
+    Setting.REFRESH_URL: "https://backup.beechens.com/drive/refresh",
     Setting.AUTHENTICATE_URL: "https://backup.beechens.com/drive/authorize",
+    Setting.DRIVE_REFRESH_URL: "https://www.googleapis.com/oauth2/v4/token",
+    Setting.DRIVE_AUTHORIZE_URL: "https://accounts.google.com/o/oauth2/v2/auth",
+    Setting.DRIVE_TOKEN_URL: "https://oauth2.googleapis.com/token",
     Setting.CHOOSE_FOLDER_URL: "https://backup.beechens.com/drive/picker",
     Setting.ERROR_REPORT_URL: "https://backup.beechens.com/logerror",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",

@@ -3,28 +3,22 @@ import json
 import math
 import os
 import re
-from datetime import timedelta
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
 from aiohttp import ClientSession
-from aiohttp.client import ClientTimeout
-from aiohttp.client_exceptions import (ClientConnectorError,
-                                       ClientResponseError, ContentTypeError,
-                                       ServerTimeoutError)
-from dns.exception import DNSException
+from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
-from yarl import URL
 
-from ..util import AsyncHttpGetter, Resolver
-from ..config import Config, Setting, VERSION
-from ..exceptions import (DriveQuotaExceeded, GoogleCantConnect,
-                          GoogleCredentialsExpired, GoogleDnsFailure,
-                          GoogleDrivePermissionDenied, GoogleInternalError,
-                          GoogleSessionError, GoogleTimeoutError, LogicError,
-                          ProtocolError, ensureKey, CredRefreshGoogleError, CredRefreshMyError)
+from ..util import AsyncHttpGetter
+from ..config import Config, Setting
+from ..exceptions import (GoogleCredentialsExpired,
+                          GoogleSessionError, LogicError,
+                          ProtocolError, ensureKey, KnownTransient)
+from backup.util import Backoff
 from ..time import Time
 from ..logger import getLogger
+from backup.creds import Creds, Exchanger, DriveRequester
 
 logger = getLogger(__name__)
 
@@ -72,32 +66,28 @@ DRIVE_EXPONENTIAL_BACKOFF: int = 2
 @singleton
 class DriveRequests():
     @inject
-    def __init__(self, config: Config, time: Time, resolver: Resolver, session: ClientSession):
+    def __init__(self, config: Config, time: Time, drive: DriveRequester, session: ClientSession, exchanger: Exchanger):
+        self.session = session
         self.config = config
         self.time = time
-        self.resolver = resolver
-
-        self.cred_expiration = None
-        self.cred_bearer = None
-        self.cred_refresh = None
-        self.cred_id = None
-        self.cred_secret = None
-        self.session = session
-        self.tryLoadCredentials()
+        self.drive = drive
+        self.creds: Optional[Creds] = None
+        self.exchanger: Exchanger = exchanger
 
         # Between attempts to upload, we keep track of the info needed to resume a resumable upload.
         self.last_attempt_metadata = None
         self.last_attempt_location = None
         self.last_attempt_count = 0
+        self.tryLoadCredentials()
 
-    async def _getHeaders(self, refresh=False):
+    async def _getHeaders(self):
         return {
-            "Authorization": "Bearer " + await self.getToken(refresh=refresh),
+            "Authorization": "Bearer " + await self.getToken(),
             "Client-Identifier": self.config.clientIdentifier()
         }
 
     def isCustomCreds(self):
-        return self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID) != self.cred_id
+        return self.creds is not None and self.creds.id != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID)
 
     def _getAuthHeaders(self):
         return {
@@ -105,7 +95,7 @@ class DriveRequests():
         }
 
     def enabled(self):
-        return self.cred_refresh is not None
+        return self.creds is not None
 
     def _enabledCheck(self):
         if not self.enabled():
@@ -116,88 +106,33 @@ class DriveRequests():
         if os.path.isfile(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
             try:
                 with open(self.config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
-                    loaded = json.load(f)
-                self.cred_bearer = loaded['access_token']
-                self.cred_refresh = loaded['refresh_token']
-                self.cred_id = loaded['client_id']
-                try:
-                    self.cred_expiration = \
-                        self.time.parse(loaded['token_expiry'])
-                except Exception:
-                    # just eat the error, refresh now
-                    self.cred_expiration = self.time.now() - timedelta(minutes=1)
-                if 'client_secret' in loaded:
-                    if loaded['client_id'] == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
-                        # The creds are saved with the old client secret, re-save them without it
-                        # so wer'e foced to use the new auth endpoint.
-                        with open(self.config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
-                            loaded = json.dump({
-                                'access_token': self.cred_bearer,
-                                'refresh_token': self.cred_refresh,
-                                'client_id': self.cred_id,
-                                'token_expiry': loaded['token_expiry']
-                            }, f)
-                    else:
-                        self.cred_secret = loaded['client_secret']
-                else:
-                    self.cred_secret = None
+                    self.creds = Creds.load(self.time, json.load(f))
+                if self.creds.secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
+                    # The creds are saved with the old client secret, re-save them without it
+                    # so we're foced to use the new auth endpoint.
+                    with open(self.config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
+                        json.dump(self.creds.serialize(include_secret=False), f)
+                        self.creds._secret = None
                 return
             except Exception:
                 pass
-        self.cred_bearer = None
-        self.cred_expiration = None
-        self.cred_refresh = None
-        self.cred_secret = None
-        self.cred_id = None
 
-    def saveCredentials(self, creds):
+    def saveCredentials(self, creds: Creds):
         with open(self.config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
-            json.dump(creds, f)
+            json.dump(creds.serialize(), f)
         self.tryLoadCredentials()
 
     async def getToken(self, refresh=False):
-        if self.cred_expiration and self.time.now() + timedelta(minutes=1) < self.cred_expiration and not refresh:
-            return self.cred_bearer
+        if self.creds and not self.creds.is_expired and not refresh:
+            return self.creds.access_token
 
         # refresh the credentials
-        try:
-            if self.cred_secret is not None:
-                data = {
-                    'client_id': self.cred_id,
-                    'client_secret': self.cred_secret,
-                    'refresh_token': self.cred_refresh,
-                    'grant_type': 'refresh_token'
-                }
-                logger.debug("Requesting refreshed credentials from Google Drive")
-                data = await self.retryRequest("POST", URL_AUTH, is_json=True, data=data, auth_headers=self._getAuthHeaders(), cred_retry=False)
-            else:
-                logger.debug("Requesting refreshed credentials from backup.beechens.com")
-                url = URL(self.config.get(Setting.DRIVE_REFRESH_URL)).with_query({
-                    "client_id": self.cred_id,
-                    'refresh_token': self.cred_refresh,
-                    'client': str(self.config.clientIdentifier()),
-                    'version': VERSION
-                })
-                async with self.session.post(str(url), headers=self._getAuthHeaders()) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                    elif resp.status == 503:
-                        raise CredRefreshGoogleError((await resp.json())["error"])
-                    elif resp.status == 401:
-                        raise GoogleCredentialsExpired()
-                    else:
-                        try:
-                            extra = (await resp.json())["error"]
-                        except BaseException:
-                            extra = ""
-                        raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
-        except ClientConnectorError:
-            raise CredRefreshMyError("Unable to connect to https://backup.beechens.com")
-        self.cred_expiration = self.time.now() + timedelta(seconds=int(ensureKey('expires_in',
-                                                                                 data, "Google Drive's credential Response")))
-        self.cred_bearer = \
-            ensureKey('access_token', data, "Google Drive's Credential Response")
-        return self.cred_bearer
+        logger.debug("Requesting refreshed Google Drive credentials")
+        self.creds = await self.exchanger.refresh(self.creds)
+        return self.creds.access_token
+
+    async def refreshToken(self):
+        await self.getToken(refresh=True)
 
     async def get(self, id):
         q = {
@@ -361,124 +296,34 @@ class DriveRequests():
     async def createFolder(self, metadata):
         return await self.retryRequest("POST", URL_FILES + "?supportsAllDrives=true", is_json=True, json=metadata)
 
-    def buildTimeout(self):
-        return ClientTimeout(
-            sock_connect=self.config.get(
-                Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS),
-            sock_read=self.config.get(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS))
-
     async def retryRequest(self, method, url, auth_headers: Optional[Dict[str, str]] = None, headers: Optional[Dict[str, str]] = None, json: Optional[Dict[str, Any]] = None, data: Any = None, is_json: bool = False, cred_retry: bool = True, patch_url: bool = True):
-        backoff = DRIVE_RETRY_INITIAL_SECONDS
-        attempts = 0
-        refresh_token = False
+        backoff = Backoff(base=DRIVE_RETRY_INITIAL_SECONDS, attempts=DRIVE_MAX_RETRIES)
         if patch_url:
             url = self.config.get(Setting.DRIVE_URL) + url
         while True:
-            if auth_headers is not None:
-                send_headers = auth_headers.copy()
-            else:
-                send_headers = await self._getHeaders(refresh=refresh_token)
-                refresh_token = False
+            headers_to_use = await self._getHeaders()
             if headers:
-                send_headers.update(headers)
-            attempts += 1
-
+                headers_to_use.update(headers)
             logger.debug("Making Google Drive request: " + url)
             try:
-                to_send = data
-                if isinstance(to_send, io.BytesIO):
+                data_to_use = data
+                if isinstance(data_to_use, io.BytesIO):
                     # This is a pretty low-down dirty hack, but it works and lets us reuse the byte stream.
                     # aiohttp complains if you pass it a large byte object
-                    to_send = io.BytesIO(to_send.getbuffer())
-                    to_send.seek(0)
-                response = await self.session.request(method, url, headers=send_headers, json=json, timeout=self.buildTimeout(), data=to_send)
-
-                if response.status < 400:
-                    # Response was good, so return the deets
-                    if is_json:
-                        ret = await response.json()
-                        await response.release()
-                        return ret
-                    else:
-                        return response
-                try:
-                    await self.raiseForKnownErrors(response)
-                    # Only retry 403 and 5XX error,
-                    # see https://developers.google.com/drive/api/v3/manage-uploads
-                    if attempts > DRIVE_MAX_RETRIES:
-                        # out of retries, give up if it failed.
-                        if response.status == 500 or response.status == 503:
-                            raise GoogleInternalError()
-                        response.raise_for_status()
-                    elif response.status == 401 and cred_retry:
-                        # retry with fresh creds
-                        logger.debug(
-                            "Google Drive credentials expired.  We'll retry with new ones.")
-                        refresh_token = True
-                        await self.time.sleepAsync(backoff)
-                        backoff *= DRIVE_EXPONENTIAL_BACKOFF
-                    elif response.status == RATE_LIMIT_EXCEEDED or response.status == TOO_MANY_REQUESTS or int(response.status / 100) == 5:
-                        logger.error("Google Drive returned HTTP code: {0}: we'll retry in {1} seconds".format(
-                            response.status, backoff))
-                        await self.time.sleepAsync(backoff)
-                        # backoff exponentially, a good practice in general but also helps resolve rate limit errors.
-                        backoff *= DRIVE_EXPONENTIAL_BACKOFF
-                    else:
-                        response.raise_for_status()
-                finally:
+                    data_to_use = io.BytesIO(data_to_use.getbuffer())
+                    data_to_use.seek(0)
+                response = await self.drive.request(method, url, headers=headers_to_use, json=json, data=data_to_use)
+                if is_json:
+                    ret = await response.json()
                     await response.release()
-
-            except ClientConnectorError as e:
-                logger.debug(
-                    "Ran into trouble reaching Google Drive's servers.  We'll use alternate DNS servers on the next attempt.")
-                self.resolver.toggle()
-                if e.os_error.errno == -2:
-                    # -2 means dns lookup failed.
-                    raise GoogleDnsFailure()
-                elif str(e.os_error) == "Domain name not found":
-                    raise GoogleDnsFailure()
-                elif e.os_error.errno in [99, 111, 10061]:
-                    # 111 means connection refused
-                    # Can't connect
-                    raise GoogleCantConnect()
-                elif "Could not contact DNS serve" in str(e.os_error):
-                    # Wish there was a better way to identify this exception
-                    raise GoogleDnsFailure()
-                raise
-            except ServerTimeoutError:
-                raise GoogleTimeoutError()
-            except DNSException as e:
-                logger.debug(str(e))
-                logger.debug(
-                    "Ran into trouble resolving Google Drive's servers.  We'll use normal DNS servers on the next attempt.")
-                self.resolver.toggle()
-                raise GoogleDnsFailure()
-
-    async def raiseForKnownErrors(self, response):
-        try:
-            message = await response.json()
-        except ContentTypeError:
-            return
-        except ValueError:
-            # parsing json failed, just give up
-            return
-        except TypeError:
-            # Same
-            return
-        if "error" not in message:
-            return
-        error_obj = message["error"]
-        if isinstance(error_obj, str):
-            if error_obj == "expired":
-                raise GoogleCredentialsExpired()
-            else:
-                raise CredRefreshGoogleError(error_obj)
-        if "errors" not in error_obj:
-            return
-        for error in error_obj["errors"]:
-            if "reason" not in error:
-                continue
-            if error["reason"] == "storageQuotaExceeded":
-                raise DriveQuotaExceeded()
-            elif error["reason"] == "forbidden":
-                raise GoogleDrivePermissionDenied()
+                    return ret
+                else:
+                    return response
+            except GoogleCredentialsExpired:
+                # Get fresh credentials, then retry right away.
+                logger.debug("Google Drive credentials have expired.  We'll retry with new ones.")
+                await self.refreshToken()
+            except KnownTransient as e:
+                backoff.backoff(e)
+                logger.error("{0}: we'll retry in {1} seconds".format(e.message(), backoff.peek()))
+                await self.time.sleepAsync(backoff.peek())

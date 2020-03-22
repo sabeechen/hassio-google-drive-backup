@@ -20,3 +20,4 @@ aiofiles
 injector
 autopep8
 colorlog
+ptvsd

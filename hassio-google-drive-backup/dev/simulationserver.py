@@ -19,7 +19,10 @@ from injector import inject, singleton
 from backup.time import Time
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
 from backup.logger import getLogger
+from backup.creds import Creds
 from server.server import Server
+from tests.faketime import FakeTime
+from datetime import timedelta
 
 logger = getLogger(__name__)
 
@@ -61,7 +64,7 @@ class SimulationServer():
         self._events = []
         self._attributes = {}
         self._notification = None
-        self._time = time
+        self._time: FakeTime = time
         self._options = self.defaultOptions()
         self._username = "user"
         self._password = "pass"
@@ -312,6 +315,13 @@ class SimulationServer():
         self._authserver.client_id = self.getSetting("drive_client_id")
         self._authserver.client_secret = self.getSetting("drive_client_secret")
 
+    def getCurrentCreds(self):
+        return Creds(self._time,
+                     id=self.getSetting("drive_client_id"),
+                     expiration=self._time.now() + timedelta(hours=1),
+                     access_token=self.getSetting("drive_auth_token"),
+                     refresh_token=self.getSetting("drive_refresh_token"))
+
     async def reset(self, request: Request):
         self._reset()
         if isinstance(request, Request):
@@ -368,6 +378,11 @@ class SimulationServer():
         self._checkDriveHeaders(request)
         if id not in self.items:
             raise HTTPNotFound
+        if id in self.lostPermission:
+            return Response(
+                status=403,
+                content_type="application/json",
+                text='{"error": {"errors": [{"reason": "forbidden"}]}}')
         request_type = request.query.get("alt", "metadata")
         if request_type == "media":
             # return bytes
@@ -601,7 +616,6 @@ class SimulationServer():
     async def hassioNewFullSnapshot(self, request: Request):
         if (self.block_snapshots or self.snapshot_in_progress) and not self.getSetting('always_hard_lock'):
             raise HTTPBadRequest()
-        
         input_json = {}
         try:
             input_json = await request.json()

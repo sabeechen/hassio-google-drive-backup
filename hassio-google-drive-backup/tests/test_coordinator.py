@@ -353,3 +353,25 @@ async def test_cancel(coord: Coordinator, global_info: GlobalInfo):
     await coord._sync_start.wait()
     await coord.cancel()
     assert isinstance(global_info._last_error, UserCancelledError)
+
+
+@pytest.mark.asyncio
+async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Model, dest, source, simple_config: Config):
+    time.setTimeZone("Europe/Stockholm")
+    simple_config.override(Setting.SNAPSHOT_TIME_OF_DAY, "12:00")
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+
+    source.setMax(10)
+    source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 18, 5)))
+    time.setNow(time.local(2020, 3, 16, 18, 6))
+    model.reinitialize()
+    coord.reset()
+    await coord.sync()
+    assert not coord.check()
+    assert coord.nextSnapshotTime() == time.local(2020, 3, 17, 12)
+
+    time.setNow(time.local(2020, 3, 17, 11, 59))
+    await coord.sync()
+    assert not coord.check()
+    time.setNow(time.local(2020, 3, 17, 12))
+    assert coord.check()

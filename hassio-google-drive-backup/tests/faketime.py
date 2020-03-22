@@ -15,6 +15,9 @@ class FakeTime(Time):
                 datetime(1985, 12, 6, 0, 0, 0, tzinfo=gettz('EST')))
         self.sleeps = []
 
+    def setTimeZone(self, name):
+        self.local_tz = gettz(name)
+
     def setNow(self, now: datetime):
         self._now = now
         return self
@@ -39,8 +42,3 @@ class FakeTime(Time):
 
     def clearSleeps(self):
         self.sleeps = []
-
-    def asRfc3339String(self, time: datetime) -> str:
-        if time is None:
-            time = self.now()
-        return time.strftime("%Y-%m-%dT%H:%M:%SZ")

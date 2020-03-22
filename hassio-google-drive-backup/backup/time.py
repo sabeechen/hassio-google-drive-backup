@@ -74,3 +74,8 @@ class Time(object):
         if (delta.seconds != 0):
             return "{0} seconds{1}".format(delta.seconds, flavor)
         return "right now"
+
+    def asRfc3339String(self, time: datetime) -> str:
+        if time is None:
+            time = self.now()
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ")

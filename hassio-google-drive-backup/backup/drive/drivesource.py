@@ -22,6 +22,7 @@ from .driverequests import DriveRequests
 from .thumbnail import THUMBNAIL_IMAGE
 from ..model import SnapshotDestination, AbstractSnapshot, DriveSnapshot, Snapshot
 from ..logger import getLogger
+from ..creds.creds import Creds
 
 logger = getLogger(__name__)
 
@@ -52,7 +53,7 @@ class DriveSource(SnapshotDestination):
         self._existing_folder_name = None
         self._existing_folders = {}
 
-    def saveCreds(self, creds) -> None:
+    def saveCreds(self, creds: Creds) -> None:
         logger.info("Saving new Google Drive credentials")
         self.drivebackend.saveCredentials(creds)
         self.trigger()
@@ -207,6 +208,10 @@ class DriveSource(SnapshotDestination):
                 return False
             else:
                 raise e
+        except GoogleDrivePermissionDenied:
+            # TODO: Is this actually necessary?  Is it covered by a test?
+            # Lost permission on the backup folder
+            return False
 
     async def _getParentFolderId(self):
         if not self._folder_queryied_last or self._folder_queryied_last + timedelta(seconds=FOLDER_CACHE_SECONDS) < self.time.now():

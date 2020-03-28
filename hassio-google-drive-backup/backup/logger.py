@@ -2,8 +2,10 @@ import logging
 from logging import LogRecord, Formatter
 from traceback import TracebackException
 from colorlog import ColoredFormatter
+from os.path import join, abspath
 
 HISTORY_SIZE = 1000
+PATH_BASE = abspath(join(__file__, "..", ".."))
 
 
 class HistoryHandler(logging.Handler):
@@ -124,12 +126,12 @@ class StandardLogger(logging.Logger):
             if count > _RECURSIVE_CUTOFF:
                 continue
             fileName = frame.filename
-            pos = fileName.rfind("hassio-google-drive-backup/backup")
-            if pos > 0:
+            pos = fileName.rfind(PATH_BASE)
+            if pos >= 0:
                 is_addon = True
                 line_internal = False
-                fileName = "/addon" + \
-                    fileName[pos + len("hassio-google-drive-backup/backup"):]
+                fileName = "addon" + \
+                    fileName[pos + len(PATH_BASE):]
 
             pos = fileName.rfind("site-packages")
             if pos > 0:

@@ -3,77 +3,73 @@ import urllib
 import json
 from os.path import abspath, join
 from aiohttp.web import Application, json_response, Request, TCPSite, AppRunner, post, Response, static, FileResponse, get
-from aiohttp.client import ClientSession
 from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError, ServerConnectionError, ServerDisconnectedError, ServerTimeoutError
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPSeeOther
-from yarl import URL
+from backup.creds import Exchanger
+from backup.logger import getLogger, StandardLogger
+from injector import ClassAssistedBuilder, inject, singleton
+from google.cloud import logging
+from google.auth.exceptions import DefaultCredentialsError
+import json
 
-SCOPE = 'https://www.googleapis.com/auth/drive.file'
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 DEFAULT_REDIRECT = os.environ.get("AUTHORIZED_REDIRECT", "https://backup.beechens.com/drive/authorize")
-URL_REFRESH = "https://www.googleapis.com/oauth2/v4/token"
-URL_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth"
-URL_TOKEN = "https://oauth2.googleapis.com/token"
+
+basic_logger = getLogger(__name__)
+
+@singleton
+class CloudLogger(StandardLogger):
+    @inject
+    def __init__(self):
+        super().__init__(__name__)
+        self.google_logger = None
+        if os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') is not None:
+            try:
+                google_logger_client = logging.Client()
+                self.googler_logger = google_logger_client.logger("refresh_server")
+            except DefaultCredentialsError:
+                basic_logger.error("Unable to start Google Logger, no default credentials")
+    
+    def log_struct(self, data):
+        if self.google_logger is not None:
+            self.google_logger.log_struct(data)
+        else:
+            basic_logger.info(json.dumps(data))
 
 
+@singleton
 class Server():
     # TODO: really should log request info here, client-iedntifier, etc
-    def __init__(self, session: ClientSession, url_refresh=URL_REFRESH,
-                 url_authorize=URL_AUTHORIZE, url_token=URL_TOKEN,
-                 client_id=CLIENT_ID, client_secret=CLIENT_SECRET,
+    @inject
+    def __init__(self,
+                 exchanger_builder: ClassAssistedBuilder[Exchanger],
+                 logger: CloudLogger,
+                 client_id=CLIENT_ID,
+                 client_secret=CLIENT_SECRET,
                  authorized_redirect=DEFAULT_REDIRECT):
-        self.session = session
-        self.url_token = url_token
-        self.url_authorize = url_authorize
-        self.url_refresh = url_refresh
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.authorized_redirect = authorized_redirect
+        self.exchanger = exchanger_builder.build(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect=authorized_redirect)
+        self.logger = logger
 
     async def authorize(self, request: Request):
         if 'redirectbacktoken' in request.query:
-            state = request.query.get('redirectbacktoken')
-            url = URL(self.url_authorize).with_query({
-                'client_id': self.client_id,
-                'scope': SCOPE,
-                'response_type': 'code',
-                'include_granted_scopes': 'true',
-                'access_type': "offline",
-                'state': state,
-                'redirect_uri': self.authorized_redirect,
-                'prompt': "consent"
-            })
             # Someone is trying to authenticate with the add-on, direct them to the google auth url
-            raise HTTPSeeOther(str(url))
+            raise HTTPSeeOther(await self.exchanger.getAuthorizationUrl(request.query.get('redirectbacktoken')))
         elif 'state' in request.query and 'code' in request.query:
             state = request.query.get('state')
             code = request.query.get('code')
             try:
-                data = urllib.parse.urlencode({
-                    'client_id': self.client_id,
-                    'client_secret': self.client_secret,
-                    'code': code,
-                    'redirect_uri': self.authorized_redirect,
-                    'grant_type': 'authorization_code'
-                })
-
-                async with self.session.post(self.url_token, headers={"content-type": "application/x-www-form-urlencoded"}, data=data) as resp:
-                    resp.raise_for_status()
-                    creds = await resp.json()
-                sent_creds = {
-                    'access_token': creds['access_token'],
-                    'refresh_token': creds['refresh_token'],
-                    'client_id': creds['client_id'],
-                    'token_expiry': creds['token_expiry'],
-                }
-
+                creds = (await self.exchanger.exchange(code)).serialize(include_secret=False)
                 # Redirect to "state" address with serialized creentials"
-                raise HTTPSeeOther(state + "?creds=" + urllib.parse.quote(json.dumps(sent_creds)))
+                raise HTTPSeeOther(state + "?creds=" + urllib.parse.quote(json.dumps(creds)))
             except Exception as e:
                 if isinstance(e, HTTPSeeOther):
                     # expected, pass this thorugh
                     raise
+                self.logError(request, e)
                 content = "The server encountered an error while processing this request: " + str(e) + "<br/>"
                 content += "Please <a href='https://github.com/sabeechen/hassio-google-drive-backup/issues'>file an issue</a> on Hass.io Google Backup's GitHub page so I'm aware of this problem or attempt authorizing with Google Drive again."
                 return Response(status=500, body=content)
@@ -81,24 +77,19 @@ class Server():
             raise HTTPBadRequest()
 
     async def error(self, request: Request):
-        # TODO: Implement cloud storage for errors
+        try:
+            self.logReport(request, await request.json())
+        except BaseException as e:
+            self.logError(request, e)
         return Response()
 
+    # TODO: This needs testing.  Lots of test coverage.
     async def refresh(self, request: Request):
-        data = {
-            'client_id': request.query.get("client_id"),
-            'client_secret': self.client_secret,
-            'refresh_token': request.query.get("refresh_token"),
-            'grant_type': 'refresh_token'
-        }
         try:
-            async with self.session.post(self.url_refresh, data=data) as resp:
-                resp.raise_for_status()
-                reply = await resp.json()
-                return json_response({
-                    "expires_in": reply["expires_in"],
-                    "access_token": reply["access_token"]
-                })
+            token = (await request.json())['refresh_token']
+            creds = self.exchanger.refreshCredentials(token)
+            new_creds = await self.exchanger.refresh(creds)
+            return json_response(new_creds.serialize(include_secret=False))
         except ClientResponseError as e:
             if e.status == 401:
                 return json_response({
@@ -106,6 +97,7 @@ class Server():
                 }, status=401)
             else:
                 # TODO: Make a special user visible error for this
+                self.logError(request, e)
                 return json_response({
                     "error": "Google returned HTTP {}".format(e.status)
                 }, status=503)
@@ -126,7 +118,7 @@ class Server():
                 "error": "Google's servers timed out"
             }, status=503)
         except Exception as e:
-            # TODO: log this
+            self.logError(request, e)
             return json_response({
                 "error": str(e)
             }, status=500)
@@ -157,3 +149,22 @@ class Server():
         site = TCPSite(runner, "0.0.0.0", int(os.environ.get("PORT")))
         await site.start()
         print("Server Started")
+
+    def logError(self, request: Request, exception: Exception):
+        data = self.getRequestInfo(request)
+        data['exception'] = self.logger.formatException(exception)
+        self.logger.log_struct(data)
+
+    def logReport(self, request, report):
+        data = self.getRequestInfo(request)
+        data['report'] = report
+        self.logger.log_struct(data)
+
+    def getRequestInfo(self, request: Request):
+        return {
+            'client': request.headers.get('client', "unknown"),
+            'version': request.headers.get('addon_version', "unknown"),
+            'address': request.remote,
+            'url': str(request.url),
+            'length': request.content_length
+        }

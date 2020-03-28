@@ -32,7 +32,14 @@ logger = getLogger(__name__)
 @singleton
 class Exchanger():
     @inject
-    def __init__(self, time: Time, session: ClientSession, config: Config, drive: DriveRequester, client_id: str, client_secret: str, redirect: str):
+    def __init__(self,
+                 time: Time,
+                 session: ClientSession,
+                 config: Config,
+                 drive: DriveRequester,
+                 client_id: str,
+                 client_secret: str,
+                 redirect: str):
         self.time = time
         self.config = config
         self.session = session
@@ -65,14 +72,7 @@ class Exchanger():
         resp = None
         try:
             resp = await self.drive.request("post", self.config.get(Setting.DRIVE_TOKEN_URL), data=data)
-            data = await resp.json()
-            return Creds(
-                self.time,
-                id=self._client_id,
-                secret=self._client_secret,
-                access_token=ensureKey(KEY_ACCESS_TOKEN, CRED_OBJECT_NAME),
-                refresh_token=ensureKey(KEY_REFRESH_TOKEN, CRED_OBJECT_NAME),
-                expiration=self._get_expiration(data))
+            return Creds.load(self.time, await resp.json(), id=self._client_id, secret=self._client_secret)
         finally:
             if resp is not None:
                 resp.release()
@@ -109,22 +109,17 @@ class Exchanger():
         data = {
             KEY_CLIENT_ID: creds.id,
             KEY_REFRESH_TOKEN: creds.refresh_token,
-            KEY_GRANT_TYPE: 'refresh_token',
-            KEY_VERSION: VERSION,
-            KEY_CLIENT: self.config.clientIdentifier()
         }
 
-        url = URL(self.config.get(Setting.REFRESH_URL)).with_query(data)
+        url = URL(self.config.get(Setting.REFRESH_URL))
         try:
-            async with self.session.post(str(url)) as resp:
+            headers = {
+                'addon_version': VERSION,
+                'client': self.config.clientIdentifier()
+            }
+            async with self.session.post(str(url), headers=headers, json=data) as resp:
                 if resp.status < 400:
-                    data = await resp.json()
-                    return Creds(
-                        self.time,
-                        id=creds.id,
-                        access_token=ensureKey(KEY_ACCESS_TOKEN, data, CRED_OBJECT_NAME),
-                        refresh_token=creds.refresh_token,
-                        expiration=self._get_expiration(data))
+                    return Creds.load(self.time, await resp.json())
                 elif resp.status == 503:
                     raise CredRefreshGoogleError((await resp.json())["error"])
                 elif resp.status == 401:
@@ -137,6 +132,9 @@ class Exchanger():
                     raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
         except ClientConnectorError:
             raise CredRefreshMyError("Unable to connect to https://backup.beechens.com")
+
+    def refreshCredentials(self, refresh_token):
+        return Creds(self.time, id=self._client_id, expiration=None, access_token=None, refresh_token=refresh_token, secret=self._client_secret)
 
     def _get_expiration(self, data):
         return self.time.now() + timedelta(seconds=int(ensureKey(KEY_EXPIRES_IN, data, CRED_OBJECT_NAME)))

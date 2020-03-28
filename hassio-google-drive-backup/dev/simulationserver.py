@@ -14,7 +14,7 @@ from aiohttp.web import (Application, HTTPBadRequest, HTTPClientError,
                          HTTPUnauthorized, Request, Response, delete, get,
                          json_response, middleware, patch, post, put, HTTPSeeOther)
 from aiohttp.client import ClientSession
-from injector import inject, singleton
+from injector import inject, singleton, ClassAssistedBuilder
 
 from backup.time import Time
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
@@ -42,7 +42,7 @@ class HttpMultiException(HTTPClientError):
 @singleton
 class SimulationServer():
     @inject
-    def __init__(self, port, time: Time, session: ClientSession):
+    def __init__(self, port, time: Time, session: ClientSession, authserver_builder: ClassAssistedBuilder[Server]):
         self.items: Dict[str, Any] = {}
         self.id_counter = 0
         self.upload_info: Dict[str, Any] = {}
@@ -73,15 +73,10 @@ class SimulationServer():
         self.relative = True
         self.block_snapshots = False
         self.snapshot_in_progress = False
-        self.last_error_report = None
         self.drive_auth_code = "drive_auth_code"
-        self._authserver = Server(
-            session,
+        self._authserver = authserver_builder.build(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            url_refresh="http://localhost:{}/oauth2/v4/token".format(port),
-            url_authorize="http://localhost:{}/o/oauth2/v2/auth".format(port),
-            url_token="http://localhost:{}/token".format(port),
             authorized_redirect="http://localhost:{}/drive/authorize".format(port))
 
     def wasUrlRequested(self, pattern):
@@ -312,8 +307,8 @@ class SimulationServer():
         self.expireCreds()
         self.settings['drive_client_secret'] = self.generateId(5)
         self.settings['drive_client_id'] = self.generateId(5)
-        self._authserver.client_id = self.getSetting("drive_client_id")
-        self._authserver.client_secret = self.getSetting("drive_client_secret")
+        self._authserver.exchanger._client_id = self.getSetting("drive_client_id")
+        self._authserver.exchanger._client_secret = self.getSetting("drive_client_secret")
 
     def getCurrentCreds(self):
         return Creds(self._time,
@@ -780,10 +775,6 @@ class SimulationServer():
         self._options = (await request.json())['options'].copy()
         return self.formatDataResponse({})
 
-    async def errorReport(self, request: Request):
-        self.last_error_report = request.query["error"]
-        return Response()
-
     @middleware
     async def error_middleware(self, request: Request, handler):
         self.urls.append(str(request.url))
@@ -854,8 +845,7 @@ class SimulationServer():
             post('/doareset', self.reset),
             post('/oauth2/v4/token', self.driveRefreshToken),
             get('/o/oauth2/v2/auth', self.driveAuthorize),
-            post('/token', self.driveToken),
-            get('/errorreport', self.errorReport)
+            post('/token', self.driveToken)
         ]
 
     def generateId(self, length: int = 30) -> Any:

@@ -101,10 +101,14 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
                     server_url + "/drive/authorize")
     config.override(Setting.DRIVE_REFRESH_URL,
                     server_url + "/oauth2/v4/token")
+    config.override(Setting.DRIVE_AUTHORIZE_URL,
+                    server_url + "/o/oauth2/v2/auth")
+    config.override(Setting.DRIVE_TOKEN_URL,
+                    server_url + "/token")
     config.override(Setting.REFRESH_URL,
                     server_url + "/drive/refresh")
     config.override(Setting.ERROR_REPORT_URL,
-                    server_url + "/errorreport")
+                    server_url + "/logerror")
     config.override(Setting.HASSIO_TOKEN, "test_header")
     config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
     config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")

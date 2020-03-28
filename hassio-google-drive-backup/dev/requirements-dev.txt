@@ -21,3 +21,4 @@ injector
 autopep8
 colorlog
 ptvsd
+google-cloud-logging

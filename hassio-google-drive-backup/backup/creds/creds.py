@@ -61,13 +61,13 @@ class Creds():
         return ret
 
     @classmethod
-    def load(cls, time: Time, data):
-        id = ensureKey(KEY_CLIENT_ID, data, "credentials")
+    def load(cls, time: Time, data, id=None, secret=None):
+        if id is None:
+            id = ensureKey(KEY_CLIENT_ID, data, "credentials")
+        if secret is None and KEY_CLIENT_SECRET in data:
+            secret = data[KEY_CLIENT_SECRET]
         refresh = ensureKey(KEY_REFRESH_TOKEN, data, "credentials")
         access = ensureKey(KEY_ACCESS_TOKEN, data, "credentials")
-        secret = None
-        if KEY_CLIENT_SECRET in data:
-            secret = data[KEY_CLIENT_SECRET]
         expires = None
         try:
             if KEY_TOKEN_EXPIRY in data:

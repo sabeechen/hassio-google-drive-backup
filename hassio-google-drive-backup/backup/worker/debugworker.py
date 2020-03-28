@@ -60,9 +60,11 @@ class DebugWorker(Worker):
             else:
                 package = self.buildClearReport()
             logger.info("Sending error report (see settings to disable)")
-            url: str = self.config.get(Setting.ERROR_REPORT_URL) + "?error={0}&version=1".format(
-                quote(json.dumps(package, indent=4, sort_keys=True)))
-            async with self.session.get(url):
+            headers = {
+                'client': self.config.clientIdentifier(),
+                'addon_version': VERSION
+            }
+            async with self.session.post(self.config.get(Setting.ERROR_REPORT_URL), headers=headers, json=package) as resp:
                 pass
 
     async def updateDns(self):
@@ -101,8 +103,6 @@ class DebugWorker(Worker):
     def buildClearReport(self):
         duration = self.time.now() - self.last_sent_error_time
         report = {
-            'client': self.config.clientIdentifier(),
-            'now': self.formatDate(self.time.now()),
             'duration': str(duration)
         }
         return report

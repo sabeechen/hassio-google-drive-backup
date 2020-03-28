@@ -6,3 +6,4 @@ injector
 aiofiles
 ptvsd
 colorlog
+google-cloud-logging

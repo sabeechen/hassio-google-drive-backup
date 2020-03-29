@@ -84,7 +84,7 @@ class Config():
                 config[_LOOKUP[key]] = os.environ[key]
             elif str.upper(key) in _LOOKUP:
                 config[_LOOKUP[str.upper(key)]] = os.environ[key]
-        return Config(data)
+        return Config(config)
 
     def __init__(self, data={}):
         self.overrides = {}

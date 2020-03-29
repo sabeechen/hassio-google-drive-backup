@@ -13,7 +13,7 @@ from aiohttp.client import ClientSession
 from oauth2client.client import OAuth2Credentials
 
 from backup.util import AsyncHttpGetter, GlobalInfo, File
-from backup.server import AsyncServer, Restarter
+from backup.ui import AsyncServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,

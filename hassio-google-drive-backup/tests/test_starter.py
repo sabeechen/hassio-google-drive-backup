@@ -5,7 +5,7 @@ from injector import Injector
 from backup.ha import HaUpdater, HaSource
 from backup.worker import DebugWorker, Watcher
 from backup.config import Config
-from backup.server import AsyncServer
+from backup.ui import AsyncServer
 from backup.model import Scyncer
 
 

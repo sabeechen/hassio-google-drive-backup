@@ -53,31 +53,50 @@ class GenConfig():
 
 
 class Config():
-    def __init__(self, config_path=None):
+    @classmethod
+    def fromFile(cls, config_path):
+        with open(config_path, "r") as f:
+            data = json.load(f)
+        return Config(data)
+
+    @classmethod
+    def withOverrides(cls, overrides):
+        config = Config()
+        for key in overrides.keys():
+            config.override(key, overrides[key])
+        return config
+
+    
+    @classmethod
+    def withFileOverrides(cls, override_path):
+        with open(override_path, "r") as f:
+            data = json.load(f)
+        overrides = {}
+        for key in data.keys():
+            overrides[_LOOKUP[key]] = data[key]
+        return Config.withOverrides(overrides)
+
+    @classmethod
+    def fromEnvironment(cls):
+        config = {}
+        for key in os.environ:
+            if key in _LOOKUP:
+                config[_LOOKUP[key]] = os.environ[key]
+            elif str.upper(key) in _LOOKUP:
+                config[_LOOKUP[str.upper(key)]] = os.environ[key]
+        return Config(data)
+
+    def __init__(self, data={}):
         self.overrides = {}
         self.config = {}
         self._subscriptions = []
         self._clientIdentifier = uuid.uuid4()
-
+        self.data = data
         self.retained = self._loadRetained()
         self._gen_config_cache = self.getGenerationalConfig()
 
-    def loadDefaults(self, config_path=None):
-        if config_path is None:
-            config_path = Setting.CONFIG_FILE_PATH.default()
-        if len(config_path) > 0:
-            with open(config_path, "r") as f:
-                self.config = json.load(f)
-        self._gen_config_cache = self.getGenerationalConfig()
-
-    def loadOverrides(self, config_path):
-        self.loadDefaults(config_path)
-
-        for key in list(self.config.keys()):
-            self.override(_LOOKUP[key], self.config[key])
-
     def getConfigFor(self, options):
-        new_config = Config("")
+        new_config = Config()
         new_config.overrides = self.overrides.copy()
         new_config.update(self.validate(options))
         return new_config

@@ -25,7 +25,7 @@ def dest():
 
 @pytest.fixture
 def simple_config():
-    config = Config("")
+    config = Config()
     return config
 
 

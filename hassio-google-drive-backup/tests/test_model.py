@@ -27,7 +27,7 @@ def dest():
 
 @pytest.fixture
 def simple_config():
-    config = Config("")
+    config = Config()
     return config
 
 
@@ -40,12 +40,12 @@ def test_timeOfDay(estimator) -> None:
     time: FakeTime = FakeTime()
     info = GlobalInfo(time)
 
-    config: Config = Config("")
+    config: Config = Config()
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
     assert model.getTimeOfDay() is None
 
-    config = Config("").override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
+    config = Config().override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
     model = Model(config, time, default_source,
                   default_source, info, estimator)
     assert model.getTimeOfDay() == (0, 0)
@@ -101,13 +101,13 @@ def test_next_time(estimator):
     info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
 
-    config: Config = Config("").override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
+    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
     assert model._nextSnapshot(now=now, last_snapshot=None) is None
     assert model._nextSnapshot(now=now, last_snapshot=now) is None
 
-    config: Config = Config("").override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
     assert model._nextSnapshot(
@@ -125,7 +125,7 @@ def test_next_time_of_day(estimator):
     info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
 
-    config: Config = Config("").override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
+    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
         Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)

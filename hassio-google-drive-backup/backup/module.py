@@ -22,8 +22,9 @@ class BaseModule(Module):
     '''
     A module shared between tests and main
     '''
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, override_dns=True):
         self._config = config
+        self._override_dns = override_dns
 
     @provider
     @singleton
@@ -55,8 +56,11 @@ class BaseModule(Module):
     @provider
     @singleton
     def getSession(self, resolver: Resolver) -> ClientSession:
-        conn = aiohttp.TCPConnector(resolver=resolver, family=socket.AF_INET)
-        return ClientSession(connector=conn)
+        if self._override_dns:
+            conn = aiohttp.TCPConnector(resolver=resolver, family=socket.AF_INET)
+            return ClientSession(connector=conn)
+        else:
+            return ClientSession()
 
 
 class MainModule(Module):

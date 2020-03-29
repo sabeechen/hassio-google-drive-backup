@@ -89,36 +89,27 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
     with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
         f.write(json.dumps(drive_creds.serialize()))
 
-    with open(os.path.join(cleandir, "options.json"), "w") as f:
-        json.dump({}, f)
-
-    config = Config(os.path.join(cleandir, "options.json"))
-    config.override(Setting.DRIVE_URL, server_url)
-    config.override(Setting.HASSIO_URL, server_url + "/")
-    config.override(Setting.HOME_ASSISTANT_URL,
-                    server_url + "/homeassistant/api/")
-    config.override(Setting.AUTHENTICATE_URL,
-                    server_url + "/drive/authorize")
-    config.override(Setting.DRIVE_REFRESH_URL,
-                    server_url + "/oauth2/v4/token")
-    config.override(Setting.DRIVE_AUTHORIZE_URL,
-                    server_url + "/o/oauth2/v2/auth")
-    config.override(Setting.DRIVE_TOKEN_URL,
-                    server_url + "/token")
-    config.override(Setting.REFRESH_URL,
-                    server_url + "/drive/refresh")
-    config.override(Setting.ERROR_REPORT_URL,
-                    server_url + "/logerror")
-    config.override(Setting.HASSIO_TOKEN, "test_header")
-    config.override(Setting.SECRETS_FILE_PATH, "secrets.yaml")
-    config.override(Setting.CREDENTIALS_FILE_PATH, "credentials.dat")
-    config.override(Setting.FOLDER_FILE_PATH, "folder.dat")
-    config.override(Setting.RETAINED_FILE_PATH, "retained.json")
-    config.override(Setting.INGRESS_TOKEN_FILE_PATH, "ingress.dat")
-    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "test_client_id")
-    config.override(Setting.BACKUP_DIRECTORY_PATH, cleandir)
-    config.override(Setting.PORT, ui_port)
-    config.override(Setting.INGRESS_PORT, ingress_port)
+    config = Config.withOverrides({
+        Setting.DRIVE_URL: server_url,
+        Setting.HASSIO_URL: server_url + "/",
+        Setting.HOME_ASSISTANT_URL: server_url + "/homeassistant/api/",
+        Setting.AUTHENTICATE_URL: server_url + "/drive/authorize",
+        Setting.DRIVE_REFRESH_URL: server_url + "/oauth2/v4/token",
+        Setting.DRIVE_AUTHORIZE_URL: server_url + "/o/oauth2/v2/auth",
+        Setting.DRIVE_TOKEN_URL: server_url + "/token",
+        Setting.REFRESH_URL: server_url + "/drive/refresh",
+        Setting.ERROR_REPORT_URL: server_url + "/logerror",
+        Setting.HASSIO_TOKEN: "test_header",
+        Setting.SECRETS_FILE_PATH: "secrets.yaml",
+        Setting.CREDENTIALS_FILE_PATH: "credentials.dat",
+        Setting.FOLDER_FILE_PATH: "folder.dat",
+        Setting.RETAINED_FILE_PATH: "retained.json",
+        Setting.INGRESS_TOKEN_FILE_PATH: "ingress.dat",
+        Setting.DEFAULT_DRIVE_CLIENT_ID: "test_client_id",
+        Setting.BACKUP_DIRECTORY_PATH: cleandir,
+        Setting.PORT: ui_port,
+        Setting.INGRESS_PORT: ingress_port
+    })
 
     # PROBLEM: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
     # taking waaaaaaaay too long.  Remove this line and the @pytest.mark.flaky annotations once the problem is identified.

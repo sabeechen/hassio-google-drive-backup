@@ -6,7 +6,7 @@ import asyncio
 from aiorun import run
 from injector import Injector
 
-from backup.config import Config
+from backup.config import Config, Setting
 from backup.module import MainModule, BaseModule
 from backup.starter import Starter
 
@@ -34,9 +34,9 @@ if __name__ == '__main__':
 
     if len(argv) > 1:
         # Needed to load a different config for dev environments.
-        config.loadOverrides(abspath(join(__file__, "../../dev/data", argv[1] + "_options.json")))
+        config = Config.withFileOverrides(abspath(join(__file__, "../../dev/data", argv[1] + "_options.json")))
     else:
-        config.loadDefaults()
+        config = Config.fromFile(Setting.CONFIG_FILE_PATH.default())
 
     if platform.system() == "Windows":
         # Needed for dev on windows machines

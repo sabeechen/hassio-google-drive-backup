@@ -14,7 +14,7 @@ from aiohttp.web import (Application, HTTPBadRequest, HTTPClientError,
                          HTTPUnauthorized, Request, Response, delete, get,
                          json_response, middleware, patch, post, put, HTTPSeeOther)
 from aiohttp.client import ClientSession
-from injector import inject, singleton, ClassAssistedBuilder
+from injector import inject, singleton, ClassAssistedBuilder, Injector
 
 from backup.time import Time
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
@@ -23,6 +23,9 @@ from backup.creds import Creds
 from server.server import Server
 from tests.faketime import FakeTime
 from datetime import timedelta
+from backup.module import BaseModule
+from backup.config import Config, Setting
+import aiorun
 
 logger = getLogger(__name__)
 
@@ -76,8 +79,7 @@ class SimulationServer():
         self.drive_auth_code = "drive_auth_code"
         self._authserver = authserver_builder.build(
             client_id="test_client_id",
-            client_secret="test_client_secret",
-            authorized_redirect="http://localhost:{}/drive/authorize".format(port))
+            client_secret="test_client_secret")
 
     def wasUrlRequested(self, pattern):
         for url in self.urls:
@@ -885,34 +887,34 @@ class SimulationServer():
 
 
 async def main():
-    async with ClientSession() as session:
-        server = SimulationServer(56154, Time(), session)
-        await server.reset({
-            'snapshot_min_size': 1024 * 1024 * 3,
-            'snapshot_max_size': 1024 * 1024 * 5,
-            "drive_refresh_token": "test_refresh_token",
-            "drive_client_id": "test_client_id",
-            "drive_client_secret": "test_client_secret",
-            "drive_upload_sleep": 0,
-            "snapshot_wait_time": 0,
-            "hassio_header": "test_header"
-        })
+    port = 56154
+    base = URL("http://localhost").with_port(port)
+    config = Config.withOverrides({
+        Setting.DRIVE_AUTHORIZE_URL: str(base.with_path("o/oauth2/v2/auth")),
+        Setting.AUTHENTICATE_URL: str(base.with_path("drive/authorize")),
+        Setting.DRIVE_TOKEN_URL: str(base.with_path("token")),
+        Setting.DRIVE_REFRESH_URL: str(base.with_path("oauth2/v4/token"))
+    })
+    injector = Injector(BaseModule(config, override_dns=False))
+    server = injector.get(ClassAssistedBuilder[SimulationServer]).build(port=port)
+    await server.reset({
+        'snapshot_min_size': 1024 * 1024 * 3,
+        'snapshot_max_size': 1024 * 1024 * 5,
+        "drive_refresh_token": "test_refresh_token",
+        "drive_client_id": "test_client_id",
+        "drive_client_secret": "test_client_secret",
+        "drive_upload_sleep": 0,
+        "snapshot_wait_time": 0,
+        "hassio_header": "test_header"
+    })
 
-        # start the server
-        port = 56154
-        runner = aiohttp.web.AppRunner(server.createApp())
-        await runner.setup()
-        site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=port)
-        await site.start()
-        print("Server started on port " + str(port))
-
-        try:
-            while True:
-                await asyncio.sleep(1)
-        finally:
-            await runner.shutdown()
-            await runner.cleanup()
+    # start the server
+    runner = aiohttp.web.AppRunner(server.createApp())
+    await runner.setup()
+    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=port)
+    await site.start()
+    print("Server started on port " + str(port))
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    aiorun.run(main())

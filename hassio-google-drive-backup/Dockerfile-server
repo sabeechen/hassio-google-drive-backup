@@ -1,0 +1,16 @@
+# Use the official lightweight Python image.
+# https://hub.docker.com/_/python
+FROM python:3.8-slim
+
+# Copy local code to the container image.
+ENV APP_HOME /server
+WORKDIR $APP_HOME
+COPY . ./
+COPY config.json /usr/local/lib/python3.8/site-packages/config.json
+
+# Install production dependencies.
+RUN pip3 install --trusted-host pypi.python.org -r requirements-server.txt
+RUN pip3 install .
+
+WORKDIR /
+ENTRYPOINT ["python3", "-m", "backup.server"]

@@ -1,6 +1,9 @@
 {
     "hassio_url": "http://localhost:56154/",
     "home_assistant_url": "http://localhost:56154/homeassistant/api/",
+    "authenticate_url": "https://dev.beechens.com/drive/authorize",
+    "refresh_url": "https://dev.beechens.com/drive/refresh",
+    "choose_folder_url": "https://dev.beechens.com/drive/picker",
     "hassio_header": "test_header",
     "retained_file_path": "hassio-google-drive-backup/dev/data/retained.json",
     "backup_directory_path": "hassio-google-drive-backup/dev/backup",
@@ -10,6 +13,7 @@
     "credentials_file_path": "hassio-google-drive-backup/dev/data/credentials.dat",
     "folder_file_path": "hassio-google-drive-backup/dev/data/folder.dat",
     "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
+    "default_drive_client_id": "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com",
     "ingress_port": 56155,
     "port": 56156
 }

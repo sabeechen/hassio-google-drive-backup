@@ -99,6 +99,8 @@
     "credentials_file_path": "str?",
     "ingress_token_file_path": "str?",
     "default_drive_client_id": "str?",
+    "default_drive_client_secret": "str?",
+    "drive_picker_api_key": "str?",
     "default_chunk_size": "int(1,)?"
   },
   "ports": {

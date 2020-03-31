@@ -11,7 +11,7 @@
     "credentials_file_path": "hassio-google-drive-backup/dev/data/credentials.dat",
     "folder_file_path": "hassio-google-drive-backup/dev/data/folder.dat",
     "authenticate_url": "http://localhost:56154/drive/authorize",
-    "drive_refresh_url": "http://localhost:56154/oauth2/v4/tokenh",
+    "drive_refresh_url": "http://localhost:56154/oauth2/v4/token",
     "refresh_url": "http://localhost:56154/drive/refresh",
     "choose_folder_url": "http://localhost:56154/drive/picker",
     "drive_authorize_url": "http://localhost:56154/o/oauth2/v2/auth",

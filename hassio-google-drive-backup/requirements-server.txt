@@ -1,0 +1,14 @@
+aiodns
+aiofiles
+aiohttp
+aiorun
+colorlog
+dnspython
+google-cloud-logging
+injector
+oauth2client
+ptvsd
+python-dateutil==2.6.1
+pyyaml
+watchdog
+aiohttp-jinja2

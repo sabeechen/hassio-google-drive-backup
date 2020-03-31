@@ -22,3 +22,4 @@ autopep8
 colorlog
 ptvsd
 google-cloud-logging
+aiohttp-jinja2

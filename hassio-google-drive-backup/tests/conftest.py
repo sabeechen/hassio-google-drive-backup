@@ -106,6 +106,7 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
         Setting.RETAINED_FILE_PATH: "retained.json",
         Setting.INGRESS_TOKEN_FILE_PATH: "ingress.dat",
         Setting.DEFAULT_DRIVE_CLIENT_ID: "test_client_id",
+        Setting.DEFAULT_DRIVE_CLIENT_SECRET: "test_client_secret",
         Setting.BACKUP_DIRECTORY_PATH: cleandir,
         Setting.PORT: ui_port,
         Setting.INGRESS_PORT: ingress_port

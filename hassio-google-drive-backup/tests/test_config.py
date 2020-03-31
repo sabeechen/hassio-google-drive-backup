@@ -1,3 +1,4 @@
+import os
 from pytest import raises
 
 from backup.model import GenConfig
@@ -152,7 +153,7 @@ def test_GenerationalConfig() -> None:
     assert Config().getGenerationalConfig() is None
 
     assert Config().override(Setting.GENERATIONAL_DAYS,
-                               3).getGenerationalConfig() == GenConfig(days=3)
+                               5).getGenerationalConfig() == GenConfig(days=5)
     assert Config().override(Setting.GENERATIONAL_WEEKS,
                                3).getGenerationalConfig() == GenConfig(days=1, weeks=3)
     assert Config().override(Setting.GENERATIONAL_MONTHS,
@@ -170,6 +171,19 @@ def test_GenerationalConfig() -> None:
 
     assert Config().override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).override(Setting.GENERATIONAL_DAY_OF_WEEK,
                                                                               "tue").override(Setting.GENERATIONAL_DAY_OF_YEAR, "4").getGenerationalConfig() is None
+
+
+def test_from_environment():
+    assert Config.fromEnvironment().get(Setting.PORT) != 1000
+
+    os.environ["PORT"] = str(1000)
+    assert Config.fromEnvironment().get(Setting.PORT) == 1000
+
+    del os.environ["PORT"]
+    assert Config.fromEnvironment().get(Setting.PORT) != 1000
+
+    os.environ["port"] = str(1000)
+    assert Config.fromEnvironment().get(Setting.PORT) == 1000
 
 
 def getGenConfig(update):

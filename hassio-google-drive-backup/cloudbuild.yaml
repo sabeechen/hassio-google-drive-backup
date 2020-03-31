@@ -1,0 +1,5 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-f', 'Dockerfile-server', '-t', 'gcr.io/$PROJECT_ID/authserver', '.' ]
+images:
+- 'gcr.io/$PROJECT_ID/authserver'

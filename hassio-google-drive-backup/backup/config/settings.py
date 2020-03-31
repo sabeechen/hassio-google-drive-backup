@@ -69,6 +69,8 @@ class Setting(Enum):
     GOOGLE_DRIVE_PAGE_SIZE = "google_drive_page_size"
     ALTERNATE_DNS_SERVERS = "alternate_dns_servers"
     DEFAULT_DRIVE_CLIENT_ID = "default_drive_client_id"
+    DEFAULT_DRIVE_CLIENT_SECRET = "default_drive_client_secret"
+    DRIVE_PICKER_API_KEY = "drive_picker_api_key"
 
     # Files and folders
     FOLDER_FILE_PATH = "folder_file_path"
@@ -197,6 +199,8 @@ _DEFAULTS = {
     Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: 5,
     Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60,
     Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com",
+    Setting.DEFAULT_DRIVE_CLIENT_SECRET: "",
+    Setting.DRIVE_PICKER_API_KEY: "",
     Setting.DEFAULT_CHUNK_SIZE: 1024 * 1024 * 5
 }
 

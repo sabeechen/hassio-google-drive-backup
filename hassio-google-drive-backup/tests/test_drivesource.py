@@ -464,6 +464,8 @@ async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, 
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
+
+    # TODO: invetigate change history on this.  It looks wrong, when did I change it?
     # config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Make the folder inaccessible
@@ -622,7 +624,7 @@ async def test_cred_refresh_with_secret(drive: DriveSource, server: SimulationSe
     server.resetDriveAuth()
     with open(config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
         creds = server.getCurrentCreds()
-        creds._secret = server.getSetting("drive_client_secret")
+        creds._secret = config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET)
         json.dump(creds.serialize(), f)
     drive.drivebackend.tryLoadCredentials()
     await drive.get()

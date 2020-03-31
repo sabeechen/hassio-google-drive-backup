@@ -20,7 +20,7 @@ from backup.time import Time
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
 from backup.logger import getLogger
 from backup.creds import Creds
-from server.server import Server
+from backup.server import Server
 from tests.faketime import FakeTime
 from datetime import timedelta
 from backup.module import BaseModule
@@ -45,8 +45,9 @@ class HttpMultiException(HTTPClientError):
 @singleton
 class SimulationServer():
     @inject
-    def __init__(self, port, time: Time, session: ClientSession, authserver_builder: ClassAssistedBuilder[Server]):
+    def __init__(self, port, time: Time, session: ClientSession, authserver: Server, config: Config):
         self.items: Dict[str, Any] = {}
+        self.config = config
         self.id_counter = 0
         self.upload_info: Dict[str, Any] = {}
         self.simulate_drive_errors = False
@@ -77,9 +78,7 @@ class SimulationServer():
         self.block_snapshots = False
         self.snapshot_in_progress = False
         self.drive_auth_code = "drive_auth_code"
-        self._authserver = authserver_builder.build(
-            client_id="test_client_id",
-            client_secret="test_client_secret")
+        self._authserver = authserver
 
     def wasUrlRequested(self, pattern):
         for url in self.urls:
@@ -183,8 +182,6 @@ class SimulationServer():
             "addon_slug": "self_slug",
             "drive_refresh_token": "",
             "drive_auth_token": "",
-            "drive_client_id": "test_client_id",
-            "drive_client_secret": "test_client_secret",
             "drive_upload_sleep": 0,
             "drive_all_error": None
         }
@@ -229,9 +226,9 @@ class SimulationServer():
 
     async def driveRefreshToken(self, request: Request):
         params = await request.post()
-        if params['client_id'] != self.getSetting('drive_client_id'):
+        if params['client_id'] != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
             raise HTTPUnauthorized()
-        if params['client_secret'] != self.getSetting('drive_client_secret'):
+        if params['client_secret'] != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
             raise HTTPUnauthorized()
         if params['refresh_token'] != self.getSetting('drive_refresh_token'):
             raise HTTPUnauthorized()
@@ -258,7 +255,7 @@ class SimulationServer():
 
     async def driveAuthorize(self, request: Request):
         query = request.query
-        if query.get('client_id') != self.getSetting('drive_client_id'):
+        if query.get('client_id') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
             raise HTTPUnauthorized()
         if query.get('scope') != 'https://www.googleapis.com/auth/drive.file':
             raise HTTPUnauthorized()
@@ -283,9 +280,9 @@ class SimulationServer():
             raise HTTPUnauthorized()
         if data.get('grant_type') != 'authorization_code':
             raise HTTPUnauthorized()
-        if data.get('client_id') != self.getSetting('drive_client_id'):
+        if data.get('client_id') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
             raise HTTPUnauthorized()
-        if data.get('client_secret') != self.getSetting('drive_client_secret'):
+        if data.get('client_secret') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
             raise HTTPUnauthorized()
         if data.get('code') != self.drive_auth_code:
             raise HTTPUnauthorized()
@@ -293,8 +290,8 @@ class SimulationServer():
         return json_response({
             'access_token': self.getSetting('drive_auth_token'),
             'refresh_token': self.getSetting('drive_refresh_token'),
-            'client_id': self.getSetting('drive_client_id'),
-            'client_sceret': self.getSetting('drive_client_secret'),
+            'client_id': self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
+            'client_secret': self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
             'token_expiry': self.timeToRfc3339String(self._time.now()),
         })
 
@@ -307,14 +304,12 @@ class SimulationServer():
 
     def resetDriveAuth(self):
         self.expireCreds()
-        self.settings['drive_client_secret'] = self.generateId(5)
-        self.settings['drive_client_id'] = self.generateId(5)
-        self._authserver.exchanger._client_id = self.getSetting("drive_client_id")
-        self._authserver.exchanger._client_secret = self.getSetting("drive_client_secret")
+        self.config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, self.generateId(5))
+        self.config.override(Setting.DEFAULT_DRIVE_CLIENT_SECRET, self.generateId(5))
 
     def getCurrentCreds(self):
         return Creds(self._time,
-                     id=self.getSetting("drive_client_id"),
+                     id=self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
                      expiration=self._time.now() + timedelta(hours=1),
                      access_token=self.getSetting("drive_auth_token"),
                      refresh_token=self.getSetting("drive_refresh_token"))
@@ -901,8 +896,6 @@ async def main():
         'snapshot_min_size': 1024 * 1024 * 3,
         'snapshot_max_size': 1024 * 1024 * 5,
         "drive_refresh_token": "test_refresh_token",
-        "drive_client_id": "test_client_id",
-        "drive_client_secret": "test_client_secret",
         "drive_upload_sleep": 0,
         "snapshot_wait_time": 0,
         "hassio_header": "test_header"

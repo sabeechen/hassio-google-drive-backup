@@ -1,9 +1,0 @@
-dnspython
-aiorun
-aiohttp
-aiodns
-injector
-aiofiles
-ptvsd
-colorlog
-google-cloud-logging

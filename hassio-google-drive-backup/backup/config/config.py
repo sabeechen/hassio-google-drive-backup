@@ -4,7 +4,7 @@ import os.path
 import uuid
 from typing import Any, Dict, List, Optional
 
-from .settings import _LOOKUP, Setting
+from .settings import _LOOKUP, Setting, _VALIDATORS
 from ..logger import getLogger
 
 logger = getLogger(__name__)
@@ -82,16 +82,18 @@ class Config():
         for key in os.environ:
             if key in _LOOKUP:
                 config[_LOOKUP[key]] = os.environ[key]
-            elif str.upper(key) in _LOOKUP:
-                config[_LOOKUP[str.upper(key)]] = os.environ[key]
+            elif str.lower(key) in _LOOKUP:
+                config[_LOOKUP[str.lower(key)]] = _VALIDATORS[_LOOKUP[str.lower(key)]].validate(os.environ[key])
         return Config(config)
 
-    def __init__(self, data={}):
+    def __init__(self, data=None):
         self.overrides = {}
-        self.config = {}
+        if data is None:
+            self.config = {}
+        else:
+            self.config = data
         self._subscriptions = []
         self._clientIdentifier = uuid.uuid4()
-        self.data = data
         self.retained = self._loadRetained()
         self._gen_config_cache = self.getGenerationalConfig()
 

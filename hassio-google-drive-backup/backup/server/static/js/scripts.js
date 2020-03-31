@@ -100,12 +100,6 @@ class Color {
       return new Color(this.r, this.g, this.b, alpha);
     }
   }
-  
-  
-    var developerKey = 'AIzaSyDQe1aNi8LpdcmDW2NISA8n3IJB8ZIp15g';
-    var clientId = "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com"
-  
-    var appId = "933944288016";
     var scope = ['https://www.googleapis.com/auth/drive.file'];
   
     var pickerApiLoaded = false;

@@ -13,6 +13,10 @@
     <script src="/static/js/jquery.js?version=0.98.3"></script>
     <script src="/static/js/colpick.js?version=0.98.3"></script>
     <script src="/static/js/materialize.js?version=0.98.3"></script>
+    <script type="text/javascript">
+      var clientId = "{{ client_id }}";
+      var appId = "{{ app_id }}";
+    </script>
     <script type="text/javascript" src="/static/js/scripts.js?version=0.98.3"></script>
     <style>
   body {    
@@ -31,7 +35,7 @@
     <nav class="non-ingress ha-blue" role="navigation">
       <div class="nav-wrapper">
         <a class="brand-logo">
-          <img style="vertical-align: middle;" src="images/logo.png" width=40 height=40 />
+          <img style="vertical-align: middle;" src="/static/images/logo.png" width=40 height=40 />
           <span>Choose Backup Folder</span>
         </a>
       </div>

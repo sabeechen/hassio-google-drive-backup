@@ -1,6 +1,8 @@
 import os
 import urllib
 import json
+import aiohttp_jinja2
+import jinja2
 from os.path import abspath, join
 from aiohttp.web import Application, json_response, Request, TCPSite, AppRunner, post, Response, static, FileResponse, get
 from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError, ServerConnectionError, ServerDisconnectedError, ServerTimeoutError
@@ -11,10 +13,6 @@ from backup.config import Config, Setting
 from injector import ClassAssistedBuilder, inject, singleton
 from google.cloud import logging
 from google.auth.exceptions import DefaultCredentialsError
-
-CLIENT_ID = os.environ.get("CLIENT_ID")
-CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
-DEFAULT_REDIRECT = os.environ.get("AUTHORIZED_REDIRECT", "https://backup.beechens.com/drive/authorize")
 
 basic_logger = getLogger(__name__)
 
@@ -45,14 +43,13 @@ class Server():
     def __init__(self,
                  config: Config,
                  exchanger_builder: ClassAssistedBuilder[Exchanger],
-                 logger: CloudLogger,
-                 client_id=CLIENT_ID,
-                 client_secret=CLIENT_SECRET):
+                 logger: CloudLogger):
         self.exchanger = exchanger_builder.build(
-            client_id=client_id,
-            client_secret=client_secret,
+            client_id=config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
+            client_secret=config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
             redirect=config.get(Setting.AUTHENTICATE_URL))
         self.logger = logger
+        self.config = config
 
     async def authorize(self, request: Request):
         if 'redirectbacktoken' in request.query:
@@ -123,9 +120,13 @@ class Server():
                 "error": str(e)
             }, status=500)
 
+    @aiohttp_jinja2.template('picker.jinja2')
     async def picker(self, request: Request):
-        path = abspath(join(__file__, "..", "static", "picker.html"))
-        return FileResponse(path)
+        return {
+            "client_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
+            "developer_key": self.config.get(Setting.DRIVE_PICKER_API_KEY),
+            "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0]
+        }
 
     async def index(self, request: Request):
         path = abspath(join(__file__, "..", "static", "index.html"))
@@ -141,14 +142,15 @@ class Server():
             post("/drive/refresh", self.refresh),
             post("/logerror", self.error)
         ])
+        aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(path))
         return app
 
     async def start(self):
         runner = AppRunner(self.buildApp(Application()))
         await runner.setup()
-        site = TCPSite(runner, "0.0.0.0", int(os.environ.get("PORT")))
+        site = TCPSite(runner, "0.0.0.0", int(self.config.get(Setting.PORT)))
         await site.start()
-        print("Server Started")
+        self.logger.info("Backup Auth Server Started")
 
     def logError(self, request: Request, exception: Exception):
         data = self.getRequestInfo(request)

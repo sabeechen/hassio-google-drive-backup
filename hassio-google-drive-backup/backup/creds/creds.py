@@ -40,11 +40,13 @@ class Creds():
 
     @property
     def expiration(self):
+        if self._expiration is None:
+            return self.time.now()
         return self._expiration
 
     @property
     def is_expired(self):
-        return self.time.now() > self._expiration
+        return self.time.now() >= self.expiration
 
     def serialize(self, include_secret=True):
         ret = {

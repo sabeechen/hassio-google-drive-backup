@@ -82,7 +82,7 @@ def event_loop():
 
 @pytest.fixture
 async def injector(cleandir, server_url, ui_port, ingress_port):
-    drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token", "test_client_secret")
+    drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token")
     with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
         f.write("for_unit_tests: \"password value\"\n")
 

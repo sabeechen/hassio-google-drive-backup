@@ -488,7 +488,7 @@ class AsyncServer(Trigger, Startable):
 
     def _addRoutes(self, app):
         app.add_routes(
-            [web.static('/static', abspath(join(__file__, "..", "..", "..", "static")), append_version=True)])
+            [web.static('/static', abspath(join(__file__, "..", "..", "static")), append_version=True)])
         app.add_routes([web.get('/', self.index)])
         app.add_routes([web.get('/index.html', self.index)])
         self._addRoute(app, self.reauthenticate)
@@ -586,7 +586,7 @@ class AsyncServer(Trigger, Startable):
             }
 
     def filePath(self, name):
-        return abspath(join(__file__, "..", "..", "..", "static", name))
+        return abspath(join(__file__, "..", "..", "static", name))
 
     def cssElement(self, selector, keys):
         ret = selector

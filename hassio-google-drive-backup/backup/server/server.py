@@ -10,6 +10,7 @@ from aiohttp.web_exceptions import HTTPBadRequest, HTTPSeeOther
 from backup.creds import Exchanger
 from backup.logger import getLogger, StandardLogger
 from backup.config import Config, Setting
+from backup.exceptions import GoogleCredentialsExpired
 from injector import ClassAssistedBuilder, inject, singleton
 from google.cloud import logging
 from google.auth.exceptions import DefaultCredentialsError
@@ -81,6 +82,7 @@ class Server():
         return Response()
 
     # TODO: This needs testing.  Lots of test coverage.
+    # TODO: this shoudl handle the GoogleCantconnect, GoogleDNs, etc errors specifically. 
     async def refresh(self, request: Request):
         try:
             token = (await request.json())['refresh_token']
@@ -114,6 +116,10 @@ class Server():
             return json_response({
                 "error": "Google's servers timed out"
             }, status=503)
+        except GoogleCredentialsExpired:
+            return json_response({
+                    "error": "expired"
+                }, status=401)
         except Exception as e:
             self.logError(request, e)
             return json_response({
@@ -129,11 +135,11 @@ class Server():
         }
 
     async def index(self, request: Request):
-        path = abspath(join(__file__, "..", "static", "index.html"))
+        path = abspath(join(__file__, "..", "..", "static", "server-index.html"))
         return FileResponse(path)
 
     def buildApp(self, app):
-        path = abspath(join(__file__, "..", "static"))
+        path = abspath(join(__file__, "..", "..", "static"))
         app.add_routes([
             static("/static", path, append_version=True),
             get("/drive/picker", self.picker),

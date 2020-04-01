@@ -772,6 +772,9 @@ class SimulationServer():
         self._options = (await request.json())['options'].copy()
         return self.formatDataResponse({})
 
+    async def slugRedirect(self, request: Request):
+        raise HTTPSeeOther("https://localhost:" + str(self.config.get(Setting.INGRESS_PORT)))
+
     @middleware
     async def error_middleware(self, request: Request, handler):
         self.urls.append(str(request.url))
@@ -842,7 +845,8 @@ class SimulationServer():
             post('/doareset', self.reset),
             post('/oauth2/v4/token', self.driveRefreshToken),
             get('/o/oauth2/v2/auth', self.driveAuthorize),
-            post('/token', self.driveToken)
+            post('/token', self.driveToken),
+            get('/hassio/ingress/self_slug', self.slugRedirect)
         ]
 
     def generateId(self, length: int = 30) -> Any:

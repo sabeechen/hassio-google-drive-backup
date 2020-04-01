@@ -17,7 +17,6 @@
     "drive_authorize_url": "http://localhost:56154/o/oauth2/v2/auth",
     "drive_token_url": "http://localhost:56154/token",
     "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
-    "default_drive_client_id": "test_client_id",
     "ingress_port": 56155,
     "port": 56156
 }

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
+    <title>Hass.io Google Drive Backup - Folder Picker</title>
+
+    <link href="/static/css/icons.css?version=0.98.3" rel="stylesheet">
+    <link href="/static/css/materialize.css?version=0.98.3" type="text/css" rel="stylesheet" media="screen,projection" />
+    <link id="theme" href="/static/css/static.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
+    <link rel="icon" type="image/png" href="/static/images/favicon.png?version=0.98.3">
+    <script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
+    <script src="/static/js/jquery.js?version=0.98.3"></script>
+    <script src="/static/js/colpick.js?version=0.98.3"></script>
+    <script src="/static/js/materialize.js?version=0.98.3"></script>
+    <script type="text/javascript">
+      var clientId = "{{ client_id }}";
+      var appId = "{{ app_id }}";
+    </script>
+    <script type="text/javascript" src="/static/js/scripts.js?version=0.98.3"></script>
+    <script type="text/javascript" src="/static/js/settings.js?version=0.98.3"></script>
+    <script type="text/javascript">>
+      $(document).ready(function() {
+        doColors();
+      });
+    </script>
+    <style>
+  body {    
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+
+  main {
+    flex: 1 0 auto;
+  }
+    </style>    
+  </head>
+  <body>
+  <header>
+    <nav class="non-ingress ha-blue" role="navigation">
+      <div class="nav-wrapper">
+        <a class="brand-logo">
+          <img style="vertical-align: middle;" src="/static/images/logo.png" width=40 height=40 />
+          <span>Choose Backup Folder</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+  <main>
+    <div class="container">
+      <div class="section">
+      <div class="row" id="hello_card">
+								                  <div class="col s12 m9">
+								                      <div class="card">
+								                          <div class="card-content">
+								                              <span class="card-title">Opening folder picker...</span>
+								                              <p>A window should be opening now asking you to log into your Google account and then to select a folder from your Google Drive.
+								                              <ul class="browser-default">
+								                                <li>If not, your popup blocker probably hates this page.  Click the button below to open the dialog.</li>
+								                                <li>After you select a folder you'll be redirected back to the addon.</li>
+								                                <li>The folder you select is where the addon will store snapshots from now on.  This should be what you want.</li>
+								                                <li>If you'd like to know why this page has to be hosted on an external domain, <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a>.</li>
+								                              </ul>
+								                              </p>
+								                              <div class="card-action white-text">
+								                                  <a target="_blank" class="waves-effect waves-light btn" onclick="loadPicker();">Choose Folder</a>
+								                              </div>
+								                          </div>
+								                      </div>
+								                  </div>
+								              </div>
+    </div>
+    </div>
+  </main>
+  <footer class="ha-blue page-footer">
+    <div class="container">
+      <div class="row">
+        <div class="col l3 s12">
+          <h5 class="accent-text">Connect</h5>
+          <ul>
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a>
+            </li>
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue
+                Tracker</a></li>
+            <li><a class="accent-text" href="https://materializecss.com">Materialize</a></li>
+          </ul>
+        </div>
+        <div class="col l6 s12">
+          <h5 class="accent-title">Who did this?</h5>
+          <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
+            like it and would like to support me, you can star my projects on <a
+              href="https://github.com/sabeechen">Github</a> or just throw money at me              
+            <style>
+              .bmc-button img {
+                width: 25px !important;
+                margin-bottom: 1px !important;
+                box-shadow: none !important;
+                border: none !important;
+                vertical-align: middle !important;
+              }
+
+              .bmc-button {
+                padding: 3px 5px 3px 5px !important;
+                line-height: 25px !important;
+                height: 35px !important;
+                min-width: 160px !important;
+                text-decoration: none !important;
+                display: inline-flex !important;
+                color: #000000 !important;
+                background-color: #FFFFFF !important;
+                border-radius: 3px !important;
+                border: 1px solid transparent !important;
+                padding: 3px 5px 3px 5px !important;
+                font-size: 7px !important;
+                letter-spacing: 0.6px !important;
+                box-shadow: 0px 1px 2px rgba(190, 190, 190, 0.5) !important;
+                -webkit-box-shadow: 0px 1px 2px 2px rgba(190, 190, 190, 0.5) !important;
+                margin: 0 auto !important;
+                font-family: 'Cookie', cursive !important;
+                -webkit-box-sizing: border-box !important;
+                box-sizing: border-box !important;
+                -o-transition: 0.3s all linear !important;
+                -webkit-transition: 0.3s all linear !important;
+                -moz-transition: 0.3s all linear !important;
+                -ms-transition: 0.3s all linear !important;
+                transition: 0.3s all linear !important;
+              }
+
+              .bmc-button:hover,
+              .bmc-button:active,
+              .bmc-button:focus {
+                -webkit-box-shadow: 0px 1px 2px 2px rgba(190, 190, 190, 0.5) !important;
+                text-decoration: none !important;
+                box-shadow: 0px 1px 2px 2px rgba(190, 190, 190, 0.5) !important;
+                opacity: 0.85 !important;
+                color: #000000 !important;
+              }
+            </style>
+            <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet"><a class="bmc-button"
+              target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img
+                src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee"><span
+                style="margin-left:15px;font-size:20px !important;">Buy me a coffee</span></a></p>
+        </div>
+      </div>
+      <div class="container left accent-text">
+        © 2020 Stephen Beechen
+      </div>
+    </div>
+  </footer>
+  </body>
+</html>
+

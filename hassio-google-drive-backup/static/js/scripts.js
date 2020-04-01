@@ -753,3 +753,99 @@ $(document).ready(function () {
     $(".non-ingress").hide();
   }
 });
+
+
+function loadPicker() {
+  gapi.load('auth', {'callback': onAuthApiLoad});
+  gapi.load('picker', {'callback': onPickerApiLoad});
+}
+
+function onAuthApiLoad() {
+  window.gapi.auth.authorize({
+    'client_id': clientId,
+    'scope': scope,
+    'immediate': false
+   }, handleAuthResult);
+}
+
+function onPickerApiLoad() {
+  pickerApiLoaded = true;
+  createPicker();
+}
+
+function handleAuthResult(authResult) {
+  if (authResult && !authResult.error) {
+    oauthToken = authResult.access_token;
+    createPicker();
+  }
+}
+
+// Create and render a Picker object for searching images.
+function createPicker() {
+  if (pickerApiLoaded && oauthToken) {
+    var mydrive = new google.picker.DocsView(google.picker.ViewId.DOCS)
+        .setMode(google.picker.DocsViewMode.LIST)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setParent('root')
+        .setLabel("My Drive");
+    var sharedWithMe = new google.picker.DocsView(google.picker.FOLDERS)
+        .setMode(google.picker.DocsViewMode.LIST)
+        //.setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setOwnedByMe(true)
+        .setQuery("*")
+        .setLabel("Shared With Me");
+    var sharedDrives = new google.picker.DocsView(google.picker.ViewId.DOCS)
+        .setEnableDrives(true) 
+        .setMode(google.picker.DocsViewMode.LIST) 
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true);
+    var recent = new google.picker.DocsView(google.picker.ViewId.RECENTLY_PICKED)
+        .setMode(google.picker.DocsViewMode.LIST)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true);
+    var picker = new google.picker.PickerBuilder()
+        .disableFeature(google.picker.Feature.NAV_HIDDEN)
+        .disableFeature(google.picker.Feature.MINE_ONLY)
+        .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+        .setAppId(appId)
+        .setOAuthToken(oauthToken)
+        .addView(mydrive)
+        //.addView(sharedWithMe)
+        .addView(sharedDrives)
+        .addView(recent)
+        .setTitle("Choose a backup folder")
+        .setCallback(pickerCallback)
+        .build();
+     picker.setVisible(true);
+  }
+}
+
+function getQueryParams( params) {
+  let href = window.location;
+  //this expression is to get the query strings
+  let reg = new RegExp( '[?&]' + params + '=([^&#]*)', 'i' );
+  let queryString = reg.exec(href);
+  return queryString ? queryString[1] : null;
+};
+
+// A simple callback implementation.
+function pickerCallback(data) {
+  if (data.action == google.picker.Action.PICKED) {
+    var message = "";
+    if (data.docs.length == 0) {
+      message = "No document was selected.  Please try selecting a folder again."
+    } else if (data.docs[0].mimeType != "application/vnd.google-apps.folder") {
+      // Has to be a folder.  Doesn't make sense otherwise.
+      message = "You can only backup snapshots to a folder.  Please select a folder instead."
+    }
+
+    if (message.length > 0) {
+      alert(message);
+    } else {
+      // Redirect back to the uer's home assistant with the now authorized folder id.
+      window.location.href = decodeURIComponent(getQueryParams("returnto")) + "?id=" + data.docs[0].id
+    }
+  }
+}

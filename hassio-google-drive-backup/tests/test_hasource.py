@@ -6,7 +6,7 @@ from aiohttp.client_exceptions import ClientResponseError
 from backup.config import Config, Setting, CreateOptions
 from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
-                               SnapshotPasswordKeyInvalid, UploadFailed)
+                               SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError)
 from backup.util import GlobalInfo
 from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password
 from backup.model import DummySnapshot
@@ -481,3 +481,10 @@ async def test_delete_error(time, ha: HaSource, server):
 async def test_hostname(time, ha: HaSource, server, global_info: GlobalInfo):
     await ha.init()
     assert global_info.url == "/hassio/ingress/self_slug"
+
+
+@pytest.mark.asyncio
+async def test_supervisor_error(time, ha: HaSource, server: SimulationServer, global_info: GlobalInfo):
+    await server.stop()
+    with pytest.raises(SupervisorConnectionError):
+        await ha.init()

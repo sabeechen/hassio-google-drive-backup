@@ -138,13 +138,9 @@ async def server(injector, port, drive_creds: Creds, session):
 
     # start the server
     logging.getLogger().info("Starting SimulationServer on port " + str(port))
-    runner = aiohttp.web.AppRunner(server.createApp())
-    await runner.setup()
-    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=port)
-    await site.start()
+    await server.start(port)
     yield server
-    await runner.shutdown()
-    await runner.cleanup()
+    await server.stop()
 
 
 @pytest.fixture

@@ -804,6 +804,16 @@ class SimulationServer():
         self._authserver.buildApp(app)
         return app
 
+    async def start(self, port):
+        self.runner = aiohttp.web.AppRunner(self.createApp())
+        await self.runner.setup()
+        site = aiohttp.web.TCPSite(self.runner, "0.0.0.0", port=port)
+        await site.start()
+
+    async def stop(self):
+        await self.runner.shutdown()
+        await self.runner.cleanup()
+
     def toggleBlockSnapshot(self, request: Request):
         self.snapshot_in_progress = not self.snapshot_in_progress
         resp = "Blocking" if self.snapshot_in_progress else "Not Blocking"

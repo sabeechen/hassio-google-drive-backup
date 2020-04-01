@@ -301,7 +301,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         except Exception as e:
             logger.debug("Failed to connect to supervisor")
             logger.debug(logger.formatException(e))
-            raise SupervisorConnectionError()
+            raise e
 
     def getAddonUrl(self):
         """

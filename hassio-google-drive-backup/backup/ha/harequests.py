@@ -2,13 +2,13 @@ import os
 from typing import Any, Dict, List
 
 from aiohttp import ClientSession
-from aiohttp.client_exceptions import ClientResponseError
+from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError
 from injector import inject
 
 from ..util import AsyncHttpGetter
 from ..config import Config, Setting
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
-from ..exceptions import HomeAssistantDeleteError
+from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError
 from ..model import HASnapshot, Snapshot
 from ..logger import getLogger
 
@@ -17,6 +17,15 @@ logger = getLogger(__name__)
 NOTIFICATION_ID = "backup_broken"
 EVENT_SNAPSHOT_START = "snapshot_started"
 EVENT_SNAPSHOT_END = "snapshot_ended"
+
+
+def supervisor_call(func):
+    async def wrap_and_call(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except ClientConnectorError:
+            raise SupervisorConnectionError()
+    return wrap_and_call
 
 
 class HaRequests():
@@ -29,6 +38,7 @@ class HaRequests():
         self.cache = {}
         self.session = session
 
+    @supervisor_call
     async def createSnapshot(self, info):
         if 'folders' in info or 'addons' in info:
             url = "{0}snapshots/new/partial".format(
@@ -38,15 +48,18 @@ class HaRequests():
                 self.config.get(Setting.HASSIO_URL))
         return await self._postHassioData(url, info)
 
+    @supervisor_call
     async def auth(self, user: str, password: str) -> None:
         await self._postHassioData("{}auth".format(self.config.get(Setting.HASSIO_URL)), {"username": user, "password": password})
 
+    @supervisor_call
     async def upload(self, stream):
         url: str = "{0}snapshots/new/upload".format(
             self.config.get(Setting.HASSIO_URL))
         async with stream:
             return await self._postHassioData(url, data=stream.generator(self.config.get(Setting.DEFAULT_CHUNK_SIZE)))
 
+    @supervisor_call
     async def delete(self, slug) -> None:
         delete_url: str = "{0}snapshots/{1}/remove".format(
             self.config.get(Setting.HASSIO_URL), slug)
@@ -59,6 +72,7 @@ class HaRequests():
                 raise HomeAssistantDeleteError()
             raise e
 
+    @supervisor_call
     async def snapshot(self, slug):
         if slug in self.cache:
             info = self.cache[slug]
@@ -67,31 +81,39 @@ class HaRequests():
             self.cache[slug] = info
         return HASnapshot(info, self.config.isRetained(slug))
 
+    @supervisor_call
     async def snapshots(self):
         return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "snapshots")
 
+    @supervisor_call
     async def haInfo(self):
         url = "{0}homeassistant/info".format(
             self.config.get(Setting.HASSIO_URL))
         return await self._getHassioData(url)
 
+    @supervisor_call
     async def selfInfo(self) -> Dict[str, Any]:
         return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/self/info")
 
+    @supervisor_call
     async def hassosInfo(self) -> Dict[str, Any]:
         return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "hassos/info")
 
+    @supervisor_call
     async def info(self) -> Dict[str, Any]:
         return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "info")
 
+    @supervisor_call
     async def refreshSnapshots(self):
         url = "{0}snapshots/reload".format(self.config.get(Setting.HASSIO_URL))
         return await self._postHassioData(url)
 
+    @supervisor_call
     async def supervisorInfo(self):
         url = "{0}supervisor/info".format(self.config.get(Setting.HASSIO_URL))
         return await self._getHassioData(url)
 
+    @supervisor_call
     async def restore(self, slug: str, password: str = None) -> None:
         url: str = "{0}snapshots/{1}/restore/full".format(
             self.config.get(Setting.HASSIO_URL), slug)
@@ -100,6 +122,7 @@ class HaRequests():
         else:
             await self._postHassioData(url, {})
 
+    @supervisor_call
     async def download(self, slug) -> AsyncHttpGetter:
         url = "{0}snapshots/{1}/download".format(
             self.config.get(Setting.HASSIO_URL), slug)
@@ -140,10 +163,12 @@ class HaRequests():
             'Client-Identifier': self.config.clientIdentifier()
         }
 
+    @supervisor_call
     async def _getHassioData(self, url: str) -> Dict[str, Any]:
         logger.debug("Making Hassio request: " + url)
         return await self._validateHassioReply(await self.session.get(url, headers=self._getHassioHeaders()))
 
+    @supervisor_call
     async def _postHassioData(self, url: str, json=None, file=None, data=None) -> Dict[str, Any]:
         logger.debug("Making Hassio request: " + url)
         return await self._validateHassioReply(await self.session.post(url, headers=self._getHassioHeaders(), json=json, data=data))
@@ -191,6 +216,7 @@ class HaRequests():
         }
         await self._postHaData("states/binary_sensor.snapshots_stale", data)
 
+    @supervisor_call
     async def updateConfig(self, config) -> None:
         return await self._postHassioData("{0}addons/self/options".format(self.config.get(Setting.HASSIO_URL)), {'options': config})
 

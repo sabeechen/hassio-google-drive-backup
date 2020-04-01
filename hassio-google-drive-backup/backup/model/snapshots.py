@@ -19,7 +19,7 @@ PROP_PROTECTED = "protected"
 PROP_RETAINED = "retained"
 
 DRIVE_KEY_TEXT = "Google Drive's snapshot metadata"
-HA_KEY_TEXT = "Hass.io's snapshot metadata"
+HA_KEY_TEXT = "Home Assistant's snapshot metadata"
 
 
 class AbstractSnapshot():
@@ -94,7 +94,7 @@ class AbstractSnapshot():
 
 class Snapshot(object):
     """
-    Represents a Hass.io snapshot stored on Google Drive, locally in
+    Represents a Home Assistant snapshot stored on Google Drive, locally in
     Home Assistant, or a pending snapshot we expect to see show up later
     """
 
@@ -201,7 +201,7 @@ class Snapshot(object):
         if inDrive:
             return "Drive Only"
         if inHa:
-            return "Hass.io Only"
+            return "HA Only"
         return "Deleted"
 
     def isDeleted(self) -> bool:

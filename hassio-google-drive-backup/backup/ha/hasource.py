@@ -108,7 +108,7 @@ class PendingSnapshot(AbstractSnapshot):
 @singleton
 class HaSource(SnapshotSource[HASnapshot]):
     """
-    Stores logic for interacting with the Hass.io add-on API
+    Stores logic for interacting with the supervisor add-on API
     """
     @inject
     def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo):
@@ -349,7 +349,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         try:
             result = await asyncio.wait_for(self.harequests.createSnapshot(pending._request_info), timeout=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS))
             slug = ensureKey(
-                "slug", result, "Hass.io's create snapshot response")
+                "slug", result, "supervisor's create snapshot response")
             pending.complete(slug)
             self.config.setRetained(
                 slug, pending.getOptions().retain_sources.get(self.name(), False))

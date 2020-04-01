@@ -90,7 +90,7 @@ async def test_folder_creation(drive, time, config):
 
     item = await drive.drivebackend.get(folderId)
     assert not item["trashed"]
-    assert item["name"] == "Hass.io Snapshots"
+    assert item["name"] == "Home Assistant Snapshots"
     assert item["mimeType"] == FOLDER_MIME_TYPE
     assert item["appProperties"]['backup_folder'] == 'true'
 

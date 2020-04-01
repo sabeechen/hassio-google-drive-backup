@@ -29,7 +29,7 @@ logger = getLogger(__name__)
 MIME_TYPE = "application/tar"
 THUMBNAIL_MIME_TYPE = "image/png"
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
-FOLDER_NAME = 'Hass.io Snapshots'
+FOLDER_NAME = 'Home Assistant Snapshots'
 FOLDER_CACHE_SECONDS = 30
 
 
@@ -116,7 +116,7 @@ class DriveSource(SnapshotDestination):
         file_metadata = {
             'name': str(snapshot.name()) + ".tar",
             'parents': [await self._getParentFolderId()],
-            'description': 'A Hass.io snapshot file uploaded by Hass.io Google Drive Backup',
+            'description': 'A Home Assistant snapshot file uploaded by HomeAssistant Google Drive Backup',
             'appProperties': {
                 PROP_KEY_SLUG: snapshot.slug(),
                 PROP_KEY_DATE: str(snapshot.date()),

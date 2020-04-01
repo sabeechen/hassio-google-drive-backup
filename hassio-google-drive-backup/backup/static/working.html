@@ -4,7 +4,7 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-  <title>Hassio Google Drive Backup</title>
+  <title>Home Assistant Google Drive Backup</title>
 
   <!-- CSS  -->
   <link href="static/css/icons.css?version=0.100.0" rel="stylesheet">
@@ -60,7 +60,7 @@
     <div class="modal-footer">
       <a href="#!" class="danger-button modal-close waves-effect waves-light btn" id="delete_drive">Delete in Google
         Drive</a>
-      <a href="#!" class="danger-button modal-close waves-effect waves-light btn" id="delete_ha">Delete in Hass.io</a>
+      <a href="#!" class="danger-button modal-close waves-effect waves-light btn" id="delete_ha">Delete in HA</a>
       <a href="#!" class="danger-button modal-close waves-effect waves-light btn" id="delete_both">Delete Everywhere</a>
       <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="delete_cancel">Cancel</a>
     </div>
@@ -138,8 +138,8 @@
   </div>
   <div id="uploadmodal" class="modal">
     <div class="modal-content">
-      <h4>Upload this snapshot to Hass.io</h4>
-      <p>Are you sure you'd like to upload this snapshot back to Hass.io? The snapshot will be downloaded from Google
+      <h4>Upload this snapshot to Home Assistant</h4>
+      <p>Are you sure you'd like to upload this snapshot back to Home Assistant? The snapshot will be downloaded from Google
         Drive, and after that you'll be able to restore it.</p>
       <p><b>Note:</b> The snapshot you upload from Google Drive will be kept indefinitely in Home Assistant until you
         delete it manually. You can thange this by selecting "Never Delete" and unckecking "Keep indefinitely in Home
@@ -299,7 +299,7 @@
           <ul id='action_dropdown' class='dropdown-content'>
             <li id="delete_option">
               <a href="#!" id="delete_link" data-target="deletemodal" class="modal-trigger tooltipped"
-                data-position="left" data-tooltip="Deletes the snapshot from Hass.io, Google Drive, or both."
+                data-position="left" data-tooltip="Deletes the snapshot from Home Assistant, Google Drive, or both."
                 onClick="confirmDeleteSnapshot(this);return false;">
                 <i class="material-icons left" style="font-size: 25px">delete_forever</i>Delete
               </a>
@@ -321,7 +321,7 @@
             <li id="upload_option">
               <a href="#!" id="upload_link" data-target="uploadmodal" class="modal-trigger tooltipped"
                 data-position="left"
-                data-tooltip="Upload the snapshot from Google Drive to Hass.io.  <br/>You'll need to do this if you want to restore the snapshot."
+                data-tooltip="Upload the snapshot from Google Drive to Home Assistant.  <br/>You'll need to do this if you want to restore the snapshot."
                 onClick="uploadSnapshot(this);return false;">
                 <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
               </a>
@@ -391,7 +391,7 @@
                 class="validate" onkeyup="checkForSecret()" />
               <label for="snapshot_password">Password</label>
               <span class="helper-text">When set, creates snapshots protected by a password. This password will be
-                required by Hass.io when restoring the snapshot. Leave blank to require no password. You can specify a
+                required by Home Assistant when restoring the snapshot. Leave blank to require no password. You can specify a
                 password from your secrets.yaml by using the syntax "!secret your_secret_key".</span>
             </div>
             <div class="input-field col m6 s12" id="password_renter_block">
@@ -937,7 +937,7 @@
           <h6>Check the Logs</h6>This add-on makes its <a target="_blank" href="log?format=view">debug logs</a>
           available. They're pretty cryptic, but might give you some context for whats going wrong. Sometimes, an error
           only shows up in the Home Assistant supervisor logs, which you can get to from within Home Assistant by
-          clicking "Hass.io" > "System" > "System Logs" > "Refresh".
+          clicking "Supervisor" > "System" > "System Logs" > "Refresh".
         </li>
         <li>
           <h6>Restart Everything</h6>
@@ -1215,16 +1215,16 @@
               <div class="card-content white-text">
                 <span class="card-title">
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">delete_forever</i>
-                  <span style="vertical-align: top;">Couldn't delete old snapshots in Hass.io</span>
+                  <span style="vertical-align: top;">Couldn't delete old snapshots in Home Assistant</span>
                 </span>
                 <p>
                   The add-on ran into an error (HTTP 400) trying to delete your oldest snapshot. This can happen
-                  sometimes (especially if you just installed the add-on) when Hassio's cache of your existing snapshots
+                  sometimes (especially if you just installed the add-on) when Home Assistant's cache of your existing snapshots
                   is out of sync. The add-on can't continue until this is resolved.
                 </p>
                 <p>To resolve this, you can try:</p>
                 <ul class="browser-default">
-                  <li>Refreshing your snapshots by going to the snapshot page in Hass.io and clicking the refresh icon
+                  <li>Refreshing your snapshots by going to the snapshot page in Home Assistant and clicking the refresh icon
                     in the top right.</li>
                   <li>Restarting the machine Home Assistant runs on.</li>
                 </ul>
@@ -1270,7 +1270,7 @@
                   </li>
                 </ul>
 
-                <p>You can also try restarting this add-on, Hass.io, or Home Assistant.</p>
+                <p>You can also try restarting this add-on, the supervisor, or Home Assistant.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="sync('google_dns'); return false;">Try Syncing Again</a>
                 </div>
@@ -1313,7 +1313,7 @@
                     </div>
                   </li>
                 </ul>
-                <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
+                <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="sync('google_timeout'); return false;">Try Syncing Again</a>
                 </div>
@@ -1351,7 +1351,7 @@
                     </div>
                   </li>
                 </ul>
-                <p>You can also try syncing again or restarting this add-on, Hass.io, or Home Assistant.</p>
+                <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="sync('google_cant_connect'); return false;">Try Syncing Again</a>
                 </div>
@@ -1392,11 +1392,11 @@
                   <i class="material-icons" style="font-size: 50px; padding-right: 10px;">settings_backup_restore</i>
                   <span style="vertical-align: top;">Snapshot Already in Progress</span>
                 </span>
-                <p>The add-on couldn't create a snapshot on schedule because one is already in progress. Hass.io can
+                <p>The add-on couldn't create a snapshot on schedule because one is already in progress. Home Assistant can
                   only create one snapshot at a time. This can happen if:</p>
                 <ul class="browser-default">
                   <li>The add-on was started while a snapshot was already in progress</li>
-                  <li>A snapshot was started outside of the add-on, eg manually from the Hass.io snapshots page.</li>
+                  <li>A snapshot was started outside of the add-on, eg manually from the supervisor snapshots page.</li>
                 </ul>
                 <p>Typically you don't need to do anything to resolve this, as the add-on will pick up again once the
                   snapshot in progress finishes.
@@ -1459,7 +1459,7 @@
                       account</a> and upload files without problems.</li>
                   <li>Reauthenting the add-on with Google Drive (click "ACTIONS" -> "Reauthorize Google Drive" up top)
                   </li>
-                  <li>Restarting the add-on, Home Assistant, or Hass.io.</li>
+                  <li>Restarting the add-on, Home Assistant, or the supervisor.</li>
                   <li>Reinstalling the add-on.</li>
                 </ul>
                 <div class="card-action white-text">
@@ -1498,7 +1498,7 @@
                     can keep a smaller history by setting up the <a target="_blank"
                       href="https://www.home-assistant.io/components/recorder/">recorder component</a> purge settings in
                     Home Assistant</li>
-                  <li>Restarting the add-on, Home Assistant, or Hass.io.</li>
+                  <li>Restarting the add-on, Home Assistant, or the supervisor.</li>
                   <li>Reinstalling the add-on.</li>
                 </ul>
                 <div class="card-action white-text">
@@ -1523,17 +1523,17 @@
                     here</a> to see the folder contents in Google Drive.</p>
                 <p>To resolve this you can:</p>
                 <ul class="browser-default">
-                  <li>"Use the folder" and merge in snapshots from this Hass.io/Home Assistant instance. If this
+                  <li>"Use the folder" and merge in snapshots from this Home Assistant instance. If this
                     instance has newer snapshots, then some of the snapshots in Google Drive might get deleted to make
                     room for these newer ones (this depends on your settings). You probably want this option if you just
                     reinstalled the addon.</li>
                   <li>"Choose a different folder" to store snapshots in, ignoring the existing folder. You probably want
-                    his option if you have multiple Hass.io/Home Assistant instances that should all back up to their
+                    his option if you have multiple Home Assistant instances that should all back up to their
                     own folder.</li>
                   <li>Or "create a new folder" to automatically create a folder and ignore the existing one. The new folder will be created
                     at the root of your My Drive.</li>
                 </ul>
-                <p>Note: If you run multiple instance of Hass.io/Home Assistant with this addon using the same Google
+                <p>Note: If you run multiple instance of Home Assistant with this addon using the same Google
                   Drive account,
                   its recommended that you use a different folder for each instance. Otherwise they'll delete
                   eachother's
@@ -1656,7 +1656,7 @@
                 </p>
                 <ul class="browser-default">
                   <li>
-                    <p>A pending snapshot can't be stopped once its started, because its creation is managed by Home Assistant and Hass.io.  Being "Paused" only stos the addon from creating new snapshots and syncing them with Google Drive.</p>
+                    <p>A pending snapshot can't be stopped once its started, because its creation is managed by Home Assistant.  Being "Paused" only stops the addon from creating new snapshots and syncing them with Google Drive.</p>
                   </li>
                   <li>
                     <p>You can resume by clicking the link below or just waiting.</p>
@@ -1738,9 +1738,9 @@
             <div class="card">
               <div class="card-content">
                 <span class="card-title">Restore a Snapshot</span>
-                <p>Snapshots must be restored through the Hass.io Snapshots page. You can restore a snapshot by
+                <p>Snapshots must be restored through the supervisor Snapshots page. You can restore a snapshot by
                   navigating to
-                  "Hass.io" &gt; "Snapshots" from the Home Assistant Web-UI,
+                  "Supervisor" &gt; "Snapshots" from the Home Assistant Web-UI,
                   or by click the button below to navigate there by a direct link. Depending on how you access the Home
                   Assistant Web-UI the direct link may not, so you'll just have to navigate there.</p>
                 <br />

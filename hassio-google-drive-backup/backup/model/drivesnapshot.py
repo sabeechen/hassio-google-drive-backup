@@ -22,7 +22,7 @@ DRIVE_KEY_TEXT = "Google Drive's snapshot metadata"
 class DriveSnapshot(AbstractSnapshot):
 
     """
-    Represents a Hass.io snapshot stored on Google Drive
+    Represents a Home Assistant snapshot stored on Google Drive
     """
 
     def __init__(self, data: Dict[Any, Any]):

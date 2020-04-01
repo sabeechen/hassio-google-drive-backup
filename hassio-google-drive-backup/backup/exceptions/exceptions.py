@@ -318,7 +318,7 @@ class LowSpaceError(KnownError):
 
 class SupervisorConnectionError(KnownError):
     def message(self):
-        return "The addon couldn't connect to the Hass.io supervisor.  Backups can't continue until the supervisor is responding."
+        return "The addon couldn't connect to the supervisor.  Backups can't continue until the supervisor is responding."
 
     def code(self):
         return "supervisor_connection"

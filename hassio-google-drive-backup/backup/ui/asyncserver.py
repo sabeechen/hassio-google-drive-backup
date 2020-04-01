@@ -257,14 +257,14 @@ class AsyncServer(Trigger, Startable):
             resp.content_type = 'text/html'
         else:
             resp.content_type = 'text/plain'
-            resp.headers['Content-Disposition'] = 'attachment; filename="hassio-google-drive-backup.log"'
+            resp.headers['Content-Disposition'] = 'attachment; filename="home-assistant-google-drive-backup.log"'
 
         await resp.prepare(request)
 
         def content():
             html = format == "colored"
             if format == "html":
-                yield "<html><head><title>Hass.io Google Drive Backup Log</title></head><body><pre>\n"
+                yield "<html><head><title>Home Assistant Google Drive Backup Log</title></head><body><pre>\n"
             for line in getHistory(self.last_log_index, html):
                 self.last_log_index = line[0]
                 if line:

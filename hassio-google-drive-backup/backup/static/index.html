@@ -4,7 +4,7 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-  <title>Hass.io Google Drive Backup</title>
+  <title>Home Assistant Google Drive Backup</title>
 
   <link href="static/css/icons.css?version=0.100.0" rel="stylesheet">
   <link href="static/css/materialize.css?version=0.100.0" type="text/css" rel="stylesheet" media="screen,projection" />
@@ -75,7 +75,7 @@
                 class="validate" onkeyup="checkForSecret()" />
               <label for="snapshot_password">Password</label>
               <span class="helper-text">When set, creates snapshots protected by a password. This password will be
-                required by Hass.io when restoring the snapshot. Leave blank to require no password. You can specify a
+                required by Home Assistant when restoring the snapshot. Leave blank to require no password. You can specify a
                 password from your secrets.yaml by using the syntax "!secret your_secret_key".</span>
             </div>
             <div class="input-field col m6 s12" id="password_renter_block">
@@ -586,7 +586,7 @@
           available. They're pretty cryptic, but might give you some context for whats going wrong. Sometimes, an
           error
           only shows up in the Home Assistant supervisor logs, which you can get to from within Home Assistant by
-          clicking "Hass.io" > "System" > "System Logs" > "Refresh".
+          clicking "Supervisor" > "System" > "System Logs" > "Refresh".
         </li>
         <li>
           <h6>Restart Everything</h6>
@@ -642,7 +642,7 @@
     <nav class="non-ingress ha-blue" role="navigation">
       <div class="nav-wrapper">
         <a class="brand-logo"> <img style="vertical-align: middle;" src="static/images/logo.png" width=40 height=40 />
-          <span>Hass.io Google Drive Backup</span>
+          <span>Home Assistant Google Drive Backup</span>
         </a>
         <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
         <ul class="right hide-on-med-and-down">

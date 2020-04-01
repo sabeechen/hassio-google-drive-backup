@@ -14,7 +14,7 @@ from ..logger import getLogger
 
 logger = getLogger(__name__)
 
-NOTIFICATION_TITLE = "Hass.io Google Drive Backup is Having Trouble"
+NOTIFICATION_TITLE = "Home Assistant Google Drive Backup is Having Trouble"
 NOTIFICATION_DESC_LINK = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page]({0}) for details."
 NOTIFICATION_DESC_STATIC = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on status page for details."
 

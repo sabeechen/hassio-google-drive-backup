@@ -40,7 +40,7 @@ def coord(model, time, simple_config, global_info, estimator):
 
 
 @pytest.mark.asyncio
-async def test_enabled(coord: Coordinator, dest):
+async def test_enabled(coord: Coordinator, dest, time):
     dest.setEnabled(True)
     assert coord.enabled()
     dest.setEnabled(False)

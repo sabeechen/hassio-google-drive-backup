@@ -1,9 +1,9 @@
 
 tooltipBackedUp = "This snapshot has been backed up to Google Drive."
-tooltipDriveOnly = "This snapshot is only in Google Drive. Select \"Upload\" from the actions menu to Upload it to Hass.io."
-tooltipHassio = "This snapshot is only in Hass.io. Change the number of snapshots you keep in Drive to get it to upload."
+tooltipDriveOnly = "This snapshot is only in Google Drive. Select \"Upload\" from the actions menu to Upload it to Home Assistant."
+tooltipHassio = "This snapshot is only in Home Assistant. Change the number of snapshots you keep in Drive to get it to upload."
 tooltipWaiting = "This snapshot is waiting to upload to Google Drive."
-tooltipLoading = "This snapshot is being downloaded from Google Drive to Hass.io.  Soon it will be available to restore."
+tooltipLoading = "This snapshot is being downloaded from Google Drive to Home Assistant.  Soon it will be available to restore."
 tooltipPending = "This snapshot is being created.  If it takes a long time, see the addon's FAQ on GitHub"
 tooltipUploading = "This snapshot is being uploaded to Google Drive."
 
@@ -16,7 +16,7 @@ If english isn't your first language, don't sweat it.  Just try to be clear and 
  * A screenshot if its something visual.
  * What configuration options are you using with the add-on?
  * What logs is the add-on printing out?  You can see the detailed logs by clicking "Logs" at the right of the web-UI.
- * Are there any problematic looking logs from the Hassio supervisor?  You can get to them from the Home Assistant Interface from "Hass.io" > "System" > "System Log"
+ * Are there any problematic looking logs from the supervisor?  You can get to them from the Home Assistant Interface from "Supervisor" > "System" > "System Log"
  \n\n`;
 
 function toggleSlide(checkbox, target) {
@@ -213,11 +213,11 @@ function deleteSnapshot(slug, drive, ha) {
   //console.log("Delete: " + slug + " Drive: " + drive + " HA: " + ha)
   message = "Deleting snapshot from ";
   if (drive && ha) {
-    message += "Hass.io and Google Drive"
+    message += "Home Assistant and Google Drive"
   } else if (drive) {
     message += "Google Drive"
   } else if (ha) {
-    message += "Hass.io"
+    message += "Home Assistant"
   } else {
     message += "<i>...nowhere?</i>"
   }

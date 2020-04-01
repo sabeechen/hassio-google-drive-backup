@@ -1,4 +1,4 @@
-# Hass.io Google Drive Backup
+# Home Assistant Google Drive Backup
 ![screenshot](images/screenshot.png)
 ## About
 A complete and easy to configure solution for backing up your snapshots to Google Drive
@@ -9,28 +9,28 @@ A complete and easy to configure solution for backing up your snapshots to Googl
 * Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
 * Simple UI focused on clarity, usability and getting out of the way.  
 
-This is for you if you want to quickly set up a backup strategy without much fuss.  It doesn't require much familiarity with Hass.io, its architectire, or Google Drive.  Detailed install instrctions are provided below but you can just add the repo, click install and open the Web UI.  It will tell you what to do and only takes a few simple clicks.
+This is for you if you want to quickly set up a backup strategy without much fuss.  It doesn't require much familiarity with Home Assistant, its architectire, or Google Drive.  Detailed install instrctions are provided below but you can just add the repo, click install and open the Web UI.  It will tell you what to do and only takes a few simple clicks.
 
 Do you like this?  Give me a reason to keep doing it and [![Repo Screenshot](images/bmc.png)](https://www.buymeacoffee.com/sabeechen)
 
 ## Installation
 The add-on is installed like any other.
-1.   Go to "Hass.io" > "Add-on" in Home Assistant and add this repository URL: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
+1.   Go to "Supervisor" > "Add-on" in Home Assistant and add this repository URL: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
   
      ![Add Repo Screenshot](images/add_ss.png)
-2.   Scroll down the page to find the new repository, and click the new add-on named "Hass.io Google Drive Backup"
+2.   Scroll down the page to find the new repository, and click the new add-on named "Home Assistant Google Drive Backup"
 
      ![Repo Screenshot](images/repo_ss.png)
 3.   Click "Install" and give it a few minutes to finish downloading.
-4.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of people this should take you to [https://hassio.local:1627/](https://hassio.local:1627/).
+4.   Click "Start", give it a few seconds to spin up, and then click the "Open Web UI" button that appears.  For the majority of people this should take you to [https://hhomeassistant.local:1627/](https://homeassistant.local:1627/).
 5.   The "Getting Started" page will tell you how many snapshots you have and what it will do with them once you connect it to Google Drive.  You can click "Settings" to change those options throught he add-on (takes effect immediately), or update them from the page where you installed the add-on as shown below (restart for them to take effect).
 6.   Click the "Authenticate with Drive" button to link the add-on with your Google Drive account.  Alternatively, you can generate your [own Google API credentials](#can-i-use-my-own-google-api-information-to-authenticate-instead-of-yours), though the process is not simple.
 7.   You should be redirected automatically to the backup status page.  Here you can make a new snapshot, see the progress of uploading to Google Drive, etc.  You're done!
 
 ## Configuration Options
 Settings can be change easily by starting the add-on and clicking "Settings" in the web UI.  The UI explains what each setting is and you don't need to modify anything before clicking "start".  If you  would still prefer to modify the settings in json, the options are detailed below.
-*  **max_snapshots_in_hassio** (default: 4): The number of snapshots the add-on will allow Hass.io to store locally before old ones are deleted.
-    > #### Example: Keep 10 snapshots in Hass.io
+*  **max_snapshots_in_hassio** (default: 4): The number of snapshots the add-on will allow Home Assistant to store locally before old ones are deleted.
+    > #### Example: Keep 10 snapshots in Home Assistant
     > ```json
     > "max_snapshots_in_hassio": "10"
     > ```
@@ -147,10 +147,10 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 Redundancy is the foundation of reliability.  With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
 
 ### How do I restore a snapshot?
-If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant. If not, you'll need to start up a fresh installation of Hass.io and do the following:  can be copied over to your Home Assistant "/backups" folder like any snapshot, however because I found this tedious to do on a fresh install of Home Assistant I've made a workflow thats a little easier.  On your fresh install of Hass.io:
+If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant. If not, you'll need to start up a fresh installation of Home Assistant and do the following:  can be copied over to your Home Assistant "/backups" folder like any snapshot, however because I found this tedious to do on a fresh install of Home Assistant I've made a workflow thats a little easier.  On your fresh install of Home Assistant:
 *  [Install the add-on.](#installation)  Once linked with Google Drive, you should see the snapshots you created previously show up.  You should see a warning pop up about fidning an "Existing snapshot folder" which is expected, you cna just ignore it for now.
 * Click "Actions" -> "Upload" on the snapshot you want to use which will upload the snapshot to Home Assistant directly from Google Drive.  Wait for the upload to finish.
-* Click "Actions" -> "Restore" to be taken to the Hass.io restore page, or just navigate there through the Home Assistant interface ("Hass.io" -> "Snapshots").
+* Click "Actions" -> "Restore" to be taken to the Supervisor restore page, or just navigate there through the Home Assistant interface ("Supervisor" -> "Snapshots").
 * You'll see the snapshot you uploaded.  Click on it and select "Wipe & Restore".  Wait a while for it to complete (maybe a logn while).  Congrats! you're back up and running.
 
 Note: You can also just copy a snapshots manually from Google Drive to your /backup folder using something like the Sambda addon.  I've found the steps above to be a little easier, since it works for any operating system, network setup, etc.
@@ -166,7 +166,7 @@ The add-on creates a few sensors that show the status of snapshots that you coul
     card:
       type: markdown
       content: >-
-        Snapshots are stale! Please visit the "Hass.io Google Drive Backup" add-on
+        Snapshots are stale! Please visit the "Home Assistant Google Drive Backup" add-on
         status page for details.
       title: Stale Snapshots!`
 #### Mobile Notifications
@@ -185,7 +185,7 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
       - data:
         service: notify.android
           title: Snapshots are Stale
-          message: Please visit the 'Hass.io Google Drive Backup ' add-on status page
+          message: Please visit the 'Home Assistant Google Drive Backup ' add-on status page
             for details.
 
 You could automate anything off of this binary sensor.  The add-on also exposes a sensor `sensor.snapshot_backup` that exposes the details of each snapshot.  I'm working on a custom lovelace component to expose that information.
@@ -261,7 +261,7 @@ Maybe.  You can encrypt your snapshots by giving a password in the add-on's opti
 On a matter of principle, I only keep track of and store information necessary for the add-on to function.  To the best of my knowledge the scope of this is:
 * You can opt-in to sending error reports from the add-on sent to a database maintained by me.  This includes the full text of the error's stack trace, the error message, and the version of the add-on you're running.  This helps notice problems with new releases but leaving it off (the default unless you turn it on) doesn't affect the functionality of the add-on in any way.
 * Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance.  This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive.  Your password is never seen by me or the add-on.  You can read mroe abotu how authentication with Google is accomplished [here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md).
-* The add-on has access to the files in Google Drive it created, which is the 'Hass.io Snapshots' folder and any snapshots it uploads.  See the https://www.googleapis.com/auth/drive.file scope in the [Drive REST API v3 Documentation](https://developers.google.com/drive/api/v3/about-auth) for details, this is the only scope the add-on requests for your account.
+* The add-on has access to the files in Google Drive it created, which is the 'Home Assistant Snapshots' folder and any snapshots it uploads.  See the https://www.googleapis.com/auth/drive.file scope in the [Drive REST API v3 Documentation](https://developers.google.com/drive/api/v3/about-auth) for details, this is the only scope the add-on requests for your account.
 * Google stores a history of information about the number of requests, number of errors, and latency of requests made by this Add-on and makes a graph of that visible to me.  This is needed because Google only gives me a certain quota for requests shared between all users of the add-on, so I need to be aware if someone is abusing it.
 * The Add-on is distributed as a Docker container hosted on Docker Hub, which his how almost all add-ons work.  Docker keeps track of how many people have requested an image and makes that information publicly visible.
 
@@ -280,12 +280,12 @@ If the add-on runs into trouble and can't back up, you should see a big red box 
 ### Will this fill up my Google Drive?  Why are my snapshots so big?
 You'll need to take care to ensure you don't configure this to blow up your Google Drive.  You might want to consider:
 *   If your snapshots are HUGE, its probably because Home Assistant by default keeps a long sensor history.  Consider setting `purge_keep_days: N` in your [recorder confiuration](https://www.home-assistant.io/components/recorder/) to trim it down to something more manageable, like 1 day of history.
-*   Some other of the add-ons are designed to manage large amounts of media.  For example, add-ons like the Plex Media Server are designed to store media in the /share folder, and Mobile Upload folders default to a sub-folder in the addons folder.  If you migrate all of your media to the HASS.io folder structure and you don't exclude it from the backup, you _could easily chew up your entire Google Drive space in a single snapshot_.
+*   Some other of the add-ons are designed to manage large amounts of media.  For example, add-ons like the Plex Media Server are designed to store media in the /share folder, and Mobile Upload folders default to a sub-folder in the addons folder.  If you migrate all of your media to the Home Assistant folder structure and you don't exclude it from the backup, you _could easily chew up your entire Google Drive space in a single snapshot_.
 *   If you use the Google Drive Desktop sync client, you'll porbably want to tell it not to sync this folder (its available in the options).
 
 ### I want my snapshots to sync to my Desktop computer too
 Thats not a question but you can use [Google Drive Backup & Sync]([https://www.google.com/drive/download/) to download anything in your Google Drive to your desktop/laptop automatically.
 
-### I configured this to only keep 4 snapshots in Drive and Hass.io, but sometimes I can see there are 5?
+### I configured this to only keep 4 snapshots in Drive and Home Assistant, but sometimes I can see there are 5?
 The add-on will only delete an old snapshot if a new one exists to replace it, so it will create a 5th one before deleting the first.  This is a reliability/disk usage compromise that favors reliability, because otherwise it would have to delete an old snapshot (leaving only 3) before it could guarantee the 4th one exists.
 

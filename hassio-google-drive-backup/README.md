@@ -1,4 +1,4 @@
-A complete and easy way to back up Hass.io to Google Drive.
+A complete and easy way to back up Home Assistant to Google Drive.
 * Create snapshots on a configurable schedule.
 * Clean up old snapshots in Home Assistant and Google Drive.
 * Recover quickly from disaster by uploading your snapshots directly from Google Drive.

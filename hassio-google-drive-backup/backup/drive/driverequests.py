@@ -24,7 +24,7 @@ logger = getLogger(__name__)
 
 MIME_TYPE = "application/tar"
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
-FOLDER_NAME = 'Hass.io Snapshots'
+FOLDER_NAME = 'Home Assistant Snapshots'
 DRIVE_VERSION = "v3"
 DRIVE_SERVICE = "drive"
 

@@ -61,7 +61,7 @@ async def test_init_failure(updater: HaUpdater, global_info: GlobalInfo, time: F
     await updater.update()
     assert server.getNotification() == {
         'message': 'The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on status page for details.',
-        'title': 'Hass.io Google Drive Backup is Having Trouble',
+        'title': 'Home Assistant Google Drive Backup is Having Trouble',
         'notification_id': 'backup_broken'
     }
 
@@ -163,7 +163,7 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     await updater.update()
     assert server.getNotification() == {
         'message': 'The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page](http://localhost/test) for details.',
-        'title': 'Hass.io Google Drive Backup is Having Trouble',
+        'title': 'Home Assistant Google Drive Backup is Having Trouble',
         'notification_id': 'backup_broken'
     }
 

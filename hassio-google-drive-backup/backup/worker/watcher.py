@@ -15,7 +15,6 @@ logger = getLogger(__name__)
 
 REPORT_DELAY_SECONDS = 5
 
-# TODO: Remove the extra logging here once Hass.io's behavior is sorted out
 @singleton
 class Watcher(Trigger, FileSystemEventHandler, Startable):
     @inject
@@ -55,7 +54,7 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
 
             if self.report_debug:
                 logger.debug(
-                    "Backup directory was written to, we'll reload snapshots from Hassio soon")
+                    "Backup directory was written to, we'll reload snapshots from Home Assistant soon")
                 self.report_debug = False
         finally:
             self.lock.release()

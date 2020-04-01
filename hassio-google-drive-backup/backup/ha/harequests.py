@@ -21,7 +21,7 @@ EVENT_SNAPSHOT_END = "snapshot_ended"
 
 class HaRequests():
     """
-    Stores logic for interacting with the Hass.io add-on API
+    Stores logic for interacting with the supervisor add-on API
     """
     @inject
     def __init__(self, config: Config, session: ClientSession):

@@ -8,12 +8,12 @@ from ..logger import getLogger
 
 logger = getLogger(__name__)
 
-HA_KEY_TEXT = "Hass.io's snapshot metadata"
+HA_KEY_TEXT = "Home Assistant's snapshot metadata"
 
 
 class HASnapshot(AbstractSnapshot):
     """
-    Represents a Hass.io snapshot stored locally in Home Assistant
+    Represents a Home Assistant snapshot stored locally in Home Assistant
     """
 
     def __init__(self, data: Dict[str, Any], retained=False):

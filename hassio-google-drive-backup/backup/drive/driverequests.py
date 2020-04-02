@@ -107,12 +107,6 @@ class DriveRequests():
             try:
                 with open(self.config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
                     self.creds = Creds.load(self.time, json.load(f))
-                if self.creds.secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
-                    # The creds are saved with the old client secret, re-save them without it
-                    # so we're foced to use the new auth endpoint.
-                    with open(self.config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
-                        json.dump(self.creds.serialize(include_secret=False), f)
-                        self.creds._secret = None
                 return
             except Exception:
                 pass

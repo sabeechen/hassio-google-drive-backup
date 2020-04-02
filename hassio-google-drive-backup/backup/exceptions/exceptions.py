@@ -45,7 +45,7 @@ class KnownTransient(KnownError):
 
 
 class SimulatedError(KnownError):
-    def __init__(self, code):
+    def __init__(self, code=None):
         self._code = code
 
     def code(self):
@@ -56,7 +56,7 @@ class SimulatedError(KnownError):
 
 
 class LogicError(KnownError):
-    def __init__(self, message):
+    def __init__(self, message=None):
         self._message = message
 
     def message(self):
@@ -67,7 +67,7 @@ class LogicError(KnownError):
 
 
 class ProtocolError(KnownError):
-    def __init__(self, parameter, object_name=None, debug_object=None):
+    def __init__(self, parameter=None, object_name=None, debug_object=None):
         self._parameter = parameter
         self._object_name = object_name
         self._debug_object = debug_object
@@ -145,7 +145,7 @@ class PleaseWait(KnownError):
 
 
 class InvalidConfigurationValue(KnownError):
-    def __init__(self, key, current):
+    def __init__(self, key=None, current=None):
         self.key = key
         self.current = current
 
@@ -159,7 +159,7 @@ class InvalidConfigurationValue(KnownError):
 # UI Handler Done and updated
 
 class DeleteMutlipleSnapshotsError(KnownError):
-    def __init__(self, delete_sources):
+    def __init__(self, delete_sources=None):
         self.delete_sources = delete_sources
 
     def message(self):
@@ -243,7 +243,7 @@ class HomeAssistantDeleteError(KnownError):
 
 
 class ExistingBackupFolderError(KnownError):
-    def __init__(self, existing_id: str, existing_name: str):
+    def __init__(self, existing_id: str=None, existing_name: str=None):
         self.existing_id = existing_id
         self.existing_name = existing_name
 
@@ -275,7 +275,7 @@ class BackupFolderMissingError(KnownError):
 
 
 class BackupFolderInaccessible(KnownError):
-    def __init__(self, existing_id: str):
+    def __init__(self, existing_id: str=None):
         self.existing_id = existing_id
 
     def message(self):
@@ -299,7 +299,7 @@ class GoogleDrivePermissionDenied(KnownError):
 
 
 class LowSpaceError(KnownError):
-    def __init__(self, pct_used, space_remaining):
+    def __init__(self, pct_used=None, space_remaining=None):
         self.pct_used = pct_used
         self.space_remaining = space_remaining
 
@@ -336,7 +336,7 @@ class UserCancelledError(KnownError):
 
 
 class CredRefreshGoogleError(KnownError):
-    def __init__(self, from_google):
+    def __init__(self, from_google=None):
         self.from_google = from_google
 
     def message(self):
@@ -352,7 +352,7 @@ class CredRefreshGoogleError(KnownError):
 
 
 class CredRefreshMyError(KnownError):
-    def __init__(self, reason):
+    def __init__(self, reason=None):
         self.reason = reason
 
     def message(self):

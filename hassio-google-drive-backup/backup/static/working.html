@@ -1669,6 +1669,99 @@
             </div>
           </div>
         </div>
+        <div class="row default-hidden error_card token_refresh_google_error" id="token_refresh_google_error">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">Couldn't Refresh Google Drive Credentials</span>
+                </span>
+                <p>
+                  The addon was unable to refresh your credentials with Google Drive.  When it tried, Google said:
+                </p>
+                <pre>
+                  <span id="data_from_google">(?)</span>
+                </pre>
+                <p>This can happen if:</p>
+                <ul class="browser-default">
+                  <li>The domain <a target="_blank" href="https://backup.beechens.com">https://backup.beechens.com</a>, which grants your credentials from Google Drive (<a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a> to see why), is having trouble communicating with Google Drive.</li>
+                  <li>Google Drive is experiencing a temporary outage.</li>
+                  <li>Something else has gone wrong with your Google Drive credentials.</li>
+                </ul>
+                <p>Usually this problem will resolve on its own, but you can try:
+                  <ul class="browser-default">
+                    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+                    <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
+                      again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
+                    <li>If the problem persists, <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('token_refresh_google_error')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card token_refresh_my_error" id="token_refresh_my_error">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">Couldn't Refresh Google Drive Credentials</span>
+                </span>
+                <p>
+                  The addon was unable to refresh your credentials with Google Drive.  When it tried, backup.beechens.com said:
+                </p>
+                <pre>
+                  <span id="data_reason">(?)</span>
+                </pre>
+                <p>This can happen if:</p>
+                <ul class="browser-default">
+                  <li>The domain <a target="_blank" href="https://backup.beechens.com">https://backup.beechens.com</a>, which grants your credentials from Google Drive (<a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a> to see why), is having some unexpected problems.</li>
+                  <li>Something else has gone wrong with your Google Drive credentials.</li>
+                </ul>
+                <p>Usually this problem will resolve on its own, but you can try:
+                  <ul class="browser-default">
+                    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+                    <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
+                      again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
+                    <li>If the problem persists, <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('token_refresh_my_error')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card supervisor_connection" id="supervisor_connection">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">Unable to Reach Home Assistant Supervisor</span>
+                </span>
+                <p>
+                  The addon was unable to connect to the Home Assistant Supervisor.  This addon requires the supervisor to be running to create 
+                  snapshots, load configuration, etc.  Without the supervisor the addon will not be able to do anything useful.  Typically this 
+                  should never happen, and indicates that something is wrong with your Home Assistant installation.
+                </p>
+                <p>To resolve this you can try:
+                  <ul class="browser-default">
+                    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+                    <li>Restarting the machine that Home Assistant runs on.  Often this resolves transient problems the Home Assistant Supervisor might have.</li>
+                    <li>If the problem persists, <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('supervisor_connection')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden" id="error_details_card">
           <div class="col s12 m9">
             <div class="card red darken-4">

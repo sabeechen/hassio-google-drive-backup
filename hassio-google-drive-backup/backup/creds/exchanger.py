@@ -131,7 +131,7 @@ class Exchanger():
                         extra = ""
                     raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
         except ClientConnectorError:
-            raise CredRefreshMyError("Unable to connect to https://backup.beechens.com")
+            raise CredRefreshMyError("Unable to connect to https://habackup.io")
 
     def refreshCredentials(self, refresh_token):
         return Creds(self.time, id=self._client_id, expiration=None, access_token=None, refresh_token=refresh_token, secret=self._client_secret)

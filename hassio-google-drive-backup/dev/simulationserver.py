@@ -12,7 +12,7 @@ import aiohttp
 from aiohttp.web import (Application, HTTPBadRequest, HTTPClientError,
                          HTTPException, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, delete, get,
-                         json_response, middleware, patch, post, put, HTTPSeeOther)
+                         json_response, middleware, patch, post, put, HTTPSeeOther, HTTPPaymentRequired)
 from aiohttp.client import ClientSession
 from injector import inject, singleton, ClassAssistedBuilder, Injector
 

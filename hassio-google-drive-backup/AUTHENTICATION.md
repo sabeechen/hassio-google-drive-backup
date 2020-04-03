@@ -24,21 +24,21 @@ Google puts some limitations on how the access token must be generated that will
 * When the user is redirected to https://accounts.google.com (step 2), the redirect must be from a known public website associated with the app.
 * When the user is redirected back to the app after authorization (step 4), the redirect must be a statically addressed and publicly accessible website.
 
-These limitations make a technical problem for the addon because most people's Home Assistant instances aren't publicly accessible and the address is different for each one. Performing the authentication workflow exactly as described above won't work.  To get around this, I (the developer fo this addon) set up a website, backup.beechens.com, which serves as the known public and statically addressible website that Google redirects from/to.  The source code for this server is available within the addon's github repository.
+These limitations make a technical problem for the addon because most people's Home Assistant instances aren't publicly accessible and the address is different for each one. Performing the authentication workflow exactly as described above won't work.  To get around this, I (the developer fo this addon) set up a website, https://habackup.io, which serves as the known public and statically addressible website that Google redirects from/to.  The source code for this server is available within the addon's github repository.
 
 So when you authenticate the add-on, the workflow actually looks like this:
 1. You start out at the add-on's web interface, something like https://homeassistant.local:8123/ingress/hassio_google_drive_backup
-2.  You click the "Authenticate With Google Drive" button, which takes note of the address of your Home Assistant installation (https://homeassistant.local:8123 in this case) and sends you to https://backup.beechens.com/drive/authorize
-3. https://backup.beechens.com immediately generates the Google login url for you and redirects you to https://accounts.google.com
+2.  You click the "Authenticate With Google Drive" button, which takes note of the address of your Home Assistant installation (https://homeassistant.local:8123 in this case) and sends you to https://habackup.io/drive/authorize
+3. https://habackup.io immediately generates the Google login url for you and redirects you to https://accounts.google.com
 4.  You login with your Google credentials on Google's domain, and confirm you want to give the add-on permission to see files and folders it creates (the drive.file scope)
-5.  Google redirects you back to https://backup.beechens.com.com, along with the access token that will be used for future authentication.
-6.  https://backup.beechens.com.com redirects you back to your add-on web-UI (which it kept track of in step 2) along with the access token.
+5.  Google redirects you back to https://habackup.io, along with the access token that will be used for future authentication.
+6.  https://habackup.io redirects you back to your add-on web-UI (which it kept track of in step 2) along with the access token.
 7.  The addon (on your local Home Assistant installation) persists the access token and uses it in the future any time it needs to talk to Google Drive.
 
-Noteably, your access token isn't persisted at https:/backup.beechens.com, its only passed through back to your local add-on installation.  I do this because:
+Noteably, your access token isn't persisted at https://habackup.io, its only passed through back to your local add-on installation.  I do this because:
 - It ensures your information is only ever stored on your machine, which is reassuring from from the user's perspective (eg you).  
-- If my server (https://backup.beechens.com) ever gets compromised, there isn't any valuable information stored there that compomises you as well.
+- If my server (https://habackup.io) ever gets compromised, there isn't any valuable information stored there that compomises you as well.
 - This is practicing a form of [defense-in-depth](https://en.wikipedia.org/wiki/Defense_in_depth_%28computing%29) secuity, where-in [personal data](https://en.wikipedia.org/wiki/Personal_data) is only stored in the palces where it is strictly crtitical.
 - It makes the server more simple, since it is a stateless machien that doesn't require a database (eg to store your token).  
 
-After your token is generated and stored on your machine, it needs to be *refreshed* periodically with Google Drive.  To do this, the addon will again ask https://backup.beechens.com who will relay the request with Google Drive.
+After your token is generated and stored on your machine, it needs to be *refreshed* periodically with Google Drive.  To do this, the addon will again ask https://habackup.io who will relay the request with Google Drive.

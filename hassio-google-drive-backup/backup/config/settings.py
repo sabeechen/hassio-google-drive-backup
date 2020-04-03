@@ -174,13 +174,13 @@ _DEFAULTS = {
     Setting.HASSIO_TOKEN: "",
     Setting.HOME_ASSISTANT_URL: "http://hassio/homeassistant/api/",
     Setting.DRIVE_URL: "https://www.googleapis.com",
-    Setting.REFRESH_URL: "https://backup.beechens.com/drive/refresh",
-    Setting.AUTHENTICATE_URL: "https://backup.beechens.com/drive/authorize",
+    Setting.REFRESH_URL: "https://habackup.io/drive/refresh",
+    Setting.AUTHENTICATE_URL: "https://habackup.io/drive/authorize",
     Setting.DRIVE_REFRESH_URL: "https://www.googleapis.com/oauth2/v4/token",
     Setting.DRIVE_AUTHORIZE_URL: "https://accounts.google.com/o/oauth2/v2/auth",
     Setting.DRIVE_TOKEN_URL: "https://oauth2.googleapis.com/token",
-    Setting.CHOOSE_FOLDER_URL: "https://backup.beechens.com/drive/picker",
-    Setting.ERROR_REPORT_URL: "https://backup.beechens.com/logerror",
+    Setting.CHOOSE_FOLDER_URL: "https://habackup.io/drive/picker",
+    Setting.ERROR_REPORT_URL: "https://habackup.io/logerror",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
 
     # File locations used to store things

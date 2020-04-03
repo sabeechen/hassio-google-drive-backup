@@ -1,9 +1,9 @@
 {
     "hassio_url": "http://localhost:56154/",
     "home_assistant_url": "http://localhost:56154/homeassistant/api/",
-    "authenticate_url": "https://dev.beechens.com/drive/authorize",
-    "refresh_url": "https://dev.beechens.com/drive/refresh",
-    "choose_folder_url": "https://dev.beechens.com/drive/picker",
+    "authenticate_url": "https://dev.habackup.io/drive/authorize",
+    "refresh_url": "https://dev.habackup.io/drive/refresh",
+    "choose_folder_url": "https://dev.habackup.io/drive/picker",
     "hassio_header": "test_header",
     "retained_file_path": "hassio-google-drive-backup/dev/data/retained.json",
     "backup_directory_path": "hassio-google-drive-backup/dev/backup",

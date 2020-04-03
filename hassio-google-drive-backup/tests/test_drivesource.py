@@ -696,7 +696,7 @@ async def test_cant_reach_refresh_server(drive: DriveSource, server: SimulationS
     time.advanceDay()
     with pytest.raises(CredRefreshMyError) as error:
         await drive.get()
-    assert error.value.data() == {"reason": "Unable to connect to https://backup.beechens.com"}
+    assert error.value.data() == {"reason": "Unable to connect to https://habackup.io"}
 
 
 @pytest.mark.asyncio

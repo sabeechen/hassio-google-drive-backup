@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Run Addon (Dev Backends)",
             "type": "python",
@@ -12,6 +11,14 @@
             "pythonPath": "${config:python.pythonPath}",
             "module": "hassio-google-drive-backup.backup",
             "args": ["dev"]
+        },
+        {
+            "name": "Run Addon (Dev Drive)",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "hassio-google-drive-backup.backup",
+            "args": ["drive_dev"]
         },
         {
             "name": "Run Addon (Real Google Drive)",

@@ -4,6 +4,7 @@ import os
 import tempfile
 import asyncio
 import platform
+from yarl import URL
 
 import aiohttp
 import pytest
@@ -187,6 +188,11 @@ async def server_url(port):
 @pytest.fixture
 async def port(unused_tcp_port_factory):
     return unused_tcp_port_factory()
+
+
+@pytest.fixture
+async def ui_url(ingress_port):
+    return URL("http://localhost").with_port(ingress_port)
 
 
 @pytest.fixture

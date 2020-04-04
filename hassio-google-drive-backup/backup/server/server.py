@@ -10,7 +10,7 @@ from aiohttp.web_exceptions import HTTPBadRequest, HTTPSeeOther
 from backup.creds import Exchanger
 from backup.logger import getLogger, StandardLogger
 from backup.config import Config, Setting
-from backup.exceptions import GoogleCredentialsExpired
+from backup.exceptions import GoogleCredentialsExpired, GoogleCantConnect, GoogleDnsFailure, GoogleInternalError, GoogleTimeoutError, ensureKey, KnownError
 from injector import ClassAssistedBuilder, inject, singleton
 from google.cloud import logging
 from google.auth.exceptions import DefaultCredentialsError
@@ -81,11 +81,9 @@ class Server():
             self.logError(request, e)
         return Response()
 
-    # TODO: This needs testing.  Lots of test coverage.
-    # TODO: this shoudl handle the GoogleCantconnect, GoogleDNs, etc errors specifically. 
     async def refresh(self, request: Request):
         try:
-            token = (await request.json())['refresh_token']
+            token = ensureKey('refresh_token', await request.json(), "the request payload")
             creds = self.exchanger.refreshCredentials(token)
             new_creds = await self.exchanger.refresh(creds)
             return json_response(new_creds.serialize(include_secret=False))
@@ -117,8 +115,12 @@ class Server():
             }, status=503)
         except GoogleCredentialsExpired:
             return json_response({
-                    "error": "expired"
-                }, status=401)
+                "error": "expired"
+            }, status=401)
+        except KnownError as e:
+            return json_response({
+                "error": e.message()
+            }, status=503)
         except Exception as e:
             self.logError(request, e)
             return json_response({

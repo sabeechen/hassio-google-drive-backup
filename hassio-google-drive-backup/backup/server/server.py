@@ -95,7 +95,6 @@ class Server():
                     "error": "expired"
                 }, status=401)
             else:
-                # TODO: Make a special user visible error for this
                 self.logError(request, e)
                 return json_response({
                     "error": "Google returned HTTP {}".format(e.status)

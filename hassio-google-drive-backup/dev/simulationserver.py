@@ -60,6 +60,7 @@ class SimulationServer():
         self.files: Dict[str, bytearray] = {}
         self.chunks = []
         self.settings: Dict[str, Any] = self.defaultSettings()
+        self.client_id_hack = None
         self._snapshot_lock = asyncio.Lock()
         self._settings_lock = Lock()
         self._port = port
@@ -226,8 +227,12 @@ class SimulationServer():
 
     async def driveRefreshToken(self, request: Request):
         params = await request.post()
-        if params['client_id'] != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
-            raise HTTPUnauthorized()
+        if self.client_id_hack is not None:
+            if params['client_id'] != self.client_id_hack:
+                raise HTTPUnauthorized()
+        else:
+            if params['client_id'] != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
+                raise HTTPUnauthorized()
         if params['client_secret'] != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
             raise HTTPUnauthorized()
         if params['refresh_token'] != self.getSetting('drive_refresh_token'):

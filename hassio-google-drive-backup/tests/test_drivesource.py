@@ -461,15 +461,12 @@ async def test_folder_missing_on_upload(time, drive: DriveSource, config: Config
 
 
 @pytest.mark.asyncio
-async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, config: Config, server, snapshot_helper, session):
+async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper, session):
     # Make the folder
     await drive.get()
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
-
-    # TODO: invetigate change history on this.  It looks wrong, when did I change it?
-    # config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Make the folder inaccessible
     server.lostPermission.append(await drive.getFolderId())
@@ -487,7 +484,7 @@ async def test_folder_error_on_upload_lost_permission_custom_client(time, drive:
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
-    
+
     server.client_id_hack = config.get(Setting.DEFAULT_DRIVE_CLIENT_ID)
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something-else")
 

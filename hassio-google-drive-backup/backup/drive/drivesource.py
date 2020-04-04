@@ -209,7 +209,6 @@ class DriveSource(SnapshotDestination):
             else:
                 raise e
         except GoogleDrivePermissionDenied:
-            # TODO: Is this actually necessary?  Is it covered by a test?
             # Lost permission on the backup folder
             return False
 

@@ -24,7 +24,7 @@ class DriveRequester():
 
     async def request(self, method, url, headers={}, json=None, data=None):
         try:
-            # TODO: Exceptions here should clean up the response object
+            # MAYBE: Exceptions here should clean up the response object
             response = await self.session.request(method, url, headers=headers, json=json, timeout=self.buildTimeout(), data=data)
             if response.status < 400:
                 return response

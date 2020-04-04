@@ -81,7 +81,7 @@ class Config():
         config = {}
         for key in os.environ:
             if key in _LOOKUP:
-                config[_LOOKUP[key]] = os.environ[key]
+                config[_LOOKUP[key]] = _VALIDATORS[_LOOKUP[key]].validate(os.environ[key])
             elif str.lower(key) in _LOOKUP:
                 config[_LOOKUP[str.lower(key)]] = _VALIDATORS[_LOOKUP[str.lower(key)]].validate(os.environ[key])
         return Config(config)

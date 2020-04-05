@@ -239,3 +239,6 @@ class Config():
             return self.config[setting.key()]
         else:
             return setting.default()
+
+    def getForUi(self, setting: Setting):
+        return _VALIDATORS[setting].formatForUi(self.get(setting))

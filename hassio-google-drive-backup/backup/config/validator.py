@@ -16,3 +16,6 @@ class Validator(ABC):
 
     def raiseForValue(self, value):
         raise InvalidConfigurationValue(self.name, str(value))
+
+    def formatForUi(self, value):
+        return value

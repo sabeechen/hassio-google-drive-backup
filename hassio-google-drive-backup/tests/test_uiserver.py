@@ -673,3 +673,28 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
     resp = await reader.get("changefolder?id=12345", ingress=False)
     assert "window.location.assign(\"/\")" in resp
     assert ui_server._coord._model.dest._folderId == "12345"
+
+
+@pytest.mark.asyncio
+async def test_update_sync_interval(reader, ui_server, config: Config, server):
+    # Make sure the default saves nothing
+    update = {
+        "config": {
+            "max_sync_interval_seconds": '1 hour',
+        },
+        "snapshot_folder": "unused"
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60
+    assert "max_sync_interval_seconds" not in server._options
+
+    # Update custom
+    update = {
+        "config": {
+            "max_sync_interval_seconds": '2 hours',
+        },
+        "snapshot_folder": "unused"
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60 * 2
+    assert server._options["max_sync_interval_seconds"] == 60 * 60 * 2

@@ -322,7 +322,7 @@ class AsyncServer(Trigger, Startable):
                 "Full", self._time.now(), self._ha_source.getHostInfo())
         current_config = {}
         for setting in Setting:
-            current_config[setting.key()] = self.config.get(setting)
+            current_config[setting.key()] = self.config.getForUi(setting)
         default_config = {}
         for setting in Setting:
             default_config[setting.key()] = setting.default()

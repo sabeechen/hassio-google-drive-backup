@@ -856,6 +856,19 @@
                   what address will work for www.googleapis.com.</span>
               </div>
             </div>
+            <div class="col s11 offset-s1 row">
+              <div class="input-field col s12 m12 s12">
+                <i class="material-icons prefix">refresh</i>
+                <input type="text" id="max_sync_interval_seconds" name="max_sync_interval_seconds"
+                  pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$" class="validate" />
+                <label for="drive_ipv4">Sync Interval</label>
+                <span class="helper-text">
+                  How often the addon should check Home Assistant and Google Drive for snapshots.  
+                  The addon will still sync more frequently when it starts, creates a new snapshot, 
+                  or encounters errors.  This can be any duration of time expressed as hours, minutes,
+                  and seconds.  Examples: '1 hour', '30 minutes', '1 hour, 30 minutes, 10 seconds', etc.</span>
+              </div>
+            </div>
           </div>
         </form>
       </div>

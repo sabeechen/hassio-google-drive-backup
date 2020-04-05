@@ -83,7 +83,7 @@
     "drive_host_name": "str?",
 
     "snapshot_stale_seconds": "float(0,)?",
-    "max_sync_interval_seconds": "float(0,)?",
+    "max_sync_interval_seconds": "float(300,)?",
     "pending_snapshot_timeout_seconds": "float(0,)?",
     "failed_snapshot_timeout_seconds": "float(0,)?",
     "new_snapshot_timeout_seconds": "float(0,)?",

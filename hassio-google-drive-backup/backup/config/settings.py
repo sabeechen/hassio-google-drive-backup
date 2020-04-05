@@ -7,6 +7,7 @@ from .floatvalidator import FloatValidator
 from .intvalidator import IntValidator
 from .regexvalidator import RegexValidator
 from .stringvalidator import StringValidator
+from .durationassecondsvalidator import DurationAsSecondsValidator
 from ..logger import getLogger
 
 logger = getLogger(__name__)
@@ -259,4 +260,6 @@ with open(abspath(join(__file__, "..", "..", "..", "config.json"))) as f:
     addon_config = json.load(f)
 for key in addon_config["schema"]:
     _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
+
+_VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsSecondsValidator("max_sync_interval_seconds", 1, None)
 VERSION = addon_config["version"]

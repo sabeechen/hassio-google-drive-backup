@@ -9,10 +9,12 @@ RUN apk add python3-dev
 RUN apk add gcc
 WORKDIR /app
 COPY . /app
+COPY config.json /usr/local/lib/python3.8/site-packages/config.json
 RUN pip3 install --upgrade pip
-RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
+RUN pip3 install --trusted-host pypi.python.org -r requirements-addon.txt
+RUN pip3 install .
 
-# Remvoe packages we only needed for installation
+# Remove packages we only needed for installation
 RUN apk del linux-headers libc-dev libffi-dev python3-dev gcc
 
 EXPOSE 1627

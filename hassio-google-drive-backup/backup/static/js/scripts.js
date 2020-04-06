@@ -754,6 +754,8 @@ $(document).ready(function () {
   }
 });
 
+var pickerApiLoaded = false;
+var oauthToken;
 
 function loadPicker() {
   gapi.load('auth', {'callback': onAuthApiLoad});
@@ -761,6 +763,7 @@ function loadPicker() {
 }
 
 function onAuthApiLoad() {
+  var scope = ['https://www.googleapis.com/auth/drive.file'];
   window.gapi.auth.authorize({
     'client_id': clientId,
     'scope': scope,

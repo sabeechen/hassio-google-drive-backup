@@ -19,9 +19,10 @@ from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingErro
                                GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError)
 from backup.creds import Creds
 from backup.util import GlobalInfo
-from backup.model import DriveSnapshot, DummySnapshot
+from backup.model import DriveSnapshot, DummySnapshot, Snapshot
 from .faketime import FakeTime
 from .helpers import compareStreams, createSnapshotTar
+from backup.const import SOURCE_GOOGLE_DRIVE
 
 RETRY_EXHAUSTION_SLEEPS = [2, 4, 8, 16, 32]
 
@@ -706,6 +707,19 @@ async def test_refresh_problem_with_google(drive: DriveSource, server: Simulatio
     with pytest.raises(CredRefreshGoogleError) as error:
         await drive.get()
     assert error.value.data() == {"from_google": "Google returned HTTP 510"}
+
+
+@pytest.mark.asyncio
+async def test_ignore_trashed_snapshots(time, drive: DriveSource, config: Config, server, snapshot_helper):
+    snapshot = await snapshot_helper.createFile()
+    drive_snapshot = await drive.save(*snapshot)
+
+    assert len(await drive.get()) == 1
+    await drive.drivebackend.update(drive_snapshot.id(), {"trashed": True})
+
+    assert len(await drive.get()) == 0
+
+
 
 
 class SnapshotHelper():

@@ -91,7 +91,7 @@ class DriveSource(SnapshotDestination):
         try:
             async for child in self.drivebackend.query("'{}' in parents".format(parent)):
                 properties = child.get('appProperties')
-                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties:
+                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties and not child['trashed']:
                     snapshot = DriveSnapshot(child)
                     snapshots[snapshot.slug()] = snapshot
         except ClientResponseError as e:

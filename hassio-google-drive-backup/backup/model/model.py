@@ -91,11 +91,11 @@ class Model():
     def _nextSnapshot(self, now: datetime, last_snapshot: Optional[datetime]) -> Optional[datetime]:
         if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
             return None
+
+        if not self.dest.enabled():
+            return None
         if not last_snapshot:
-            if self.dest.enabled():
-                return now - timedelta(minutes=1)
-            else:
-                return None
+            return now - timedelta(minutes=1)
 
         timeofDay = self.getTimeOfDay()
         if not timeofDay:

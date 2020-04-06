@@ -375,3 +375,21 @@ async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Mod
     assert not coord.check()
     time.setNow(time.local(2020, 3, 17, 12))
     assert coord.check()
+
+
+@pytest.mark.asyncio
+async def test_disabled_at_install(coord: Coordinator, dest, time):
+    """
+    Verifies that at install time, if some snapshots are already present the 
+    addon doesn't try to sync over and over when drive is disabled.  This was 
+    a problem at one point.
+    """
+    dest.setEnabled(True)
+    await coord.sync()
+    assert len(coord.snapshots()) == 1
+
+    dest.setEnabled(False)
+    time.advance(days=5)
+    assert coord.check()
+    await coord.sync()
+    assert not coord.check()

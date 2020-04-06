@@ -485,7 +485,7 @@ function refreshstats() {
           tip = tooltipBackedUp;
         } else if (snapshot.status.includes("Loading")) {
           tip = tooltipLoading;
-        } else if (snapshot.status.includes("Hass")) {
+        } else if (snapshot.status.includes("HA Only")) {
           tip = tooltipHassio;
         } else if (snapshot.status.includes("Pending")) {
           tip = tooltipPending;

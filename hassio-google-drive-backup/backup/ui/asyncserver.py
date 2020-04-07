@@ -385,10 +385,16 @@ class AsyncServer(Trigger, Startable):
         Password(self.config.getConfigFor(update)).resolve()
 
         validated = self.config.validate(update)
-        await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the confgiuration update request"))
+        await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the confgiuration update request"), trigger=False)
+        try:
+            await self.cancelSync(request)
+            await self.startSync(request)
+        except:
+            # eat the error, just cancel optimistically
+            pass
         return web.json_response({'message': 'Settings saved'})
 
-    async def _updateConfiguration(self, new_config, snapshot_folder_id=None):
+    async def _updateConfiguration(self, new_config, snapshot_folder_id=None, trigger=True):
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
@@ -408,7 +414,8 @@ class AsyncServer(Trigger, Startable):
                 self._coord._model.dest.changeBackupFolder(snapshot_folder_id)
             else:
                 self._coord._model.dest.resetFolder()
-        self.trigger()
+        if trigger:
+            self.trigger()
         return {'message': 'Settings saved'}
 
     def _getServerOptions(self):

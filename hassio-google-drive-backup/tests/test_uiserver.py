@@ -7,6 +7,7 @@ from urllib.parse import quote
 
 import aiohttp
 import pytest
+import asyncio
 from aiohttp import BasicAuth
 from aiohttp.client import ClientSession
 
@@ -339,7 +340,7 @@ async def test_config(reader, ui_server, config: Config, server):
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_auth_and_restart(reader, ui_server, config: Config, server, restarter):
+async def test_auth_and_restart(reader, ui_server, config: Config, server, restarter, coord: Coordinator):
     update = {"config": {"require_login": True,
                          "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
@@ -353,7 +354,8 @@ async def test_auth_and_restart(reader, ui_server, config: Config, server, resta
     await reader.get("getstatus", status=401, ingress=False)
     await reader.get("getstatus", auth=BasicAuth("user", "badpassword"), status=401, ingress=False)
     await reader.get("getstatus", auth=BasicAuth("user", "pass"), ingress=False)
-    status = await reader.getjson("sync", auth=BasicAuth("user", "pass"), ingress=False)
+    await coord.waitForSyncToFinish()
+    status = await reader.getjson("getstatus", auth=BasicAuth("user", "pass"), ingress=False)
 
     # verify a the sync succeeded (no errors)
     assert status["last_error"] is None
@@ -726,5 +728,29 @@ async def test_manual_creds(reader: ReaderHelper, ui_server: AsyncServer, config
     # Now verify that bad creds fail predictably
     req_path = "manualauth?code=bad_code"
     assert await reader.getjson(req_path) == {
-       'error': 'Your Google Drive credentials have expired.  Please reauthorize with Google Drive through the Web UI.'
+        'error': 'Your Google Drive credentials have expired.  Please reauthorize with Google Drive through the Web UI.'
     }
+
+
+@pytest.mark.asyncio
+async def test_setting_cancels_and_resyncs(reader: ReaderHelper, ui_server: AsyncServer, config: Config, server, session, drive: DriveSource, coord: Coordinator):
+    # Create a blocking sync task
+    coord._sync_wait.set()
+    sync = asyncio.create_task(coord.sync(), name="Sync from saving settings")
+    await coord._sync_start.wait()
+    assert not sync.cancelled()
+    assert not sync.done()
+
+    # Change some config
+    update = {
+        "config": {
+            "days_between_snapshots": 20,
+            "drive_ipv4": ""
+        },
+        "snapshot_folder": "unused"
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+
+    # verify the previous sync is done and another one is running
+    assert sync.done()
+    assert coord.isSyncing()

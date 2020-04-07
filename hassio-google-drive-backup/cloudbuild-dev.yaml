@@ -1,0 +1,12 @@
+steps:
+    - name: "gcr.io/cloud-builders/docker"
+      entrypoint: "bash"
+      args: ["-c", "docker login --username=sabeechen --password=${_DOCKERHUB_PASSWORD}"]
+    - name: 'gcr.io/cloud-builders/docker'
+      args: [ 'build', '-f', 'Dockerfile-addon',  '-t', 'sabeechen/hassio-google-drive-backup-amd64:${_VERSION}', "--build-arg", "BUILD_FROM=homeassistant/amd64-base", '.' ]
+    substitutions:
+      _DOCKERHUB_PASSWORD: "define me" # default value
+      _VERSION: "dev-testing" # default value
+    images:
+    - "sabeechen/hassio-google-drive-backup-amd64:${_VERSION}"
+        

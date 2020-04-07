@@ -5,7 +5,7 @@ from injector import Injector
 from backup.ha import HaUpdater, HaSource
 from backup.worker import DebugWorker, Watcher
 from backup.config import Config
-from backup.ui import AsyncServer
+from backup.ui import UiServer
 from backup.model import Scyncer
 
 
@@ -26,7 +26,7 @@ async def test_start_work(injector, server):
     assert injector.get(DebugWorker).isRunning()
     assert injector.get(Scyncer).isRunning()
     assert injector.get(HaSource).isInitialized()
-    assert injector.get(AsyncServer).running
+    assert injector.get(UiServer).running
     assert injector.get(Watcher).isStarted()
 
     # Config should have Restarter and Resolver subscribed

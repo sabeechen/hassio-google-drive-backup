@@ -1,2 +1,2 @@
-from .asyncserver import AsyncServer
+from .uiserver import UiServer
 from .restarter import Restarter

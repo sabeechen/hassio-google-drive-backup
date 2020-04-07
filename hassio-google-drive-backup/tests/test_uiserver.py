@@ -14,7 +14,7 @@ from aiohttp.client import ClientSession
 from oauth2client.client import OAuth2Credentials
 
 from backup.util import AsyncHttpGetter, GlobalInfo, File
-from backup.ui import AsyncServer, Restarter
+from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
@@ -87,7 +87,7 @@ def simple_config(config):
 @pytest.fixture
 async def ui_server(injector, server):
     os.mkdir("static")
-    server = injector.get(AsyncServer)
+    server = injector.get(UiServer)
     await server.run()
     yield server
     await server.shutdown()
@@ -106,13 +106,13 @@ def reader(ui_server, session, ui_port, ingress_port):
 
 
 @pytest.mark.asyncio
-async def test_AsyncServer_start(ui_server: AsyncServer):
+async def test_uiserver_start(ui_server: UiServer):
     assert ui_server.running
 
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(10)
-async def test_AsyncServer_static_files(reader):
+async def test_uiserver_static_files(reader):
     await reader.get("")
     await reader.get("reauthenticate")
     await reader.get("pp")
@@ -369,7 +369,7 @@ async def test_auth_and_restart(reader, ui_server, config: Config, server, resta
 @pytest.mark.asyncio
 @pytest.mark.timeout(100)
 @pytest.mark.flaky(5)
-async def test_expose_extra_server_option(reader, ui_server: AsyncServer, config: Config):
+async def test_expose_extra_server_option(reader, ui_server: UiServer, config: Config):
     with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
         await reader.getjson("sync", ingress=False)
     config.override(Setting.EXPOSE_EXTRA_SERVER, True)
@@ -513,7 +513,7 @@ async def test_resolve_folder_new(reader, config: Config, snapshot, time, drive)
 
 
 @pytest.mark.asyncio
-async def test_ssl_server(reader: ReaderHelper, ui_server: AsyncServer, config, server, cleandir, restarter):
+async def test_ssl_server(reader: ReaderHelper, ui_server: UiServer, config, server, cleandir, restarter):
     ssl_dir = abspath(join(__file__, "..", "..", "dev", "ssl"))
     copyfile(join(ssl_dir, "localhost.crt"), join(cleandir, "localhost.crt"))
     copyfile(join(ssl_dir, "localhost.key"), join(cleandir, "localhost.key"))
@@ -533,7 +533,7 @@ async def test_ssl_server(reader: ReaderHelper, ui_server: AsyncServer, config, 
 
 
 @pytest.mark.asyncio
-async def test_bad_ssl_config_missing_files(reader: ReaderHelper, ui_server: AsyncServer, config, server, cleandir, restarter):
+async def test_bad_ssl_config_missing_files(reader: ReaderHelper, ui_server: UiServer, config, server, cleandir, restarter):
     update = {
         "config": {
             "use_ssl": True,
@@ -555,7 +555,7 @@ async def test_bad_ssl_config_missing_files(reader: ReaderHelper, ui_server: Asy
 
 
 @pytest.mark.asyncio
-async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: AsyncServer, config, server, cleandir, restarter):
+async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: UiServer, config, server, cleandir, restarter):
     ssl_dir = abspath(join(__file__, "..", "..", "dev", "ssl"))
     copyfile(join(ssl_dir, "localhost.crt"), join(cleandir, "localhost.crt"))
     copyfile(join(ssl_dir, "localhost.key"), join(cleandir, "localhost.key"))
@@ -704,7 +704,7 @@ async def test_update_sync_interval(reader, ui_server, config: Config, server):
 
 
 @pytest.mark.asyncio
-async def test_manual_creds(reader: ReaderHelper, ui_server: AsyncServer, config: Config, server, session, drive: DriveSource):
+async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: Config, server, session, drive: DriveSource):
     # get the auth url
     req_path = "manualauth?client_id={}&client_secret={}".format(config.get(Setting.DEFAULT_DRIVE_CLIENT_ID), config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET))
     data = await reader.getjson(req_path)
@@ -733,7 +733,7 @@ async def test_manual_creds(reader: ReaderHelper, ui_server: AsyncServer, config
 
 
 @pytest.mark.asyncio
-async def test_setting_cancels_and_resyncs(reader: ReaderHelper, ui_server: AsyncServer, config: Config, server, session, drive: DriveSource, coord: Coordinator):
+async def test_setting_cancels_and_resyncs(reader: ReaderHelper, ui_server: UiServer, config: Config, server, session, drive: DriveSource, coord: Coordinator):
     # Create a blocking sync task
     coord._sync_wait.set()
     sync = asyncio.create_task(coord.sync(), name="Sync from saving settings")

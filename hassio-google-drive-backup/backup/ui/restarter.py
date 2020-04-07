@@ -1,4 +1,4 @@
-from .asyncserver import AsyncServer
+from .uiserver import UiServer
 from ..config import Config, Startable
 from asyncio import create_task, Event
 from injector import inject, singleton
@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 @singleton
 class Restarter(Startable):
     @inject
-    def __init__(self, server: AsyncServer, config: Config):
+    def __init__(self, server: UiServer, config: Config):
         self._server = server
         self._config = config
         self._old_options = config.getServerOptions()

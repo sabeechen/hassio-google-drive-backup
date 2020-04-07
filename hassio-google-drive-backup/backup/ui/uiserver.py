@@ -32,7 +32,7 @@ SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
 
 
 @singleton
-class AsyncServer(Trigger, Startable):
+class UiServer(Trigger, Startable):
     @inject
     def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests,
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,

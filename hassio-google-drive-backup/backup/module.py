@@ -12,7 +12,7 @@ from backup.model import SnapshotDestination, SnapshotSource, Scyncer
 from backup.util import Resolver
 from backup.model import Coordinator
 from backup.worker import Trigger, Watcher, DebugWorker
-from backup.ui import AsyncServer, Restarter
+from backup.ui import UiServer, Restarter
 from backup.logger import getLogger
 
 logger = getLogger(__name__)
@@ -33,7 +33,7 @@ class BaseModule(Module):
 
     @multiprovider
     @singleton
-    def getTriggers(self, coord: Coordinator, ha: HaSource, drive: DriveSource, watcher: Watcher, server: AsyncServer) -> List[Trigger]:
+    def getTriggers(self, coord: Coordinator, ha: HaSource, drive: DriveSource, watcher: Watcher, server: UiServer) -> List[Trigger]:
         return [coord, ha, drive, watcher, server]
 
     @provider
@@ -49,7 +49,7 @@ class BaseModule(Module):
     @multiprovider
     @singleton
     def getStartables(self, ha_updater: HaUpdater, debugger: DebugWorker, ha_source: HaSource,
-                      server: AsyncServer, restarter: Restarter, syncer: Scyncer, watcher: Watcher) -> List[Startable]:
+                      server: UiServer, restarter: Restarter, syncer: Scyncer, watcher: Watcher) -> List[Startable]:
         # Order here matters, since its the order in which components of the addon are initialized.
         return [ha_updater, debugger, ha_source, server, restarter, syncer, watcher]
 

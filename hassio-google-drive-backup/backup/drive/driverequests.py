@@ -112,6 +112,11 @@ class DriveRequests():
                 pass
 
     def saveCredentials(self, creds: Creds):
+        if not creds:
+            if os.path.exists(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
+                os.remove(self.config.get(Setting.CREDENTIALS_FILE_PATH))
+                self.creds = None
+            return
         with open(self.config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
             json.dump(creds.serialize(), f)
         self.tryLoadCredentials()

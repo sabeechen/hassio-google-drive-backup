@@ -281,7 +281,7 @@ class SimulationServer():
 
     async def driveToken(self, request: Request):
         data = await request.post()
-        if data.get('redirect_uri') != "http://localhost:{}/drive/authorize".format(self._port):
+        if data.get('redirect_uri') not in ["http://localhost:{}/drive/authorize".format(self._port), 'urn:ietf:wg:oauth:2.0:oob']:
             raise HTTPUnauthorized()
         if data.get('grant_type') != 'authorization_code':
             raise HTTPUnauthorized()
@@ -901,7 +901,7 @@ class SimulationServer():
 
 
 async def main():
-    port = 56154
+    port = 56153
     base = URL("http://localhost").with_port(port)
     config = Config.withOverrides({
         Setting.DRIVE_AUTHORIZE_URL: str(base.with_path("o/oauth2/v2/auth")),

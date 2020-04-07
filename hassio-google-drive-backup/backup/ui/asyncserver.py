@@ -147,7 +147,7 @@ class AsyncServer(Trigger, Startable):
                 self.manual_exchanger = self.exchanger_builder.build(
                     client_id=client_id.strip(),
                     client_secret=client_secret.strip(),
-                    redirect_uri=MANUAL_CODE_REDIRECT_URI)
+                    redirect=MANUAL_CODE_REDIRECT_URI)
                 return web.json_response({
                     'auth_url': await self.manual_exchanger.getAuthorizationUrl()
                 })
@@ -160,9 +160,11 @@ class AsyncServer(Trigger, Startable):
                 self._coord.saveCreds(await self.manual_exchanger.exchange(code))
                 self._global_info.setIngoreErrorsForNow(True)
                 # TODO: this redirects back to the reauth page if user already has drive creds!
-                return web.json_response({'auth_url': "index"})
+                return web.json_response({'auth_url': "index.html?fresh=true"})
+            except KnownError as e:
+                return web.json_response({'error': e.message()})
             except Exception as e:
-                return web.json_response({'error': "Couldn't create authorization URL, Google said:" + str(e)})
+                return web.json_response({'error': "Couldn't authorize with Google Drive, Google said:" + str(e)})
         raise HTTPBadRequest()
 
     async def snapshot(self, request: Request) -> Any:

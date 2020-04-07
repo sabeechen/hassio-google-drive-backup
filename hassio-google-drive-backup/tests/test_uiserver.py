@@ -24,6 +24,7 @@ from backup.drive import DriveSource
 from backup.ha import HaSource
 from .faketime import FakeTime
 from .helpers import compareStreams
+from yarl import URL
 
 
 class ReaderHelper:
@@ -698,3 +699,32 @@ async def test_update_sync_interval(reader, ui_server, config: Config, server):
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60 * 2
     assert server._options["max_sync_interval_seconds"] == 60 * 60 * 2
+
+
+@pytest.mark.asyncio
+async def test_manual_creds(reader: ReaderHelper, ui_server: AsyncServer, config: Config, server, session, drive: DriveSource):
+    # get the auth url
+    req_path = "manualauth?client_id={}&client_secret={}".format(config.get(Setting.DEFAULT_DRIVE_CLIENT_ID), config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET))
+    data = await reader.getjson(req_path)
+    assert "auth_url" in data
+
+    # request the auth code from "google"
+    async with session.get(data["auth_url"], allow_redirects=False) as resp:
+        code = URL(resp.headers["location"]).query["code"]
+    
+    drive.saveCreds(None)
+    assert not drive.enabled()
+    # Pass the auth code to generate creds
+    req_path = "manualauth?code={}".format(code)
+    assert await reader.getjson(req_path) == {
+        'auth_url': "index.html?fresh=true"
+    }
+
+    # verify creds are saved and drive is enabled
+    assert drive.enabled()
+
+    # Now verify that bad creds fail predictably
+    req_path = "manualauth?code=bad_code"
+    assert await reader.getjson(req_path) == {
+       'error': 'Your Google Drive credentials have expired.  Please reauthorize with Google Drive through the Web UI.'
+    }

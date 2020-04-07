@@ -25,11 +25,6 @@ async def main(config):
 
 
 if __name__ == '__main__':
-    if os.environ.get("DEBUGGER") == "true":
-        # This is can be used to debug the addon when installaed as a local addon.
-        logger.info("Starting debugger on port 3000")
-        ptvsd.enable_attach(('0.0.0.0', 3000))
-
     config = Config()
 
     if len(argv) > 1:
@@ -37,6 +32,12 @@ if __name__ == '__main__':
         config = Config.withFileOverrides(abspath(join(__file__, "../../dev/data", argv[1] + "_options.json")))
     else:
         config = Config.fromFile(Setting.CONFIG_FILE_PATH.default())
+
+    if config.get(Setting.DEBUGGER_PORT) is not None:
+        port = config.get(Setting.DEBUGGER_PORT)
+        logger.info("Starting debugger on port {}".format(port))
+        ptvsd.enable_attach(('0.0.0.0', port))
+
 
     if platform.system() == "Windows":
         # Needed for dev on windows machines

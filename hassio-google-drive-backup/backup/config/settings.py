@@ -103,6 +103,7 @@ class Setting(Enum):
     FAILED_SNAPSHOT_TIMEOUT_SECONDS = "failed_snapshot_timeout_seconds"
     NEW_SNAPSHOT_TIMEOUT_SECONDS = "new_snapshot_timeout_seconds"
     DEFAULT_CHUNK_SIZE = "default_chunk_size"
+    DEBUGGER_PORT = "debugger_port"
 
     def default(self):
         return _DEFAULTS[self]
@@ -202,7 +203,8 @@ _DEFAULTS = {
     Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "",
     Setting.DRIVE_PICKER_API_KEY: "",
-    Setting.DEFAULT_CHUNK_SIZE: 1024 * 1024 * 5
+    Setting.DEFAULT_CHUNK_SIZE: 1024 * 1024 * 5,
+    Setting.DEBUGGER_PORT: None
 }
 
 _LOOKUP = {}

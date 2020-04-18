@@ -276,6 +276,12 @@ function setColors(background, accent) {
     'color': text.tint(background, 0.5).toCss()
   });
 
+  setRule(".highlight-border", {
+    'border-color': accent.toCss(),
+    'border-width': '1px',
+    'border-style': 'solid',
+  })
+
   setRule(".modal", {
     'background-color': bg_modal.toCss(),
     'box-shadow': shadow_modal

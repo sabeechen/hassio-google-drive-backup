@@ -207,6 +207,11 @@ _DEFAULTS = {
     Setting.DEBUGGER_PORT: None
 }
 
+PRIVATE = [
+    Setting.SNAPSHOT_PASSWORD,
+    Setting.SNAPSHOT_NAME
+]
+
 _LOOKUP = {}
 _VALIDATORS = {}
 

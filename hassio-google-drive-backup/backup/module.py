@@ -11,9 +11,10 @@ from backup.ha import HaSource, HaUpdater
 from backup.model import SnapshotDestination, SnapshotSource, Scyncer
 from backup.util import Resolver
 from backup.model import Coordinator
-from backup.worker import Trigger, Watcher, DebugWorker
+from backup.worker import Trigger, Watcher
 from backup.ui import UiServer, Restarter
 from backup.logger import getLogger
+from .debugworker import DebugWorker
 
 logger = getLogger(__name__)
 

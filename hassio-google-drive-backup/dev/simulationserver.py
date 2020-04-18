@@ -591,6 +591,14 @@ class SimulationServer():
             }
         )
 
+    async def supervisorLogs(self, request: Request):
+        self._verifyHassioHeader(request)
+        return Response(body="Supervisor Log line 1\nSupervisor Log Line 2")
+
+    async def coreLogs(self, request: Request):
+        self._verifyHassioHeader(request)
+        return Response(body="Core Log line 1\nCore Log Line 2")
+
     async def haInfo(self, request: Request):
         self._verifyHassioHeader(request)
         return self.formatDataResponse(
@@ -846,6 +854,8 @@ class SimulationServer():
             get('/snapshots/new/full', self.hassioNewFullSnapshot),
             get('/homeassistant/info', self.haInfo),
             get('/supervisor/info', self.hassioSupervisorInfo),
+            get('/supervisor/logs', self.supervisorLogs),
+            get('/core/logs', self.coreLogs),
             get('/snapshots', self.hassioSnapshots),
             put('/upload/drive/v3/files/progress/{id}', self.driveContinueUpload),
             post('/upload/drive/v3/files/', self.driveStartUpload),

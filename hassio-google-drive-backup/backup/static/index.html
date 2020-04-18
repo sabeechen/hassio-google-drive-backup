@@ -14,6 +14,8 @@
   <link rel="icon" type="image/png" href="static/images/favicon.png?version=0.100.0">
   <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
   <script src="static/js/jquery.js?version=0.100.0"></script>
+  <script src="static/js/markdown-it.min.js?version=0.100.0"></script>
+  <script src="static/js/clipboard.min.js?version=0.100.0"></script>
   <script src="static/js/materialize.js?version=0.100.0"></script>
   <script src="static/js/colpick.js?version=0.100.0"></script>
   <script src="static/js/init.js?version=0.100.0"></script>
@@ -609,7 +611,7 @@
         <li>
           <h6>File an Issue</h6>If you don't want to ask something in front of the angry mobs on the internet, you can
           file an issue on the
-          project GitHub <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue Tracker</a>,
+          project GitHub <a onclick="bugReport()">Issue Tracker</a>,
           just click "new issue". The developer gets an email if make one of those, which he promises to try and help
           with. No question is stupid.
         </li>
@@ -651,6 +653,37 @@
       <a href="#!" class="modal-close waves-effect waves-light btn-flat">Nevermind</a>
     </div>
   </div>
+  <div id="bug_modal" class="modal modal-fixed-footer">
+    <div class="modal-content">
+      <h4> <i class="material-icons"
+          style="font-size: 50px; padding-right: 10px; vertical-align: middle">bug_report</i><span>Report an Issue</span>
+      </h4>
+      <p class="detail-node">
+        Looks like you ran into a problem that you want to report to the developer.  Getting a lot of detail about what you 
+        ran into can really help him figure things out.  To make gathering that easy for you and the developer, follow these instructions:
+        <ul class="browser-default">
+          <li>Click <a href="#!" id="copyButtonId" data-id="@item.Type" class="copyable"
+            data-clipboard-action="copy" data-clipboard-target="div#bug_details"><i style="vertical-align: middle;" class="material-icons">content_copy</i>Copy Details</a> to copy the details below to your clipboard.  This includes detail about your configuration, 
+            any errors the addon found, and logs from Home Assistant, the Supervisor, and the addon.  This information will be
+            very helpful to the developer who looks at your issue.</li>
+          <li>Click <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new?title=Please%20add%20a%20title&body=Copy%20the%20info%20from%20the%20previous%20page%20here"><i style="vertical-align: middle;" class="material-icons">open_in_new</i>Open Github</a>
+             to open a new issue on Github and paste the text you copied there.  You can click "Preview" to make sure it looks right.</li>
+          <li>Before submitting the issue, add in any information you think might help.  Consider including what you were doing that caused the error, a screenshot, etc.</li>
+          <li>Click "Submit new issue" on Github to post the issue.  The developer will get back to you as fast as he can, but keep in mind that he maintains this project in his free time.</li>
+        </ul>
+      </p>
+      <p>Here is a preview of the information you'll be providing:</p>
+      <pre>
+        <div id="bug_details" class="highlight-border" style="overflow-y: scroll; overflow-x: scroll;"></div>
+      </pre>
+    </div>
+    <div class="modal-footer">
+      <button id="copyButtonId" data-id="@item.Type"
+      data-clipboard-action="copy" data-clipboard-target="div#bug_details" class="copyable btn waves-effect waves-light btn-flat"><i class="material-icons" style="vertical-align: middle; padding-right: 5px;">content_copy</i>Copy Details</button>
+      <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new?title=Please%20add%20a%20title&body=Copy%20the%20info%20from%20the%20previous%20page%20here" class="waves-effect waves-light btn-flat"><i class="material-icons" style="vertical-align: middle; padding-right: 5px;">open_in_new</i>Open Github</a>
+      <a href="#!" class="modal-close waves-effect waves-light btn-flat">Close</a>
+    </div>
+  </div>
   <header>
     <nav class="non-ingress ha-blue" role="navigation">
       <div class="nav-wrapper">
@@ -676,14 +709,19 @@
               Help
             </a>
           </li>
+          <li>
+            <a onclick="bugReport()">
+              <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">bug_report</i>Report a bug
+            </a>
+          </li>
         </ul>
       </div>
     </nav>
     <ul class="sidenav non-ingress" id="mobile-menu">
       <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
       <li><a href="/log?format=view" target="_blank"><i class="material-icons">code</i>Logs</a></li>
-      <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a>
-      </li>
+      <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
+      <li><a onclick="bugReport()"><i class="material-icons">bug_report</i>Report a bug</a></li>
     </ul>
     <div>
 
@@ -913,6 +951,22 @@
 
       window.setInterval(reloadForNewCreds, 5000);
       reloadForNewCreds();
+
+      var clipboard = new ClipboardJS('.copyable');
+      
+      clipboard.on('success', function(e) {
+          console.info('Action:', e.action);
+          console.info('Text:', e.text);
+          console.info('Trigger:', e.trigger);
+
+          e.clearSelection();
+          M.toast({html: "Copied! Now go to GitHub"});
+      });
+
+      clipboard.on('error', function(e) {
+          console.error('Action:', e.action);
+          console.error('Trigger:', e.trigger);
+      });
     });
 
     function getAuthUrl() {

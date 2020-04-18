@@ -22,7 +22,7 @@ from backup.logger import reset
 from backup.model import Model
 from backup.time import Time
 from backup.module import BaseModule
-from backup.worker import DebugWorker
+from backup.debugworker import DebugWorker
 from backup.creds import Creds
 from .faketime import FakeTime
 from .helpers import Uploader

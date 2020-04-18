@@ -19,6 +19,12 @@ input {
 	color: rgba(63, 63, 63, 1.0);
 }
 
+.highlight-border {
+	border-color: rgba(3, 169, 244, 1);
+	border-width: 1px;
+	border-style: solid;
+}
+
 .ha-blue {
 	background-color: rgba(3, 169, 244, 1);
 	color: rgba(255, 255, 255, 1);

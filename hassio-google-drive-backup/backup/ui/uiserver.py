@@ -5,14 +5,15 @@ from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
 from urllib.parse import quote
+from pprint import pprint
 
 import aiofiles
 from aiohttp import BasicAuth, hdrs, web, ClientSession
-from aiohttp.web import HTTPBadRequest, HTTPException, Request
+from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther
 from injector import ClassAssistedBuilder, inject, singleton
 
 from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable
-from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
+from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE, GITHUB_ISSUE_URL
 from backup.model import Coordinator, Snapshot
 from backup.exceptions import KnownError, ensureKey
 from backup.util import GlobalInfo, Estimator, Color, File
@@ -22,6 +23,7 @@ from backup.time import Time
 from backup.worker import Trigger
 from backup.logger import getLogger, getHistory
 from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
+from backup.debugworker import DebugWorker
 
 from .debug import Debug
 
@@ -36,7 +38,7 @@ class UiServer(Trigger, Startable):
     @inject
     def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests,
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
-                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger]):
+                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker):
         super().__init__()
 
         # Currently running server tasks
@@ -58,6 +60,7 @@ class UiServer(Trigger, Startable):
         self._estimator = estimator
         self._debug = debug
         self.session = session
+        self.debug_worker = debug_worker
 
     def name(self):
         return "UI Server"
@@ -377,6 +380,17 @@ class UiServer(Trigger, Startable):
             'redirect': redirect
         })
 
+    async def makeanissue(self, request: Request):
+        if self._global_info._last_error is not None:
+            error = logger.formatException(self._global_info._last_error)
+        else:
+            error = "No error could be identified automatically."
+        data = await self.debug_worker.buildBugReportData(error)
+        body = GITHUB_BUG_TEMPLATE
+        for key in data:
+            body = body.replace("{" + key + "}", str(data[key]))
+        return web.json_response({'markdown': body})
+
     async def saveconfig(self, request: Request) -> Any:
         data = await request.json()
         update = ensureKey("config", data, "the confgiuration update request")
@@ -532,6 +546,7 @@ class UiServer(Trigger, Startable):
 
         self._addRoute(app, self._debug.simerror)
         self._addRoute(app, self._debug.getTasks)
+        self._addRoute(app, self.makeanissue)
 
     def _addRoute(self, app, method):
         app.add_routes([
@@ -705,6 +720,12 @@ class UiServer(Trigger, Startable):
             'background-color': background.toCss(),
             'box-shadow': bgshadow,
             'webkit-box-shadow': bgshadow,
+        })
+
+        ret += self.cssElement(".highlight-border", {
+            'border-color': accent.toCss(),
+            'border-width': '1px',
+            'border-style': 'solid',
         })
 
         ret += self.cssElement(".dropdown-content li > a", {

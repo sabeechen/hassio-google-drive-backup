@@ -3,7 +3,7 @@ import json
 import pytest
 
 from backup.config import Config, Setting
-from backup.worker import DebugWorker
+from backup.debugworker import DebugWorker
 from backup.util import GlobalInfo
 from backup.logger import getLogger, getLast
 from dev.simulationserver import SimulationServer

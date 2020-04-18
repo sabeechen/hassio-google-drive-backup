@@ -3,7 +3,8 @@ from backup.module import MainModule, BaseModule
 from backup.starter import Starter
 from injector import Injector
 from backup.ha import HaUpdater, HaSource
-from backup.worker import DebugWorker, Watcher
+from backup.worker import Watcher
+from backup.debugworker import DebugWorker
 from backup.config import Config
 from backup.ui import UiServer
 from backup.model import Scyncer

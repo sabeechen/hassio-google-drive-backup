@@ -397,6 +397,17 @@ function setErrorWatermark() {
   error_minimum = last_data.last_error_count
 }
 
+function bugReport() {
+  postJson("makeanissue", {}, openBugDialog, null, "Generating Bug Info...")
+}
+
+function openBugDialog(resp) {
+  var md = window.markdownit();
+  var result = md.render(resp.markdown);
+  $("#bug_details").html(resp.markdown);
+  M.Modal.getInstance(document.querySelector('#bug_modal')).open();
+}
+
 sync_toast = null;
 error_toast = null
 last_data = null;
@@ -693,7 +704,6 @@ function populateDnsInfo(target, data) {
 function populateGitHubInfo(target, error) {
   $('#generic_error_title', target).text(error.message);
   $('#generic_error_details', target).text(error.details);
-  $('#error_github_link', target).attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title=" + encodeURIComponent(error.message) + "&assignee=sabeechen&body=" + encodeURIComponent(github_bug_desc + error.details + "\n" + error.message));
   $('#error_github_search', target).attr("href", "https://github.com/sabeechen/hassio-google-drive-backup/issues?q=" + encodeURIComponent("\"" + error.message.replace("\"", "\\\"") + "\""));
 }
 

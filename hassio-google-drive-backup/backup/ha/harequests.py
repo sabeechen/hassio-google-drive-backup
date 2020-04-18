@@ -129,6 +129,20 @@ class HaRequests():
         ret = AsyncHttpGetter(url, self._getHassioHeaders(), self.session)
         return ret
 
+    @supervisor_call
+    async def getSuperLogs(self):
+        url = "{0}supervisor/logs".format(self.config.get(Setting.HASSIO_URL))
+        async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
+            resp.raise_for_status()
+            return await resp.text()
+
+    @supervisor_call
+    async def getCoreLogs(self):
+        url = "{0}core/logs".format(self.config.get(Setting.HASSIO_URL))
+        async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
+            resp.raise_for_status()
+            return await resp.text()
+
     async def _validateHassioReply(self, resp) -> Dict[str, Any]:
         async with resp:
             resp.raise_for_status()

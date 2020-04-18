@@ -107,9 +107,11 @@ class Coordinator(Trigger):
                 'snapshots': 0,
                 'retained': 0,
                 'deletable': 0,
-                'name': source
+                'name': source,
+                'latest': None
             }
             size = 0
+            latest = None
             for snapshot in self.snapshots():
                 data: AbstractSnapshot = snapshot.getSource(source)
                 if data is None:
@@ -119,7 +121,11 @@ class Coordinator(Trigger):
                     source_info['retained'] += 1
                 else:
                     source_info['deletable'] += 1
+                if latest is None or data.date() > latest:
+                    latest = data.date()
                 size += int(data.sizeInt())
+            if latest is not None:
+                source_info['latest'] = self._time.asRfc3339String(latest)
             source_info['size'] = Estimator.asSizeString(size)
             info[source] = source_info
         return info

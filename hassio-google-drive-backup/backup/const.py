@@ -28,3 +28,43 @@ ERROR_BACKUP_FOLDER_INACCESSIBLE = "backup_folder_inaccessible"
 ERROR_LOW_SPACE = "low_space"
 
 DRIVE_FOLDER_URL_FORMAT = "https://drive.google.com/drive/u/0/folders/{0}"
+GITHUB_ISSUE_URL = "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title={title}&assignee=sabeechen&body={body}"
+GITHUB_BUG_TEMPLATE = """
+###### Description:
+```
+If you have anything else that could help explain what happened, please write it here.
+```
+
+ Addon version: `{version}`
+ Home Assistant Version: `{ha_version}`
+ Supervisor Version: `{super_version}`
+ Architecture: `{arch}`
+ Date: `{time}`
+ Timezone: `{timezone}`
+ Failure Time: `{failure_time}`
+ Last Good Sync: `{sync_last_start}`
+ Snapshots: 
+ ```
+ {snapshots}
+ ```
+ ###### Config:
+ ```
+ {config}
+ ```
+ ###### Exception:
+ ```
+ {error}
+ ```
+ ###### Addon Logs:
+ ```
+ {addon_logs}
+ ```
+ ###### Supervisor Logs:
+ ```
+ {super_logs}
+ ```
+ ###### Home Assistant core Logs:
+ ```
+ {core_logs}
+ ```
+ """

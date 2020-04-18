@@ -22,6 +22,7 @@ class GlobalInfo():
         self._uploads = 0
         self._last_upload = None
         self._last_success = time.now()
+        self._last_sync_success = None
         self._start_time = None
         self._last_upload_size = None
         self._last_sync_start = None
@@ -33,6 +34,7 @@ class GlobalInfo():
         self._dns_info = None
         self._skip_space_check_once = False
         self._ignore_errors_for_now = False
+        self._start_time = time.now()
 
         self.drive_folder_id = None
         self.ha_ssl = False
@@ -66,6 +68,7 @@ class GlobalInfo():
         self._first_sync = False
         self._last_error = None
         self._last_success = self._time.now()
+        self._last_sync_success = self._time.now()
         self._successes += 1
         self._multipleDeletesPermitted = False
         self.setIngoreErrorsForNow(False)

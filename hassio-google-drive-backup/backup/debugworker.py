@@ -8,12 +8,14 @@ from urllib.parse import quote
 from aiohttp import ClientSession
 from injector import inject, singleton
 
-from ..config import Config, Setting, VERSION
-from ..exceptions import KnownError
-from ..util import GlobalInfo, Resolver
-from ..time import Time
-from .worker import Worker
-from ..logger import getLogger
+from backup.config import Config, Setting, VERSION, _DEFAULTS, PRIVATE
+from backup.exceptions import KnownError
+from backup.util import GlobalInfo, Resolver
+from backup.time import Time
+from backup.worker import Worker
+from backup.logger import getLogger, getHistory
+from backup.ha import HaRequests, HaSource
+from backup.model import Coordinator
 
 logger = getLogger(__name__)
 
@@ -21,11 +23,14 @@ logger = getLogger(__name__)
 @singleton
 class DebugWorker(Worker):
     @inject
-    def __init__(self, time: Time, info: GlobalInfo, config: Config, resolver: Resolver, session: ClientSession):
+    def __init__(self, time: Time, info: GlobalInfo, config: Config, resolver: Resolver, session: ClientSession, ha: HaRequests, coord: Coordinator, ha_source: HaSource):
         super().__init__("Debug Worker", self.doWork, time, interval=10)
         self.time = time
         self._info = info
         self.config = config
+        self.ha = ha
+        self.ha_source = ha_source
+        self.coord = coord
 
         self.last_dns_update = None
         self.dns_info = None
@@ -56,7 +61,7 @@ class DebugWorker(Worker):
             self.last_sent_error = error
             if error is not None:
                 self.last_sent_error_time = self.time.now()
-                package = self.buildErrorReport(error)
+                package = await self.buildErrorReport(error)
             else:
                 package = self.buildClearReport()
             logger.info("Sending error report (see settings to disable)")
@@ -76,28 +81,58 @@ class DebugWorker(Worker):
         except Exception as e:
             self.dns_info = logger.formatException(e)
 
-    def buildErrorReport(self, error):
-        # Someday: Get the supervisor logs
-        # Someday: Get the add-on logs
+    async def buildErrorReport(self, error):
+        config_special = {}
+        for setting in Setting:
+            if self.config.get(setting) != _DEFAULTS[setting]:
+                if setting in PRIVATE:
+                    config_special[setting] = "REDACTED"
+                else:
+                    config_special[str(setting)] = self.config.get(setting)
         report = {}
-        report['version'] = VERSION
+        report['config'] = json.dumps(config_special, indent=4)
+        report['time'] = self.formatDate(self.time.now())
+        report['start_time'] = self.formatDate(self._info._start_time)
+        report['addon_version'] = VERSION
+        report['failure_time'] = self.formatDate(self._info._last_failure_time)
+        report['failure_count'] = self._info._failures
+        report['sync_last_start'] = self.formatDate(self._info._last_sync_start)
+        report['sync_count'] = self._info._syncs
+        report['sync_success_count'] = self._info._successes
+        report['sync_last_success'] = self._info._last_sync_success
+        report['upload_count'] = self._info._uploads
+        report['upload_last_size'] = self._info._last_upload_size
+        report['upload_last_attempt'] = self.formatDate(self._info._last_upload)
+
         report['debug'] = self._info.debug
-        report['google_dns'] = self.dns_info
+        report['version'] = VERSION
         report['error'] = error
         report['client'] = self.config.clientIdentifier()
-        report['upload'] = {
-            'count': self._info._uploads,
-            'last_size': self._info._last_upload_size,
-            'last_attempt': self.formatDate(self._info._last_upload)
-        }
-        report['syncs'] = {
-            'count': self._info._syncs,
-            'successes': self._info._successes,
-            'failures': self._info._failures,
-            'last_start': self.formatDate(self._info._last_sync_start),
-            'last_failure': self.formatDate(self._info._last_failure_time)
-        }
-        report['now'] = self.formatDate(self.time.now())
+
+        if self.ha_source.isInitialized():
+            report["super_version"] = self.ha_source.super_info.get('version', "None")
+            report["arch"] = self.ha_source.super_info.get('arch', "None")
+            report["timezone"] = self.ha_source.super_info.get('timezone', "None")
+            report["ha_version"] = self.ha_source.ha_info.get('version', "None")
+        else:
+            report["super_version"] = "Uninitialized"
+            report["arch"] = "Uninitialized"
+            report["timezone"] = "Uninitialized"
+            report["ha_version"] = "Uninitialized"
+        report["snapshots"] = json.dumps(self.coord.buildSnapshotMetrics(), indent=4)
+        return report
+
+    async def buildBugReportData(self, error):
+        report = await self.buildErrorReport(error)
+        report['addon_logs'] = "\n".join(b for a,b in list(getHistory(0, False))[-20:])
+        try:
+            report['super_logs'] = "\n".join((await self.ha.getSuperLogs()).split("\n")[-20:])
+        except Exception as e:
+            report['super_logs'] = logger.formatException(e)
+        try:
+            report['core_logs'] = "\n".join((await self.ha.getCoreLogs()).split("\n")[-20:])
+        except Exception as e:
+            report['core_logs'] = logger.formatException(e)
         return report
 
     def buildClearReport(self):

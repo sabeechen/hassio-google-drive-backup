@@ -3,7 +3,6 @@ import json
 import socket
 import subprocess
 from datetime import datetime, timedelta
-from urllib.parse import quote
 
 from aiohttp import ClientSession
 from injector import inject, singleton
@@ -18,6 +17,7 @@ from backup.ha import HaRequests, HaSource
 from backup.model import Coordinator
 
 logger = getLogger(__name__)
+ERROR_LOG_LENGTH = 30
 
 
 @singleton
@@ -69,7 +69,7 @@ class DebugWorker(Worker):
                 'client': self.config.clientIdentifier(),
                 'addon_version': VERSION
             }
-            async with self.session.post(self.config.get(Setting.ERROR_REPORT_URL), headers=headers, json=package) as resp:
+            async with self.session.post(self.config.get(Setting.ERROR_REPORT_URL), headers=headers, json=package):
                 pass
 
     async def updateDns(self):
@@ -124,13 +124,13 @@ class DebugWorker(Worker):
 
     async def buildBugReportData(self, error):
         report = await self.buildErrorReport(error)
-        report['addon_logs'] = "\n".join(b for a,b in list(getHistory(0, False))[-20:])
+        report['addon_logs'] = "\n".join(b for a, b in list(getHistory(0, False))[-ERROR_LOG_LENGTH:])
         try:
-            report['super_logs'] = "\n".join((await self.ha.getSuperLogs()).split("\n")[-20:])
+            report['super_logs'] = "\n".join((await self.ha.getSuperLogs()).split("\n")[-ERROR_LOG_LENGTH:])
         except Exception as e:
             report['super_logs'] = logger.formatException(e)
         try:
-            report['core_logs'] = "\n".join((await self.ha.getCoreLogs()).split("\n")[-20:])
+            report['core_logs'] = "\n".join((await self.ha.getCoreLogs()).split("\n")[-ERROR_LOG_LENGTH:])
         except Exception as e:
             report['core_logs'] = logger.formatException(e)
         return report

@@ -5,15 +5,14 @@ from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
 from urllib.parse import quote
-from pprint import pprint
 
 import aiofiles
 from aiohttp import BasicAuth, hdrs, web, ClientSession
-from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther
+from aiohttp.web import HTTPBadRequest, HTTPException, Request
 from injector import ClassAssistedBuilder, inject, singleton
 
 from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable
-from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE, GITHUB_ISSUE_URL
+from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Snapshot
 from backup.exceptions import KnownError, ensureKey
 from backup.util import GlobalInfo, Estimator, Color, File
@@ -403,7 +402,7 @@ class UiServer(Trigger, Startable):
         try:
             await self.cancelSync(request)
             await self.startSync(request)
-        except:
+        except:  # noqa: E722
             # eat the error, just cancel optimistically
             pass
         return web.json_response({'message': 'Settings saved'})

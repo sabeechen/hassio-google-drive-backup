@@ -43,7 +43,7 @@ If you have anything else that could help explain what happened, please write it
  Timezone: `{timezone}`
  Failure Time: `{failure_time}`
  Last Good Sync: `{sync_last_start}`
- Snapshots: 
+ Snapshots:
  ```
  {snapshots}
  ```

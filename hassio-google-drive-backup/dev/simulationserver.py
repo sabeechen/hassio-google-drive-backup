@@ -12,7 +12,7 @@ import aiohttp
 from aiohttp.web import (Application, HTTPBadRequest, HTTPClientError,
                          HTTPException, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, delete, get,
-                         json_response, middleware, patch, post, put, HTTPSeeOther, HTTPPaymentRequired)
+                         json_response, middleware, patch, post, put, HTTPSeeOther)
 from aiohttp.client import ClientSession
 from injector import inject, singleton, ClassAssistedBuilder, Injector
 
@@ -624,7 +624,7 @@ class SimulationServer():
         input_json = {}
         try:
             input_json = await request.json()
-        except:
+        except:  # noqa: E722
             pass
         try:
             await self._snapshot_lock.acquire()

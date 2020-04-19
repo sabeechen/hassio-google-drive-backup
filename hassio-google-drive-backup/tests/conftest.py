@@ -6,7 +6,6 @@ import asyncio
 import platform
 from yarl import URL
 
-import aiohttp
 import pytest
 from aiohttp import ClientSession
 from injector import (ClassAssistedBuilder, Injector, Module, inject, provider,

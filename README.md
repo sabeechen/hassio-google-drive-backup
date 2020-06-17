@@ -147,11 +147,12 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 Redundancy is the foundation of reliability.  With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
 
 ### How do I restore a snapshot?
-If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant. If not, you'll need to start up a fresh installation of Hass.io and do the following:  can be copied over to your Home Assistant "/backups" folder like any snapshot, however because I found this tedious to do on a fresh install of Home Assistant I've made a workflow thats a little easier.  On your fresh install of Hass.io:
-*  [Install the add-on.](#installation)  Once linked with Google Drive, you should see the snapshots you created previously show up.  You should see a warning pop up about fidning an "Existing snapshot folder" which is expected, you cna just ignore it for now.
-* Click "Actions" -> "Upload" on the snapshot you want to use which will upload the snapshot to Home Assistant directly from Google Drive.  Wait for the upload to finish.
-* Click "Actions" -> "Restore" to be taken to the Hass.io restore page, or just navigate there through the Home Assistant interface ("Hass.io" -> "Snapshots").
-* You'll see the snapshot you uploaded.  Click on it and select "Wipe & Restore".  Wait a while for it to complete (maybe a logn while).  Congrats! you're back up and running.
+If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant. If not, you'll need to start up a fresh installation of Hass.io and do the following:
+- On your fresh install of Hass.io:
+  *  [Install the add-on.](#installation)  Once linked with Google Drive, you should see the snapshots you created previously show up.  You should see a warning pop up about finding an "Existing snapshot folder" which is expected, you can just ignore it for now.
+  * Click "Actions" -> "Upload" on the snapshot you want to use which will upload the snapshot to Home Assistant directly from Google Drive.  Wait for the upload to finish.
+  * Click "Actions" -> "Restore" to be taken to the Hass.io restore page, or just navigate there through the Home Assistant interface ("Hass.io" -> "Snapshots").
+  * You'll see the snapshot you uploaded.  Click on it and select "Wipe & Restore".  Wait a while for it to complete (maybe a logn while).  Congrats! you're back up and running.
 
 Note: You can also just copy a snapshots manually from Google Drive to your /backup folder using something like the Sambda addon.  I've found the steps above to be a little easier, since it works for any operating system, network setup, etc.
 
@@ -225,7 +226,7 @@ The add-on can be configured to keep [generational backups](https://en.wikipedia
 If you set '`"days_between_snapshots": 0`', then the add-on won't try to create new snapshots but will still back up any it finds to Google Drive and clean up old snapshots in both Home Assistant and Google Drive.  This can be useful if you already  have for example an automation that creates snapshots on a schedule.
 
 ### Can I give snapshots a different name?
-The config option `snapshot_name` can be changed to give snapshots a different name or with a date format of your choosing.  The default is `{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes snapshots with a name like `Full Snapshot 2019-10-31 14:00:00`.  Using the settings menu in the Web UI, you can see a preview of what a snapshot name will look like but you cna also set it in the add-on's options.  Below is the list of variables you can add to modify the name to your liking.
+The config option `snapshot_name` can be changed to give snapshots a different name or with a date format of your choosing.  The default is `{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes snapshots with a name like `Full Snapshot 2019-10-31 14:00:00`.  Using the settings menu in the Web UI, you can see a preview of what a snapshot name will look like but you can also set it in the add-on's options.  Below is the list of variables you can add to modify the name to your liking.
 * `{type}`: The type of snapshot, either 'Full' or 'Partial'
 * `{year}`: Year in 4 digit format (eg 2019)
 * `{year_short}`: Year in 4 digit format (eg 19)

@@ -7,6 +7,7 @@ from .faketime import FakeTime
 from .helpers import HelperTestSource
 from dev.simulationserver import SimulationServer
 from backup.logger import getLast
+from backup.util import Estimator
 
 STALE_ATTRIBUTES = {
     "friendly_name": "Snapshots Stale"
@@ -35,7 +36,10 @@ async def test_init(updater: HaUpdater, global_info, server):
         'last_snapshot': 'Never',
         'snapshots': [],
         'snapshots_in_google_drive': 0,
-        'snapshots_in_hassio': 0
+        'snapshots_in_hassio': 0,
+        'snapshots_in_home_assistant': 0,
+        'size_in_google_drive': "0.0 B",
+        'size_in_home_assistant': '0.0 B'
     })
     assert server.getNotification() is None
 
@@ -113,7 +117,10 @@ async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime):
         'last_snapshot': 'Never',
         'snapshots': [],
         'snapshots_in_google_drive': 0,
-        'snapshots_in_hassio': 0
+        'snapshots_in_hassio': 0,
+        'snapshots_in_home_assistant': 0,
+        'size_in_home_assistant': "0.0 B",
+        'size_in_google_drive': "0.0 B"
     })
 
 
@@ -137,7 +144,10 @@ async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime,
         }
         ],
         'snapshots_in_google_drive': 1,
-        'snapshots_in_hassio': 1
+        'snapshots_in_hassio': 1,
+        'snapshots_in_home_assistant': 1,
+        'size_in_home_assistant': Estimator.asSizeString(snapshot.size()),
+        'size_in_google_drive': Estimator.asSizeString(snapshot.size())
     })
 
 
@@ -153,7 +163,10 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
         'last_snapshot': 'Never',
         'snapshots': [],
         'snapshots_in_google_drive': 0,
-        'snapshots_in_hassio': 0
+        'snapshots_in_hassio': 0,
+        'snapshots_in_home_assistant': 0,
+        'size_in_home_assistant': "0.0 B",
+        'size_in_google_drive': "0.0 B"
     })
     assert server.getNotification() is None
 

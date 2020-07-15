@@ -44,7 +44,6 @@ class GlobalInfo():
         self.url = ""
         self.debug = {}
         self.lock = Lock()
-        self._use_existing = None
 
     def ignoreErrorsForNow(self):
         return self._ignore_errors_for_now
@@ -108,12 +107,6 @@ class GlobalInfo():
     def addDebugInfo(self, key, value):
         with self.lock:
             self.debug[key] = value
-
-    def resolveFolder(self, use_existing):
-        self._use_existing = use_existing
-
-    def getUseExistingFolder(self):
-        return self._use_existing
 
     def isSkipSpaceCheckOnce(self):
         return self._skip_space_check_once

@@ -23,6 +23,7 @@ from backup.worker import Trigger
 from backup.logger import getLogger, getHistory
 from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
 from backup.debugworker import DebugWorker
+from backup.drive import FolderFinder
 
 from .debug import Debug
 
@@ -37,7 +38,7 @@ class UiServer(Trigger, Startable):
     @inject
     def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests,
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
-                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker):
+                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker, folder_finder: FolderFinder):
         super().__init__()
 
         # Currently running server tasks
@@ -60,6 +61,7 @@ class UiServer(Trigger, Startable):
         self._debug = debug
         self.session = session
         self.debug_worker = debug_worker
+        self.folder_finder = folder_finder
 
     def name(self):
         return "UI Server"
@@ -99,6 +101,7 @@ class UiServer(Trigger, Startable):
         status["last_error_count"] = self._global_info.failureCount()
         status["ignore_errors_for_now"] = self._global_info.ignoreErrorsForNow()
         status["syncing"] = self._coord.isSyncing()
+        status["ignore_sync_error"] = self._coord.isWorkingThroughUpload()
         status["firstSync"] = self._global_info._first_sync
         status["maxSnapshotsInHasssio"] = self.config.get(
             Setting.MAX_SNAPSHOTS_IN_HASSIO)
@@ -220,9 +223,8 @@ class UiServer(Trigger, Startable):
 
     async def resolvefolder(self, request: Request):
         use_existing = BoolValidator.strToBool(request.query.get("use_existing", False))
-        self._global_info.resolveFolder(use_existing)
+        self.folder_finder.resolveExisting(use_existing)
         self._global_info.suppressError()
-        self._coord._model.dest.resetFolder()
         self._global_info.setIngoreErrorsForNow(True)
         await self.sync()
         return web.json_response({'message': 'Done'})
@@ -294,7 +296,7 @@ class UiServer(Trigger, Startable):
 
     async def changefolder(self, request: Request) -> None:
         id = request.query.get("id", None)
-        self._coord._model.dest.changeBackupFolder(id)
+        self.folder_finder.save(id)
         self._global_info.setIngoreErrorsForNow(True)
         self.trigger()
         try:
@@ -335,7 +337,7 @@ class UiServer(Trigger, Startable):
             'addons': self._global_info.addons,
             'name_keys': name_keys,
             'defaults': default_config,
-            'snapshot_folder': self._coord._model.dest._folderId,
+            'snapshot_folder': self._global_info.drive_folder_id,
             'is_custom_creds': self._coord._model.dest.isCustomCreds()
         })
 
@@ -398,7 +400,7 @@ class UiServer(Trigger, Startable):
         Password(self.config.getConfigFor(update)).resolve()
 
         validated = self.config.validate(update)
-        await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the confgiuration update request"), trigger=False)
+        await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the configuration update request"), trigger=False)
         try:
             await self.cancelSync(request)
             await self.startSync(request)
@@ -421,12 +423,12 @@ class UiServer(Trigger, Startable):
         if is_specify and not was_specify:
             # Delete the reset the saved backup folder, since the preference
             # for specifying the folder changed from false->true
-            self._coord._model.dest.resetFolder()
+            self.folder_finder.reset()
         if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None:
             if len(snapshot_folder_id) > 0:
-                self._coord._model.dest.changeBackupFolder(snapshot_folder_id)
+                self.folder_finder.save(snapshot_folder_id)
             else:
-                self._coord._model.dest.resetFolder()
+                self.folder_finder.reset()
         if trigger:
             self.trigger()
         return {'message': 'Settings saved'}

@@ -3,11 +3,11 @@ import json
 from time import sleep
 
 import pytest
+import asyncio
 from aiohttp.client_exceptions import ClientResponseError
-from datetime import timedelta
 from backup.config import Config, Setting
 from dev.simulationserver import SimulationServer
-from backup.drive import DriveSource
+from backup.drive import DriveSource, FolderFinder
 from backup.drive.driverequests import (BASE_CHUNK_SIZE,
                                         CHUNK_UPLOAD_TARGET_SECONDS, MAX_CHUNK_SIZE,
                                         RETRY_SESSION_ATTEMPTS)
@@ -18,13 +18,23 @@ from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingErro
                                GoogleDnsFailure, GoogleInternalError,
                                GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError)
 from backup.creds import Creds
-from backup.util import GlobalInfo
-from backup.model import DriveSnapshot, DummySnapshot, Snapshot
+from backup.model import DriveSnapshot, DummySnapshot
 from .faketime import FakeTime
 from .helpers import compareStreams, createSnapshotTar
-from backup.const import SOURCE_GOOGLE_DRIVE
 
 RETRY_EXHAUSTION_SLEEPS = [2, 4, 8, 16, 32]
+
+
+class SnapshotHelper():
+    def __init__(self, uploader, time):
+        self.time = time
+        self.uploader = uploader
+
+    async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name"):
+        from_snapshot: DummySnapshot = DummySnapshot(
+            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug)
+        data = await self.uploader.upload(createSnapshotTar(slug, name, self.time.now(), size))
+        return from_snapshot, data
 
 
 @pytest.fixture
@@ -219,6 +229,25 @@ def test_chunk_size(drive: DriveSource):
         BASE_CHUNK_SIZE, 1) == BASE_CHUNK_SIZE * CHUNK_UPLOAD_TARGET_SECONDS
     assert drive.drivebackend._getNextChunkSize(
         BASE_CHUNK_SIZE, 1.01) == BASE_CHUNK_SIZE * (CHUNK_UPLOAD_TARGET_SECONDS - 1)
+
+
+@pytest.mark.asyncio
+async def test_working_through_upload(drive: DriveSource, server: SimulationServer, snapshot_helper: SnapshotHelper):
+    assert not drive.isWorking()
+
+    # Let a single chunk upload, then wait
+    server._upload_chunk_wait.clear()
+    server._upload_chunk_trigger.clear()
+    server.waitOnChunk = 2
+    from_snapshot, data = await snapshot_helper.createFile(size=1024 * 1024 * 10)
+    save_task = asyncio.create_task(drive.save(from_snapshot, data))
+    await server._upload_chunk_trigger.wait()
+    assert drive.isWorking()
+
+    # let it complete
+    server._upload_chunk_wait.set()
+    await save_task
+    assert not drive.isWorking()
 
 
 @pytest.mark.asyncio
@@ -442,13 +471,30 @@ async def verify_upload_resumed(time, drive: DriveSource, config: Config, server
 
 
 @pytest.mark.asyncio
+async def test_recreate_folder_when_deleted(time, drive: DriveSource, config: Config, snapshot_helper, folder_finder: FolderFinder):
+    await drive.get()
+    id = await drive.getFolderId()
+    await drive.drivebackend.delete(id)
+    await drive.get()
+    assert id != await drive.getFolderId()
+
+
+@pytest.mark.asyncio
+async def test_recreate_folder_when_losing_permissions(time, drive: DriveSource, config: Config, snapshot_helper, server: SimulationServer):
+    await drive.get()
+    id = await drive.getFolderId()
+    server.lostPermission.append(id)
+    await drive.get()
+    assert id != await drive.getFolderId()
+
+
+@pytest.mark.asyncio
 async def test_folder_missing_on_upload(time, drive: DriveSource, config: Config, snapshot_helper):
     # Make the folder
     await drive.get()
 
     # Require a specified folder so we don't query
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
-    config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
+    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
 
     # Delete the folder
     await drive.drivebackend.delete(await drive.getFolderId())
@@ -571,52 +617,50 @@ async def test_no_folder_when_required(time, drive: DriveSource, config: Config)
 
 
 @pytest.mark.asyncio
-async def test_existing_folder_already_exists(time, drive: DriveSource, config: Config):
+async def test_existing_folder_already_exists(time, drive: DriveSource, config: Config, folder_finder: FolderFinder):
     await drive.get()
     drive.checkBeforeChanges()
 
     # Reset folder, try again
-    drive.resetFolder()
+    folder_finder.reset()
     await drive.get()
     with pytest.raises(ExistingBackupFolderError):
         drive.checkBeforeChanges()
 
 
 @pytest.mark.asyncio
-async def test_existing_resolved_use_existing(time, drive: DriveSource, config: Config, global_info: GlobalInfo):
+async def test_existing_resolved_use_existing(time, drive: DriveSource, config: Config, folder_finder: FolderFinder):
     await drive.get()
     drive.checkBeforeChanges()
 
     folder_id = await drive.getFolderId()
 
     # Reset folder, try again
-    drive.resetFolder()
+    folder_finder.reset()
     await drive.get()
     with pytest.raises(ExistingBackupFolderError):
         drive.checkBeforeChanges()
 
-    global_info.resolveFolder(True)
-    drive.resetFolder()
+    folder_finder.resolveExisting(True)
     await drive.get()
     drive.checkBeforeChanges()
     assert await drive.getFolderId() == folder_id
 
 
 @pytest.mark.asyncio
-async def test_existing_resolved_create_new(time, drive: DriveSource, config: Config, global_info: GlobalInfo):
+async def test_existing_resolved_create_new(time, drive: DriveSource, config: Config, folder_finder: FolderFinder):
     await drive.get()
     drive.checkBeforeChanges()
 
     folder_id = await drive.getFolderId()
 
     # Reset folder, try again
-    drive.resetFolder()
+    folder_finder.reset()
     await drive.get()
     with pytest.raises(ExistingBackupFolderError):
         drive.checkBeforeChanges()
 
-    global_info.resolveFolder(False)
-    drive.resetFolder()
+    folder_finder.resolveExisting(False)
     await drive.get()
     drive.checkBeforeChanges()
     assert await drive.getFolderId() != folder_id
@@ -719,16 +763,3 @@ async def test_ignore_trashed_snapshots(time, drive: DriveSource, config: Config
 
     assert len(await drive.get()) == 0
 
-
-
-
-class SnapshotHelper():
-    def __init__(self, uploader, time):
-        self.time = time
-        self.uploader = uploader
-
-    async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name"):
-        from_snapshot: DummySnapshot = DummySnapshot(
-            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug)
-        data = await self.uploader.upload(createSnapshotTar(slug, name, self.time.now(), size))
-        return from_snapshot, data

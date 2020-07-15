@@ -11,8 +11,6 @@ import asyncio
 from aiohttp import BasicAuth
 from aiohttp.client import ClientSession
 
-from oauth2client.client import OAuth2Credentials
-
 from backup.util import AsyncHttpGetter, GlobalInfo, File
 from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
@@ -21,7 +19,7 @@ from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
-from backup.drive import DriveSource
+from backup.drive import DriveSource, FolderFinder
 from backup.ha import HaSource
 from .faketime import FakeTime
 from .helpers import compareStreams
@@ -145,6 +143,7 @@ async def test_getstatus(reader, config: Config, ha, server):
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
         'snapshots': 0,
+        'latest': None,
         'size': '0.0 B'
     }
     assert data['sources'][SOURCE_HA] == {
@@ -152,6 +151,7 @@ async def test_getstatus(reader, config: Config, ha, server):
         'name': SOURCE_HA,
         'retained': 0,
         'snapshots': 0,
+        'latest': None,
         'size': '0.0 B'
     }
     assert len(data['sources']) == 2
@@ -159,7 +159,7 @@ async def test_getstatus(reader, config: Config, ha, server):
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot):
+async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: FakeTime):
     data = await reader.getjson("getstatus")
     assert data['firstSync'] is False
     assert data['folder_id'] is not None
@@ -172,6 +172,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot):
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
         'snapshots': 1,
+        'latest': time.asRfc3339String(time.now()),
         'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert data['sources'][SOURCE_HA] == {
@@ -179,6 +180,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot):
         'name': SOURCE_HA,
         'retained': 0,
         'snapshots': 1,
+        'latest': time.asRfc3339String(time.now()),
         'size': data['sources'][SOURCE_HA]['size']
     }
     assert len(data['sources']) == 2
@@ -186,7 +188,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot):
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordinator):
+async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
     slug = snapshot.slug()
     assert await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug)) == {
         'message': "Updated the snapshot's settings"
@@ -197,6 +199,7 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 1,
         'snapshots': 1,
+        'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert status['sources'][SOURCE_HA] == {
@@ -204,6 +207,7 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'name': SOURCE_HA,
         'retained': 1,
         'snapshots': 1,
+        'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_HA]['size']
     }
 
@@ -214,6 +218,7 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
         'snapshots': 1,
+        'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert status['sources'][SOURCE_HA] == {
@@ -221,6 +226,7 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'name': SOURCE_HA,
         'retained': 0,
         'snapshots': 1,
+        'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_HA]['size']
     }
     await reader.getjson("deleteSnapshot?slug={0}&drive=true&ha=false".format(slug))
@@ -231,6 +237,7 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
         'snapshots': 0,
+        'latest': None,
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
     }
     assert status['sources'][SOURCE_HA] == {
@@ -238,6 +245,7 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'name': SOURCE_HA,
         'retained': 1,
         'snapshots': 1,
+        'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_HA]['size']
     }
 
@@ -658,13 +666,13 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
 
 
 @pytest.mark.asyncio
-async def test_changefolder(reader: ReaderHelper, coord: Coordinator, ha, ui_server):
+async def test_changefolder(reader: ReaderHelper, coord: Coordinator, ha, ui_server, folder_finder: FolderFinder):
     assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("changefolder?id=12345")
-    assert ui_server._coord._model.dest._folderId == "12345"
+    assert await folder_finder.get() == "12345"
 
 
 @pytest.mark.asyncio
-async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveSource, restarter, ui_server):
+async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveSource, restarter, ui_server, folder_finder: FolderFinder):
     update = {
         "config": {
             "expose_extra_server": True
@@ -675,7 +683,7 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
     await restarter.waitForRestart()
     resp = await reader.get("changefolder?id=12345", ingress=False)
     assert "window.location.assign(\"/\")" in resp
-    assert ui_server._coord._model.dest._folderId == "12345"
+    assert await folder_finder.get() == "12345"
 
 
 @pytest.mark.asyncio
@@ -713,7 +721,7 @@ async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: C
     # request the auth code from "google"
     async with session.get(data["auth_url"], allow_redirects=False) as resp:
         code = URL(resp.headers["location"]).query["code"]
-    
+
     drive.saveCreds(None)
     assert not drive.enabled()
     # Pass the auth code to generate creds

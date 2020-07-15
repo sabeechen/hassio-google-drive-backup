@@ -61,7 +61,8 @@ class SnapshotSource(Trigger, Generic[T]):
 
 
 class SnapshotDestination(SnapshotSource):
-    pass
+    def isWorking(self):
+        return False
 
 
 @singleton
@@ -71,7 +72,7 @@ class Model():
         self.config: Config = config
         self.time = time
         self.source: SnapshotSource = source
-        self.dest: SnapshotSource = dest
+        self.dest: SnapshotDestination = dest
         self.reinitialize()
         self.snapshots: Dict[str, Snapshot] = {}
         self.firstSync = True
@@ -162,6 +163,9 @@ class Model():
                     await self._purge(self.dest)
                 else:
                     break
+
+    def isWorkingThroughUpload(self):
+        return self.dest.isWorking()
 
     async def createSnapshot(self, options):
         if not self.source.enabled():

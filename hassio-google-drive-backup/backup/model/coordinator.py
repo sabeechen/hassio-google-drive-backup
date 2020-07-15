@@ -66,6 +66,9 @@ class Coordinator(Trigger):
         task = self._sync_task
         return task is not None and not task.done()
 
+    def isWorkingThroughUpload(self):
+        return self.isSyncing() and self._model.isWorkingThroughUpload()
+
     async def waitForSyncToFinish(self):
         task = self._sync_task
         if task is not None:

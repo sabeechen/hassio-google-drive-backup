@@ -7,7 +7,7 @@ from pytest import raises
 from backup.config import Config, Setting, CreateOptions
 from backup.exceptions import LogicError, LowSpaceError, NoSnapshot, PleaseWait, UserCancelledError
 from backup.util import GlobalInfo
-from backup.model import Coordinator, Model, Snapshot
+from backup.model import Coordinator, Model, Snapshot, SnapshotDestination
 from .conftest import FsFaker
 from .faketime import FakeTime
 from .helpers import HelperTestSource, skipForWindows
@@ -356,6 +356,19 @@ async def test_cancel(coord: Coordinator, global_info: GlobalInfo):
 
 
 @pytest.mark.asyncio
+async def test_working_through_upload(coord: Coordinator, global_info: GlobalInfo, dest):
+    coord._sync_wait.clear()
+    assert not coord.isWorkingThroughUpload()
+    sync_task = asyncio.create_task(coord.sync())
+    await coord._sync_start.wait()
+    assert not coord.isWorkingThroughUpload()
+    dest.working = True
+    assert coord.isWorkingThroughUpload()
+    coord._sync_wait.set()
+    await asyncio.wait([sync_task])
+    assert not coord.isWorkingThroughUpload()
+
+@pytest.mark.asyncio
 async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Model, dest, source, simple_config: Config):
     time.setTimeZone("Europe/Stockholm")
     simple_config.override(Setting.SNAPSHOT_TIME_OF_DAY, "12:00")
@@ -380,8 +393,8 @@ async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Mod
 @pytest.mark.asyncio
 async def test_disabled_at_install(coord: Coordinator, dest, time):
     """
-    Verifies that at install time, if some snapshots are already present the 
-    addon doesn't try to sync over and over when drive is disabled.  This was 
+    Verifies that at install time, if some snapshots are already present the
+    addon doesn't try to sync over and over when drive is disabled.  This was
     a problem at one point.
     """
     dest.setEnabled(True)

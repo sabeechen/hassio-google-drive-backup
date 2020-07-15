@@ -580,7 +580,7 @@ function refreshstats() {
         if (item.is(":visible")) {
           item.hide();
         }
-      } else if (item.hasClass(error.error_type) && data.last_error_count != error_minimum && !data.ignore_errors_for_now) {
+      } else if (item.hasClass(error.error_type) && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
         found = true;
         if (data.hasOwnProperty('dns_info')) {
           var dns_div = $('.dns_info', item)
@@ -612,7 +612,7 @@ function refreshstats() {
       }
     });
 
-    if (data.last_error != null && !found && data.last_error_count != error_minimum && !data.ignore_errors_for_now) {
+    if (data.last_error != null && !found && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
       var card = $("#error_card")
       populateGitHubInfo(card, data.last_error);
       card.fadeIn();

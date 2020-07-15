@@ -1,4 +1,4 @@
-from .model import SnapshotSource, CreateOptions
+from .model import SnapshotSource, CreateOptions, SnapshotDestination
 from .snapshots import Snapshot
 from .dummysnapshotsource import DummySnapshotSource
 from typing import Dict
@@ -9,8 +9,7 @@ from ..logger import getLogger
 logger = getLogger(__name__)
 
 
-
-class SimulatedSource(SnapshotSource[DummySnapshotSource]):
+class SimulatedSource(SnapshotDestination):
     def __init__(self, name):
         self._name = name
         self.current: Dict[str, DummySnapshotSource] = {}
@@ -24,6 +23,7 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
         self.snapshot_name = SnapshotName()
         self.host_info = {}
         self.snapshot_type = "Full"
+        self.working = False
 
     def setEnabled(self, value):
         self._enabled = value
@@ -39,6 +39,12 @@ class SimulatedSource(SnapshotSource[DummySnapshotSource]):
     def setMax(self, count):
         self.max = count
         return self
+
+    def isWorking(self):
+        return self.working
+
+    def setIsWorking(self, value):
+        self.working = value
 
     def maxCount(self) -> None:
         return self.max

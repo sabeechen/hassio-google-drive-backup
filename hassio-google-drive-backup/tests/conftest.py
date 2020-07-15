@@ -14,7 +14,7 @@ from injector import (ClassAssistedBuilder, Injector, Module, inject, provider,
 from backup.config import Config, Setting
 from backup.model import Coordinator
 from dev.simulationserver import SimulationServer
-from backup.drive import DriveRequests, DriveSource
+from backup.drive import DriveRequests, DriveSource, FolderFinder
 from backup.util import GlobalInfo, Estimator, Resolver
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
@@ -270,3 +270,8 @@ async def client_identifier(injector):
 @pytest.fixture
 async def debug_worker(injector):
     return injector.get(DebugWorker)
+
+
+@pytest.fixture()
+async def folder_finder(injector):
+    return injector.get(FolderFinder)

@@ -25,6 +25,7 @@ from tests.faketime import FakeTime
 from datetime import timedelta
 from backup.module import BaseModule
 from backup.config import Config, Setting
+from asyncio import Event
 import aiorun
 
 logger = getLogger(__name__)
@@ -80,6 +81,10 @@ class SimulationServer():
         self.snapshot_in_progress = False
         self.drive_auth_code = "drive_auth_code"
         self._authserver = authserver
+        self._upload_chunk_wait = Event()
+        self._upload_chunk_trigger = Event()
+        self.current_chunk = 1
+        self.waitOnChunk = 0
 
     def wasUrlRequested(self, pattern):
         for url in self.urls:
@@ -494,6 +499,12 @@ class SimulationServer():
         return resp
 
     async def driveContinueUpload(self, request: Request):
+        if self.waitOnChunk > 0:
+            if self.current_chunk == self.waitOnChunk:
+                self._upload_chunk_trigger.set()
+                await self._upload_chunk_wait.wait()
+            else:
+                self.current_chunk += 1
         id = request.match_info.get('id')
         if (self.getSetting('drive_upload_sleep') > 0):
             await self._time.sleepAsync(self.getSetting('drive_upload_sleep'))

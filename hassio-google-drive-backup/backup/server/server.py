@@ -14,28 +14,8 @@ from backup.exceptions import GoogleCredentialsExpired, GoogleCantConnect, Googl
 from injector import ClassAssistedBuilder, inject, singleton
 from google.cloud import logging
 from google.auth.exceptions import DefaultCredentialsError
-
-basic_logger = getLogger(__name__)
-
-
-@singleton
-class CloudLogger(StandardLogger):
-    @inject
-    def __init__(self):
-        super().__init__(__name__)
-        self.google_logger = None
-        if os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') is not None:
-            try:
-                google_logger_client = logging.Client()
-                self.googler_logger = google_logger_client.logger("refresh_server")
-            except DefaultCredentialsError:
-                basic_logger.error("Unable to start Google Logger, no default credentials")
-
-    def log_struct(self, data):
-        if self.google_logger is not None:
-            self.google_logger.log_struct(data)
-        else:
-            basic_logger.info(json.dumps(data))
+from .errorstore import ErrorStore
+from .cloudlogger import CloudLogger
 
 
 @singleton
@@ -44,13 +24,15 @@ class Server():
     def __init__(self,
                  config: Config,
                  exchanger_builder: ClassAssistedBuilder[Exchanger],
-                 logger: CloudLogger):
+                 logger: CloudLogger,
+                 error_store: ErrorStore):
         self.exchanger = exchanger_builder.build(
             client_id=config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             client_secret=config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
             redirect=config.get(Setting.AUTHENTICATE_URL))
         self.logger = logger
         self.config = config
+        self.error_store = error_store
 
     async def authorize(self, request: Request):
         if 'redirectbacktoken' in request.query:
@@ -168,6 +150,7 @@ class Server():
         data = self.getRequestInfo(request)
         data['report'] = report
         self.logger.log_struct(data)
+        self.error_store.store(data)
 
     def getRequestInfo(self, request: Request):
         return {

@@ -102,7 +102,8 @@
     "default_drive_client_secret": "str?",
     "drive_picker_api_key": "str?",
     "default_chunk_size": "int(1,)?",
-    "debugger_port": "int(5000,)?"
+    "debugger_port": "int(5000,)?",
+    "server_project_id": "str?"
   },
   "ports": {
     "1627/tcp": 1627

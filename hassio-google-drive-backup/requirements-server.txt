@@ -12,3 +12,4 @@ python-dateutil==2.6.1
 pyyaml
 watchdog
 aiohttp-jinja2
+firebase-admin

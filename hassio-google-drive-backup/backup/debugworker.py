@@ -46,7 +46,7 @@ class DebugWorker(Worker):
         if self.config.get(Setting.SEND_ERROR_REPORTS):
             try:
                 await self.maybeSendErrorReport()
-            except Exception:
+            except Exception as e:
                 # just eat the error
                 pass
 
@@ -90,7 +90,7 @@ class DebugWorker(Worker):
                 else:
                     config_special[str(setting)] = self.config.get(setting)
         report = {}
-        report['config'] = json.dumps(config_special, indent=4)
+        report['config'] = config_special
         report['time'] = self.formatDate(self.time.now())
         report['start_time'] = self.formatDate(self._info._start_time)
         report['addon_version'] = VERSION
@@ -99,7 +99,7 @@ class DebugWorker(Worker):
         report['sync_last_start'] = self.formatDate(self._info._last_sync_start)
         report['sync_count'] = self._info._syncs
         report['sync_success_count'] = self._info._successes
-        report['sync_last_success'] = self._info._last_sync_success
+        report['sync_last_success'] = self.formatDate(self._info._last_sync_success)
         report['upload_count'] = self._info._uploads
         report['upload_last_size'] = self._info._last_upload_size
         report['upload_last_attempt'] = self.formatDate(self._info._last_upload)
@@ -119,7 +119,7 @@ class DebugWorker(Worker):
             report["arch"] = "Uninitialized"
             report["timezone"] = "Uninitialized"
             report["ha_version"] = "Uninitialized"
-        report["snapshots"] = json.dumps(self.coord.buildSnapshotMetrics(), indent=4)
+        report["snapshots"] = self.coord.buildSnapshotMetrics()
         return report
 
     async def buildBugReportData(self, error):

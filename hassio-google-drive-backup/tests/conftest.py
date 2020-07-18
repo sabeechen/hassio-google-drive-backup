@@ -23,6 +23,7 @@ from backup.time import Time
 from backup.module import BaseModule
 from backup.debugworker import DebugWorker
 from backup.creds import Creds
+from backup.server import ErrorStore
 from .faketime import FakeTime
 from .helpers import Uploader
 
@@ -167,6 +168,11 @@ async def fs(injector):
 @pytest.fixture
 async def estimator(injector, fs):
     return injector.get(Estimator)
+
+
+@pytest.fixture
+async def error_store(injector):
+    return injector.get(ErrorStore)
 
 
 @pytest.fixture

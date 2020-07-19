@@ -560,7 +560,7 @@ function handleSettingsDialog(data) {
     $("#choose_folder_controls").hide();
   }
 
-  $("#settings_specify_folder_id").val(data.snapshot_folder);
+  setInputValue("settings_specify_folder_id", data.snapshot_folder);
 
   if (config.hasOwnProperty("snapshot_password")) {
     $("#snapshot_password").data("old_password", config.snapshot_password);

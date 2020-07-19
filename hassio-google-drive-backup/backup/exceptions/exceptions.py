@@ -340,7 +340,7 @@ class CredRefreshGoogleError(KnownError):
         self.from_google = from_google
 
     def message(self):
-        return "Coulnd't refresh your credentials with Google because: '{}'".format(self.from_google)
+        return "Couldn't refresh your credentials with Google because: '{}'".format(self.from_google)
 
     def code(self):
         return "token_refresh_google_error"

@@ -384,6 +384,7 @@ function getWindowRootUri() {
   path = loc.pathname.replace("\\", "/");
   path = path.replace("/reauthenticate", "/");
   path = path.replace("/reauthenticate/", "/");
+  path = path.replace("/index.html", "/");
   path = path + "/";
   path = path.replace("//", "/");
   return loc.protocol + "//" + loc.hostname + ":" + loc.port + path;

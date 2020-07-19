@@ -1,3 +1,7 @@
+# How to use:
+#    gcloud config set project hassio-drive-backup 
+#    gcloud builds submit --config cloudbuild-server.yaml
+
 steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'Dockerfile-server', '-t', 'gcr.io/$PROJECT_ID/authserver', '.' ]

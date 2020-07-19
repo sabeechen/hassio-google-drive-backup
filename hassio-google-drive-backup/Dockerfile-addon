@@ -7,10 +7,11 @@ RUN apk add libc-dev
 RUN apk add libffi-dev
 RUN apk add python3-dev
 RUN apk add gcc
+RUN apk add py3-pip
 WORKDIR /app
 COPY . /app
 COPY config.json /usr/local/lib/python3.8/site-packages/config.json
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade pip wheel setuptools
 RUN pip3 install --trusted-host pypi.python.org -r requirements-addon.txt
 RUN pip3 install .
 

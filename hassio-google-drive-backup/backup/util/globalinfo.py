@@ -36,7 +36,6 @@ class GlobalInfo():
         self._ignore_errors_for_now = False
         self._start_time = time.now()
 
-        self.drive_folder_id = None
         self.ha_ssl = False
         self.addons = None
         self.ha_port = None

@@ -82,7 +82,6 @@ class DriveSource(SnapshotDestination):
 
     async def get(self) -> Dict[str, DriveSnapshot]:
         parent = await self.getFolderId()
-        self._info.drive_folder_id = parent
         snapshots: Dict[str, DriveSnapshot] = {}
         try:
             async for child in self.drivebackend.query("'{}' in parents".format(parent)):

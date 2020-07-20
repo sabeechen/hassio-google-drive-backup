@@ -1,5 +1,6 @@
 import os
 import os.path
+import aiofile
 from datetime import timedelta
 from typing import Any, Dict
 
@@ -48,7 +49,7 @@ class FolderFinder():
     async def get(self):
         if self._existing_folder and self._use_existing is not None:
             if self._use_existing:
-                self.save(self._existing_folder)
+                await self.save(self._existing_folder)
             else:
                 await self.create()
             self._use_existing = None
@@ -72,12 +73,12 @@ class FolderFinder():
     def getExisting(self):
         return self._existing_folder
 
-    def save(self, folder: Any) -> str:
+    async def save(self, folder: Any) -> str:
         if not isinstance(folder, str):
             folder = folder.get('id')
         logger.info("Saving snapshot folder: " + folder)
-        with open(self.config.get(Setting.FOLDER_FILE_PATH), "w") as folder_file:
-            folder_file.write(folder)
+        async with aiofile.AIOFile(self.config.get(Setting.FOLDER_FILE_PATH), 'w') as folder_file:
+            await folder_file.write(folder)
         self._folderId = folder
         self._folder_queryied_last = self.time.now()
         self._existing_folder = None
@@ -88,6 +89,9 @@ class FolderFinder():
         self._folderId = None
         self._folder_queryied_last = None
         self._existing_folder = None
+
+    def getCachedFolder(self):
+        return self._folderId
 
     def deCache(self):
         self._folderId = None
@@ -176,5 +180,5 @@ class FolderFinder():
             },
         }
         folder = await self.drivebackend.createFolder(file_metadata)
-        self.save(folder)
+        await self.save(folder)
         return folder.get('id')

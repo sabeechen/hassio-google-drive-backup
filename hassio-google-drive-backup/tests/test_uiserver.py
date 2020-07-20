@@ -20,6 +20,7 @@ from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
 from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource, FolderFinder
+from backup.drive.drivesource import FOLDER_MIME_TYPE
 from backup.ha import HaSource
 from .faketime import FakeTime
 from .helpers import compareStreams
@@ -31,7 +32,7 @@ class ReaderHelper:
         self.session = session
         self.ui_port = ui_port
         self.ingress_port = ingress_port
-        self.timeout = aiohttp.ClientTimeout(total=3)
+        self.timeout = aiohttp.ClientTimeout(total=20)
 
     def getUrl(self, ingress=True, ssl=False):
         if ssl:
@@ -681,9 +682,22 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     await restarter.waitForRestart()
-    resp = await reader.get("changefolder?id=12345", ingress=False)
+
+    # create a folder
+    folder_metadata = {
+        'name': "Other Folder",
+        'mimeType': FOLDER_MIME_TYPE,
+        'appProperties': {
+            "backup_folder": "true",
+        },
+    }
+
+    # create two folders at different times
+    id = (await drive.drivebackend.createFolder(folder_metadata))['id']
+
+    resp = await reader.get("changefolder?id=" + str(id), ingress=False)
     assert "window.location.assign(\"/\")" in resp
-    assert await folder_finder.get() == "12345"
+    assert await folder_finder.get() == id
 
 
 @pytest.mark.asyncio
@@ -762,3 +776,19 @@ async def test_setting_cancels_and_resyncs(reader: ReaderHelper, ui_server: UiSe
     # verify the previous sync is done and another one is running
     assert sync.done()
     assert coord.isSyncing()
+
+
+@pytest.mark.asyncio
+async def test_change_specify_folder_setting(reader: ReaderHelper, server, session, coord: Coordinator, folder_finder: FolderFinder):
+    await coord.sync()
+    assert folder_finder.getCachedFolder() is not None
+
+    # Change some config
+    update = {
+        "config": {
+            "specify_snapshot_folder": True
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert folder_finder.getCachedFolder() is None

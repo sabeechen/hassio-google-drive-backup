@@ -25,3 +25,4 @@ google-cloud-logging
 aiohttp-jinja2
 beautifulsoup4
 firebase-admin
+aiofile

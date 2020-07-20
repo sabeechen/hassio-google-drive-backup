@@ -68,7 +68,7 @@ class UiServer(Trigger, Startable):
 
     async def getstatus(self, request) -> Dict[Any, Any]:
         status: Dict[Any, Any] = {}
-        status['folder_id'] = self._global_info.drive_folder_id
+        status['folder_id'] = self.folder_finder.getCachedFolder()
         status['snapshots'] = []
         snapshots = self._coord.snapshots()
         for snapshot in snapshots:
@@ -79,7 +79,8 @@ class UiServer(Trigger, Startable):
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = False
         status['cred_version'] = self._global_info.credVersion
-        status['free_space'] = Estimator.asSizeString(self._estimator.getBytesFree())
+        status['free_space'] = Estimator.asSizeString(
+            self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
             status['next_snapshot'] = "Disabled"
@@ -174,8 +175,10 @@ class UiServer(Trigger, Startable):
 
     async def snapshot(self, request: Request) -> Any:
         custom_name = request.query.get("custom_name", None)
-        retain_drive = BoolValidator.strToBool(request.query.get("retain_drive", False))
-        retain_ha = BoolValidator.strToBool(request.query.get("retain_ha", False))
+        retain_drive = BoolValidator.strToBool(
+            request.query.get("retain_drive", False))
+        retain_ha = BoolValidator.strToBool(
+            request.query.get("retain_ha", False))
         options = CreateOptions(self._time.now(), custom_name, {
             SOURCE_GOOGLE_DRIVE: retain_drive,
             SOURCE_HA: retain_ha
@@ -222,7 +225,8 @@ class UiServer(Trigger, Startable):
         return web.json_response({'message': "Updated the snapshot's settings"})
 
     async def resolvefolder(self, request: Request):
-        use_existing = BoolValidator.strToBool(request.query.get("use_existing", False))
+        use_existing = BoolValidator.strToBool(
+            request.query.get("use_existing", False))
         self.folder_finder.resolveExisting(use_existing)
         self._global_info.suppressError()
         self._global_info.setIngoreErrorsForNow(True)
@@ -251,7 +255,8 @@ class UiServer(Trigger, Startable):
 
     async def log(self, request: Request) -> Any:
         format = request.query.get("format", "download")
-        catchup = BoolValidator.strToBool(request.query.get("catchup", "False"))
+        catchup = BoolValidator.strToBool(
+            request.query.get("catchup", "False"))
 
         if not catchup:
             self.last_log_index = 0
@@ -285,9 +290,10 @@ class UiServer(Trigger, Startable):
     async def token(self, request: Request) -> None:
         if 'creds' in request.query:
             self._global_info.setIngoreErrorsForNow(True)
-            self._coord.saveCreds(Creds.load(self._time, json.loads(request.query['creds'])))
+            self._coord.saveCreds(Creds.load(
+                self._time, json.loads(request.query['creds'])))
         try:
-            if request.url.port == self.config.get(Setting.INGRESS_PORT):
+            if request.url.port != self.config.get(Setting.PORT):
                 return await self.redirect(self._ha_source.getAddonUrl())
         except:  # noqa: E722
             # eat the error
@@ -295,12 +301,15 @@ class UiServer(Trigger, Startable):
         return await self.redirect("/")
 
     async def changefolder(self, request: Request) -> None:
+        # update config to specify snapshot folder
+        await self._updateConfiguration(self.config.validateUpdate({Setting.SPECIFY_SNAPSHOT_FOLDER: True}))
+
         id = request.query.get("id", None)
-        self.folder_finder.save(id)
+        await self.folder_finder.save(id)
         self._global_info.setIngoreErrorsForNow(True)
         self.trigger()
         try:
-            if request.url.port == self.config.get(Setting.INGRESS_PORT):
+            if request.url.port != self.config.get(Setting.PORT):
                 return await self.redirect(self._ha_source.getAddonUrl())
         except:  # noqa: E722
             # eat the error
@@ -337,7 +346,7 @@ class UiServer(Trigger, Startable):
             'addons': self._global_info.addons,
             'name_keys': name_keys,
             'defaults': default_config,
-            'snapshot_folder': self._global_info.drive_folder_id,
+            'snapshot_folder': self.folder_finder.getCachedFolder(),
             'is_custom_creds': self._coord._model.dest.isCustomCreds()
         })
 
@@ -420,13 +429,13 @@ class UiServer(Trigger, Startable):
 
         is_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
 
-        if is_specify and not was_specify:
+        if is_specify is not was_specify:
             # Delete the reset the saved backup folder, since the preference
             # for specifying the folder changed from false->true
             self.folder_finder.reset()
         if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None:
             if len(snapshot_folder_id) > 0:
-                self.folder_finder.save(snapshot_folder_id)
+                await self.folder_finder.save(snapshot_folder_id)
             else:
                 self.folder_finder.reset()
         if trigger:
@@ -572,11 +581,13 @@ class UiServer(Trigger, Startable):
             try:
                 await runner.shutdown()
             except Exception as e:
-                logger.error("Error while trying to shut down server: " + str(e))
+                logger.error(
+                    "Error while trying to shut down server: " + str(e))
             try:
                 await runner.cleanup()
             except Exception as e:
-                logger.error("Error while trying to shut down server: " + str(e))
+                logger.error(
+                    "Error while trying to shut down server: " + str(e))
         self.runners = []
 
     async def shutdown(self):

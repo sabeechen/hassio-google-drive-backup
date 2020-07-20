@@ -11,5 +11,6 @@ aiohttp
 aiodns
 injector
 aiofiles
+aiofile
 ptvsd
 colorlog

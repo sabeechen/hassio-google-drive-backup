@@ -1,5 +1,6 @@
 aiodns
 aiofiles
+aiofile
 aiohttp
 aiorun
 colorlog

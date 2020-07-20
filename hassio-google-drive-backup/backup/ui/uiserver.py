@@ -165,7 +165,6 @@ class UiServer(Trigger, Startable):
             try:
                 self._coord.saveCreds(await self.manual_exchanger.exchange(code))
                 self._global_info.setIngoreErrorsForNow(True)
-                # TODO: this redirects back to the reauth page if user already has drive creds!
                 return web.json_response({'auth_url': "index.html?fresh=true"})
             except KnownError as e:
                 return web.json_response({'error': e.message()})

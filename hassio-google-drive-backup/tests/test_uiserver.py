@@ -16,11 +16,12 @@ from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
-                          SOURCE_GOOGLE_DRIVE, SOURCE_HA)
+                          SOURCE_GOOGLE_DRIVE, SOURCE_HA, ERROR_BACKUP_FOLDER_MISSING)
 from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource, FolderFinder
 from backup.drive.drivesource import FOLDER_MIME_TYPE
+from dev.simulationserver import SimulationServer
 from backup.ha import HaSource
 from .faketime import FakeTime
 from .helpers import compareStreams
@@ -791,4 +792,41 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
         "snapshot_folder": ""
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+
+    # verify the snapshot folder was reset, which triggers the error dialog to find a new folder
     assert folder_finder.getCachedFolder() is None
+
+    await coord.waitForSyncToFinish()
+    result = await reader.postjson("getstatus")
+    assert result["last_error"]["error_type"] == ERROR_BACKUP_FOLDER_MISSING
+
+
+@pytest.mark.asyncio
+async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, server: SimulationServer, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
+    server.resetDriveAuth()
+    # Generate manual credentials
+    req_path = "manualauth?client_id={}&client_secret={}".format(server.custom_drive_client_id, server.custom_drive_client_secret)
+    data = await reader.getjson(req_path)
+    assert "auth_url" in data
+    async with session.get(data["auth_url"], allow_redirects=False) as resp:
+        code = URL(resp.headers["location"]).query["code"]
+    drive.saveCreds(None)
+    assert not drive.enabled()
+    req_path = "manualauth?code={}".format(code)
+    await reader.getjson(req_path)
+    assert drive.isCustomCreds()
+
+    await coord.sync()
+    assert folder_finder.getCachedFolder() is not None
+
+    # Change some config
+    update = {
+        "config": {
+            Setting.SPECIFY_SNAPSHOT_FOLDER: True
+        },
+        "snapshot_folder": "12345"
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert folder_finder.getCachedFolder() == "12345"
+
+    # Un change the folder, which should clear the folder

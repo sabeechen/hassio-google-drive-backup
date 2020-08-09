@@ -428,15 +428,12 @@ class UiServer(Trigger, Startable):
 
         is_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
 
-        if is_specify is not was_specify:
+        if not was_specify and is_specify and not self._coord._model.dest.isCustomCreds():
             # Delete the reset the saved backup folder, since the preference
             # for specifying the folder changed from false->true
             self.folder_finder.reset()
-        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None:
-            if len(snapshot_folder_id) > 0:
-                await self.folder_finder.save(snapshot_folder_id)
-            else:
-                self.folder_finder.reset()
+        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None and len(snapshot_folder_id):
+            await self.folder_finder.save(snapshot_folder_id)
         if trigger:
             self.trigger()
         return {'message': 'Settings saved'}

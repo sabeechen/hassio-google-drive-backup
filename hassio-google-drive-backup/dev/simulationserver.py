@@ -85,6 +85,8 @@ class SimulationServer():
         self._upload_chunk_trigger = Event()
         self.current_chunk = 1
         self.waitOnChunk = 0
+        self.custom_drive_client_id = self.generateId(5)
+        self.custom_drive_client_secret = self.generateId(5)
 
     def wasUrlRequested(self, pattern):
         for url in self.urls:
@@ -232,13 +234,7 @@ class SimulationServer():
 
     async def driveRefreshToken(self, request: Request):
         params = await request.post()
-        if self.client_id_hack is not None:
-            if params['client_id'] != self.client_id_hack:
-                raise HTTPUnauthorized()
-        else:
-            if params['client_id'] != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
-                raise HTTPUnauthorized()
-        if params['client_secret'] != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
+        if not self.checkClientIdandSecret(params['client_id'], params['client_secret']):
             raise HTTPUnauthorized()
         if params['refresh_token'] != self.getSetting('drive_refresh_token'):
             raise HTTPUnauthorized()
@@ -265,7 +261,7 @@ class SimulationServer():
 
     async def driveAuthorize(self, request: Request):
         query = request.query
-        if query.get('client_id') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
+        if query.get('client_id') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID) and query.get('client_id') != self.custom_drive_client_id:
             raise HTTPUnauthorized()
         if query.get('scope') != 'https://www.googleapis.com/auth/drive.file':
             raise HTTPUnauthorized()
@@ -290,9 +286,7 @@ class SimulationServer():
             raise HTTPUnauthorized()
         if data.get('grant_type') != 'authorization_code':
             raise HTTPUnauthorized()
-        if data.get('client_id') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID):
-            raise HTTPUnauthorized()
-        if data.get('client_secret') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
+        if not self.checkClientIdandSecret(data.get('client_id'), data.get('client_secret')):
             raise HTTPUnauthorized()
         if data.get('code') != self.drive_auth_code:
             raise HTTPUnauthorized()
@@ -300,10 +294,21 @@ class SimulationServer():
         return json_response({
             'access_token': self.getSetting('drive_auth_token'),
             'refresh_token': self.getSetting('drive_refresh_token'),
-            'client_id': self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
+            'client_id': data.get('client_id'),
             'client_secret': self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
             'token_expiry': self.timeToRfc3339String(self._time.now()),
         })
+
+    def checkClientIdandSecret(self, client_id: str, client_secret: str) -> bool:
+        if self.custom_drive_client_id == client_id and self.custom_drive_client_secret == client_secret:
+            return True
+        if client_id == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID) == client_id and client_secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
+            return True
+
+        if self.client_id_hack is not None:
+            if client_id == self.client_id_hack and client_secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
+                return True
+        return False
 
     def expireCreds(self):
         self.generateNewAccessToken()

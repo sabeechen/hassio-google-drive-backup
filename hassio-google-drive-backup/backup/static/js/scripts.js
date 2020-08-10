@@ -419,8 +419,13 @@ function refreshstats() {
     $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots + " (" + data.sources.HomeAssistant.size + ")");
     $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots + " (" + data.sources.GoogleDrive.size + ")");
     $('#space_left').empty().append("x GB remaining");
-    $('#last_snapshot').empty().append(data.last_snapshot);
-    $('#next_snapshot').empty().append(data.next_snapshot);
+    $('#last_snapshot').empty().append(data.last_snapshot_text);
+    $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
+    $('#last_snapshot').attr("title", data.last_snapshot_detail);
+
+    $('#next_snapshot').empty().append(data.next_snapshot_text);
+    $('#next_snapshot').attr("datetime", data.next_snapshot_machine);
+    $('#next_snapshot').attr("title", data.next_snapshot_detail);
     $('#free_space').empty().append(data.free_space + " remaining");
     $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
     snapshot_div = $('#snapshots')

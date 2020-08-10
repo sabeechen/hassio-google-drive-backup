@@ -83,17 +83,27 @@ class UiServer(Trigger, Startable):
             self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
-            status['next_snapshot'] = "Disabled"
+            status['next_snapshot_text'] = "Disabled"
+            status['next_snapshot_machine'] = ""
+            status['next_snapshot_detail'] = "Disabled"
         elif (next < self._time.now()):
-            status['next_snapshot'] = self._time.formatDelta(self._time.now())
+            status['next_snapshot_text'] = self._time.formatDelta(self._time.now())
+            status['next_snapshot_machine'] = self._time.asRfc3339String(self._time.now())
+            status['next_snapshot_detail'] = self._time.toLocal(self._time.now()).strftime("%c")
         else:
-            status['next_snapshot'] = self._time.formatDelta(next)
+            status['next_snapshot_text'] = self._time.formatDelta(next)
+            status['next_snapshot_machine'] = self._time.asRfc3339String(next)
+            status['next_snapshot_detail'] = self._time.toLocal(next).strftime("%c")
 
         if len(snapshots) > 0:
             latest = snapshots[len(snapshots) - 1].date()
-            status['last_snapshot'] = self._time.formatDelta(latest)
+            status['last_snapshot_text'] = self._time.formatDelta(latest)
+            status['last_snapshot_machine'] = self._time.asRfc3339String(latest)
+            status['last_snapshot_detail'] = self._time.toLocal(latest).strftime("%c")
         else:
-            status['last_snapshot'] = "Never"
+            status['last_snapshot_text'] = "Never"
+            status['last_snapshot_machine'] = ""
+            status['last_snapshot_detail'] = "Never"
 
         status['last_error'] = None
         if self._global_info._last_error is not None and self._global_info.isErrorSuppressed():
@@ -130,7 +140,7 @@ class UiServer(Trigger, Startable):
             'slug': snapshot.slug(),
             'size': snapshot.sizeString(),
             'status': snapshot.status(),
-            'date': snapshot.date().isoformat(),
+            'date': self._time.toLocal(snapshot.date()).strftime("%c"),
             'inDrive': drive is not None,
             'inHA': ha is not None,
             'isPending': ha is not None and type(ha) is PendingSnapshot,

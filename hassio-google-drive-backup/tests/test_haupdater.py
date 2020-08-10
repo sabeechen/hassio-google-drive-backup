@@ -10,7 +10,8 @@ from backup.logger import getLast
 from backup.util import Estimator
 
 STALE_ATTRIBUTES = {
-    "friendly_name": "Snapshots Stale"
+    "friendly_name": "Snapshots Stale",
+    "device_class": "problem"
 }
 
 

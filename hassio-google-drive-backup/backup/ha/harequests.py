@@ -225,7 +225,8 @@ class HaRequests():
         data: Dict[str, Any] = {
             "state": state,
             "attributes": {
-                "friendly_name": "Snapshots Stale"
+                "friendly_name": "Snapshots Stale",
+                "device_class": "problem"
             }
         }
         await self._postHaData("states/binary_sensor.snapshots_stale", data)

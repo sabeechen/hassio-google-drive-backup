@@ -16,7 +16,6 @@
   <link rel="icon" type="image/png" href="static/images/favicon.png?version=0.100.0">
   <script src="static/js/jquery.js?version=0.100.0"></script>
   <script src="static/js/markdown-it.min.js?version=0.100.0"></script>
-  <script src="static/js/clipboard.min.js?version=0.100.0"></script>
   <script src="static/js/materialize.js?version=0.100.0"></script>
   <script src="static/js/colpick.js?version=0.100.0"></script>
   <script src="static/js/init.js?version=0.100.0"></script>
@@ -50,22 +49,6 @@
 
       var elems = document.querySelectorAll('.dropdown-trigger');
       var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
-
-      var clipboard = new ClipboardJS('.copyable');
-      
-      clipboard.on('success', function(e) {
-          console.info('Action:', e.action);
-          console.info('Text:', e.text);
-          console.info('Trigger:', e.trigger);
-
-          e.clearSelection();
-          M.toast({html: "Copied! Now go to GitHub"});
-      });
-
-      clipboard.on('error', function(e) {
-          console.error('Action:', e.action);
-          console.error('Trigger:', e.trigger);
-      });
     });
   </script>
 </head>
@@ -948,11 +931,10 @@
           style="font-size: 50px; padding-right: 10px; vertical-align: middle">bug_report</i><span>Report an Issue</span>
       </h4>
       <p class="detail-node">
-        Looks like you ran into a problem that you want to report to the developer.  Getting a lot of detail about what you 
-        ran into can really help him figure things out.  To make gathering that easy for you and the developer, follow these instructions:
+        Looks like you ran into a problem that you want to report to the developer(s).  Getting a lot of detail about what you 
+        ran into can really help them figure things out.  To make gathering that easy for you and the developer, follow these instructions:
         <ul class="browser-default">
-          <li>Click <a href="#!" id="copyButtonId" data-id="@item.Type" class="copyable"
-            data-clipboard-action="copy" data-clipboard-target="div#bug_details"><i style="vertical-align: middle;" class="material-icons">content_copy</i>Copy Details</a> to copy the details below to your clipboard.  This includes detail about your configuration, 
+          <li>Click <a href="#!" onclick="doBugDetailCopy()"><i style="vertical-align: middle;" class="material-icons">content_copy</i>Copy Details</a> to copy the details below to your clipboard.  This includes detail about your configuration, 
             any errors the addon found, and logs from Home Assistant, the Supervisor, and the addon.  This information will be
             very helpful to the developer who looks at your issue.</li>
           <li>Click <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new?title=Please%20add%20a%20title&body=Copy%20the%20info%20from%20the%20previous%20page%20here"><i style="vertical-align: middle;" class="material-icons">open_in_new</i>Open Github</a>
@@ -962,13 +944,25 @@
         </ul>
       </p>
       <p>Here is a preview of the information you'll be providing:</p>
-      <pre>
-        <div id="bug_details" class="highlight-border" style="overflow-y: scroll; overflow-x: scroll;"></div>
-      </pre>
+      <div class="row">
+        <div class="col s12">
+          <ul class="tabs" id="bug_report_tabs">
+            <li class="tab col s3"><a class="active" href="#bug_preview">Preview</a></li>
+            <li class="tab col s3"><a href="#bug_markdown">Markdown</a></li>
+          </ul>
+        </div>
+        <div id="bug_preview" class="col s12">
+          <div id="bug_preview_display" class="highlight-border" style="overflow-y: scroll; overflow-x: scroll;"></div>
+        </div>
+        <div id="bug_markdown" class="col s12">
+          <div class="highlight-border">
+            <textarea id="bug_markdown_display" style="overflow-x: scroll; height: 1000px"></textarea>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
-      <button id="copyButtonId" data-id="@item.Type"
-      data-clipboard-action="copy" data-clipboard-target="div#bug_details" class="copyable btn waves-effect waves-light btn-flat"><i class="material-icons" style="vertical-align: middle; padding-right: 5px;">content_copy</i>Copy Details</button>
+      <button id="copy_button" onclick="doBugDetailCopy()" class="btn waves-effect waves-light btn-flat"><i class="material-icons" style="vertical-align: middle; padding-right: 5px;">content_copy</i>Copy Details</button>
       <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new?title=Please%20add%20a%20title&body=Copy%20the%20info%20from%20the%20previous%20page%20here" class="waves-effect waves-light btn-flat"><i class="material-icons" style="vertical-align: middle; padding-right: 5px;">open_in_new</i>Open Github</a>
       <a href="#!" class="modal-close waves-effect waves-light btn-flat">Close</a>
     </div>

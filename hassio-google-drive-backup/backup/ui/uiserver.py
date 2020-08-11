@@ -407,7 +407,10 @@ class UiServer(Trigger, Startable):
         data = await self.debug_worker.buildBugReportData(error)
         body = GITHUB_BUG_TEMPLATE
         for key in data:
-            body = body.replace("{" + key + "}", str(data[key]))
+            if isinstance(data[key], dict):
+                body = body.replace("{" + key + "}", json.dumps(data[key], indent=4))
+            else:
+                body = body.replace("{" + key + "}", str(data[key]))
         return web.json_response({'markdown': body})
 
     async def saveconfig(self, request: Request) -> Any:
@@ -851,6 +854,43 @@ class UiServer(Trigger, Startable):
         })
 
         ret += self.cssElement(".bmc-button span", {'color': text.toCss()})
+
+        ret += self.cssElement(".tabs .tab a", {
+            'color': link_accent.tint(background, 0.35).toCss(),
+            'display': 'block',
+            'width': '100%',
+            'height': '100%',
+            'padding': '0 24px',
+            'font-size': '14px',
+            'text-overflow': 'ellipsis',
+            'overflow': 'hidden',
+            '-webkit-transition': 'color .28s ease, background-color .28s ease',
+            'transition': 'color .28s ease, background-color .28s ease',
+        })
+
+        ret += self.cssElement(".tabs .tab a:hover, .tabs .tab a.active", {
+            'background-color': 'transparent',
+            'color': link_accent.toCss()
+        })
+
+        ret += self.cssElement(".tabs .indicator", {
+            'position': 'absolute',
+            'bottom': '0',
+            'height': '2px',
+            'background-color': link_accent.toCss(),
+            'will-change': 'left, right'
+        })
+
+        ret += self.cssElement(".tabs", {
+            'position': 'relative',
+            'overflow-x': 'auto',
+            'overflow-y': 'hidden',
+            'height': '48px',
+            'width': '100%',
+            'background-color': 'transparent',
+            'margin': '0 auto',
+            'white-space': 'nowrap',
+        })
 
         return web.Response(text=ret, content_type='text/css')
 

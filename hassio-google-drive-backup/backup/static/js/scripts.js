@@ -403,10 +403,25 @@ function bugReport() {
 }
 
 function openBugDialog(resp) {
-  var md = window.markdownit();
-  var result = md.render(resp.markdown);
-  $("#bug_details").html(resp.markdown);
+  $("#bug_markdown_display").val(resp.markdown);
+  renderMarkdown();
+  tabs = M.Tabs.getInstance(document.querySelector("#bug_report_tabs"));
   M.Modal.getInstance(document.querySelector('#bug_modal')).open();
+  tabs.select("bug_markdown");
+  tabs.select("bug_preview");
+  tabs.updateTabIndicator();
+}
+
+function doBugDetailCopy() {
+  tabs.select("bug_markdown");
+  var copyText = document.getElementById("bug_markdown_display");
+  copyText.select();
+  document.execCommand("copy");
+  M.toast({ html: "Copied! Now go to GitHub" });
+}
+
+function renderMarkdown() {
+  $("#bug_preview_display").html(window.markdownit().render($("#bug_markdown_display").val()));
 }
 
 sync_toast = null;
@@ -768,14 +783,15 @@ $(document).ready(function () {
     // We're in an ingress iframe.
     $(".non-ingress").hide();
   }
+  var instance = M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
 });
 
 var pickerApiLoaded = false;
 var oauthToken;
 
 function loadPicker() {
-  gapi.load('auth', {'callback': onAuthApiLoad});
-  gapi.load('picker', {'callback': onPickerApiLoad});
+  gapi.load('auth', { 'callback': onAuthApiLoad });
+  gapi.load('picker', { 'callback': onPickerApiLoad });
 }
 
 function onAuthApiLoad() {
@@ -784,7 +800,7 @@ function onAuthApiLoad() {
     'client_id': clientId,
     'scope': scope,
     'immediate': false
-   }, handleAuthResult);
+  }, handleAuthResult);
 }
 
 function onPickerApiLoad() {
@@ -803,48 +819,48 @@ function handleAuthResult(authResult) {
 function createPicker() {
   if (pickerApiLoaded && oauthToken) {
     var mydrive = new google.picker.DocsView(google.picker.ViewId.DOCS)
-        .setMode(google.picker.DocsViewMode.LIST)
-        .setIncludeFolders(true)
-        .setSelectFolderEnabled(true)
-        .setParent('root')
-        .setLabel("My Drive");
+      .setMode(google.picker.DocsViewMode.LIST)
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(true)
+      .setParent('root')
+      .setLabel("My Drive");
     var sharedWithMe = new google.picker.DocsView(google.picker.FOLDERS)
-        .setMode(google.picker.DocsViewMode.LIST)
-        //.setIncludeFolders(true)
-        .setSelectFolderEnabled(true)
-        .setOwnedByMe(true)
-        .setQuery("*")
-        .setLabel("Shared With Me");
+      .setMode(google.picker.DocsViewMode.LIST)
+      //.setIncludeFolders(true)
+      .setSelectFolderEnabled(true)
+      .setOwnedByMe(true)
+      .setQuery("*")
+      .setLabel("Shared With Me");
     var sharedDrives = new google.picker.DocsView(google.picker.ViewId.DOCS)
-        .setEnableDrives(true) 
-        .setMode(google.picker.DocsViewMode.LIST) 
-        .setIncludeFolders(true)
-        .setSelectFolderEnabled(true);
+      .setEnableDrives(true)
+      .setMode(google.picker.DocsViewMode.LIST)
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(true);
     var recent = new google.picker.DocsView(google.picker.ViewId.RECENTLY_PICKED)
-        .setMode(google.picker.DocsViewMode.LIST)
-        .setIncludeFolders(true)
-        .setSelectFolderEnabled(true);
+      .setMode(google.picker.DocsViewMode.LIST)
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(true);
     var picker = new google.picker.PickerBuilder()
-        .disableFeature(google.picker.Feature.NAV_HIDDEN)
-        .disableFeature(google.picker.Feature.MINE_ONLY)
-        .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
-        .setAppId(appId)
-        .setOAuthToken(oauthToken)
-        .addView(mydrive)
-        //.addView(sharedWithMe)
-        .addView(sharedDrives)
-        .addView(recent)
-        .setTitle("Choose a backup folder")
-        .setCallback(pickerCallback)
-        .build();
-     picker.setVisible(true);
+      .disableFeature(google.picker.Feature.NAV_HIDDEN)
+      .disableFeature(google.picker.Feature.MINE_ONLY)
+      .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+      .setAppId(appId)
+      .setOAuthToken(oauthToken)
+      .addView(mydrive)
+      //.addView(sharedWithMe)
+      .addView(sharedDrives)
+      .addView(recent)
+      .setTitle("Choose a backup folder")
+      .setCallback(pickerCallback)
+      .build();
+    picker.setVisible(true);
   }
 }
 
-function getQueryParams( params) {
+function getQueryParams(params) {
   let href = window.location;
   //this expression is to get the query strings
-  let reg = new RegExp( '[?&]' + params + '=([^&#]*)', 'i' );
+  let reg = new RegExp('[?&]' + params + '=([^&#]*)', 'i');
   let queryString = reg.exec(href);
   return queryString ? queryString[1] : null;
 };

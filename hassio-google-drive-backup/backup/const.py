@@ -32,7 +32,7 @@ GITHUB_ISSUE_URL = "https://github.com/sabeechen/hassio-google-drive-backup/issu
 GITHUB_BUG_TEMPLATE = """
 ###### Description:
 ```
-If you have anything else that could help explain what happened, please write it here.
+If you have anything else that could help explain what happened, click "MArkdonw" above and write it here.
 ```
 
  Addon version: `{version}`
@@ -43,6 +43,10 @@ If you have anything else that could help explain what happened, please write it
  Timezone: `{timezone}`
  Failure Time: `{failure_time}`
  Last Good Sync: `{sync_last_start}`
+ ###### Exception:
+ ```
+ {error}
+ ```
  Snapshots:
  ```
  {snapshots}
@@ -50,10 +54,6 @@ If you have anything else that could help explain what happened, please write it
  ###### Config:
  ```
  {config}
- ```
- ###### Exception:
- ```
- {error}
  ```
  ###### Addon Logs:
  ```
@@ -63,7 +63,7 @@ If you have anything else that could help explain what happened, please write it
  ```
  {super_logs}
  ```
- ###### Home Assistant core Logs:
+ ###### Home Assistant Core Logs:
  ```
  {core_logs}
  ```

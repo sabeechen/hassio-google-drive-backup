@@ -9,7 +9,7 @@ from injector import inject, singleton
 
 from ..config import Config, Setting
 from ..exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
-                          GoogleDrivePermissionDenied)
+                          GoogleDrivePermissionDenied, LogInToGoogleDriveError)
 from ..time import Time
 from .driverequests import DriveRequests
 from ..logger import getLogger
@@ -112,9 +112,17 @@ class FolderFinder():
     async def _search(self) -> str:
         folders = []
 
-        async for child in self.drivebackend.query("mimeType='" + FOLDER_MIME_TYPE + "'"):
-            if self._isValidFolder(child):
-                folders.append(child)
+        try:
+            async for child in self.drivebackend.query("mimeType='" + FOLDER_MIME_TYPE + "'"):
+                if self._isValidFolder(child):
+                    folders.append(child)
+        except ClientResponseError as e:
+            # 404 means the folder doesn't exist (maybe it got moved?)
+            if e.status == 404:
+                "Make Error"
+                raise LogInToGoogleDriveError()
+            else:
+                raise e
 
         if len(folders) == 0:
             return None

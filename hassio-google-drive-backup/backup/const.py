@@ -26,13 +26,14 @@ ERROR_BACKUP_FOLDER_MISSING = "backup_folder_missing"
 CHOOSE_BACKUP_FOLDER = "choose_backup_folder"
 ERROR_BACKUP_FOLDER_INACCESSIBLE = "backup_folder_inaccessible"
 ERROR_LOW_SPACE = "low_space"
+LOG_IN_TO_DRIVE = "log_in_to_drive"
 
 DRIVE_FOLDER_URL_FORMAT = "https://drive.google.com/drive/u/0/folders/{0}"
 GITHUB_ISSUE_URL = "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title={title}&assignee=sabeechen&body={body}"
 GITHUB_BUG_TEMPLATE = """
 ###### Description:
 ```
-If you have anything else that could help explain what happened, click "MArkdonw" above and write it here.
+If you have anything else that could help explain what happened, click "Markdown" above and write it here.
 ```
 
  Addon version: `{version}`

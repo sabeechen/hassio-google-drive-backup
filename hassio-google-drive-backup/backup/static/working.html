@@ -1824,6 +1824,37 @@
             </div>
           </div>
         </div>
+        <div class="row default-hidden error_card log_in_to_drive" id="log_in_to_drive">
+          <div class="col s12 m12 l9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">account_circle</i>
+                  <span style="vertical-align: top;">Please log in to Google Drive Manually</span>
+                </span>
+                <p>The addon couldn't backup your snapshots because it looks like it you've never logged in 
+                  to the <a href="https://drive.google.com" target="_blank">Google Drive website</a> before.  Doing this at 
+                  least once is required for applications like this to use Google Drive.
+                </p>
+                <p>
+                  To resolve this, you can:
+                </p>
+                <ul class="browser-default">
+                  <li>
+                    <p>Visit <a href="https://drive.google.com" target="_blank">https://drive.google.com</a> and log-in with 
+                      the account you used to connect this addon to Google Drive, then click "SYNC NOW" below to start syncing.</p>
+                  </li>
+                  <li >
+                    <p><a href="reauthenticate">Reauthorize</a> the addon with Google Drive using a different account.</p>
+                  </li>
+                </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden" id="error_details_card">
           <div class="col s12 m9">
             <div class="card red darken-4">

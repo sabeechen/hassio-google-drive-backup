@@ -9,7 +9,7 @@ from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_HA_DELETE_ERROR, ERROR_INVALID_CONFIG, ERROR_LOGIC,
                      ERROR_LOW_SPACE, ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
                      ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL,
-                     ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED)
+                     ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, LOG_IN_TO_DRIVE)
 from ..logger import getLogger
 
 logger = getLogger(__name__)
@@ -365,3 +365,14 @@ class CredRefreshMyError(KnownError):
         return {
             "reason": self.reason
         }
+
+
+class LogInToGoogleDriveError(KnownError):
+    def message(self):
+        return "Please visit drive.google.com to activate your Google Drive account."
+
+    def code(self):
+        return LOG_IN_TO_DRIVE
+
+    def retrySoon(self):
+        return False

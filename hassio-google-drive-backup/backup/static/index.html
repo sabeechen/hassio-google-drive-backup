@@ -31,7 +31,7 @@
       <h4>Add-on Settings</h4>
       <p>Settings take effect right after saving them. If you enable or disable SSL, you may need to go to a different
         address to access the UI after the settings are saved. See the <a
-          href="https://github.com/sabeechen/hassio-google-drive-backup#configuration-options" target="_blank">GitHub
+          href="https://github.com/sabeechen/hassio-google-drive-backup#configuration-options" target="_blank" rel="noreferrer">GitHub
           Readme</a> for more help with settings.</p>
       <div class="row">
         <form class="col s12" method="get" id="settings_form">
@@ -94,7 +94,7 @@
               <input type="text" id="snapshot_name" name="snapshot_name" class="validate"
                 onkeyup="snapshotNameExample()" />
               <label for="snapshot_name">Snapshot Name Template</label>
-              <span class="helper-text">The template to use for naming new snapshot. <a target="_blank"
+              <span class="helper-text">The template to use for naming new snapshot. <a target="_blank" rel="noreferrer"
                   href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">See
                   here</a> for a list of all
                 available options, your snapshots names will look something like: <br /><span
@@ -112,7 +112,7 @@
                   Drive. <span class="hide-for-custom-creds">Once this setting is saved,
                     you'll be prompted to select a folder from your Google Drive.</span> If disabled, the addon will
                   automatically create a folder in your My Drive
-                  whenever its needed.</span><span id="current_folder_span"><a id=current_folder_link target="_blank">
+                  whenever its needed.</span><span id="current_folder_span"><a id=current_folder_link target="_blank" rel="noreferrer">
                     Click here</a> to see the folder currently being used.</span>
               </label>
               <br />
@@ -131,10 +131,10 @@
                       name="settings_specify_folder_id" class="validate" />
                     <label for="settings_specify_folder_id">Snapshot Folder ID</label>
                     <span class="helper-text">The Google Drive ID of the folder you'd like to upload snapshots into. You
-                      can get this id by navigating to the folder in <a href="https://drive.google.com">Google Drive</a>
+                      can get this id by navigating to the folder in <a target="_blank" rel="noreferrer" href="https://drive.google.com">Google Drive</a>
                       and copying it out of the URL. It should be a long sequence of characters at the end of the URL.
                       For example if the URL for my folder is
-                      <a target="_blank"
+                      <a target="_blank" rel="noreferrer"
                         href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
                       then the Drive ID is
                       1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
@@ -232,7 +232,7 @@
                 <br />
                 <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.
                   This isn't necessary unless you'd like to avoid accessing this web interface through <a
-                    target="_blank"
+                    target="_blank" rel="noreferrer"
                     href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
               </label>
             </div>
@@ -301,7 +301,7 @@
                   deleting the oldest snapshots. When using this feature, its recommended that you keep "Days
                   Between Snapshots" at 1. <a
                     href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md"
-                    target="_blank">See here</a> for a deeper explanation.</span>
+                    target="_blank" rel="noreferrer">See here</a> for a deeper explanation.</span>
               </label>
             </div>
             <div class="row" id="settings_gen_details" style="display: none">
@@ -512,7 +512,7 @@
                 <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
                   use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
                   must support TCP DNS lookups. The defaults are <a
-                    href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS
+                    href="https://developers.google.com/speed/public-dns/" target="_blank" rel="noreferrer">Google's public DNS
                     servers</a>.</span>
               </div>
             </div>
@@ -537,7 +537,7 @@
                 <label for="drive_ipv4">Google Drive IP Address Override</label>
                 <span class="helper-text">If you're having problems with reaching Google Drive, you can use this to
                   specify Google Drive's IP address manually and circumvent DNS lookup entirely. You can use a website
-                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
+                  like <a target="_blank" rel="noreferrer" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
                     one</a> to lookup
                   what address will work for www.googleapis.com.</span>
               </div>
@@ -584,14 +584,14 @@
       <ul class="browser-default">
         <li>
           <h6>Check the FAQ</h6>First check out the <a
-            href="https://github.com/sabeechen/hassio-google-drive-backup#faq">add-on FAQ</a>.
+            href="https://github.com/sabeechen/hassio-google-drive-backup#faq" target="_blank" rel="noreferrer">add-on FAQ</a>.
           Reading documentation is boring, its true, but the developer spent a lot of time trying making them easy to
           read and follow. If you're lucky, your question is already answered there.
         </li>
 
         <li>
           <h6>Check the Forum</h6>Next, try checking the <a
-            href="https://community.home-assistant.io/t/hass-io-add-on-hass-io-google-drive-backup/">add-on
+            href="https://community.home-assistant.io/t/hass-io-add-on-hass-io-google-drive-backup/" target="_blank" rel="noreferrer">add-on
             announcement
             forum post.</a> Your question might already be there, and if not its a good place to ask. If the developer
           can't answer your question, it might be that another user can help.
@@ -635,7 +635,7 @@
           <h6>Get a fresh perspective</h6>
           Take a walk, serously. Sometimes the mind gets so fixated on a problem that it can't think around it
           anymore.
-          <a href="https://en.wikipedia.org/wiki/Rubber_duck_debugging">Explain your problem to a duck</a> and you
+          <a href="https://en.wikipedia.org/wiki/Rubber_duck_debugging" target="_blank" rel="noreferrer">Explain your problem to a duck</a> and you
           might see the solution was obvious.
         </li>
         <li>
@@ -760,7 +760,7 @@
         <div class="row center">
           <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;.
             <span id="flavor_auto_folder">On your first backup it will create a new folder at the root of your <a
-                href="https://drive.google.com/drive/my-drive">My Drive</a> where future backups will be stored. Once
+                href="https://drive.google.com/drive/my-drive" target="_blank" rel="noreferrer">My Drive</a> where future backups will be stored. Once
               its created, you can move the folder wherever you want.</span>
             <span id="flavor_specific_folder">After connecting with Google Drive, you'll be prompted to select your
               backup folder.</span>
@@ -792,7 +792,7 @@
                       Clicking this link authenticates you with an external domain (<a
                         href="https://habackup.io">habackup.io</a>). To learn why
                       this is necessary, check out the details <a
-                        href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">here</a>.
+                        href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md" target="_blank" rel="noreferrer">here</a>.
                       By doing this, you agree to our <a href="pp">Privacy Policy</a> and <a href="tos">Terms of
                         Service</a></h6>
                   </li>
@@ -812,7 +812,7 @@
 
           </div>
           <div id="option2" class="col s12 m6 offset-m3 default-hidden">
-            Follow the <a target="_blank"
+            Follow the <a target="_blank" rel="noreferrer"
               href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md">instructions
               here</a> to get your own client ID and client secret from Google. This is a much more complicated and time
             consuming approach, but doesn't require you to authenticate yourself with an external domain.
@@ -893,19 +893,19 @@
         <div class="col l3 s12">
           <h5 class="accent-text">Connect</h5>
           <ul>
-            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a>
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup" target="_blank" rel="noreferrer">Project Github</a>
             </li>
-            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues" target="_blank" rel="noreferrer">Issue
                 Tracker</a></li>
-            <li><a class="accent-text" href="https://materializecss.com">Materialize</a></li>
+            <li><a class="accent-text" href="https://materializecss.com" target="_blank" rel="noreferrer">Materialize</a></li>
           </ul>
         </div>
         <div class="col l6 s12">
           <h5 class="accent-title">Who did this?</h5>
           <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
             like it and would like to support me, you can star my projects on <a
-              href="https://github.com/sabeechen" class="accent-text">Github</a> or just gimme money at
-            <a class="bmc-button" target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img src="static/images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
+              href="https://github.com/sabeechen" class="accent-text" target="_blank" rel="noreferrer">Github</a> or just gimme money at
+            <a class="bmc-button" target="_blank" rel="noreferrer" href="https://www.buymeacoffee.com/sabeechen"><img src="static/images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
         </div>
       </div>
       <div class="container left accent-text">

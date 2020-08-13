@@ -130,12 +130,12 @@ async def test_getstatus(reader, config: Config, ha, server):
     assert data['firstSync'] is True
     assert data['folder_id'] is None
     assert data['last_error'] is None
-    assert data['last_snapshot'] == "Never"
+    assert data['last_snapshot_text'] == "Never"
     assert data['maxSnapshotsInDrive'] == config.get(
         Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
     assert data['maxSnapshotsInHasssio'] == config.get(
         Setting.MAX_SNAPSHOTS_IN_HASSIO)
-    assert data['next_snapshot'] == "right now"
+    assert data['next_snapshot_text'] == "right now"
     assert data['restore_link'] == "http://{host}:1337/hassio/snapshots"
     assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
     assert data['warn_ingress_upgrade'] is False
@@ -166,8 +166,8 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
     assert data['firstSync'] is False
     assert data['folder_id'] is not None
     assert data['last_error'] is None
-    assert data['last_snapshot'] != "Never"
-    assert data['next_snapshot'] != "right now"
+    assert data['last_snapshot_text'] != "Never"
+    assert data['next_snapshot_text'] != "right now"
     assert len(data['snapshots']) == 1
     assert data['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
@@ -819,14 +819,22 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
     await coord.sync()
     assert folder_finder.getCachedFolder() is not None
 
-    # Change some config
+    # Specify the snapshot folder, which should cache the new one
     update = {
         "config": {
-            Setting.SPECIFY_SNAPSHOT_FOLDER: True
+            Setting.SPECIFY_SNAPSHOT_FOLDER.value: True
         },
         "snapshot_folder": "12345"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     assert folder_finder.getCachedFolder() == "12345"
 
-    # Un change the folder, which should clear the folder
+    # Un change the folder, which should keep the existing folder
+    update = {
+        "config": {
+            Setting.SPECIFY_SNAPSHOT_FOLDER.value: False
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert folder_finder.getCachedFolder() == "12345"

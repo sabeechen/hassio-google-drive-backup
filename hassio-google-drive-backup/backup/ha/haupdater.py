@@ -124,8 +124,8 @@ class HaUpdater(Worker):
                 "snapshots_in_google_drive": len(list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, snapshots))),
                 "snapshots_in_hassio": len(list(filter(lambda s: s.getSource(SOURCE_HA), snapshots))),
                 "snapshots_in_home_assistant": len(list(filter(lambda s: s.getSource(SOURCE_HA), snapshots))),
-                "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.size(), filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE), snapshots)))),
-                "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.size(), filter(lambda s: s.getSource(SOURCE_HA), snapshots)))),
+                "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE), snapshots)))),
+                "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), filter(lambda s: s.getSource(SOURCE_HA), snapshots)))),
                 "snapshots": list(map(makeSnapshotData, snapshots))
             }
         }

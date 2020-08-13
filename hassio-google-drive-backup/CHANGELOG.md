@@ -1,27 +1,62 @@
-## [0.100.0 2019-01-18]
-# Added
+## [0.101.0 2020-08-13]
+This is a very large update.  The addon has been mostly rewritten to support some additional features in the present and accomodate some better planned features in the future.  Hopefully this is the last time I'll need to rewrite the whole damn thing!
+Because there is a lot of new code, please don't hesitate to notify me if you see something working incorrectly.  I do pretty extensive automated and manual testing, but I can't catch everything.  You can report bugs through the new "Action" -> "Report a bug" to level menu item.
+### Added
+- When syncing, a persistant notification pops up in the UI indicating that the sync is taking place.
+- A sync in progress can be cancelled, which briefly pauses it (you can choose to resume immediately).
+- Better messaging when a user needs to log into Drive at least once for the addon to work (a common first time user problem).
+- "Next Snapshot" and "Last Snapshot" UI elements now show the exact time in a tooltip.
+- Error dialogs now clear immadiately after an attempted resync or after the first chunk of data is uploaded to Google Drive.
+- A top level menu item for submitting detailed preformatted bug reports on GitHub.
+- The addon now handles authentication with Google Drive through a dedicated domain, habackup.io, instead fo the confusingly named philosophyofpen.com.  I'll have you know that ".io" domains don't come cheap!  Don't worry, those of you using your own Google Drive authentication credentials are unaffected by this. 
+
+
+### Changed
+- Automatic error reports now contain a lot more information to help in debugging (version number, snapshot count, etc).
+- Bug report links now pre-fill a lot of help debugging information, especially supervisor and addon logs.
+- sensor.snapshots_stale sensor includes the "device_class: problem" attribute again.
+- Some UTC datetimes have been localized for display.
+- Updated many strings to reflect the "Hass.io" - "Supervisor" and "Home Assistant" -> "Home Assistant Core" rebrandings.
+- Changing settings now cancels the current sync and syncs again (so the changed settings get reflected immediately).
+- The addon now considers snapshots in the "Trash" as deleted.
+
+### Fixed
+- A bug that maded the addon sync over and over at install time if you disable upload to Google Drive.
+- Numerous spelling errors.
+
+### Technical
+- Everything now runs asynchronously (non blocking) using the aiohttp framework.  This should help the UI be more responsive, and is the same API that Home assistant uses to run code asynchronously.
+- The addon uses a new domain hosted on reliable infrastructure, habackup.io, to handle authentication with Google drive.
+- Exposed local python debugger through config options for debugging.
+- Merged server and client repositories.
+- Migrated deployment process to run through Google Cloud Build
+- Project now uses dependency injection to resolve code dependencies.
+- Recorganized the project into different packages.
+
+## [0.100.0 2020-01-18]
+### Added
 - Option to select the snapshot folder.  Now you can sync multiple instances to a single Google Drive account. See settings to try it out.
 - Web UI now shows total disk usage in Google Drive and Home Assistant.
 - Web UI now shows disk space available in the backup folder.
 - Addon stops and asks for help if it thinks you're going to run out of space.
 - Config options for the above features.
 - A link to my [Buy Me a Coffee](https://www.buymeacoffee.com/sabeechen) page if you'd like to support.
-# Changes
+### Changes
 - Got rid of "jank" in various places.  The fight against jank is never truly won.
 - If an existing snapshot folder is found on installation, the addon will ask before using it.
-# Fixes
+### Fixes
 - Lots of spelling errors.
 
 ## [0.99.0] 2019-11-01
-# Added
+### Added
 - Colors for the interface can now be choosen from the Setting Menu or through addon options.  Try it from the settings menu, you'll like it.
 - Added a config option 'delete_generational_early', which deletes older unused snapshots more aggressively ([see here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md) for an explanation).
 - '{hostname}' can now be used as an option in snapshot names. 
 
-# Changes
+### Changes
 - Snapshot staleness sensor now has the 'generic' device class, since the 'problem' device class was removed from HA's documentation.
 
-# Fixes
+### Fixes
 - Fixed a bug causing generational snapshots closer to noon to be saved over those later in the day.
 - Fixed a bug in generational snapshots that caused users far from GMT to save snapshots on the wrong day.
 

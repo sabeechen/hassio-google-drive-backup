@@ -81,7 +81,7 @@
               onkeyup="snapshotNameOneOffExample()" />
             <label for="snapshot_name_one_off">Snapshot Name</label>
             <span class="helper-text">The name to use for this snapshot, or leave it blank to use the default naming
-              scheme. Optionally you can use template variables,<a target="_blank"
+              scheme. Optionally you can use template variables,<a target="_blank" rel="noreferrer"
                 href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">see
                 here</a> for a list of all
               available options. Your snapshots name will look something like: <br /><span
@@ -345,7 +345,7 @@
       <h4>Add-on Settings</h4>
       <p>Settings take effect right after saving them. If you enable or disable SSL, you may need to go to a different
         address to access the UI after the settings are saved. See the <a
-          href="https://github.com/sabeechen/hassio-google-drive-backup#configuration-options" target="_blank">GitHub
+          href="https://github.com/sabeechen/hassio-google-drive-backup#configuration-options" target="_blank" rel="noreferrer">GitHub
           Readme</a> for more help with settings.</p>
       <div class="row">
         <form class="col s12" method="get" id="settings_form">
@@ -408,7 +408,7 @@
               <input type="text" id="snapshot_name" name="snapshot_name" class="validate"
                 onkeyup="snapshotNameExample()" />
               <label for="snapshot_name">Snapshot Name Template</label>
-              <span class="helper-text">The template to use for naming new snapshot. <a target="_blank"
+              <span class="helper-text">The template to use for naming new snapshot. <a target="_blank" rel="noreferrer"
                   href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">See
                   here</a> for a list of all
                 available options, your snapshots names will look something like: <br /><span
@@ -426,7 +426,7 @@
                   Drive. <span class="hide-for-custom-creds">Once this setting is saved,
                     you'll be prompted to select a folder from your Google Drive.</span> If disabled, the addon will
                   automatically create a folder in your My Drive
-                  whenever its needed.</span><span id="current_folder_span"><a id=current_folder_link target="_blank">
+                  whenever its needed.</span><span id="current_folder_span"><a id=current_folder_link target="_blank" rel="noreferrer">
                     Click here</a> to see the folder currently being used.</span>
               </label>
               <br />
@@ -445,10 +445,10 @@
                       name="settings_specify_folder_id" class="validate" />
                     <label for="settings_specify_folder_id">Snapshot Folder ID</label>
                     <span class="helper-text">The Google Drive ID of the folder you'd like to upload snapshots into. You
-                      can get this id by navigating to the folder in <a href="https://drive.google.com">Google Drive</a>
+                      can get this id by navigating to the folder in <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
                       and copying it out of the URL. It should be a long sequence of characters at the end of the URL.
                       For example if the URL for my folder is
-                      <a target="_blank"
+                      <a target="_blank" rel="noreferrer"
                         href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
                       then the Drive ID is
                       1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
@@ -547,7 +547,7 @@
                 <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.
                   This isn't necessary unless you'd like to avoid accessing this web interface through <a
                     target="_blank"
-                    href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
+                    href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/" target="_blank" rel="noreferrer">ingress</a>.</span>
               </label>
             </div>
           </div>
@@ -615,7 +615,7 @@
                   deleting the oldest snapshots. When using this feature, its recommended that you keep "Days
                   Between Snapshots" at 1. <a
                     href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/GENERATIONAL_BACKUP.md"
-                    target="_blank">See here</a> for a deeper explanation.</span>
+                    target="_blank" rel="noreferrer">See here</a> for a deeper explanation.</span>
               </label>
             </div>
             <div class="row" id="settings_gen_details" style="display: none">
@@ -826,7 +826,7 @@
                 <span class="helper-text">When the add-on runs into trouble resolving Google Drive's IP Address, it will
                   use this comma-delimited list of DNS Servers as alternate sources for name resolution. The servers
                   must support TCP DNS lookups. The defaults are <a
-                    href="https://developers.google.com/speed/public-dns/" target="_blank">Google's public DNS
+                    href="https://developers.google.com/speed/public-dns/" target="_blank" rel="noreferrer">Google's public DNS
                     servers</a>.</span>
               </div>
             </div>
@@ -851,7 +851,7 @@
                 <label for="drive_ipv4">Google Drive IP Address Override</label>
                 <span class="helper-text">If you're having problems with reaching Google Drive, you can use this to
                   specify Google Drive's IP address manually and circumvent DNS lookup entirely. You can use a website
-                  like <a target="_blank" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
+                  like <a target="_blank" rel="noreferrer" href="https://www.xmyip.com/hostname-ip?hostname=www.googleapis.com">this
                     one</a> to lookup
                   what address will work for www.googleapis.com.</span>
               </div>
@@ -922,14 +922,14 @@
       <ul class="browser-default">
         <li>
           <h6>Check the FAQ</h6>First check out the <a
-            href="https://github.com/sabeechen/hassio-google-drive-backup#faq">add-on FAQ</a>.
+            href="https://github.com/sabeechen/hassio-google-drive-backup#faq" target="_blank" rel="noreferrer">add-on FAQ</a>.
           Reading documentation is boring, its true, but the developer spent a lot of time trying making them easy to
           read and follow. If you're lucky, your question is already answered there.
         </li>
 
         <li>
           <h6>Check the Forum</h6>Next, try checking the <a
-            href="https://community.home-assistant.io/t/hass-io-add-on-hass-io-google-drive-backup/">add-on announcement
+            href="https://community.home-assistant.io/t/hass-io-add-on-hass-io-google-drive-backup/" target="_blank" rel="noreferrer">add-on announcement
             forum post.</a> Your question might already be there, and if not its a good place to ask. If the developer
           can't answer your question, it might be that another user can help.
         </li>
@@ -947,7 +947,7 @@
         <li>
           <h6>File an Issue</h6>If you don't want to ask something in front of the angry mobs on the internet, you can
           file an issue on the
-          project GitHub <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue Tracker</a>,
+          project GitHub <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues" target="_blank" rel="noreferrer">Issue Tracker</a>,
           just click "new issue". The developer gets an email if make one of those, which he promises to try and help
           with. No question is stupid.
         </li>
@@ -968,7 +968,7 @@
         <li>
           <h6>Get a fresh perspective</h6>
           Take a walk, serously. Sometimes the mind gets so fixated on a problem that it can't think around it anymore.
-          <a href="https://en.wikipedia.org/wiki/Rubber_duck_debugging">Explain your problem to a duck</a> and you
+          <a href="https://en.wikipedia.org/wiki/Rubber_duck_debugging" target="_blank" rel="noreferrer">Explain your problem to a duck</a> and you
           might see the solution was obvious.
         </li>
         <li>
@@ -1132,8 +1132,8 @@
                     will be until its actually created.</p>
                   <p>To resolve this you can:</p>
                   <ul class="browser-default">
-                    <li>Free up space in Home Assistant.  Addons like the <a target="_blank" href="https://www.home-assistant.io/addons/configurator/">Configurator</a> can help you see what files might be taking up space.</li>
-                    <li>Make your snapshots smaller (see <a target="_blank"
+                    <li>Free up space in Home Assistant.  Addons like the <a target="_blank" rel="noreferrer" href="https://www.home-assistant.io/addons/configurator/">Configurator</a> can help you see what files might be taking up space.</li>
+                    <li>Make your snapshots smaller (see <a target="_blank" rel="noreferrer"
                       href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this
                       tip</a>).  You can also click the little <i class="material-icons"
                       style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">info</i> next to snapshots below to see which parts of them are taking up the most space.</li>
@@ -1165,21 +1165,21 @@
                 </span>
 
                 <p>Google Drive is full, backups can't continue until space is available. You can go to Google Drive's
-                  <a href="https://drive.google.com/drive/quota">quota page</a> to see whats using up space in your
+                  <a href="https://drive.google.com/drive/quota" target="_blank" rel="noreferrer">quota page</a> to see whats using up space in your
                   Google
                   Drive, but because that space is shared between several Google products (eg GMail, Google Photos) one
                   of
                   those products might be using the space instead. You can see your usage across all those products on
-                  Google's <a href="https://drive.google.com/settings/storage">storage settings</a> page.</p>
+                  Google's <a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">storage settings</a> page.</p>
                 <p>To resolve this you can:</p>
                 <ul class="browser-default">
                   <li>Free up space in Google Drive, GMail, or Google Photos by deleting things.</li>
                   <li>Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
                         style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
                       settings</a> to store fewer snapshots in Google Drive</li>
-                  <li><a href="https://drive.google.com/settings/storage">Buy more storage</a> from Google</li>
+                  <li><a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">Buy more storage</a> from Google</li>
                   <li>Make your snapshots smaller (see <a
-                      href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this
+                      href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big" target="_blank" rel="noreferrer">this
                       tip</a>)</li>
                 </ul>
               </div>
@@ -1230,7 +1230,7 @@
                 </ul>
                 <p>The add-on will retry periodically to check if the issue is resolved. To retry now, click "Try
                   Syncing Again" below. If the above doesn't help, please file an issue on <a
-                    href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new" target="_blank">GitHub</a>
+                    href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new" target="_blank" rel="noreferrer">GitHub</a>
                   to get more help.</p>
               </div>
               <div class="card-action white-text">
@@ -1455,7 +1455,7 @@
                 <p>If this error keeps sticking around, you can try:</p>
                 <ul class="browser-default">
                   <li>Making sure the internet is working fine.</li>
-                  <li>Making sure you're able to log into your <a href="https://drive.google.com">Google Drive
+                  <li>Making sure you're able to log into your <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive
                       account</a> and upload files without problems.</li>
                   <li>Reauthenting the add-on with Google Drive (click "ACTIONS" -> "Reauthorize Google Drive" up top)
                   </li>
@@ -1482,20 +1482,20 @@
                   documentation if an upload takes longer than a week then it will be forcibly cancelled and return this
                   error. This can happen if your internet is very slow or your snapshots are very large, however I (your
                   friendly developer) suspect this can happen in more common circumstances. If the below options don't
-                  help, please file an issue on <a target="_blank"
-                    href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new">GitHub</a> with as much
+                  help, please file an issue on <a target="_blank" rel="noreferrer"
+                    href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new" >GitHub</a> with as much
                   detail as you can stomach to help me look into it.
                 </p>
                 <p>If this error keeps sticking around, you can try:</p>
                 <ul class="browser-default">
                   <li>Syncing again (if it hasn't already started) by clicking "Try Syncing Again" below.</li>
-                  <li>Making sure you're able to log into your <a target="_blank" href="https://drive.google.com">Google
+                  <li>Making sure you're able to log into your <a target="_blank" rel="noreferrer" href="https://drive.google.com">Google
                       Drive
                       account</a> and upload files without problems.</li>
-                  <li>Ensuring your internet connection is reasonably fast by doing a <a target="_blank"
+                  <li>Ensuring your internet connection is reasonably fast by doing a <a target="_blank" rel="noreferrer"
                       href="https://www.google.com/search?q=speed+test">speed test</a></li>
                   <li>Making your snapshots smaller. Usually snapshots are large because of a huge sensor database. You
-                    can keep a smaller history by setting up the <a target="_blank"
+                    can keep a smaller history by setting up the <a target="_blank" rel="noreferrer"
                       href="https://www.home-assistant.io/components/recorder/">recorder component</a> purge settings in
                     Home Assistant</li>
                   <li>Restarting the add-on, Home Assistant, or Hass.io.</li>
@@ -1582,7 +1582,7 @@
                 <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to
                   select your folder through an external domain, which is where the link below will take you.
                   <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
-                    target="_blank">See here</a> for details if you'd like to know more about why.</p>
+                    target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose folder</a>
                   <a href="#" onclick="loadSettings()">Open settings</a>
@@ -1625,14 +1625,14 @@
                   <li>
                     <p>If the folder still exists, you can restore access to it by the addon by ensuring that your
                       google account has access to it. The folder should be accessible from <a id="data_existing_url"
-                        target="_blank">this link</a>. After doing so, click "sync now" below to try syncing again.</p>
+                      target="_blank" rel="noreferrer">this link</a>. After doing so, click "sync now" below to try syncing again.</p>
                   </li>
                 </ul>
                 <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to select
                   your folder through an
                   external domain, which is where the "choose folder" link below will take you.
                   <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
-                    target="_blank">See here</a> for details if you'd like to know more about why.</p>
+                  target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
                 <div class="card-action white-text">
                   <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose new folder</a>
                   <a href="#" onclick="sync()">sync now</a>
@@ -1676,7 +1676,7 @@
             <div class="card">
               <div class="card-content">
                 <span class="card-title">Use Ingress instead?</span>
-                <p>The latest version of this add-on supports <a target="_blank"
+                <p>The latest version of this add-on supports <a target="_blank" rel="noreferrer"
                     href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>. Ingress allows
                   this web interface to be embeeded inside of Home Assistant, which is usually more secure because it
                   delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and
@@ -1801,11 +1801,11 @@
         <div class="col l3 s12">
           <h5 class="accent-text">Connect</h5>
           <ul>
-            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup">Project Github</a>
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup" target="_blank" rel="noreferrer">Project Github</a>
             </li>
-            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues">Issue
+            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues" target="_blank" rel="noreferrer">Issue
                 Tracker</a></li>
-            <li><a class="accent-text" href="https://materializecss.com">Materialize</a></li>
+            <li><a class="accent-text" href="https://materializecss.com" target="_blank" rel="noreferrer">Materialize</a></li>
           </ul>
         </div>
         <div class="col l6 s12">
@@ -1813,7 +1813,7 @@
           <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
             like it and would like to support me, you can star my projects on <a
               href="https://github.com/sabeechen" class="accent-text">Github</a> or just gimme money at
-            <a class="bmc-button" target="_blank" href="https://www.buymeacoffee.com/sabeechen"><img src="images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
+            <a class="bmc-button" target="_blank" rel="noreferrer" href="https://www.buymeacoffee.com/sabeechen"><img src="images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
         </div>
       </div>
       <div class="container left accent-text">

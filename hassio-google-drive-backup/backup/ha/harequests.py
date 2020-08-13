@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError
 from injector import inject
 
@@ -46,7 +46,7 @@ class HaRequests():
         else:
             url = "{0}snapshots/new/full".format(
                 self.config.get(Setting.HASSIO_URL))
-        return await self._postHassioData(url, info)
+        return await self._postHassioData(url, info, timeout=ClientTimeout(total=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS)))
 
     @supervisor_call
     async def auth(self, user: str, password: str) -> None:
@@ -183,9 +183,9 @@ class HaRequests():
         return await self._validateHassioReply(await self.session.get(url, headers=self._getHassioHeaders()))
 
     @supervisor_call
-    async def _postHassioData(self, url: str, json=None, file=None, data=None) -> Dict[str, Any]:
+    async def _postHassioData(self, url: str, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
         logger.debug("Making Hassio request: " + url)
-        return await self._validateHassioReply(await self.session.post(url, headers=self._getHassioHeaders(), json=json, data=data))
+        return await self._validateHassioReply(await self.session.post(url, headers=self._getHassioHeaders(), json=json, data=data, timeout=timeout))
 
     async def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
         async with self.session.post(self.config.get(Setting.HOME_ASSISTANT_URL) + path, headers=self._getHaHeaders(), json=data) as resp:

@@ -86,7 +86,7 @@ class DebugWorker(Worker):
         for setting in Setting:
             if self.config.get(setting) != _DEFAULTS[setting]:
                 if setting in PRIVATE:
-                    config_special[setting] = "REDACTED"
+                    config_special[str(setting)] = "REDACTED"
                 else:
                     config_special[str(setting)] = self.config.get(setting)
         report = {}

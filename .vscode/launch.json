@@ -8,7 +8,7 @@
             "name": "Run Addon (Dev Backends)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${config:python.pythonPath}",
+            "pythonPath": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
             "args": ["dev"]
         },
@@ -16,7 +16,7 @@
             "name": "Run Addon (Dev Drive)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${config:python.pythonPath}",
+            "pythonPath": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
             "args": ["drive_dev"]
         },
@@ -24,7 +24,7 @@
             "name": "Run Addon (Real Google Drive)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${config:python.pythonPath}",
+            "pythonPath": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
             "args": ["drive"]
         },
@@ -32,8 +32,15 @@
             "name": "Run Mock Backend Server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${config:python.pythonPath}",
+            "pythonPath": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.dev.simulationserver",
+        },
+        {
+            "name": "Run Error Analyzer",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "${command:python.interpreterPath}",
+            "module": "hassio-google-drive-backup.backup.util.error_analyzer",
         },
         {
             "name": "Python: Current File (External Terminal)",
@@ -52,15 +59,51 @@
                     "remoteRoot": "/app" // Linux example; adjust as necessary for your OS and situation.
                 }
             ],
-            "port": 3000,                   // Set to the remote port.
-            "host": "local-hassio-google-drive-backup"               // Set to your remote host's public IP address.
+            "port": 9050,                   // Set to the remote port.
+            "host": "hassio"               // Set to your remote host's public IP address.
         },
         {
             "name": "Run Auth Server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${config:python.pythonPath}",
+            "pythonPath": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.server",
+            "env": {
+                "PORT": "12345",
+                "CLIENT_SECRET": "client_secret",
+                "CLIENT_ID": "client_id"
+            }
+        },
+        {
+            "name": "Build/Upload Dev Addon Container",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "${command:python.interpreterPath}",
+            "module": "hassio-google-drive-backup.dev.deploy_dev_addon",
+            "env": {
+                "PORT": "12345",
+                "CLIENT_SECRET": "client_secret",
+                "CLIENT_ID": "client_id"
+            }
+        },
+        {
+            "name": "Build/Upload Server Container",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "${command:python.interpreterPath}",
+            "module": "hassio-google-drive-backup.dev.deploy_server",
+            "env": {
+                "PORT": "12345",
+                "CLIENT_SECRET": "client_secret",
+                "CLIENT_ID": "client_id"
+            }
+        },
+        {
+            "name": "Build/Upload Addon Production Containers",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "${command:python.interpreterPath}",
+            "module": "hassio-google-drive-backup.dev.deploy_addon",
             "env": {
                 "PORT": "12345",
                 "CLIENT_SECRET": "client_secret",

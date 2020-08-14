@@ -292,7 +292,7 @@ async def test_delete(reader, ui_server, snapshot):
 @pytest.mark.asyncio
 async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot, coord: Coordinator):
     assert len(coord.snapshots()) == 1
-    assert (await reader.getjson("getstatus"))["snapshots"][0]["date"] == time.now().isoformat()
+    assert (await reader.getjson("getstatus"))["snapshots"][0]["date"] == time.toLocal(time.now()).strftime("%c")
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName&retain_drive=False&retain_ha=False") == {
@@ -300,7 +300,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     }
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 2
-    assert status["snapshots"][1]["date"] == time.now().isoformat()
+    assert status["snapshots"][1]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][1]["name"] == "TestName"
     assert not status["snapshots"][1]["driveRetain"]
     assert not status["snapshots"][1]["haRetain"]
@@ -313,7 +313,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 3
     assert not status["snapshots"][1]["driveRetain"]
-    assert status["snapshots"][2]["date"] == time.now().isoformat()
+    assert status["snapshots"][2]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][2]["name"] == "TestName2"
     assert not status["snapshots"][2]["haRetain"]
     assert status["snapshots"][2]["driveRetain"]
@@ -326,7 +326,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 4
     assert not status["snapshots"][1]["driveRetain"]
-    assert status["snapshots"][3]["date"] == time.now().isoformat()
+    assert status["snapshots"][3]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][3]["name"] == "TestName3"
     assert status["snapshots"][3]["haRetain"]
     assert not status["snapshots"][3]["driveRetain"]
@@ -729,7 +729,8 @@ async def test_update_sync_interval(reader, ui_server, config: Config, server):
 @pytest.mark.asyncio
 async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: Config, server, session, drive: DriveSource):
     # get the auth url
-    req_path = "manualauth?client_id={}&client_secret={}".format(config.get(Setting.DEFAULT_DRIVE_CLIENT_ID), config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET))
+    req_path = "manualauth?client_id={}&client_secret={}".format(config.get(
+        Setting.DEFAULT_DRIVE_CLIENT_ID), config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET))
     data = await reader.getjson(req_path)
     assert "auth_url" in data
 
@@ -805,7 +806,8 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
 async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, server: SimulationServer, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
     server.resetDriveAuth()
     # Generate manual credentials
-    req_path = "manualauth?client_id={}&client_secret={}".format(server.custom_drive_client_id, server.custom_drive_client_secret)
+    req_path = "manualauth?client_id={}&client_secret={}".format(
+        server.custom_drive_client_id, server.custom_drive_client_secret)
     data = await reader.getjson(req_path)
     assert "auth_url" in data
     async with session.get(data["auth_url"], allow_redirects=False) as resp:

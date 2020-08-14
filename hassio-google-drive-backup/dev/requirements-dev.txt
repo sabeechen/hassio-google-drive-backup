@@ -7,7 +7,7 @@ python-dateutil==2.6.1
 watchdog
 pyyaml
 dnspython
-pytest
+pytest>=5.4.0
 pytest-timeout
 pytest-rerunfailures
 pytest-asyncio

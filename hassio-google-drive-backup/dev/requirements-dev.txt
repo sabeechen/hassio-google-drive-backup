@@ -22,6 +22,7 @@ autopep8
 colorlog
 ptvsd
 google-cloud-logging
+google-cloud-firestore
 aiohttp-jinja2
 beautifulsoup4
 firebase-admin

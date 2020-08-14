@@ -290,3 +290,5 @@ Thats not a question but you can use [Google Drive Backup & Sync]([https://www.g
 ### I configured this to only keep 4 snapshots in Drive and Home Assistant, but sometimes I can see there are 5?
 The add-on will only delete an old snapshot if a new one exists to replace it, so it will create a 5th one before deleting the first.  This is a reliability/disk usage compromise that favors reliability, because otherwise it would have to delete an old snapshot (leaving only 3) before it could guarantee the 4th one exists.
 
+### Can I exclude specific sub-folders from my snapshot?
+The addon uses the supervisor to create snapshots, and the supervisor only permits you to include or exclude the 4 main folders (home assistant configuration, share, SSL, and local addons).  Excluding specific subfolders, or only including specific subfolders from a snapshot isn't possible today.

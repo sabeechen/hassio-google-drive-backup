@@ -2,7 +2,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.pythonPath": "/usr/bin/python3.8",
+    "python.linting.enabled": true,
     "python.linting.flake8Enabled": true,
     "python.linting.pylintEnabled": false,
     "python.linting.mypyEnabled": false,
@@ -12,7 +12,4 @@
         "--verbose"
     ],
     "python.autoComplete.addBrackets": true,
-    "python.testing.pytestArgs": [
-        "${workspaceFolder}/hassio-google-drive-backup/tests"
-    ]
 }

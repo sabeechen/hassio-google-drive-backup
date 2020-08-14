@@ -30,6 +30,7 @@ Here are some pointers about how things work that might get you to where you wan
 - Constructor dependencies are handled through dependency injection.  You can look at the the attributes defined on most any class or constructor to see how they should be defined.
 - The project has almost 100% test coverage.  If you change something, your PR must include tests that cover it.  The onyl exception is all the javascript, which has no unit tests.
 - The web server for the addon is in uiserver.py.
+- You'l want to make your changes to the dev branch, since the master branch is where new releases are made.
 
 ## Trying Out Changes
 To try out changes locally during development, I've written a server that simulates Home Assistant, Supervisor, habackup.io, and Google Drive HTTP endpoints that the addon expects in [simulationserver.py](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/dev/simulationserver.py).  Its a beast of a class and doeas a lot.  It simulates the services for development and is also used to make unit tests work.

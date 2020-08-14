@@ -7,7 +7,7 @@ from pytest import raises
 from backup.config import Config, Setting, CreateOptions
 from backup.exceptions import LogicError, LowSpaceError, NoSnapshot, PleaseWait, UserCancelledError
 from backup.util import GlobalInfo
-from backup.model import Coordinator, Model, Snapshot, SnapshotDestination
+from backup.model import Coordinator, Model, Snapshot
 from .conftest import FsFaker
 from .faketime import FakeTime
 from .helpers import HelperTestSource, skipForWindows
@@ -367,6 +367,7 @@ async def test_working_through_upload(coord: Coordinator, global_info: GlobalInf
     coord._sync_wait.set()
     await asyncio.wait([sync_task])
     assert not coord.isWorkingThroughUpload()
+
 
 @pytest.mark.asyncio
 async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Model, dest, source, simple_config: Config):

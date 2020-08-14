@@ -1,11 +1,9 @@
-import json
-
 import pytest
 
 from backup.config import Config, Setting
 from backup.debugworker import DebugWorker
 from backup.util import GlobalInfo
-from backup.logger import getLogger, getLast
+from backup.logger import getLogger
 from dev.simulationserver import SimulationServer
 from .helpers import skipForWindows
 from backup.server import ErrorStore

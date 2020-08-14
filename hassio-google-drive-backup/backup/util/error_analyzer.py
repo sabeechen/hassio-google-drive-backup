@@ -1,9 +1,7 @@
 import asyncio
 import firebase_admin
-import sys
 from firebase_admin import credentials
 from firebase_admin import firestore
-from datetime import datetime
 from pathlib import Path
 
 
@@ -38,7 +36,7 @@ async def main():
         elif command == "exit" or command == "quit" or command == "q":
             return
 
-    #stream = reports.stream()
+    # stream = reports.stream()
     for report in query.get():
         print(report.to_dict())
 

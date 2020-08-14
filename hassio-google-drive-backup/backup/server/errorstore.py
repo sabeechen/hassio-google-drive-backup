@@ -6,6 +6,7 @@ from backup.config import Setting, Config
 from .cloudlogger import CloudLogger
 from injector import inject, singleton
 
+
 @singleton
 class ErrorStore():
     @inject

@@ -9,7 +9,8 @@ from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_HA_DELETE_ERROR, ERROR_INVALID_CONFIG, ERROR_LOGIC,
                      ERROR_LOW_SPACE, ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
                      ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL,
-                     ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, LOG_IN_TO_DRIVE)
+                     ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, LOG_IN_TO_DRIVE,
+                     SUPERVISOR_PERMISSION, ERROR_GOOGLE_UNEXPECTED, ERROR_SUPERVISOR_TIMEOUT, ERROR_SUPERVISOR_UNEXPECTED)
 from ..logger import getLogger
 
 logger = getLogger(__name__)
@@ -217,6 +218,10 @@ class GoogleTimeoutError(KnownError):
     def code(self):
         return ERROR_GOOGLE_TIMEOUT
 
+    @classmethod
+    def factory(cls):
+        return GoogleTimeoutError()
+
 
 class GoogleRateLimitError(KnownTransient):
     def message(self):
@@ -376,3 +381,50 @@ class LogInToGoogleDriveError(KnownError):
 
     def retrySoon(self):
         return False
+
+
+class SupervisorPermissionError(KnownError):
+    def message(self):
+        return "The supervisor is rejecting requests from the addon.  Please visit the web-UI for guidance"
+
+    def code(self):
+        return SUPERVISOR_PERMISSION
+
+    def retrySoon(self):
+        return True
+
+
+class GoogleUnexpectedError(KnownError):
+    def message(self):
+        return "Google gave an unexpected response"
+
+    def code(self):
+        return ERROR_GOOGLE_UNEXPECTED
+
+    @classmethod
+    def factory(cls):
+        return GoogleUnexpectedError()
+
+
+class SupervisorTimeoutError(KnownError):
+    def message(self):
+        return "A request to the supervisor timed out"
+
+    def code(self):
+        return ERROR_SUPERVISOR_TIMEOUT
+
+    @classmethod
+    def factory(cls):
+        return SupervisorTimeoutError()
+
+
+class SupervisorUnexpectedError(KnownError):
+    def message(self):
+        return "The supervisor gave an unexpected response"
+
+    def code(self):
+        return ERROR_SUPERVISOR_UNEXPECTED
+
+    @classmethod
+    def factory(cls):
+        return SupervisorUnexpectedError()

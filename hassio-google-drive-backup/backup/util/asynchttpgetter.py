@@ -2,7 +2,8 @@ import io
 from typing import Dict
 
 from aiohttp import ClientSession
-from aiohttp.client import ClientResponse
+from aiohttp.client import ClientResponse, ClientPayloadError, ClientOSError, ClientTimeout
+from asyncio.exceptions import TimeoutError
 
 from ..exceptions import LogicError, ensureKey
 from ..logger import getLogger
@@ -16,7 +17,7 @@ POSITION_ERROR_MESSAGE = "AsyncHttpGetter must also be set up at position 0"
 
 
 class AsyncHttpGetter:
-    def __init__(self, url, headers: Dict[str, str], session, size: int = None):
+    def __init__(self, url, headers: Dict[str, str], session, size: int = None, timeout=None, timeoutFactory=None, otherErrorFactory=None):
         self._url: str = url
 
         # Current position of the stream
@@ -36,6 +37,10 @@ class AsyncHttpGetter:
 
         # Where the resposne currently starts
         self._responseStart = 0
+
+        self.timeoutFactory = timeoutFactory
+        self.otherErrorFactory = otherErrorFactory
+        self.timeout = timeout
 
     async def setup(self):
         if not self._position == 0:
@@ -89,7 +94,20 @@ class AsyncHttpGetter:
             headers['range'] = "bytes=%s-%s" % (self._position, self._size - 1)
         if self._response is not None:
             await self._response.release()
-        resp = await self._session.get(self._url, headers=headers)
+        try:
+            resp = await self._session.get(self._url, headers=headers, timeout=self.timeout)
+        except TimeoutError:
+            if self.timeoutFactory is not None:
+                raise self.timeoutFactory()
+            raise
+        except ClientPayloadError:
+            if self.otherErrorFactory is not None:
+                raise self.otherErrorFactory()
+            raise
+        except ClientOSError:
+            if self.otherErrorFactory is not None:
+                raise self.otherErrorFactory()
+            raise
         resp.raise_for_status()
         if where == 0 and self._size is not None and CONTENT_LENGTH_HEADER in resp.headers and int(resp.headers[CONTENT_LENGTH_HEADER]) != self._size:
             raise LogicError(SERVER_CONTENT_LENGTH_ERROR)
@@ -111,7 +129,20 @@ class AsyncHttpGetter:
         needed = min(count, self.size() - self._position)
 
         # And then get it
-        data = await self._response.content.readexactly(needed)
+        try:
+            data = await self._response.content.readexactly(needed)
+        except TimeoutError:
+            if self.timeoutFactory is not None:
+                raise self.timeoutFactory()
+            raise
+        except ClientPayloadError:
+            if self.otherErrorFactory is not None:
+                raise self.otherErrorFactory()
+            raise
+        except ClientOSError:
+            if self.otherErrorFactory is not None:
+                raise self.otherErrorFactory()
+            raise
         ret.write(data)
         # Keep track of where we are in the stream
         self._responseStart += len(data)

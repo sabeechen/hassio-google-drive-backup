@@ -102,6 +102,7 @@ class Setting(Enum):
     PENDING_SNAPSHOT_TIMEOUT_SECONDS = "pending_snapshot_timeout_seconds"
     FAILED_SNAPSHOT_TIMEOUT_SECONDS = "failed_snapshot_timeout_seconds"
     NEW_SNAPSHOT_TIMEOUT_SECONDS = "new_snapshot_timeout_seconds"
+    DOWNLOAD_TIMEOUT_SECONDS = "download_timeout_seconds"
     DEFAULT_CHUNK_SIZE = "default_chunk_size"
     DEBUGGER_PORT = "debugger_port"
     SERVER_PROJECT_ID = "server_project_id"
@@ -205,6 +206,7 @@ _DEFAULTS = {
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "",
     Setting.DRIVE_PICKER_API_KEY: "",
     Setting.DEFAULT_CHUNK_SIZE: 1024 * 1024 * 5,
+    Setting.DOWNLOAD_TIMEOUT_SECONDS: 60,
     Setting.DEBUGGER_PORT: None,
     Setting.SERVER_PROJECT_ID: ""
 }

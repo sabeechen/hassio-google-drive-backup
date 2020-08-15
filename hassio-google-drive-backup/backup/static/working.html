@@ -1824,6 +1824,109 @@
             </div>
           </div>
         </div>
+        <div class="row default-hidden error_card supervisor_permission" id="supervisor_permission">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">Unable to Talk to the Home Assistant Supervisor</span>
+                </span>
+                <p>
+                  The addon was unable to communicate with the Supervisor because it said the addon is unauthorized.  This addon 
+                  must communicate with the supervisor to create snapshots, load configuration, etc.  Without the supervisor the 
+                  addon will not be able to do anything useful.  Typically this should never happen, and indicates that something
+                  is wrong with your Home Assistant installation.
+                  <ul class="browser-default">
+                    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
+                    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.  Sometimes the supervisor
+                      can get into a bad state and this works around it.</li>
+                    <li>Checking the Supervisor's logs ("Supervisor" > "System" > "Logs") to see if any errors might indicate what the problem is.</li>
+                    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('supervisor_connection')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card supervisor_timeout" id="supervisor_timeout">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">A Request to the Supervisor Timed Out</span>
+                </span>
+                <p>
+                  The addon was unable to communicate with the Supervisor because it timed out.  This addon 
+                  must communicate with the supervisor to create snapshots, load configuration, etc.  Without the supervisor the 
+                  addon will not be able to do anything useful. This usually resolves itself after the addon retrys, but if 
+                  you see this error stick around for a while you can try
+                  <ul class="browser-default">
+                    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
+                    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.  Sometimes the supervisor
+                      can get into a bad state and this works around it.</li>
+                    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('supervisor_timeout')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card supervisor_unexpected" id="supervisor_unexpected">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">The Supervisor Returned an Unexpected Response</span>
+                </span>
+                <p>
+                  The addon was unable to communicate with the Supervisor because it gave back an unreadable response.  
+                  This addon must communicate with the supervisor to create snapshots, load configuration, etc.  Without 
+                  the supervisor the addon will not be able to do anything useful. This usually 
+                  resolves itself after the addon retrys, but if you see this error stick around for a while you can try:
+                  <ul class="browser-default">
+                    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
+                    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.  Sometimes the supervisor
+                      can get into a bad state and this works around it.</li>
+                    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden error_card google_unexpected" id="google_unexpected">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">Google drive Returned an Unexpected Response</span>
+                </span>
+                <p>
+                  The addon was unable to communicate with Google Drive because it gave back an unreadable response.  
+                  Withotu beign able to communicate with google drive, the addon will nto be able to back up snapshots to the cloud.
+                  This usually resolves itself after the addon retrys, but if you see this error stick around for a while you can try:
+                  <ul class="browser-default">
+                    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
+                    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.</li>
+                    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden error_card log_in_to_drive" id="log_in_to_drive">
           <div class="col s12 m12 l9">
             <div class="card red darken-4">

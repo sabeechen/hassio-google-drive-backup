@@ -87,6 +87,7 @@
     "pending_snapshot_timeout_seconds": "float(0,)?",
     "failed_snapshot_timeout_seconds": "float(0,)?",
     "new_snapshot_timeout_seconds": "float(0,)?",
+    "download_timeout_seconds": "float(0,)?",
 
     "ingress_port": "int(0,)?",
     "port": "int(0,)?",

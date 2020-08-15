@@ -6,15 +6,15 @@ import re
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
-from aiohttp import ClientSession
-from aiohttp.client_exceptions import ClientResponseError
+from aiohttp import ClientSession, ClientTimeout
+from aiohttp.client_exceptions import ClientResponseError, ServerTimeoutError
 from injector import inject, singleton
 
 from ..util import AsyncHttpGetter
 from ..config import Config, Setting
 from ..exceptions import (GoogleCredentialsExpired,
                           GoogleSessionError, LogicError,
-                          ProtocolError, ensureKey, KnownTransient)
+                          ProtocolError, ensureKey, KnownTransient, GoogleTimeoutError, GoogleUnexpectedError)
 from backup.util import Backoff
 from ..time import Time
 from ..logger import getLogger
@@ -141,7 +141,13 @@ class DriveRequests():
         return await self.retryRequest("GET", URL_FILES + id + "/?" + urlencode(q), is_json=True)
 
     async def download(self, id, size):
-        ret = AsyncHttpGetter(self.config.get(Setting.DRIVE_URL) + URL_FILES + id + "/?alt=media&supportsAllDrives=true", await self._getHeaders(), self.session, size=size)
+        ret = AsyncHttpGetter(self.config.get(Setting.DRIVE_URL) + URL_FILES + id + "/?alt=media&supportsAllDrives=true",
+                              await self._getHeaders(),
+                              self.session,
+                              size=size,
+                              timeoutFactory=GoogleTimeoutError.factory,
+                              otherErrorFactory=GoogleUnexpectedError.factory,
+                              timeout=ClientTimeout(total=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
         return ret
 
     async def query(self, query):
@@ -326,3 +332,5 @@ class DriveRequests():
                 backoff.backoff(e)
                 logger.error("{0}: we'll retry in {1} seconds".format(e.message(), backoff.peek()))
                 await self.time.sleepAsync(backoff.peek())
+            except ServerTimeoutError:
+                raise GoogleTimeoutError()

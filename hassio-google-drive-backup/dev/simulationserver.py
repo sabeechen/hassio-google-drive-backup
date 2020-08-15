@@ -87,6 +87,9 @@ class SimulationServer():
         self.waitOnChunk = 0
         self.custom_drive_client_id = self.generateId(5)
         self.custom_drive_client_secret = self.generateId(5)
+        self.supervisor_error = None
+        self.drive_sleep = 0
+        self.supervisor_sleep = 0
 
     def wasUrlRequested(self, pattern):
         for url in self.urls:
@@ -227,7 +230,9 @@ class SimulationServer():
                 else:
                     error['attempts'] = error['attempts'] - 1
 
-    def _checkDriveHeaders(self, request: Request):
+    async def _checkDriveHeaders(self, request: Request):
+        if self.drive_sleep > 0:
+            await asyncio.sleep(self.drive_sleep)
         self._checkDriveError(request)
         if request.headers.get("Authorization", "") != "Bearer " + self.getSetting('drive_auth_token'):
             raise HTTPUnauthorized()
@@ -382,7 +387,7 @@ class SimulationServer():
 
     async def driveGetItem(self, request: Request):
         id = request.match_info.get('id')
-        self._checkDriveHeaders(request)
+        await self._checkDriveHeaders(request)
         if id not in self.items:
             raise HTTPNotFound
         if id in self.lostPermission:
@@ -403,7 +408,7 @@ class SimulationServer():
 
     async def driveUpdate(self, request: Request):
         id = request.match_info.get('id')
-        self._checkDriveHeaders(request)
+        await self._checkDriveHeaders(request)
         if id not in self.items:
             return HTTPNotFound
         update = await request.json()
@@ -416,14 +421,14 @@ class SimulationServer():
 
     async def driveDelete(self, request: Request):
         id = request.match_info.get('id')
-        self._checkDriveHeaders(request)
+        await self._checkDriveHeaders(request)
         if id not in self.items:
             raise HTTPNotFound
         del self.items[id]
         return Response()
 
     async def driveQuery(self, request: Request):
-        self._checkDriveHeaders(request)
+        await self._checkDriveHeaders(request)
         query: str = request.query.get("q", "")
         fields = self.parseFields(request.query.get('fields', 'id'))
         if mimeTypeQueryPattern.match(query):
@@ -456,7 +461,7 @@ class SimulationServer():
             raise HTTPBadRequest
 
     async def driveCreate(self, request: Request):
-        self._checkDriveHeaders(request)
+        await self._checkDriveHeaders(request)
         id = self.generateId(30)
         item = self.formatItem(await request.json(), id)
         self.items[id] = item
@@ -472,7 +477,7 @@ class SimulationServer():
                 }
             }, status=400)
         logging.getLogger().info("Drive start upload request")
-        self._checkDriveHeaders(request)
+        await self._checkDriveHeaders(request)
         if request.query.get('uploadType') != 'resumable':
             raise HTTPBadRequest()
         mimeType = request.headers.get('X-Upload-Content-Type', None)
@@ -513,7 +518,7 @@ class SimulationServer():
         id = request.match_info.get('id')
         if (self.getSetting('drive_upload_sleep') > 0):
             await self._time.sleepAsync(self.getSetting('drive_upload_sleep'))
-        self._checkDriveHeaders(request)
+        await self._checkDriveHeaders(request)
         if self.upload_info.get('id', "") != id:
             raise HTTPBadRequest()
         chunk_size = int(request.headers['Content-Length'])
@@ -574,7 +579,9 @@ class SimulationServer():
             return resp
 
     # HASSIO METHODS BELOW
-    def _verifyHassioHeader(self, request) -> bool:
+    async def _verifyHassioHeader(self, request) -> bool:
+        if self.supervisor_sleep > 0:
+            await asyncio.sleep(self.supervisor_sleep)
         if self.getSetting("hassio_error") is not None:
             raise HttpMultiException(self.getSetting("hassio_error"))
         self._verifyHeader(request, "X-HASSIO-KEY",
@@ -592,15 +599,24 @@ class SimulationServer():
     def formatDataResponse(self, data: Any) -> str:
         return json_response({'result': 'ok', 'data': data})
 
+    def checkForSupervisorError(self):
+        if self.supervisor_error is not None:
+            return Response(status=self.supervisor_error)
+        return None
+
     def formatErrorResponse(self, error: str) -> str:
         return json_response({'result': error})
 
     async def hassioSnapshots(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         return self.formatDataResponse({'snapshots': list(self.snapshots.values())})
 
     async def hassioSupervisorInfo(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         return self.formatDataResponse(
             {
                 "addons": list(all_addons).copy()
@@ -608,15 +624,21 @@ class SimulationServer():
         )
 
     async def supervisorLogs(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         return Response(body="Supervisor Log line 1\nSupervisor Log Line 2")
 
     async def coreLogs(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         return Response(body="Core Log line 1\nCore Log Line 2")
 
     async def haInfo(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         return self.formatDataResponse(
             {
                 "version": self.getSetting('ha_version'),
@@ -635,6 +657,8 @@ class SimulationServer():
         )
 
     async def hassioNewFullSnapshot(self, request: Request):
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
         if (self.block_snapshots or self.snapshot_in_progress) and not self.getSetting('always_hard_lock'):
             raise HTTPBadRequest()
         input_json = {}
@@ -645,7 +669,7 @@ class SimulationServer():
         try:
             await self._snapshot_lock.acquire()
             self.snapshot_in_progress = True
-            self._verifyHassioHeader(request)
+            await self._verifyHassioHeader(request)
             error = self.getSetting("hassio_snapshot_error")
             if error is not None:
                 raise HttpMultiException(error)
@@ -671,13 +695,15 @@ class SimulationServer():
             self._snapshot_lock.release()
 
     async def hassioNewPartialSnapshot(self, request: Request):
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
         if (self.block_snapshots or self.snapshot_in_progress) and not self.getSetting('always_hard_lock'):
             raise HTTPBadRequest()
         input_json = await request.json()
         try:
             await self._snapshot_lock.acquire()
             self.snapshot_in_progress = True
-            self._verifyHassioHeader(request)
+            await self._verifyHassioHeader(request)
             seconds = int(request.query.get(
                 'seconds', self.getSetting('snapshot_wait_time')))
             date = self._time.now()
@@ -706,7 +732,9 @@ class SimulationServer():
             self._snapshot_lock.release()
 
     async def uploadNewSnapshot(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         try:
             received_bytes = await self.readAll(request)
             info = parseSnapshotInfo(BytesIO(received_bytes))
@@ -718,8 +746,10 @@ class SimulationServer():
             return self.formatErrorResponse("Bad snapshot")
 
     async def hassioDelete(self, request: Request):
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
         slug = request.match_info.get('slug')
-        self._verifyHassioHeader(request)
+        await self._verifyHassioHeader(request)
         if slug not in self.snapshots:
             raise HTTPNotFound()
         del self.snapshots[slug]
@@ -727,21 +757,27 @@ class SimulationServer():
         return self.formatDataResponse("deleted")
 
     async def hassioSnapshotInfo(self, request: Request):
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
         slug = request.match_info.get('slug')
-        self._verifyHassioHeader(request)
+        await self._verifyHassioHeader(request)
         if slug not in self.snapshots:
             raise HTTPNotFound()
         return self.formatDataResponse(self.snapshots[slug])
 
     async def hassioSnapshotDownload(self, request: Request):
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
         slug = request.match_info.get('slug')
-        self._verifyHassioHeader(request)
+        await self._verifyHassioHeader(request)
         if slug not in self.snapshot_data:
             raise HTTPNotFound()
         return self.serve_bytes(request, self.snapshot_data[slug])
 
     async def hassioSelfInfo(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         return self.formatDataResponse({
             "webui": self.getSetting('web_ui'),
             'ingress_url': self.getSetting('ingress_url'),
@@ -750,7 +786,9 @@ class SimulationServer():
         })
 
     async def hassioInfo(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         return self.formatDataResponse({
             "supervisor": self.getSetting('supervisor'),
             "homeassistant": self.getSetting('homeassistant'),
@@ -763,7 +801,9 @@ class SimulationServer():
         })
 
     async def hassioAuthenticate(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         input_json = await request.json()
         if input_json.get("username") != self._username or input_json.get("password") != self._password:
             raise HTTPBadRequest()
@@ -797,7 +837,9 @@ class SimulationServer():
         return Response()
 
     async def hassioUpdateOptions(self, request: Request):
-        self._verifyHassioHeader(request)
+        if self.checkForSupervisorError() is not None:
+            return self.checkForSupervisorError()
+        await self._verifyHassioHeader(request)
         self._options = (await request.json())['options'].copy()
         return self.formatDataResponse({})
 

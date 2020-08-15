@@ -6,7 +6,7 @@ from aiohttp.client_exceptions import ClientResponseError
 from backup.config import Config, Setting, CreateOptions
 from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
-                               SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError)
+                               SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError)
 from backup.util import GlobalInfo
 from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password
 from backup.model import DummySnapshot
@@ -21,7 +21,7 @@ async def test_sync_empty(ha) -> None:
 
 
 @pytest.mark.asyncio
-async def test_CRUD(ha, time, server) -> None:
+async def test_CRUD(ha: HaSource, time, server) -> None:
     server._options.update({"new_snapshot_timeout_seconds": 100})
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
 
@@ -488,3 +488,33 @@ async def test_supervisor_error(time, ha: HaSource, server: SimulationServer, gl
     await server.stop()
     with pytest.raises(SupervisorConnectionError):
         await ha.init()
+
+
+
+@pytest.mark.asyncio
+async def test_supervisor_permission_error(time, ha: HaSource, server: SimulationServer, global_info: GlobalInfo):
+    server.supervisor_error = 403
+    with pytest.raises(SupervisorPermissionError):
+        await ha.init()
+
+    server.supervisor_error = 404
+    with pytest.raises(ClientResponseError):
+        await ha.init()
+
+
+@pytest.mark.asyncio
+async def test_download_timeout(ha: HaSource, time, server: SimulationServer, config: Config) -> None:
+    server._options.update({"new_snapshot_timeout_seconds": 100})
+    snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
+    from_ha = await ha.harequests.snapshot(snapshot.slug())
+    full = DummySnapshot(from_ha.name(), from_ha.date(),
+                         from_ha.size(), from_ha.slug(), "dummy")
+    full.addSource(snapshot)
+
+    server.supervisor_sleep = 10
+    config.override(Setting.DOWNLOAD_TIMEOUT_SECONDS, 1)
+    direct_download = await ha.harequests.download(snapshot.slug())
+
+    with pytest.raises(SupervisorTimeoutError):
+        await direct_download.setup()
+        await direct_download.read(1)

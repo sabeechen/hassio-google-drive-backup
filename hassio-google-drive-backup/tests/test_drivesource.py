@@ -16,7 +16,7 @@ from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingErro
                                DriveQuotaExceeded, ExistingBackupFolderError,
                                GoogleCantConnect, GoogleCredentialsExpired,
                                GoogleDnsFailure, GoogleInternalError,
-                               GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError)
+                               GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError, GoogleUnexpectedError)
 from backup.creds import Creds
 from backup.model import DriveSnapshot, DummySnapshot
 from .faketime import FakeTime
@@ -168,7 +168,7 @@ async def test_out_of_space(snapshot_helper, drive: DriveSource, server: Simulat
 async def test_drive_dns_resolution_error(drive: DriveSource, config: Config, time):
     config.override(Setting.DRIVE_URL,
                     "http://fsdfsdasdasdf.saasdsdfsdfsd.com:2567")
-    with pytest.raises(GoogleDnsFailure):
+    with pytest.raises(GoogleCantConnect):
         await drive.get()
     assert time.sleeps == []
 
@@ -763,3 +763,18 @@ async def test_ignore_trashed_snapshots(time, drive: DriveSource, config: Config
 
     assert len(await drive.get()) == 0
 
+
+@pytest.mark.asyncio
+async def test_download_timeout(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper):
+    config.override(Setting.DOWNLOAD_TIMEOUT_SECONDS, 1)
+    from_snapshot, data = await snapshot_helper.createFile()
+    snapshot = await drive.save(from_snapshot, data)
+
+    # Verify the uploaded bytes are identical
+    from_snapshot.addSource(snapshot)
+    server.drive_sleep = 100
+    download = await drive.read(from_snapshot)
+    data.position(0)
+    
+    with pytest.raises(GoogleTimeoutError):
+        await compareStreams(data, download)

@@ -4,11 +4,12 @@ from typing import Any, Dict, List
 from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError
 from injector import inject
+from asyncio.exceptions import TimeoutError
 
 from ..util import AsyncHttpGetter
 from ..config import Config, Setting
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
-from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError
+from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError
 from ..model import HASnapshot, Snapshot
 from ..logger import getLogger
 
@@ -25,6 +26,12 @@ def supervisor_call(func):
             return await func(*args, **kwargs)
         except ClientConnectorError:
             raise SupervisorConnectionError()
+        except TimeoutError:
+            raise SupervisorConnectionError()
+        except ClientResponseError as e:
+            if e.code == 403:
+                raise SupervisorPermissionError()
+            raise
     return wrap_and_call
 
 
@@ -126,7 +133,12 @@ class HaRequests():
     async def download(self, slug) -> AsyncHttpGetter:
         url = "{0}snapshots/{1}/download".format(
             self.config.get(Setting.HASSIO_URL), slug)
-        ret = AsyncHttpGetter(url, self._getHassioHeaders(), self.session)
+        ret = AsyncHttpGetter(url, 
+                              self._getHassioHeaders(), 
+                              self.session,
+                              timeoutFactory=SupervisorTimeoutError.factory,
+                              otherErrorFactory=SupervisorUnexpectedError.factory,
+                              timeout=ClientTimeout(total=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
         return ret
 
     @supervisor_call

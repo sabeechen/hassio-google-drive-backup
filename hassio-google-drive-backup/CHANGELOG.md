@@ -1,4 +1,12 @@
-## [0.101.0 2020-08-13]
+## [0.101.1 2020-08-15]
+### BREAKING CHANGE
+- The state of the binary_sensor.snapshots_stale sensor has been changed form publishing "true/false" to "on/off".  This is regratable, because automations you may have written for this sensor may change.  Unfortunately, this change must be made to comply with Home Assistant's datamodel.  I appologize for any confusion this causes.
+
+### Fixes
+- A bug in writing files that prevents the selected drive folder from getting saved.
+- Added error dialogs for a bunch of new error conditions.
+
+## [0.101.0 2020-08-14]
 This is a very large update.  The addon has been mostly rewritten to support some additional features in the present and accomodate some better planned features in the future.  Hopefully this is the last time I'll need to rewrite the whole damn thing!
 Because there is a lot of new code, please don't hesitate to notify me if you see something working incorrectly.  I do pretty extensive automated and manual testing, but I can't catch everything.  You can report bugs through the new "Action" -> "Report a bug" to level menu item.
 ### Added

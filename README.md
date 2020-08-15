@@ -179,8 +179,8 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
       trigger:
       - platform: state
         entity_id: binary_sensor.snapshots_stale
-        from: 'False'
-        to: 'True'
+        from: 'off'
+        to: 'on'
       condition: []
       action:
       - data:

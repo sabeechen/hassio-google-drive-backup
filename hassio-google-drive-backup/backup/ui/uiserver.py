@@ -466,8 +466,8 @@ class UiServer(Trigger, Startable):
         return web.json_response({'message': "Snapshot uploaded to Home Assistant"})
 
     async def redirect(self, url):
-        async with aiofiles.open(self.filePath("redirect.html"), mode='r') as f:
-            contents = (await f.read(1024 * 1024 * 2)).replace("{url}", url)
+        with open(self.filePath("redirect.html"), mode='r') as f:
+            contents = f.read(1024 * 1024 * 2).replace("{url}", url)
         return web.Response(body=contents, content_type="text/html")
 
     async def download(self, request: Request):

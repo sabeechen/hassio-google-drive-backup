@@ -77,8 +77,8 @@ class FolderFinder():
         if not isinstance(folder, str):
             folder = folder.get('id')
         logger.info("Saving snapshot folder: " + folder)
-        async with aiofile.AIOFile(self.config.get(Setting.FOLDER_FILE_PATH), 'w') as folder_file:
-            await folder_file.write(folder)
+        with open(self.config.get(Setting.FOLDER_FILE_PATH), 'w') as folder_file:
+            folder_file.write(folder)
         self._folderId = folder
         self._folder_queryied_last = self.time.now()
         self._existing_folder = None

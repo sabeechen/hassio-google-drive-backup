@@ -1,6 +1,6 @@
 ## [0.101.1 2020-08-15]
 ### BREAKING CHANGE
-- The state of the binary_sensor.snapshots_stale sensor has been changed form publishing "true/false" to "on/off".  This is regratable, because automations you may have written for this sensor may change.  Unfortunately, this change must be made to comply with Home Assistant's datamodel.  I appologize for any confusion this causes.
+- The state of the binary_sensor.snapshots_stale sensor has been changed from publishing "true/false" to "on/off".  This is regratable, because automations you may have written for this sensor to malfunction with the new values.  Unfortunately, this change must be made to comply with Home Assistant's datamodel.  I appologize for any confusion this causes.
 
 ### Fixes
 - A bug in writing files that prevents the selected drive folder from getting saved.

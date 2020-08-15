@@ -50,7 +50,7 @@ class HaUpdater(Worker):
     async def update(self):
         try:
             if self._config.get(Setting.ENABLE_SNAPSHOT_STALE_SENSOR):
-                await self._requests.updateSnapshotStaleSensor(self._stale())
+                await self._requests.updateSnapshotStaleSensor('on' if self._stale() else  'off')
             if self._config.get(Setting.ENABLE_SNAPSHOT_STATE_SENSOR):
                 await self._maybeSendSnapshotUpdate()
             if self._config.get(Setting.NOTIFY_FOR_STALE_SNAPSHOTS):

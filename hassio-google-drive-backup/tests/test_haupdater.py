@@ -31,7 +31,7 @@ async def test_init(updater: HaUpdater, global_info, server):
     assert not updater._stale()
     assert updater._state() == "waiting"
     verifyEntity(server, "binary_sensor.snapshots_stale",
-                 False, STALE_ATTRIBUTES)
+                 "off", STALE_ATTRIBUTES)
     verifyEntity(server, "sensor.snapshot_backup", "waiting", {
         'friendly_name': 'Snapshot State',
         'last_snapshot': 'Never',
@@ -112,7 +112,7 @@ async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime):
     assert not updater._stale()
     assert updater._state() == "waiting"
     verifyEntity(server, "binary_sensor.snapshots_stale",
-                 False, STALE_ATTRIBUTES)
+                 "off", STALE_ATTRIBUTES)
     verifyEntity(server, "sensor.snapshot_backup", "waiting", {
         'friendly_name': 'Snapshot State',
         'last_snapshot': 'Never',
@@ -132,7 +132,7 @@ async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime,
     assert not updater._stale()
     assert updater._state() == "backed_up"
     verifyEntity(server, "binary_sensor.snapshots_stale",
-                 False, STALE_ATTRIBUTES)
+                 "off", STALE_ATTRIBUTES)
     date = '1985-12-06T05:00:00+00:00'
     verifyEntity(server, "sensor.snapshot_backup", "backed_up", {
         'friendly_name': 'Snapshot State',
@@ -158,7 +158,7 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     assert not updater._stale()
     assert updater._state() == "waiting"
     verifyEntity(server, "binary_sensor.snapshots_stale",
-                 False, STALE_ATTRIBUTES)
+                 "off", STALE_ATTRIBUTES)
     verifyEntity(server, "sensor.snapshot_backup", "waiting", {
         'friendly_name': 'Snapshot State',
         'last_snapshot': 'Never',

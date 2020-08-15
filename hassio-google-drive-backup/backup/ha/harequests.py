@@ -138,7 +138,8 @@ class HaRequests():
                               self.session,
                               timeoutFactory=SupervisorTimeoutError.factory,
                               otherErrorFactory=SupervisorUnexpectedError.factory,
-                              timeout=ClientTimeout(total=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
+                              timeout=ClientTimeout(sock_connect=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS),
+                                                    sock_read=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
         return ret
 
     @supervisor_call

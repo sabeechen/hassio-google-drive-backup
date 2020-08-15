@@ -146,8 +146,7 @@ class DriveRequests():
                               self.session,
                               size=size,
                               timeoutFactory=GoogleTimeoutError.factory,
-                              otherErrorFactory=GoogleUnexpectedError.factory,
-                              timeout=ClientTimeout(total=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
+                              otherErrorFactory=GoogleUnexpectedError.factory)
         return ret
 
     async def query(self, query):

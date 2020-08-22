@@ -133,8 +133,8 @@ class HaRequests():
     async def download(self, slug) -> AsyncHttpGetter:
         url = "{0}snapshots/{1}/download".format(
             self.config.get(Setting.HASSIO_URL), slug)
-        ret = AsyncHttpGetter(url, 
-                              self._getHassioHeaders(), 
+        ret = AsyncHttpGetter(url,
+                              self._getHassioHeaders(),
                               self.session,
                               timeoutFactory=SupervisorTimeoutError.factory,
                               otherErrorFactory=SupervisorUnexpectedError.factory,

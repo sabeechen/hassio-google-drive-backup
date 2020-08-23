@@ -10,6 +10,7 @@
     "secrets_file_path": "hassio-google-drive-backup/dev/data/secrets.yaml",
     "credentials_file_path": "hassio-google-drive-backup/dev/data/credentials.dat",
     "folder_file_path": "hassio-google-drive-backup/dev/data/folder.dat",
+    "id_file_path": "hassio-google-drive-backup/dev/data/id.json",
     "authenticate_url": "http://localhost:56153/drive/authorize",
     "drive_refresh_url": "http://localhost:56153/oauth2/v4/token",
     "refresh_url": "http://localhost:56153/drive/refresh",
@@ -17,6 +18,7 @@
     "drive_authorize_url": "http://localhost:56153/o/oauth2/v2/auth",
     "drive_token_url": "http://localhost:56153/token",
     "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
+    "log_level": "TRACE",
     "ingress_port": 56152,
     "port": 56151
 }

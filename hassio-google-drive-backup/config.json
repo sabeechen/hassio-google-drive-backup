@@ -96,6 +96,7 @@
     "config_file_path": "str?",
     "retained_file_path": "str?",
     "secrets_file_path": "str?",
+    "id_file_path": "str?",
     "backup_directory_path": "str?",
     "credentials_file_path": "str?",
     "ingress_token_file_path": "str?",
@@ -104,7 +105,9 @@
     "drive_picker_api_key": "str?",
     "default_chunk_size": "int(1,)?",
     "debugger_port": "int(5000,)?",
-    "server_project_id": "str?"
+    "server_project_id": "str?",
+    "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)",
+    "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)"
   },
   "ports": {
     "1627/tcp": 1627

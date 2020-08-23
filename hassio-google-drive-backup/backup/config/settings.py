@@ -7,6 +7,7 @@ from .floatvalidator import FloatValidator
 from .intvalidator import IntValidator
 from .regexvalidator import RegexValidator
 from .stringvalidator import StringValidator
+from .listvalidator import ListValidator
 from .durationassecondsvalidator import DurationAsSecondsValidator
 from ..logger import getLogger
 
@@ -81,6 +82,7 @@ class Setting(Enum):
     BACKUP_DIRECTORY_PATH = "backup_directory_path"
     INGRESS_TOKEN_FILE_PATH = "ingress_token_file_path"
     CONFIG_FILE_PATH = "config_file_path"
+    ID_FILE_PATH = "id_file_path"
 
     # endpoints
     HASSIO_URL = "hassio_url"
@@ -106,6 +108,8 @@ class Setting(Enum):
     DEFAULT_CHUNK_SIZE = "default_chunk_size"
     DEBUGGER_PORT = "debugger_port"
     SERVER_PROJECT_ID = "server_project_id"
+    LOG_LEVEL = "log_level"
+    CONSOLE_LOG_LEVEL = "console_log_level"
 
     def default(self):
         return _DEFAULTS[self]
@@ -195,6 +199,7 @@ _DEFAULTS = {
     Setting.SECRETS_FILE_PATH: "/config/secrets.yaml",
     Setting.INGRESS_TOKEN_FILE_PATH: "/data/ingress.dat",
     Setting.CONFIG_FILE_PATH: "/data/options.json",
+    Setting.ID_FILE_PATH: "/data/id.json",
 
     # Various timeouts and intervals
     Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,
@@ -208,7 +213,9 @@ _DEFAULTS = {
     Setting.DEFAULT_CHUNK_SIZE: 1024 * 1024 * 5,
     Setting.DOWNLOAD_TIMEOUT_SECONDS: 60,
     Setting.DEBUGGER_PORT: None,
-    Setting.SERVER_PROJECT_ID: ""
+    Setting.SERVER_PROJECT_ID: "",
+    Setting.LOG_LEVEL: 'DEBUG',
+    Setting.CONSOLE_LOG_LEVEL: 'INFO'
 }
 
 PRIVATE = [
@@ -259,6 +266,8 @@ def getValidator(name, schema):
         return StringValidator(name)
     elif schema.startswith("match("):
         return RegexValidator(name, schema[6:-1])
+    elif schema.startswith("list("):
+        return ListValidator(name, schema[5:-1].split("|"))
     else:
         raise Exception("Invalid schema: " + schema)
 

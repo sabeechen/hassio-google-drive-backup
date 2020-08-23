@@ -7,6 +7,9 @@ from os.path import join, abspath
 HISTORY_SIZE = 1000
 PATH_BASE = abspath(join(__file__, "..", ".."))
 
+logging.addLevelName(5, "TRACE")
+logging.TRACE = 5
+
 
 class HistoryHandler(logging.Handler):
     def __init__(self):
@@ -65,6 +68,7 @@ formatter_color = ColoredFormatter(
         "WARNING": "yellow",
         "ERROR": "red",
         "CRITICAL": "red",
+        "TRACE": "white",
     },
 )
 CONSOLE.setFormatter(formatter_color)
@@ -77,9 +81,12 @@ HISTORY.setFormatter(Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s
 class StandardLogger(logging.Logger):
     def __init__(self, name):
         super().__init__(name)
-        self.setLevel(logging.DEBUG)
+        self.setLevel(logging.TRACE)
         self.addHandler(CONSOLE)
         self.addHandler(HISTORY)
+
+    def trace(self, msg, *args, **kwargs):
+        self.log(logging.TRACE, msg, *args, **kwargs)
 
     def printException(self, ex: Exception):
         self.error(self.formatException(ex))
@@ -157,6 +164,10 @@ class StandardLogger(logging.Logger):
         result.extend(self._compressFrames(buffer))
         return is_addon, result
 
+    def overrideLevel(self, console, history):
+        CONSOLE.setLevel(console)
+        HISTORY.setLevel(history)
+
     def _compressFrames(self, buffer):
         if len(buffer) > 1:
             yield buffer[0]
@@ -184,3 +195,22 @@ def getLast() -> LogRecord:
 
 def reset() -> None:
     return HISTORY.reset()
+
+
+class TraceLogger(StandardLogger):
+    def __init__(self, name):
+        super().__init__(name)
+        self.setLevel(logging.TRACE)
+
+    def log(self, lvl, msg, *args, **kwargs):
+        super().log(logging.TRACE, msg, *args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        super().log(logging.TRACE, *args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        super().log(logging.TRACE, *args, **kwargs)
+
+    def warn(self, *args, **kwargs):
+        super().log(logging.TRACE, *args, **kwargs)
+

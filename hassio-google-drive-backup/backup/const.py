@@ -43,7 +43,11 @@ If you have anything else that could help explain what happened, click "Markdown
  Addon version: `{version}`
  Home Assistant Version: `{ha_version}`
  Supervisor Version: `{super_version}`
+ Supervisor Channel: `{supervisor_channel}`
+ Hassos Version: `{hassos_version}`
+ Docker Version: `{docker_version}`
  Architecture: `{arch}`
+ Machine: `{machine}`
  Date: `{time}`
  Timezone: `{timezone}`
  Failure Time: `{failure_time}`

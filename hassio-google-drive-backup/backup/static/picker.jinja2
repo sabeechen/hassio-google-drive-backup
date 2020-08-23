@@ -55,25 +55,26 @@
     <div class="container">
       <div class="section">
       <div class="row" id="hello_card">
-								                  <div class="col s12 m9">
-								                      <div class="card">
-								                          <div class="card-content">
-								                              <span class="card-title">Opening folder picker...</span>
-								                              <p>A window should be opening now asking you to log into your Google account and then to select a folder from your Google Drive.
-								                              <ul class="browser-default">
-								                                <li>If not, your popup blocker probably hates this page.  Click the button below to open the dialog.</li>
-								                                <li>After you select a folder you'll be redirected back to the addon.</li>
-								                                <li>The folder you select is where the addon will store snapshots from now on.  This should be what you want.</li>
-								                                <li>If you'd like to know why this page has to be hosted on an external domain, <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a>.</li>
-								                              </ul>
-								                              </p>
-								                              <div class="card-action white-text">
-								                                  <a target="_blank" class="waves-effect waves-light btn" onclick="loadPicker();">Choose Folder</a>
-								                              </div>
-								                          </div>
-								                      </div>
-								                  </div>
-								              </div>
+          <div class="col s12 m9">
+              <div class="card">
+                  <div class="card-content">
+                      <span class="card-title">Opening folder picker...</span>
+                      <p>A window should be opening now asking you to log into your Google account and then to select a folder from your Google Drive.
+                      <ul class="browser-default">
+                        <li>If not, your popup blocker probably hates this page.  Click the button below to open the dialog.</li>
+                        <li>After you select a folder you'll be redirected back to the addon.</li>
+                        <li>If the folder you want to use doesn't exist yet, navigate to <a href="https://drive.google.com" target="_blank">Google Drive</a> and create it there first.  The folder picker doesn't let you create folders.</li>
+                        <li>The folder you select is where the addon will store snapshots from now on.  This should be what you want.</li>
+                        <li>If you'd like to know why this page has to be hosted on an external domain, <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a>.</li>
+                      </ul>
+                      </p>
+                      <div class="card-action white-text">
+                          <a target="_blank" class="waves-effect waves-light btn" onclick="loadPicker();">Choose Folder</a>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
     </div>
     </div>
   </main>

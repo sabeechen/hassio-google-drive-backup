@@ -79,3 +79,21 @@ class Time(object):
         if time is None:
             time = self.now()
         return time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class AcceleratedTime(Time):
+    def __init__(self, dialation=1.0):
+        super().__init__()
+        self.start = datetime.now(tzutc())
+        self.dialation = dialation
+
+    def now(self):
+        return self.start + relativedelta(seconds=(datetime.now(tzutc()) - self.start).total_seconds() * self.dialation)
+
+    def nowLocal(self) -> datetime:
+        return self.local(self.now())
+
+    async def sleepAsync(self, seconds: float) -> None:
+        await asyncio.sleep(seconds / self.dialation)
+
+

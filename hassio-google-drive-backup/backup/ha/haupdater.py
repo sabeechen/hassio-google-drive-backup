@@ -4,7 +4,7 @@ from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
 from ..model import Coordinator, Snapshot
-from ..config import Config, Setting, Startable
+from ..config import Config, Setting
 from ..util import GlobalInfo, Backoff, Estimator
 from .harequests import HaRequests
 from ..time import Time
@@ -50,7 +50,7 @@ class HaUpdater(Worker):
     async def update(self):
         try:
             if self._config.get(Setting.ENABLE_SNAPSHOT_STALE_SENSOR):
-                await self._requests.updateSnapshotStaleSensor('on' if self._stale() else  'off')
+                await self._requests.updateSnapshotStaleSensor('on' if self._stale() else 'off')
             if self._config.get(Setting.ENABLE_SNAPSHOT_STATE_SENSOR):
                 await self._maybeSendSnapshotUpdate()
             if self._config.get(Setting.NOTIFY_FOR_STALE_SNAPSHOTS):

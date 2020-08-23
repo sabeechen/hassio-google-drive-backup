@@ -1,6 +1,6 @@
 from aiohttp import ClientSession, ContentTypeError, ClientConnectorError, ClientTimeout
-from aiohttp.client_exceptions import ServerTimeoutError
-from backup.exceptions import GoogleInternalError, GoogleRateLimitError, GoogleCredentialsExpired, CredRefreshGoogleError, DriveQuotaExceeded, GoogleDrivePermissionDenied, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError
+from aiohttp.client_exceptions import ServerTimeoutError, ServerDisconnectedError, ClientOSError
+from backup.exceptions import GoogleUnexpectedError, GoogleInternalError, GoogleRateLimitError, GoogleCredentialsExpired, CredRefreshGoogleError, DriveQuotaExceeded, GoogleDrivePermissionDenied, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError
 from backup.util import Resolver
 from backup.logger import getLogger
 from backup.config import Config, Setting
@@ -43,7 +43,7 @@ class DriveRequester():
                 "Ran into trouble reaching Google Drive's servers.  We'll use alternate DNS servers on the next attempt.")
             self.resolver.toggle()
             if "Cannot connect to host" in str(e) or "Connection reset by peer" in str(e):
-                raise GoogleCantConnect() 
+                raise GoogleCantConnect()
             if e.os_error.errno == -2:
                 # -2 means dns lookup failed.
                 raise GoogleDnsFailure()
@@ -57,8 +57,14 @@ class DriveRequester():
                 # Wish there was a better way to identify this exception
                 raise GoogleDnsFailure()
             raise
+        except ClientOSError as e:
+            if e.errno == 1:
+                raise GoogleUnexpectedError()
+            raise
         except ServerTimeoutError:
             raise GoogleTimeoutError()
+        except ServerDisconnectedError:
+            raise GoogleUnexpectedError()
         except DNSException:
             logger.debug(
                 "Ran into trouble resolving Google Drive's servers.  We'll use normal DNS servers on the next attempt.")

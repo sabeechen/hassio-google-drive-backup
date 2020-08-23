@@ -584,8 +584,7 @@ class SimulationServer():
             await asyncio.sleep(self.supervisor_sleep)
         if self.getSetting("hassio_error") is not None:
             raise HttpMultiException(self.getSetting("hassio_error"))
-        self._verifyHeader(request, "X-HASSIO-KEY",
-                           self.getSetting('ha_header'))
+        self._verifyHeader(request, "Authorization", "Bearer " + self.getSetting('ha_header'))
 
     def _verifyHaHeader(self, request) -> bool:
         if self._ha_error is not None:

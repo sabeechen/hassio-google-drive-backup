@@ -180,7 +180,7 @@ class HaRequests():
 
     def _getHassioHeaders(self):
         return {
-            "X-HASSIO-KEY": self._getToken(),
+            'Authorization': 'Bearer ' + self._getToken(),
             'Client-Identifier': self.config.clientIdentifier()
         }
 

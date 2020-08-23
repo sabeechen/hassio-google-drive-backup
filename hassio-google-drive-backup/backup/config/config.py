@@ -65,7 +65,6 @@ class Config():
         for key in overrides.keys():
             config.override(key, overrides[key])
         return config
-
     
     @classmethod
     def withFileOverrides(cls, override_path):
@@ -93,7 +92,7 @@ class Config():
         else:
             self.config = data
         self._subscriptions = []
-        self._clientIdentifier = uuid.uuid4()
+        self._clientIdentifier = None
         self.retained = self._loadRetained()
         self._gen_config_cache = self.getGenerationalConfig()
 
@@ -171,7 +170,18 @@ class Config():
         return bool(self.config['ignore_ipv6_addresses'])
 
     def clientIdentifier(self) -> str:
-        return str(self._clientIdentifier)
+        if self._clientIdentifier is None:
+            try:
+                if os.path.exists(self.get(Setting.ID_FILE_PATH)):
+                    with open(self.get(Setting.ID_FILE_PATH)) as f:
+                        self._clientIdentifier = json.load(f)['id']
+                else:
+                    self._clientIdentifier = str(uuid.uuid4())
+                    with open(self.get(Setting.ID_FILE_PATH), "w") as f:
+                        json.dump({'id': self._clientIdentifier}, f)
+            except:
+                self._clientIdentifier = str(uuid.uuid4())
+        return self._clientIdentifier
 
     def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
         days = self.get(Setting.GENERATIONAL_DAYS)

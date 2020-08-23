@@ -1,6 +1,7 @@
 import asyncio
 import ssl
 import json
+import logging
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
@@ -20,7 +21,7 @@ from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
 from backup.ha import Password
 from backup.time import Time
 from backup.worker import Trigger
-from backup.logger import getLogger, getHistory
+from backup.logger import getLogger, getHistory, TraceLogger
 from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
 from backup.debugworker import DebugWorker
 from backup.drive import FolderFinder
@@ -40,7 +41,6 @@ class UiServer(Trigger, Startable):
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
                  session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker, folder_finder: FolderFinder):
         super().__init__()
-
         # Currently running server tasks
         self.runners = []
         self.exchanger_builder = exchanger_builder
@@ -577,7 +577,8 @@ class UiServer(Trigger, Startable):
         await self.run()
 
     async def _start_site(self, app, port, ssl_context=None):
-        runner = web.AppRunner(app)
+        aiohttp_logger = TraceLogger("aiohttp.access")
+        runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger, access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
         self.runners.append(runner)
         await runner.setup()
         # maybe host should be 0.0.0.0
@@ -603,10 +604,15 @@ class UiServer(Trigger, Startable):
         await self.stop()
 
     @web.middleware
-    async def error_middleware(self, request, handler):
+    async def error_middleware(self, request: Request, handler):
         try:
-            return await handler(request)
+            logger.trace("Serving %s %s to %s", request.method, request.url, request.remote)
+            handled = await handler(request)
+            logger.trace("Completed %s %s", request.method, request.url)
+            return handled
         except Exception as ex:
+            logger.trace("Error serving %s %s", request.method, request.url)
+            logger.trace(logger.formatException(ex))
             if isinstance(ex, HTTPException):
                 raise
             data = self.processError(ex)

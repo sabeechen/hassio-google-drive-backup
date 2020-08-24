@@ -142,6 +142,22 @@ def test_next_time_of_day(estimator):
         1985, 12, 6, 8, 0, tzinfo=test_tz)) == datetime(1985, 12, 7, 8, 0, tzinfo=test_tz)
 
 
+def test_next_time_of_day_drift(estimator):
+    time: FakeTime = FakeTime()
+    info = GlobalInfo(time)
+    now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
+
+    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
+        Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
+    model: Model = Model(config, time, default_source,
+                         default_source, info, estimator)
+
+    assert model._nextSnapshot(
+        now=now, last_snapshot=None) == now - timedelta(minutes=1)
+    assert model._nextSnapshot(
+        now=now, last_snapshot=now - timedelta(days=1) + timedelta(minutes=1)) == now
+
+
 def test_next_time_of_day_dest_disabled(model, time, source, dest):
     dest.setEnabled(True)
     assert model._nextSnapshot(

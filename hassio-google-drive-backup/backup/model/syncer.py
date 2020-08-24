@@ -3,9 +3,10 @@ from typing import List
 from injector import inject, singleton
 
 from .coordinator import Coordinator
-from ..time import Time
-from ..worker import Worker, Trigger
-from ..logger import getLogger
+from backup.time import Time
+from backup.worker import Worker, Trigger
+from backup.logger import getLogger
+from backup.exceptions import PleaseWait
 
 logger = getLogger(__name__)
 
@@ -20,12 +21,16 @@ class Scyncer(Worker):
         self._time = time
 
     async def checkforSync(self):
-        doSync = False
-        for trigger in self.triggers:
-            if trigger.check():
-                logger.debug("Sync requested by " + str(trigger.name()))
-                doSync = True
-        if doSync:
-            while self.coord.isSyncing():
-                await self._time.sleepAsync(3)
-            await self.coord.sync()
+        try:
+            doSync = False
+            for trigger in self.triggers:
+                if trigger.check():
+                    logger.debug("Sync requested by " + str(trigger.name()))
+                    doSync = True
+            if doSync:
+                while self.coord.isSyncing():
+                    await self._time.sleepAsync(3)
+                await self.coord.sync()
+        except PleaseWait:
+            # Ignore this, since it means a sync already started (race condition)
+            pass

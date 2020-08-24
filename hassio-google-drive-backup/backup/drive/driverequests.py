@@ -197,22 +197,30 @@ class DriveRequests():
                 "Content-Length": "0",
                 "Content-Range": "bytes */{0}".format(total_size)
             }
-            initial = await self.retryRequest("PUT", self.last_attempt_location, headers=headers, patch_url=False)
-            async with initial:
-                if initial.status == 308:
-                    # We can resume the upload, check where it left off
-                    if 'Range' in initial.headers:
-                        position = int(initial.headers["Range"][len("bytes=0-"):])
-                        stream.position(position + 1)
+            try:
+                initial = await self.retryRequest("PUT", self.last_attempt_location, headers=headers, patch_url=False)
+                async with initial:
+                    if initial.status == 308:
+                        # We can resume the upload, check where it left off
+                        if 'Range' in initial.headers:
+                            position = int(initial.headers["Range"][len("bytes=0-"):])
+                            stream.position(position + 1)
+                        else:
+                            # No range header in the response means no bytes have been uploaded yet.
+                            stream.position(0)
+                        logger.debug("Resuming upload at byte {0} of {1}".format(
+                            stream.position(), total_size))
+                        location = self.last_attempt_location
                     else:
-                        # No range header in the response means no bytes have been uploaded yet.
-                        stream.position(0)
-                    logger.debug("Resuming upload at byte {0} of {1}".format(
-                        stream.position(), total_size))
-                    location = self.last_attempt_location
+                        logger.debug("Drive returned status code {0}, so we'll have to start the upload over again.".format(
+                            initial.status))
+            except ClientResponseError as e:
+                if e.status == 410:
+                    # Drive doesn't recognize the resume token, so we'll just have to start over.
+                    logger.debug("Drive upload session wasn't recognized, restarting upload form the beginning.")
+                    location = None
                 else:
-                    logger.debug("Drive returned status code {0}, so we'll have to start the upload over again.".format(
-                        initial.status))
+                    raise
 
         if location is None:
             # There is no session resume, so start a new one.

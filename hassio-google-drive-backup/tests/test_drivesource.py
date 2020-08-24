@@ -778,3 +778,25 @@ async def test_download_timeout(time, drive: DriveSource, config: Config, server
     
     with pytest.raises(GoogleTimeoutError):
         await compareStreams(data, download)
+
+
+@pytest.mark.asyncio
+async def test_resume_session_reused_on_http410(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper: SnapshotHelper):
+    from_snapshot, data = await snapshot_helper.createFile()
+
+    # Configure the upload to fail after the first upload chunk
+    server.setError(".*upload/drive/v3/files/progress.*", 1, 500)
+    with pytest.raises(GoogleInternalError):
+        await drive.save(from_snapshot, data)
+
+    # Verify a requst was made to start the upload
+    assert server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert drive.drivebackend.last_attempt_location is not None
+
+    server.urls.clear()
+    server.match_errors.clear()
+    data.position(0)
+
+    server.setError(drive.drivebackend.last_attempt_location, 0, 410)
+    await drive.save(from_snapshot, data)

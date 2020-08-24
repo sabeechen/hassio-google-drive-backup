@@ -163,7 +163,7 @@ The add-on creates a few sensors that show the status of snapshots that you coul
     type: conditional
     conditions:
       - entity: binary_sensor.snapshots_stale
-        state_not: 'False'
+        state_not: 'off'
     card:
       type: markdown
       content: >-

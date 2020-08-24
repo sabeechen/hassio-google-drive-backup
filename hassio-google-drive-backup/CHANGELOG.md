@@ -1,3 +1,16 @@
+## [0.101.2 2020-08-24]
+Note: A breaking change was made in a previous version, the binary_sensor.snapshots_stale sensor now reports its state as "on/off" instead of "true/false".  If you have automations that depend on this state, please update them.  I'll be including this notice with every changelog entry for a while.
+
+### Added
+- Error reports now cotnain the hassos, docker, and machine version.
+- Log level for the addon can be controlled with the 'log_level' and 'console_log_level' config options.
+- Added 'TRACE' level loggin for all requests, which may help with debugging some current bugs.
+
+
+### Fixes
+- The addon sometimes printed a "Please Wait" error message when nothign was wrong.
+- The addon was using a deprecated autho token to authorize itself with the sueprvisor.
+
 ## [0.101.1 2020-08-15]
 ### BREAKING CHANGE
 - The state of the binary_sensor.snapshots_stale sensor has been changed form publishing "true/false" to "on/off".  This is regratable, because automations you may have written for this sensor may change.  Unfortunately, this change must be made to comply with Home Assistant's datamodel.  I appologize for any confusion this causes.

@@ -1,6 +1,6 @@
 {
   "name": "Home Assistant Google Drive Backup",
-  "version": "0.101.1",
+  "version": "0.101.2",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically back up Home Assistant snapshots to Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
@@ -106,8 +106,8 @@
     "default_chunk_size": "int(1,)?",
     "debugger_port": "int(5000,)?",
     "server_project_id": "str?",
-    "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)",
-    "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)"
+    "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
+    "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?"
   },
   "ports": {
     "1627/tcp": 1627

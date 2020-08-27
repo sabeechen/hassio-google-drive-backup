@@ -42,7 +42,7 @@ Settings can be change easily by starting the add-on and clicking "Settings" in 
     > ```
 
 *  **days_between_snapshots** (default: 3): THow often a new snapshot should be scheduled, eg "1" for daily and "7" for weekly.
-    > #### Example: Keep 10 snapshots in Google Drive
+    > #### Example: Take a snapshot every 3 days.
     > ```json
     > "days_between_snapshots": "3"
     > ```

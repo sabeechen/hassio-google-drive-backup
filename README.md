@@ -124,7 +124,7 @@ Settings can be change easily by starting the add-on and clicking "Settings" in 
     > ```
         Note: folders and add-ons must be identified by their 'slug' name.  Its recommended to use the "Settings" dialog within the add-on web UI to configure partial snapshots since these names are esoteric and hard to find.
 *   **enable_snapshot_stale_sensor** (default: true): When false, the add-on will not publish the [binary_sensor.snapshots](#how-will-i-know-this-will-be-there-when-i-need-it) stale sensor.
-*   **enable_snapshot_state_sensor** (default: true): When false, the add-on will not publish the [sensor.snapshot_state](#how-will-i-know-this-will-be-there-when-i-need-it)  sensor.
+*   **enable_snapshot_state_sensor** (default: true): When false, the add-on will not publish the [sensor.snapshot_state] sensor.
 *   **notify_for_stale_snapshots** (default: true): When false, the add-on will send a [persistent notification](#how-will-i-know-this-will-be-there-when-i-need-it) in Home Assistant when snapshots are stale.
     > #### Example: Turn off notifications and staleness sensor
     > ```json

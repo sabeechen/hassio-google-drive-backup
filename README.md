@@ -42,7 +42,7 @@ Settings can be change easily by starting the add-on and clicking "Settings" in 
     > ```
 
 *  **days_between_snapshots** (default: 3): THow often a new snapshot should be scheduled, eg "1" for daily and "7" for weekly.
-    > #### Example: Keep 10 snapshots in Google Drive
+    > #### Example: Take a snapshot every 3 days.
     > ```json
     > "days_between_snapshots": "3"
     > ```
@@ -229,7 +229,7 @@ If you set '`"days_between_snapshots": 0`', then the add-on won't try to create 
 The config option `snapshot_name` can be changed to give snapshots a different name or with a date format of your choosing.  The default is `{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes snapshots with a name like `Full Snapshot 2019-10-31 14:00:00`.  Using the settings menu in the Web UI, you can see a preview of what a snapshot name will look like but you can also set it in the add-on's options.  Below is the list of variables you can add to modify the name to your liking.
 * `{type}`: The type of snapshot, either 'Full' or 'Partial'
 * `{year}`: Year in 4 digit format (eg 2019)
-* `{year_short}`: Year in 4 digit format (eg 19)
+* `{year_short}`: Year in 2 digit format (eg 19)
 * `{weekday}`: Long day of the week (eg Monday, ..., Sunday)
 * `{weekday_short}`: Short day of week (eg Mon, ... Sun)
 * `{month}`: 2 digit month (eg 01, ... 12)

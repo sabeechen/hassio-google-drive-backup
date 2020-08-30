@@ -1,12 +1,23 @@
-A complete and easy way to back up Home Assistant to Google Drive.
-* Create snapshots on a configurable schedule.
-* Clean up old snapshots in Home Assistant and Google Drive.
-* Recover quickly from disaster by uploading your snapshots directly from Google Drive.
-* Notifies you when something goes wrong with your snapshots.
-* Super easy installation and configuration.
-* Simple, understandable interface with clear language.
-* Privacy-centric design philosophy.
-* Comprehensive documentation.
-* *Most certainly* doesn't mine bitcoin on your home automation server.  Definitely no.
+# Home Assistant Add-on: Google Drive Backup
 
-See the [readme on GitHub](https://github.com/sabeechen/hassio-google-drive-backup) for all the details, or just install the add-on and open the Web UI.  The Web-UI explains everything you have to do.
+A complete and easy way to back up your Home Assistant snapshots to Google Drive.
+
+## About
+
+Quickly set up a backup strategy without much fuss. It doesn't require much familiarity with Home Assistant, its architecture, or Google Drive. Detailed install instructions are provided below but you can just add the repo, click install and open the Web UI. It will tell you what to do and only takes a few simple clicks.
+
+### Features
+
+- Creates snapshots on a configurable schedule.
+- Uploads snapshot to Drive, even the ones it didn't create.
+- Clean up old snapshots in Home Assistant and Google Drive, so you don't run out of space.
+- Restore from a fresh install or recover quickly from disaster by uploading your snapshots directly from Google Drive.
+- Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
+- Notifies you when something goes wrong with your snapshots.
+- Super easy installation and configuration.
+- Privacy-centric design philosophy.
+- Comprehensive documentation.
+- _Most certainly_ doesn't mine bitcoin on your home automation server. Definitely no.
+
+See the [README on GitHub](https://github.com/sabeechen/hassio-google-drive-backup) for all the details, or just install the add-on and open the Web UI.
+The Web-UI explains everything you have to do.

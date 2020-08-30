@@ -32,18 +32,10 @@
     <script type="text/javascript">
         toasted = false;
         running = false;
-        function resize() {
-            var offset = 0;
-            if (!$('#hello_card').data("closed")) {
-                offset = $("#hello_card").height();
-            }
-            $("#log_container").css("height", ($(window).height() - offset - 50) + "px");
-        }
 
         function closeHello() {
             $('#hello_card').hide();
             $('#hello_card').data("closed", true);
-            resize();
         }
 
         function refreshLogs() {
@@ -86,8 +78,6 @@
 
         $(document).ready(function () {
             $('#hello_card').data("closed", false);
-            resize();
-            $(window).resize(resize);
 
             $.get("log?format=colored",
                 function (data) {
@@ -144,39 +134,43 @@
 </head>
 
 <body>
-    <div class="wrapper">
-        <div class="row" id="hello_card">
-            <div class="col s12 m9">
-                <div class="card">
+    <div class="wrapper black" style="height: 100%; display: flex; flex-direction: column">
+        <div>
+            <div class="row">
+                <div class="col s12" style="max-width: 800px">
+                    <div id="hello_card" class="card blue-grey darken-3 white-text">
                     <div class="card-content">
                         <span class="card-title">A Message from the Developer</span>
                         <p>Thanks for taking a look at the logs! I did my best to make this work well, but if you're
                             here then maybe you've run into a problem. I'm only human after all. You can file an
                             issue on the project <a
-                                href="https://github.com/sabeechen/hassio-google-drive-backup/issues" target="_blank" rel="noreferrer">GitHub issue
+                                href="https://github.com/sabeechen/hassio-google-drive-backup/issues" target="_blank" rel="noreferrer" class="light-blue-text">GitHub issue
                                 tracker</a>. I take bugs pretty seriously and I want this add-on to work well for
-                            you. You can download a copy of these logs to attach to an issue by clicking <a
-                                href=log?format=download>here</a>.</p>
-                        <p style="margin-left: 30px;">-- Stephen &lt;3</p>
-                        <div class="card-action white-text">
-                            <a target="_blank" class="waves-effect waves-light btn" onclick="closeHello();">Dismiss</a>
-                        </div>
+                            you. You can download a copy of these logs to attach to an issue by clicking <a class="light-blue-text"
+                                href="log?format=download">here</a>.</p>
+                        <br>
+                        <p style="margin-left: 20px;">— Stephen &lt;3</p>
+                    </div>
+                    <div class="card-action">
+                        <a href="#" class="light-blue-text waves-effect btn-flat" onclick="closeHello();">Dismiss</a>
+                    </div>
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col s12" style="display: flex; align-items: center;">
+                    <a class="waves-effect waves-light btn" href="log?format=download"><i class="material-icons left">file_download</i>Download logs</a>
+                    <label class="white-text" style="margin-top: 5px; margin-left: 20px;">
+                        <input type="checkbox" name="pause" id="pause" class="filled-in" />
+                        <span>Pause output</span>
+                    </label>
+                </div>
+            </div>
         </div>
-        <div id="log_container" style="background-color: black; overflow:scroll; color: white; width: 100%;">
+        <div id="log_container" class="black white-text" style="overflow:scroll; width: 100%;">
             <pre id="logwindow" style="margin: 10px; line-height: 1;">
                 Loading logs...
             </pre>
-        </div>
-        <div class="row" style="margin-bottom: 5px;">
-            <div class="col s12">
-                <label>
-                    <input type="checkbox" name="pause" id="pause" class="filled-in" />
-                    <span>Pause output</span>
-                </label>
-            </div>
         </div>
     </div>
 </body>

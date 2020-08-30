@@ -27,7 +27,7 @@ def test_verify_coverage():
 
     # Get the list of ui dialogs
     dialogs = {}
-    with open(abspath(join(__file__, "..", "..", "backup", "static", "working.html")), "r") as f:
+    with open(abspath(join(__file__, "..", "..", "backup", "static", "working.jinja2")), "r") as f:
         text = f.read()
     page = BeautifulSoup(text, 'html.parser')
     for div in page.find_all("div"):

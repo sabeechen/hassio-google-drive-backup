@@ -2,6 +2,8 @@ import asyncio
 import ssl
 import json
 import logging
+import aiohttp_jinja2
+import jinja2
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
@@ -87,19 +89,25 @@ class UiServer(Trigger, Startable):
             status['next_snapshot_machine'] = ""
             status['next_snapshot_detail'] = "Disabled"
         elif (next < self._time.now()):
-            status['next_snapshot_text'] = self._time.formatDelta(self._time.now())
-            status['next_snapshot_machine'] = self._time.asRfc3339String(self._time.now())
-            status['next_snapshot_detail'] = self._time.toLocal(self._time.now()).strftime("%c")
+            status['next_snapshot_text'] = self._time.formatDelta(
+                self._time.now())
+            status['next_snapshot_machine'] = self._time.asRfc3339String(
+                self._time.now())
+            status['next_snapshot_detail'] = self._time.toLocal(
+                self._time.now()).strftime("%c")
         else:
             status['next_snapshot_text'] = self._time.formatDelta(next)
             status['next_snapshot_machine'] = self._time.asRfc3339String(next)
-            status['next_snapshot_detail'] = self._time.toLocal(next).strftime("%c")
+            status['next_snapshot_detail'] = self._time.toLocal(
+                next).strftime("%c")
 
         if len(snapshots) > 0:
             latest = snapshots[len(snapshots) - 1].date()
             status['last_snapshot_text'] = self._time.formatDelta(latest)
-            status['last_snapshot_machine'] = self._time.asRfc3339String(latest)
-            status['last_snapshot_detail'] = self._time.toLocal(latest).strftime("%c")
+            status['last_snapshot_machine'] = self._time.asRfc3339String(
+                latest)
+            status['last_snapshot_detail'] = self._time.toLocal(
+                latest).strftime("%c")
         else:
             status['last_snapshot_text'] = "Never"
             status['last_snapshot_machine'] = ""
@@ -175,7 +183,7 @@ class UiServer(Trigger, Startable):
             try:
                 self._coord.saveCreds(await self.manual_exchanger.exchange(code))
                 self._global_info.setIngoreErrorsForNow(True)
-                return web.json_response({'auth_url': "index.html?fresh=true"})
+                return web.json_response({'auth_url': "index?fresh=true"})
             except KnownError as e:
                 return web.json_response({'error': e.message()})
             except Exception as e:
@@ -266,12 +274,13 @@ class UiServer(Trigger, Startable):
         format = request.query.get("format", "download")
         catchup = BoolValidator.strToBool(
             request.query.get("catchup", "False"))
-
         if not catchup:
             self.last_log_index = 0
         if format == "view":
-            return web.FileResponse(self.filePath("logs.html"))
-
+            context = {}
+            return aiohttp_jinja2.render_template("logs.jinja2",
+                                                  request,
+                                                  context)
         resp = web.StreamResponse()
         if format == "html":
             resp.content_type = 'text/html'
@@ -303,11 +312,11 @@ class UiServer(Trigger, Startable):
                 self._time, json.loads(request.query['creds'])))
         try:
             if request.url.port != self.config.get(Setting.PORT):
-                return await self.redirect(self._ha_source.getAddonUrl())
+                return await self.redirect(request, self._ha_source.getAddonUrl())
         except:  # noqa: E722
             # eat the error
             pass
-        return await self.redirect("/")
+        return await self.redirect(request, "/")
 
     async def changefolder(self, request: Request) -> None:
         # update config to specify snapshot folder
@@ -319,11 +328,11 @@ class UiServer(Trigger, Startable):
         self.trigger()
         try:
             if request.url.port != self.config.get(Setting.PORT):
-                return await self.redirect(self._ha_source.getAddonUrl())
+                return await self.redirect(request, self._ha_source.getAddonUrl())
         except:  # noqa: E722
             # eat the error
             pass
-        return await self.redirect("/")
+        return await self.redirect(request, "/")
 
     async def sync(self, request: Request = None) -> Any:
         await self._coord.sync()
@@ -408,7 +417,8 @@ class UiServer(Trigger, Startable):
         body = GITHUB_BUG_TEMPLATE
         for key in data:
             if isinstance(data[key], dict):
-                body = body.replace("{" + key + "}", json.dumps(data[key], indent=4))
+                body = body.replace(
+                    "{" + key + "}", json.dumps(data[key], indent=4))
             else:
                 body = body.replace("{" + key + "}", str(data[key]))
         return web.json_response({'markdown': body})
@@ -465,10 +475,13 @@ class UiServer(Trigger, Startable):
         await self._coord.uploadSnapshot(slug)
         return web.json_response({'message': "Snapshot uploaded to Home Assistant"})
 
-    async def redirect(self, url):
-        with open(self.filePath("redirect.html"), mode='r') as f:
-            contents = f.read(1024 * 1024 * 2).replace("{url}", url)
-        return web.Response(body=contents, content_type="text/html")
+    async def redirect(self, request, url):
+        context = {
+            'url': url
+        }
+        return aiohttp_jinja2.render_template("redirect.jinja2",
+                                              request,
+                                              context)
 
     async def download(self, request: Request):
         slug = request.query.get("slug", "")
@@ -495,6 +508,7 @@ class UiServer(Trigger, Startable):
 
         # Create the ingress server
         app = web.Application(middlewares=[self.error_middleware])
+        aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(self.filePath()))
         self._addRoutes(app)
 
         # The ingress port is considered secured by Home Assistant, so it doesn't get SSL or basic HTTP auth
@@ -516,6 +530,7 @@ class UiServer(Trigger, Startable):
                         self._time, self._harequests))
 
                 extra_app = web.Application(middlewares=middleware)
+                aiohttp_jinja2.setup(extra_app, loader=jinja2.FileSystemLoader(self.filePath()))
                 self._addRoutes(extra_app)
                 logger.info("Starting server on port {}".format(
                     self.config.get(Setting.PORT)))
@@ -533,6 +548,7 @@ class UiServer(Trigger, Startable):
             [web.static('/static', abspath(join(__file__, "..", "..", "static")), append_version=True)])
         app.add_routes([web.get('/', self.index)])
         app.add_routes([web.get('/index.html', self.index)])
+        app.add_routes([web.get('/index', self.index)])
         self._addRoute(app, self.reauthenticate)
         self._addRoute(app, self.tos)
         self._addRoute(app, self.pp)
@@ -578,7 +594,8 @@ class UiServer(Trigger, Startable):
 
     async def _start_site(self, app, port, ssl_context=None):
         aiohttp_logger = TraceLogger("aiohttp.access")
-        runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger, access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
+        runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger,
+                               access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
         self.runners.append(runner)
         await runner.setup()
         # maybe host should be 0.0.0.0
@@ -606,7 +623,8 @@ class UiServer(Trigger, Startable):
     @web.middleware
     async def error_middleware(self, request: Request, handler):
         try:
-            logger.trace("Serving %s %s to %s", request.method, request.url, request.remote)
+            logger.trace("Serving %s %s to %s", request.method,
+                         request.url, request.remote)
             handled = await handler(request)
             logger.trace("Completed %s %s", request.method, request.url)
             return handled
@@ -636,8 +654,11 @@ class UiServer(Trigger, Startable):
                 'details': logger.formatException(e)
             }
 
-    def filePath(self, name):
-        return abspath(join(__file__, "..", "..", "static", name))
+    def filePath(self, name=None):
+        if name is None:
+            return abspath(join(__file__, "..", "..", "static"))
+        else:
+            return abspath(join(__file__, "..", "..", "static", name))
 
     def cssElement(self, selector, keys):
         ret = selector
@@ -902,18 +923,27 @@ class UiServer(Trigger, Startable):
 
     async def index(self, request: Request):
         if not self._coord.enabled():
-            return web.FileResponse(self.filePath("index.html"), headers={'cache-control': 'no-store'})
+            template = "index.jinja2"
         else:
-            return web.FileResponse(self.filePath("working.html"), headers={'cache-control': 'no-store'})
+            template = "working.jinja2"
+        context = {}
+        response = aiohttp_jinja2.render_template(template,
+                                                  request,
+                                                  context)
+        response.headers['cache-control'] = 'no-store'
+        return response
 
+    @aiohttp_jinja2.template('privacy_policy.jinja2')
     async def pp(self, request: Request):
-        return web.FileResponse(self.filePath("privacy_policy.html"))
+        return {}
 
+    @aiohttp_jinja2.template('terms_of_service.jinja2')
     async def tos(self, request: Request):
-        return web.FileResponse(self.filePath("terms_of_service.html"))
+        return {}
 
+    @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:
-        return web.FileResponse(self.filePath("index.html"))
+        return {}
 
 
 @web.middleware

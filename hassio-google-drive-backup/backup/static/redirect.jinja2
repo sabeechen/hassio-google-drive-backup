@@ -27,7 +27,7 @@
                 window.location.assign(searchParams.get('to'));
             }
             else {
-                window.location.assign("{url}");
+                window.location.assign("{{ url }}");
             }
         }
 
@@ -50,7 +50,7 @@
                 <div class="card">
                     <div class="card-content">
                         <span class="card-title">Redirecting...</span>
-                        <p>You should be redirected to <a href="{url}">{url}</a> in a moment. Click below to be redirected now.
+                        <p>You should be redirected to <a href="{{ url }}">{{ url }}</a> in a moment. Click below to be redirected now.
                         </p>
                         <div class="card-action white-text">
                             <a target="_blank" class="waves-effect waves-light btn" onclick="redirect(); return false;">go now</a>

@@ -743,7 +743,7 @@ async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: C
     # Pass the auth code to generate creds
     req_path = "manualauth?code={}".format(code)
     assert await reader.getjson(req_path) == {
-        'auth_url': "index.html?fresh=true"
+        'auth_url': "index?fresh=true"
     }
 
     # verify creds are saved and drive is enabled

@@ -1,7 +1,6 @@
 import asyncio
 import ssl
 import json
-import logging
 import aiohttp_jinja2
 import jinja2
 from datetime import timedelta
@@ -9,12 +8,11 @@ from os.path import abspath, join
 from typing import Any, Dict
 from urllib.parse import quote
 
-import aiofiles
 from aiohttp import BasicAuth, hdrs, web, ClientSession
 from aiohttp.web import HTTPBadRequest, HTTPException, Request
 from injector import ClassAssistedBuilder, inject, singleton
 
-from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable
+from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Snapshot
 from backup.exceptions import KnownError, ensureKey
@@ -64,6 +62,9 @@ class UiServer(Trigger, Startable):
         self.session = session
         self.debug_worker = debug_worker
         self.folder_finder = folder_finder
+        self.base_context = {
+            'version': VERSION
+        }
 
     def name(self):
         return "UI Server"
@@ -277,7 +278,7 @@ class UiServer(Trigger, Startable):
         if not catchup:
             self.last_log_index = 0
         if format == "view":
-            context = {}
+            context = self.base_context
             return aiohttp_jinja2.render_template("logs.jinja2",
                                                   request,
                                                   context)
@@ -477,6 +478,7 @@ class UiServer(Trigger, Startable):
 
     async def redirect(self, request, url):
         context = {
+            **self.base_context,
             'url': url
         }
         return aiohttp_jinja2.render_template("redirect.jinja2",
@@ -926,7 +928,7 @@ class UiServer(Trigger, Startable):
             template = "index.jinja2"
         else:
             template = "working.jinja2"
-        context = {}
+        context = self.base_context
         response = aiohttp_jinja2.render_template(template,
                                                   request,
                                                   context)
@@ -935,15 +937,15 @@ class UiServer(Trigger, Startable):
 
     @aiohttp_jinja2.template('privacy_policy.jinja2')
     async def pp(self, request: Request):
-        return {}
+        return self.base_context
 
     @aiohttp_jinja2.template('terms_of_service.jinja2')
     async def tos(self, request: Request):
-        return {}
+        return self.base_context
 
     @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:
-        return {}
+        return self.base_context
 
 
 @web.middleware

@@ -12,4 +12,7 @@
         "--verbose"
     ],
     "python.autoComplete.addBrackets": true,
+    "files.associations": {
+        "*.jinja2": "html"
+    }
 }

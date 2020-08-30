@@ -91,14 +91,14 @@ When set, snapshots are created with a password. You can use a value from your s
 
 > Example: Use a password for snapshot archives
 >
-> ```json
-> "snapshot_password": "super_secret"
+> ```yaml
+> snapshot_password: "super_secret"
 > ```
 >
 > Example: Use a password from secrets.yaml
 >
-> ```json
-> "snapshot_password": "!secret snapshot_password"
+> ```yaml
+> snapshot_password: "!secret snapshot_password"
 > ```
 
 ### Option: `snapshot_name` (default: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}")

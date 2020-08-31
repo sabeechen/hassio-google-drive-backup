@@ -29,8 +29,10 @@ class Server():
         self.logger = logger
         self.config = config
         self.error_store = error_store
-        self.base_context = {
-            'version': VERSION
+
+    def base_context(self):
+        return {
+            'version': VERSION,
         }
 
     async def authorize(self, request: Request):
@@ -111,7 +113,7 @@ class Server():
     @aiohttp_jinja2.template('picker.jinja2')
     async def picker(self, request: Request):
         return {
-            **self.base_context,
+            **self.base_context(),
             "client_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             "developer_key": self.config.get(Setting.DRIVE_PICKER_API_KEY),
             "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0]
@@ -119,7 +121,7 @@ class Server():
 
     @aiohttp_jinja2.template('server-index.jinja2')
     async def index(self, request: Request):
-        return self.base_context
+        return self.base_context()
 
     def buildApp(self, app):
         path = abspath(join(__file__, "..", "..", "static"))

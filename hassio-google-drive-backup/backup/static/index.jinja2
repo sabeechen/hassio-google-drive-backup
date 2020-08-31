@@ -9,10 +9,12 @@
   <link href="static/css/icons.css?version={{ version }}" rel="stylesheet">
   <link href="static/css/materialize.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/css/colpick.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="theme?version={{ version }}" id="theme" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/css/static.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link rel="icon" type="image/png" href="static/images/favicon.png?version={{ version }}">
   <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
+  
+  {% include 'partials/theme.jinja2' %}
+
   <script src="static/js/jquery.js?version={{ version }}"></script>
   <script src="static/js/markdown-it.min.js?version={{ version }}"></script>
   <script src="static/js/clipboard.min.js?version={{ version }}"></script>

@@ -62,12 +62,16 @@ class UiServer(Trigger, Startable):
         self.session = session
         self.debug_worker = debug_worker
         self.folder_finder = folder_finder
-        self.base_context = {
-            'version': VERSION
-        }
 
     def name(self):
         return "UI Server"
+
+    def base_context(self):
+        return {
+            'version': VERSION,
+            'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
+            'accentColor': self.config.get(Setting.ACCENT_COLOR)
+        }
 
     async def getstatus(self, request) -> Dict[Any, Any]:
         status: Dict[Any, Any] = {}
@@ -278,7 +282,7 @@ class UiServer(Trigger, Startable):
         if not catchup:
             self.last_log_index = 0
         if format == "view":
-            context = self.base_context
+            context = self.base_context()
             return aiohttp_jinja2.render_template("logs.jinja2",
                                                   request,
                                                   context)
@@ -478,7 +482,7 @@ class UiServer(Trigger, Startable):
 
     async def redirect(self, request, url):
         context = {
-            **self.base_context,
+            **self.base_context(),
             'url': url
         }
         return aiohttp_jinja2.render_template("redirect.jinja2",
@@ -554,7 +558,6 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self.reauthenticate)
         self._addRoute(app, self.tos)
         self._addRoute(app, self.pp)
-        self._addRoute(app, self.theme)
 
         self._addRoute(app, self.getstatus)
         self._addRoute(app, self.snapshot)
@@ -670,265 +673,12 @@ class UiServer(Trigger, Startable):
         ret += "}\n\n"
         return ret
 
-    async def theme(self, request: Request):
-        background = Color.parse(self.config.get(Setting.BACKGROUND_COLOR))
-        accent = Color.parse(self.config.get(Setting.ACCENT_COLOR))
-
-        text = background.textColor()
-        accent_text = accent.textColor()
-        link_accent = accent
-        contrast_threshold = 4.5
-
-        contrast = background.contrast(accent)
-        if (contrast < contrast_threshold):
-            # do some adjustment to make the UI more readable if the contrast is really bad
-            scale = 1 - (contrast - 1) / (contrast_threshold - 1)
-            link_accent = link_accent.tint(text, scale * 0.5)
-
-        focus = accent.saturate(1.2)
-        help = text.tint(background, 0.25)
-
-        shadow1 = text.withAlpha(0.14)
-        shadow2 = text.withAlpha(0.12)
-        shadow3 = text.withAlpha(0.2)
-        shadowbmc = background.withAlpha(0.2)
-        bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + \
-            shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
-
-        bg_modal = background.tint(text, 0.02)
-        shadow_modal = "box-shadow: 0 24px 38px 3px " + shadow1.toCss() + ", 0 9px 46px 8px " + \
-            shadow2.toCss() + ", 0 11px 15px -7px " + shadow3.toCss()
-
-        ret = ""
-        ret += self.cssElement("html", {
-            'background-color': background.toCss(),
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement("label", {
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement("a", {
-            'color': link_accent.toCss()
-        })
-
-        ret += self.cssElement("input", {
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement(".helper-text", {
-            'color': help.toCss()
-        })
-
-        ret += self.cssElement(".ha-blue", {
-            'background-color': accent.toCss(),
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement("nav .brand-logo", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement("nav ul a", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".accent-title", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement("footer a:link", {
-            'text-decoration': 'underline',
-            'color': accent_text.textColor().tint(accent_text, 0.95).toCss()
-        })
-
-        ret += self.cssElement(".accent-text", {
-            'color': accent_text.textColor().tint(accent_text, 0.95).toCss()
-        })
-
-        ret += self.cssElement(".btn", {
-            'background-color': accent.toCss()
-        })
-
-        ret += self.cssElement(".btn:hover, .btn-large:hover, .btn-small:hover", {
-            'background-color': accent.toCss(),
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".btn:focus, .btn-large:focus, .btn-small:focus, .btn-floating:focus", {
-            'background-color': focus.toCss(),
-        })
-
-        ret += self.cssElement(".modal .modal-footer .btn, .modal .modal-footer .btn-large, .modal .modal-footer .btn-small, .modal .modal-footer .btn-flat", {
-            'margin': '6px 0',
-            'background-color': accent.toCss(),
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".dropdown-content", {
-            'background-color': background.toCss(),
-            'box-shadow': bgshadow,
-            'webkit-box-shadow': bgshadow,
-        })
-
-        ret += self.cssElement(".highlight-border", {
-            'border-color': accent.toCss(),
-            'border-width': '1px',
-            'border-style': 'solid',
-        })
-
-        ret += self.cssElement(".dropdown-content li > a", {
-            'color': text.tint(background, 0.5).toCss()
-        })
-
-        ret += self.cssElement(".modal", {
-            'background-color': bg_modal.toCss(),
-            'box-shadow': shadow_modal
-        })
-
-        ret += self.cssElement(".modal .modal-footer", {
-            'background-color': bg_modal.toCss()
-        })
-
-        ret += self.cssElement(".modal.modal-fixed-footer .modal-footer", {
-            'border-top': '1px solid ' + text.withAlpha(0.1).toCss()
-        })
-
-        ret += self.cssElement(".modal-overlay", {
-            'background': text.toCss()
-        })
-
-        ret += self.cssElement("[type=\"checkbox\"].filled-in:checked + span:not(.lever)::before", {
-            'border-right': '2px solid ' + text.toCss(),
-            'border-bottom': '2px solid ' + text.toCss()
-        })
-
-        ret += self.cssElement("[type=\"checkbox\"].filled-in:checked + span:not(.lever)::after", {
-            'border': '2px solid ' + text.toCss(),
-            'background-color': accent.darken(0.2).saturate(1.2).toCss()
-        })
-
-        ret += self.cssElement(".input-field .prefix.active", {
-            'color': accent.toCss()
-        })
-
-        ret += self.cssElement(".input-field > label", {
-            'color': help.toCss()
-        })
-
-        ret += self.cssElement(".input-field .helper-text", {
-            'color': help.toCss()
-        })
-
-        ret += self.cssElement("input:not([type]):focus:not([readonly]) + label, input[type=\"text\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"password\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"email\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"url\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"time\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"date\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"datetime\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"datetime-local\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"tel\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"number\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"search\"]:not(.browser-default):focus:not([readonly]) + label, textarea.materialize-textarea:focus:not([readonly]) + label", {
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement("input.valid:not([type]), input.valid:not([type]):focus, input[type=\"text\"].valid:not(.browser-default), input[type=\"text\"].valid:not(.browser-default):focus, input[type=\"password\"].valid:not(.browser-default), input[type=\"password\"].valid:not(.browser-default):focus, input[type=\"email\"].valid:not(.browser-default), input[type=\"email\"].valid:not(.browser-default):focus, input[type=\"url\"].valid:not(.browser-default), input[type=\"url\"].valid:not(.browser-default):focus, input[type=\"time\"].valid:not(.browser-default), input[type=\"time\"].valid:not(.browser-default):focus, input[type=\"date\"].valid:not(.browser-default), input[type=\"date\"].valid:not(.browser-default):focus, input[type=\"datetime\"].valid:not(.browser-default), input[type=\"datetime\"].valid:not(.browser-default):focus, input[type=\"datetime-local\"].valid:not(.browser-default), input[type=\"datetime-local\"].valid:not(.browser-default):focus, input[type=\"tel\"].valid:not(.browser-default), input[type=\"tel\"].valid:not(.browser-default):focus, input[type=\"number\"].valid:not(.browser-default), input[type=\"number\"].valid:not(.browser-default):focus, input[type=\"search\"].valid:not(.browser-default), input[type=\"search\"].valid:not(.browser-default):focus, textarea.materialize-textarea.valid, textarea.materialize-textarea.valid:focus, .select-wrapper.valid > input.select-dropdown", {
-            'border-bottom': '1px solid ' + accent.toCss(),
-            ' -webkit-box-shadow': ' 0 1px 0 0 ' + accent.toCss(),
-            'box-shadow': '0 1px 0 0 ' + accent.toCss()
-        })
-
-        ret += self.cssElement("input:not([type]):focus:not([readonly]), input[type=\"text\"]:not(.browser-default):focus:not([readonly]), input[type=\"password\"]:not(.browser-default):focus:not([readonly]), input[type=\"email\"]:not(.browser-default):focus:not([readonly]), input[type=\"url\"]:not(.browser-default):focus:not([readonly]), input[type=\"time\"]:not(.browser-default):focus:not([readonly]), input[type=\"date\"]:not(.browser-default):focus:not([readonly]), input[type=\"datetime\"]:not(.browser-default):focus:not([readonly]), input[type=\"datetime-local\"]:not(.browser-default):focus:not([readonly]), input[type=\"tel\"]:not(.browser-default):focus:not([readonly]), input[type=\"number\"]:not(.browser-default):focus:not([readonly]), input[type=\"search\"]:not(.browser-default):focus:not([readonly]), textarea.materialize-textarea:focus:not([readonly])", {
-            'border-bottom': '1px solid ' + accent.toCss(),
-            '-webkit-box-shadow': '0 1px 0 0 ' + accent.toCss(),
-            'box-shadow': '0 1px 0 0 ' + accent.toCss()
-        })
-
-        ret += self.cssElement(".card", {
-            'background-color': background.toCss(),
-            'box-shadow': "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
-        })
-
-        ret += self.cssElement("nav a", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".btn, .btn-large, .btn-small", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".bmc-button img", {
-            'width': '15px',
-            'margin-bottom': '1px',
-            'box-shadow': 'none',
-            'border': 'none',
-            'vertical-align': 'middle'
-        })
-
-        ret += self.cssElement(".bmc-button", {
-            'line-height': '15px',
-            'height': '25px',
-            'text-decoration': 'none',
-            'display': 'inline-flex',
-            'background-color': background.toCss(),
-            'border-radius': '3px',
-            'border': '1px solid transparent',
-            'padding': '3px 2px 3px 2px',
-            'letter-spacing': '0.6px',
-            'box-shadow': '0px 1px 2px ' + shadowbmc.toCss(),
-            '-webkit-box-shadow': '0px 1px 2px 2px ' + shadowbmc.toCss(),
-            'margin': '0 auto',
-            'font-family': "'Cookie', cursive",
-            '-webkit-box-sizing': 'border-box',
-            'box-sizing': 'border-box',
-            '-o-transition': '0.3s all linear',
-            '-webkit-transition': '0.3s all linear',
-            '-moz-transition': '0.3s all linear',
-            '-ms-transition': '0.3s all linear',
-            'transition': '0.3s all linear',
-            'font-size': '17px'
-        })
-
-        ret += self.cssElement(".bmc-button span", {'color': text.toCss()})
-
-        ret += self.cssElement(".tabs .tab a", {
-            'color': link_accent.tint(background, 0.35).toCss(),
-            'display': 'block',
-            'width': '100%',
-            'height': '100%',
-            'padding': '0 24px',
-            'font-size': '14px',
-            'text-overflow': 'ellipsis',
-            'overflow': 'hidden',
-            '-webkit-transition': 'color .28s ease, background-color .28s ease',
-            'transition': 'color .28s ease, background-color .28s ease',
-        })
-
-        ret += self.cssElement(".tabs .tab a:hover, .tabs .tab a.active", {
-            'background-color': 'transparent',
-            'color': link_accent.toCss()
-        })
-
-        ret += self.cssElement(".tabs .indicator", {
-            'position': 'absolute',
-            'bottom': '0',
-            'height': '2px',
-            'background-color': link_accent.toCss(),
-            'will-change': 'left, right'
-        })
-
-        ret += self.cssElement(".tabs", {
-            'position': 'relative',
-            'overflow-x': 'auto',
-            'overflow-y': 'hidden',
-            'height': '48px',
-            'width': '100%',
-            'background-color': 'transparent',
-            'margin': '0 auto',
-            'white-space': 'nowrap',
-        })
-
-        return web.Response(text=ret, content_type='text/css')
-
     async def index(self, request: Request):
         if not self._coord.enabled():
             template = "index.jinja2"
         else:
             template = "working.jinja2"
-        context = self.base_context
+        context = self.base_context()
         response = aiohttp_jinja2.render_template(template,
                                                   request,
                                                   context)
@@ -937,15 +687,15 @@ class UiServer(Trigger, Startable):
 
     @aiohttp_jinja2.template('privacy_policy.jinja2')
     async def pp(self, request: Request):
-        return self.base_context
+        return self.base_context()
 
     @aiohttp_jinja2.template('terms_of_service.jinja2')
     async def tos(self, request: Request):
-        return self.base_context
+        return self.base_context()
 
     @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:
-        return self.base_context
+        return self.base_context()
 
 
 @web.middleware

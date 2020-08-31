@@ -1,141 +1,134 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "layouts/base.jinja2" %}
 
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-    <title>Home Assistant Google Drive Backup</title>
-
-    <!-- CSS  -->
-    <link href="static/css/icons.css" rel="stylesheet">
-    <link href="static/css/materialize.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
-    <link href="static/css/static.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
-    <link rel="icon" type="image/png" href="static/images/favicon.png?version={{ version }}">
-    
-    {% include 'partials/theme.jinja2' %}
-
-    <script src="static/js/jquery.js?version={{ version }}"></script>
-    <script src="static/js/materialize.js?version={{ version }}"></script>
-    <script src="static/js/init.js?version={{ version }}"></script>
-    <script src="static/js/scripts.js?version={{ version }}"></script>
-    <script src="static/js/settings.js?version={{ version }}"></script>
-    <script src="static/js/restore.js?version={{ version }}"></script>
-    <style type="text/css">
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-        }
-
-        #wrapper {
-            min-height: 100%;
-        }
-    </style>
-    <script type="text/javascript">
-        toasted = false;
-        running = false;
-
-        function closeHello() {
-            $('#hello_card').hide();
-            $('#hello_card').data("closed", true);
-        }
-
-        function refreshLogs() {
-            if ($("#pause").is(':checked')) {
-                return;
-            }
-            var complete = false;
-            if (running) {
-                return;
-            }
-            running = true;
-            $.ajax(
-                {
-                    url: "log?format=colored&catchup=true",
-                    success: function (data) {
-                        console.log(data);
-                        if (data.length > 0) {
-                            $("#logwindow").append(data);
-                            $("#log_container").animate({ scrollTop: $('#log_container').prop("scrollHeight") }, 250);
-                        }
-                        if (toasted) {
-                            M.Toast.dismissAll();
-                            toasted = false;
-                        }
-                    },
-                    error: (
-                        function () {
-                            if (!toasted) {
-                                toasted = true;
-                                M.toast({ html: 'Lost connection to add-on, will keep trying to connect...', displayLength: 9999999 })
-                            }
-                        }
-                    ),
-                    complete: function () {
-                        running = false;
-                    },
-                    timeout: 1000
-                });
-        }
-
-        $(document).ready(function () {
-            $('#hello_card').data("closed", false);
-
-            $.get("log?format=colored",
-                function (data) {
-                    console.log("Loading logs");
-                    $("#logwindow").html(data);
-                    $("#log_container").animate({ scrollTop: $('#log_container').prop("scrollHeight") }, 250);
-                })
-                .fail(
-                    function (e) {
-                        errorToast(e)
-                    }
-                )
-            window.setInterval(refreshLogs, 2000);
-        });
-
-    function errorToast(error) {
-        message = "";
-        details = "";
-        var isError = false;
-        if (error.hasOwnProperty("message") && error.hasOwnProperty("error_details")) {
-            // Its an error messag form the server
-            message = error.message;
-            details = error.error_details;
-            isError = true;
-        } else if (error.hasOwnProperty("status") && error.hasOwnProperty("statusText") && error.hasOwnProperty("responseText")) {
-            // Its an HTTP error, so format appropriately
-            message = "Got unexpected HTTP error " + error.status + ": " + error.statusText;
-            details = error.responseText;
-            isError = true;
-        } else if (error.hasOwnProperty("error")) {
-            message = error.error
-            details = JSON.stringify(error, undefined, 2);
-            isError = true;
-        } else if (error.hasOwnProperty("message")) {
-            message = error.message
-            isError = false;
-        } else {
-            message = "Got an unexpected error"
-            details = JSON.stringify(error, undefined, 2);
-            isError = true;
-        }
-
-        button_text = ""
-        if (details.length > 0) {
-            button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
-            $('#error_details_paragraph').text(details);
-        }
-
-        console.log(error)
-        toast(message + button_text);
-        return isError;
+{% block head %}
+  {{ super() }}
+  <style type="text/css">
+    html,
+    body {
+        height: 100%;
+        margin: 0;
     }
-    </script>
-</head>
 
-<body>
+    #wrapper {
+        min-height: 100%;
+    }
+  </style>
+  <script type="text/javascript">
+    toasted = false;
+    running = false;
+    
+    function closeHello() {
+      $('#hello_card').hide();
+      $('#hello_card').data('closed', true);
+    }
+    
+    function refreshLogs() {
+      if ($('#pause').is(':checked')) {
+        return;
+      }
+      var complete = false;
+      if (running) {
+        return;
+      }
+      running = true;
+      $.ajax({
+        url: 'log?format=colored&catchup=true',
+        success: function (data) {
+          console.log(data);
+          if (data.length > 0) {
+            $('#logwindow').append(data);
+            $('#log_container').animate(
+              { scrollTop: $('#log_container').prop('scrollHeight') },
+              250
+            );
+          }
+          if (toasted) {
+            M.Toast.dismissAll();
+            toasted = false;
+          }
+        },
+        error: function () {
+          if (!toasted) {
+            toasted = true;
+            M.toast({
+              html: 'Lost connection to add-on, will keep trying to connect...',
+              displayLength: 9999999,
+            });
+          }
+        },
+        complete: function () {
+          running = false;
+        },
+        timeout: 1000,
+      });
+    }
+    
+    $(document).ready(function () {
+      $('#hello_card').data('closed', false);
+    
+      $.get('log?format=colored', function (data) {
+        console.log('Loading logs');
+        $('#logwindow').html(data);
+        $('#log_container').animate(
+          { scrollTop: $('#log_container').prop('scrollHeight') },
+          250
+        );
+      }).fail(function (e) {
+        errorToast(e);
+      });
+      window.setInterval(refreshLogs, 2000);
+    });
+    
+    function errorToast(error) {
+      message = '';
+      details = '';
+      var isError = false;
+      if (
+        error.hasOwnProperty('message') &&
+        error.hasOwnProperty('error_details')
+      ) {
+        // Its an error messag form the server
+        message = error.message;
+        details = error.error_details;
+        isError = true;
+      } else if (
+        error.hasOwnProperty('status') &&
+        error.hasOwnProperty('statusText') &&
+        error.hasOwnProperty('responseText')
+      ) {
+        // Its an HTTP error, so format appropriately
+        message =
+          'Got unexpected HTTP error ' + error.status + ': ' + error.statusText;
+        details = error.responseText;
+        isError = true;
+      } else if (error.hasOwnProperty('error')) {
+        message = error.error;
+        details = JSON.stringify(error, undefined, 2);
+        isError = true;
+      } else if (error.hasOwnProperty('message')) {
+        message = error.message;
+        isError = false;
+      } else {
+        message = 'Got an unexpected error';
+        details = JSON.stringify(error, undefined, 2);
+        isError = true;
+      }
+    
+      button_text = '';
+      if (details.length > 0) {
+        button_text =
+          "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>";
+        $('#error_details_paragraph').text(details);
+      }
+    
+      console.log(error);
+      toast(message + button_text);
+      return isError;
+    }
+  </script>
+{% endblock %}
+
+{% block content %}
     <div class="wrapper black" style="height: 100%; display: flex; flex-direction: column">
         <div>
             <div class="row">
@@ -175,6 +168,4 @@
             </pre>
         </div>
     </div>
-</body>
-
-</html>
+{% endblock %}

@@ -1,30 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "layouts/base.jinja2" %}
 
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-  <title>Home Assistant Google Drive Backup</title>
-
-  <!-- CSS  -->
-  <link href="static/css/icons.css?version={{ version }}" rel="stylesheet">
-  <link href="static/css/materialize.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="static/css/colpick.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="static/css/static.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
-  <link rel="icon" type="image/png" href="static/images/favicon.png?version={{ version }}">
-
-  {% include 'partials/theme.jinja2' %}
-
-  <script src="static/js/jquery.js?version={{ version }}"></script>
-  <script src="static/js/markdown-it.min.js?version={{ version }}"></script>
-  <script src="static/js/materialize.js?version={{ version }}"></script>
-  <script src="static/js/colpick.js?version={{ version }}"></script>
-  <script src="static/js/init.js?version={{ version }}"></script>
-  <script src="static/js/scripts.js?version={{ version }}"></script>
-  <script src="static/js/settings.js?version={{ version }}"></script>
-  <script src="static/js/restore.js?version={{ version }}"></script>
-  <script src="static/js/moment.js?version={{ version }}"></script>
+{% block head %}
+  {{ super() }}
   <script type="text/javascript">
     $(document).ready(function () {
       // Needed to make modal dialogs work.
@@ -53,9 +30,9 @@
       var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
     });
   </script>
-</head>
+{% endblock %}
 
-<body>
+{% block content %}
   <div id="deletemodal" class="modal">
     <div class="modal-content">
       <h4>Are you sure?</h4>
@@ -940,7 +917,7 @@
             any errors the addon found, and logs from Home Assistant, the Supervisor, and the addon.  This information will be
             very helpful to the developer who looks at your issue.</li>
           <li>Click <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new?title=Please%20add%20a%20title&body=Copy%20the%20info%20from%20the%20previous%20page%20here"><i style="vertical-align: middle;" class="material-icons">open_in_new</i>Open Github</a>
-             to open a new issue on Github and paste the text you copied there.  You can click "Preview" to make sure it looks right.</li>
+            to open a new issue on Github and paste the text you copied there.  You can click "Preview" to make sure it looks right.</li>
           <li>Before submitting the issue, add in any information you think might help.  Consider including what you were doing that caused the error, a screenshot, etc.</li>
           <li>Click "Submit new issue" on Github to post the issue.  The developer will get back to you as fast as he can, but keep in mind that he maintains this project in his free time.</li>
         </ul>
@@ -2144,6 +2121,4 @@
       </div>
     </div>
   </footer>
-</body>
-
-</html>
+{% endblock %}

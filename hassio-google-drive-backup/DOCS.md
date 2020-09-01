@@ -26,13 +26,11 @@ specify_snapshot_folder: true
 # Use a dark and red theme
 background_color: "#242424"
 accent_color: "#7D0034"
-# Notify after 12 hours of staleness
-snapshot_stale_minutes: 500
 # Use a password for snapshot archives
 snapshot_password: "super_secret"
 # Create snapshot names like 'Full Snapshot HA 0.92.0'
-snapshot_name: "{type} Snapshot {version_ha}"
-# Keep a snapshot once every day 3 days and once a week for 4 weeks
+snapshot_name: "{type} Snapshot HA {version_ha}"
+# Keep a snapshot once every day for 3 days and once a week for 4 weeks
 generational_days: 3
 generational_weeks: 4
 # Create partial snapshots with no folders and no configurator add-on
@@ -40,19 +38,9 @@ exclude_folders: "homeassistant,ssl,share,addons/local"
 exclude_addons: "core_configurator"
 # Turn off notifications and staleness sensor
 enable_snapshot_stale_sensor: false
-enable_snapshot_state_sensor: false
 notify_for_stale_snapshots: false
-# Enable server directly on port
+# Enable server directly on port port 1627
 expose_extra_server: true
-# Use SSL for the extra server
-use_ssl: true
-# Don't require login
-require_login: false
-# Use certs you keep in a weird place
-certfile: "/ssl/weird/path/cert.pem"
-keyfile: "/ssl/weird/path/key.pem"
-# Turn on verbose logging
-verbose: true
 # Allow sending error reports
 send_error_reports: true
 ```
@@ -80,10 +68,6 @@ When true, you must select the folder in Google Drive where snapshots are stored
 ### Option: `background_color` and `accent_color`
 
 The background and accent colors for the web UI. You can use this to make the UI fit in with whatever color scheme you use in Home Assistant. When unset, the interface matches Home Assistant's default blue/white style.
-
-### Option: `snapshot_stale_minutes` (default: 180)
-
-How long to wait after a snapshot should have been created to consider snapshots stale and in need of attention. Setting this too low can cause you to be notified of transient errors, ie the internet, Google Drive, or Home Assistant being offline briefly.
 
 ### Option: `snapshot_password`
 

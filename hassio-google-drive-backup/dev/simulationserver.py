@@ -892,10 +892,10 @@ class SimulationServer():
     def routes(self):
         return [
             post('/addons/self/options', self.hassioUpdateOptions),
-            post("/homeassistant/api/services/persistent_notification/dismiss", self.dismissNotification),
-            post("/homeassistant/api/services/persistent_notification/create", self.createNotification),
-            post("/homeassistant/api/events/{name}", self.haEventUpdate),
-            post("/homeassistant/api/states/{entity}", self.haStateUpdate),
+            post("/core/api/services/persistent_notification/dismiss", self.dismissNotification),
+            post("/core/api/services/persistent_notification/create", self.createNotification),
+            post("/core/api/events/{name}", self.haEventUpdate),
+            post("/core/api/states/{entity}", self.haStateUpdate),
             post('/auth', self.hassioAuthenticate),
             get('/auth', self.hassioAuthenticate),
             get('/info', self.hassioInfo),
@@ -909,7 +909,7 @@ class SimulationServer():
             post('/snapshots/new/partial', self.hassioNewPartialSnapshot),
             post('/snapshots/new/full', self.hassioNewFullSnapshot),
             get('/snapshots/new/full', self.hassioNewFullSnapshot),
-            get('/homeassistant/info', self.haInfo),
+            get('/core/info', self.haInfo),
             get('/supervisor/info', self.hassioSupervisorInfo),
             get('/supervisor/logs', self.supervisorLogs),
             get('/core/logs', self.coreLogs),

@@ -94,7 +94,7 @@ class HaRequests():
 
     @supervisor_call
     async def haInfo(self):
-        url = "{0}homeassistant/info".format(
+        url = "{0}core/info".format(
             self.config.get(Setting.HASSIO_URL))
         return await self._getHassioData(url)
 

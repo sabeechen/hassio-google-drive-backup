@@ -180,7 +180,7 @@ _DEFAULTS = {
     # Remote endpoints
     Setting.HASSIO_URL: "http://hassio/",
     Setting.HASSIO_TOKEN: "",
-    Setting.HOME_ASSISTANT_URL: "http://hassio/homeassistant/api/",
+    Setting.HOME_ASSISTANT_URL: "http://hassio/core/api/",
     Setting.DRIVE_URL: "https://www.googleapis.com",
     Setting.REFRESH_URL: "https://habackup.io/drive/refresh",
     Setting.AUTHENTICATE_URL: "https://habackup.io/drive/authorize",

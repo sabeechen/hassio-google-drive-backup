@@ -93,7 +93,7 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
     config = Config.withOverrides({
         Setting.DRIVE_URL: server_url,
         Setting.HASSIO_URL: server_url + "/",
-        Setting.HOME_ASSISTANT_URL: server_url + "/homeassistant/api/",
+        Setting.HOME_ASSISTANT_URL: server_url + "/core/api/",
         Setting.AUTHENTICATE_URL: server_url + "/drive/authorize",
         Setting.DRIVE_REFRESH_URL: server_url + "/oauth2/v4/token",
         Setting.DRIVE_AUTHORIZE_URL: server_url + "/o/oauth2/v2/auth",

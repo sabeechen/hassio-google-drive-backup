@@ -1,6 +1,6 @@
 {
     "hassio_url": "http://localhost:56154/",
-    "home_assistant_url": "http://localhost:56154/homeassistant/api/",
+    "home_assistant_url": "http://localhost:56154/core/api/",
     "authenticate_url": "https://dev.habackup.io/drive/authorize",
     "refresh_url": "https://dev.habackup.io/drive/refresh",
     "choose_folder_url": "https://dev.habackup.io/drive/picker",

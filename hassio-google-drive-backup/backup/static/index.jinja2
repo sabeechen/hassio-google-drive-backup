@@ -1,31 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "layouts/base.jinja2" %}
 
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-  <title>Home Assistant Google Drive Backup</title>
+{% block head %}
+  {{ super() }}
+  <script src="static/js/clipboard.min.js?version={{ version }}"></script>
+{% endblock %}
 
-  <link href="static/css/icons.css?version=0.101.2" rel="stylesheet">
-  <link href="static/css/materialize.css?version=0.101.2" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="static/css/colpick.css?version=0.101.2" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="theme?version=0.101.2" id="theme" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link href="static/css/static.css?version=0.101.2" type="text/css" rel="stylesheet" media="screen,projection" />
-  <link rel="icon" type="image/png" href="static/images/favicon.png?version=0.101.2">
-  <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
-  <script src="static/js/jquery.js?version=0.101.2"></script>
-  <script src="static/js/markdown-it.min.js?version=0.101.2"></script>
-  <script src="static/js/clipboard.min.js?version=0.101.2"></script>
-  <script src="static/js/materialize.js?version=0.101.2"></script>
-  <script src="static/js/colpick.js?version=0.101.2"></script>
-  <script src="static/js/init.js?version=0.101.2"></script>
-  <script src="static/js/scripts.js?version=0.101.2"></script>
-  <script src="static/js/settings.js?version=0.101.2"></script>
-  <script src="static/js/restore.js?version=0.101.2"></script>
-  <script src="static/js/moment.js?version=0.101.2"></script>
-</head>
-
-<body>
+{% block content %}
   <div id="settings_modal" class="modal modal-fixed-footer">
     <div class="modal-content">
       <h4>Add-on Settings</h4>
@@ -875,47 +855,10 @@
         <br><br>
       </div>
     </div>
-
-
-    <div class="container">
-      <div class="section">
-
-        <div class="row">
-        </div>
-
-      </div>
-      <br><br>
-    </div>
   </main>
-  <footer class="ha-blue page-footer">
-    <div class="container">
-      <div class="row">
-        <div class="col l3 s12">
-          <h5 class="accent-text">Connect</h5>
-          <ul>
-            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup" target="_blank" rel="noreferrer">Project Github</a>
-            </li>
-            <li><a class="accent-text" href="https://github.com/sabeechen/hassio-google-drive-backup/issues" target="_blank" rel="noreferrer">Issue
-                Tracker</a></li>
-            <li><a class="accent-text" href="https://materializecss.com" target="_blank" rel="noreferrer">Materialize</a></li>
-          </ul>
-        </div>
-        <div class="col l6 s12">
-          <h5 class="accent-title">Who did this?</h5>
-          <p class="accent-text">I'm an individual who works on projects like this in my spare time. If you
-            like it and would like to support me, you can star my projects on <a
-              href="https://github.com/sabeechen" class="accent-text" target="_blank" rel="noreferrer">Github</a> or just gimme money at
-            <a class="bmc-button" target="_blank" rel="noreferrer" href="https://www.buymeacoffee.com/sabeechen"><img src="static/images/bmc.svg" alt="Support me"><span>Buy me a coffee</span></a></p>
-        </div>
-      </div>
-      <div class="container left accent-text">
-        © 2020 Stephen Beechen
-      </div>
-    </div>
-  </footer>
+{% endblock %}
 
-
-  <!--  Scripts-->
+{% block scripts %}
   <script type="text/javascript">
     document.getElementById("authenticate-button").href =
       "https://habackup.io/drive/authorize?redirectbacktoken=" + encodeURIComponent(getWindowRootUri() + "token");
@@ -990,6 +933,4 @@
     }
 
   </script>
-</body>
-
-</html>
+{% endblock %}

@@ -1,49 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "layouts/base.jinja2" %}
 
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-    <title>Home Assistant Google Drive Backup</title>
-
-    <!-- CSS  -->
-    <link href="static/css/icons.css?version=0.101.2" rel="stylesheet">
-    <link href="static/css/materialize.css?version=0.101.2" type="text/css" rel="stylesheet" media="screen,projection" />
-    <link href="theme?version=0.101.2" type="text/css" rel="stylesheet" media="screen,projection" />
-    <link href="static/css/static.css?version=0.101.2" type="text/css" rel="stylesheet" media="screen,projection" />
-    <link rel="icon" type="image/png" href="static/images/favicon.png?version=0.101.2">
-    <script src="static/js/jquery.js?version=0.101.2"></script>
-    <script src="static/js/materialize.js?version=0.101.2"></script>
-    <script src="static/js/init.js?version=0.101.2"></script>
-    <script src="static/js/scripts.js?version=0.101.2"></script>
-    <script src="static/js/settings.js?version=0.101.2"></script>
-    <script src="static/js/restore.js?version=0.101.2"></script>
-
-    <script type="text/javascript">
-
-        function redirect() {
-            let searchParams = new URLSearchParams(window.location.search);
-            if (searchParams.has('to')) {
-                window.location.assign(searchParams.get('to'));
-            }
-            else {
-                window.location.assign("{{ url }}");
-            }
+{% block head %}
+  {{ super() }}
+  <script type="text/javascript">
+    function redirect() {
+        let searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.has('to')) {
+            window.location.assign(searchParams.get('to'));
         }
-
-        function sleep (time) {
-            return new Promise((resolve) => setTimeout(resolve, time));
+        else {
+            window.location.assign("{{ url }}");
         }
+    }
 
-        $(document).ready(function () {
-            sleep(3000).then(() => {
-                redirect();
-            });
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+
+    $(document).ready(function () {
+        sleep(3000).then(() => {
+            redirect();
         });
-    </script>
-</head>
+    });
+  </script>
+{% endblock %}
 
-<body>
+{% block content %}
     <div class="container">
         <div class="row" id="hello_card">
             <div class="col s12 m9">
@@ -60,5 +42,4 @@
             </div>
         </div>
     </div>
-</body>
-</html>
+{% endblock %}

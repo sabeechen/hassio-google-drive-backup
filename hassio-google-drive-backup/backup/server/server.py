@@ -1,19 +1,15 @@
-import os
 import urllib
 import json
 import aiohttp_jinja2
 import jinja2
 from os.path import abspath, join
-from aiohttp.web import Application, json_response, Request, TCPSite, AppRunner, post, Response, static, FileResponse, get
+from aiohttp.web import Application, json_response, Request, TCPSite, AppRunner, post, Response, static, get
 from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError, ServerConnectionError, ServerDisconnectedError, ServerTimeoutError
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPSeeOther
 from backup.creds import Exchanger
-from backup.logger import getLogger, StandardLogger
-from backup.config import Config, Setting
-from backup.exceptions import GoogleCredentialsExpired, GoogleCantConnect, GoogleDnsFailure, GoogleInternalError, GoogleTimeoutError, ensureKey, KnownError
+from backup.config import Config, Setting, VERSION
+from backup.exceptions import GoogleCredentialsExpired, ensureKey, KnownError
 from injector import ClassAssistedBuilder, inject, singleton
-from google.cloud import logging
-from google.auth.exceptions import DefaultCredentialsError
 from .errorstore import ErrorStore
 from .cloudlogger import CloudLogger
 
@@ -33,6 +29,11 @@ class Server():
         self.logger = logger
         self.config = config
         self.error_store = error_store
+
+    def base_context(self):
+        return {
+            'version': VERSION,
+        }
 
     async def authorize(self, request: Request):
         if 'redirectbacktoken' in request.query:
@@ -112,14 +113,15 @@ class Server():
     @aiohttp_jinja2.template('picker.jinja2')
     async def picker(self, request: Request):
         return {
+            **self.base_context(),
             "client_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             "developer_key": self.config.get(Setting.DRIVE_PICKER_API_KEY),
             "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0]
         }
 
+    @aiohttp_jinja2.template('server-index.jinja2')
     async def index(self, request: Request):
-        path = abspath(join(__file__, "..", "..", "static", "server-index.html"))
-        return FileResponse(path)
+        return self.base_context()
 
     def buildApp(self, app):
         path = abspath(join(__file__, "..", "..", "static"))

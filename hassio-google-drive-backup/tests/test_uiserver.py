@@ -112,7 +112,7 @@ async def test_uiserver_start(ui_server: UiServer):
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(10)
-async def test_uiserver_static_files(reader):
+async def test_uiserver_static_files(reader: ReaderHelper):
     await reader.get("")
     await reader.get("reauthenticate")
     await reader.get("pp")
@@ -415,12 +415,12 @@ async def test_update_error_reports_false(reader, ui_server, config: Config, ser
 
 
 @pytest.mark.asyncio
-async def test_drive_cred_generation(reader, ui_server, snapshot, server, config: Config, global_info: GlobalInfo, session: ClientSession):
+async def test_drive_cred_generation(reader, ui_server, snapshot, config: Config, global_info: GlobalInfo, session: ClientSession, google):
     status = await reader.getjson("getstatus")
     assert len(status["snapshots"]) == 1
     assert global_info.credVersion == 0
     # Invalidate the drive creds, sync, then verify we see an error
-    server.expireCreds()
+    google.expireCreds()
     status = await reader.getjson("sync")
     assert status["last_error"]["error_type"] == ERROR_CREDS_EXPIRED
 
@@ -803,11 +803,11 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
 
 
 @pytest.mark.asyncio
-async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, server: SimulationServer, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
-    server.resetDriveAuth()
+async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, google, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
+    google.resetDriveAuth()
     # Generate manual credentials
     req_path = "manualauth?client_id={}&client_secret={}".format(
-        server.custom_drive_client_id, server.custom_drive_client_secret)
+        google._custom_drive_client_id, google._custom_drive_client_secret)
     data = await reader.getjson(req_path)
     assert "auth_url" in data
     async with session.get(data["auth_url"], allow_redirects=False) as resp:

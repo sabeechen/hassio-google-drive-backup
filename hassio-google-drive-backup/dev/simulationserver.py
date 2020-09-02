@@ -1,6 +1,4 @@
 import asyncio
-import io
-import logging
 import random
 import re
 from io import BytesIO
@@ -9,12 +7,12 @@ from typing import Any, Dict
 from yarl import URL
 
 import aiohttp
-from aiohttp.web import (Application, HTTPBadRequest, HTTPClientError,
+from aiohttp.web import (Application, HTTPBadRequest,
                          HTTPException, HTTPNotFound,
-                         HTTPUnauthorized, Request, Response, delete, get,
-                         json_response, middleware, patch, post, put, HTTPSeeOther)
+                         HTTPUnauthorized, Request, Response, get,
+                         json_response, middleware, post, HTTPSeeOther)
 from aiohttp.client import ClientSession
-from injector import inject, singleton, ClassAssistedBuilder, Injector
+from injector import inject, singleton, Injector, provider, Module
 
 from backup.time import Time
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
@@ -25,7 +23,11 @@ from tests.faketime import FakeTime
 from datetime import timedelta
 from backup.module import BaseModule
 from backup.config import Config, Setting
-from asyncio import Event
+from .http_exception import HttpMultiException
+from .simulated_google import SimulatedGoogle
+from .base_server import BaseServer
+from .ports import Ports
+from .request_interceptor import RequestInterceptor
 import aiorun
 
 logger = getLogger(__name__)
@@ -38,33 +40,24 @@ intPattern = re.compile("\\d+")
 rangePattern = re.compile("bytes=\\d+-\\d+")
 
 
-class HttpMultiException(HTTPClientError):
-    def __init__(self, code):
-        self.status_code = code
-
-
 @singleton
-class SimulationServer():
+class SimulationServer(BaseServer):
     @inject
-    def __init__(self, port, time: Time, session: ClientSession, authserver: Server, config: Config):
-        self.items: Dict[str, Any] = {}
+    def __init__(self, ports: Ports, time: Time, session: ClientSession, authserver: Server, config: Config, google: SimulatedGoogle, interceptor: RequestInterceptor):
+        self.interceptor = interceptor
+        self.google = google
         self.config = config
         self.id_counter = 0
         self.upload_info: Dict[str, Any] = {}
-        self.simulate_drive_errors = False
-        self.simulate_out_of_drive_space = False
         self.error_code = 500
         self.match_errors = []
-        self.last_error = False
         self.snapshots: Dict[str, Any] = {}
         self.snapshot_data: Dict[str, bytearray] = {}
         self.files: Dict[str, bytearray] = {}
-        self.chunks = []
         self.settings: Dict[str, Any] = self.defaultSettings()
-        self.client_id_hack = None
         self._snapshot_lock = asyncio.Lock()
         self._settings_lock = Lock()
-        self._port = port
+        self._port = ports.server
         self._ha_error = None
         self._entities = {}
         self._events = []
@@ -74,21 +67,12 @@ class SimulationServer():
         self._options = self.defaultOptions()
         self._username = "user"
         self._password = "pass"
-        self.lostPermission = []
         self.urls = []
         self.relative = True
         self.block_snapshots = False
         self.snapshot_in_progress = False
-        self.drive_auth_code = "drive_auth_code"
         self._authserver = authserver
-        self._upload_chunk_wait = Event()
-        self._upload_chunk_trigger = Event()
-        self.current_chunk = 1
-        self.waitOnChunk = 0
-        self.custom_drive_client_id = self.generateId(5)
-        self.custom_drive_client_secret = self.generateId(5)
         self.supervisor_error = None
-        self.drive_sleep = 0
         self.supervisor_sleep = 0
 
     def wasUrlRequested(self, pattern):
@@ -109,6 +93,9 @@ class SimulationServer():
             'attempts': attempts,
             'status': status
         })
+
+    def clearErrors(self):
+        self.match_errors.clear()
 
     def defaultOptions(self):
         return {
@@ -171,8 +158,6 @@ class SimulationServer():
             "arch": "armv7",
             "image": "homeassistant/raspberrypi3-homeassistant",
             "custom": True,
-            "drive_upload_error": None,
-            "drive_upload_error_attempts": 0,
             "boot": True,
             "port": 8099,
             "ha_port": 1337,
@@ -191,148 +176,7 @@ class SimulationServer():
             "supported_arch": [],
             "channel": "dev",
             "addon_slug": "self_slug",
-            "drive_refresh_token": "",
-            "drive_auth_token": "",
-            "drive_upload_sleep": 0,
-            "drive_all_error": None
         }
-
-    def driveError(self) -> Any:
-        if not self.simulate_drive_errors:
-            return False
-        if not self.last_error:
-            self.last_error = True
-            return self.error_code
-        else:
-            self.last_error = False
-            return None
-
-    async def readAll(self, request):
-        data = bytearray()
-        content = request.content
-        while True:
-            chunk, done = await content.readchunk()
-            data.extend(chunk)
-            if len(chunk) == 0:
-                break
-        return data
-
-    def _checkDriveError(self, request: Request):
-        if self.getSetting("drive_all_error"):
-            raise HttpMultiException(self.getSetting("drive_all_error"))
-        error = self.driveError()
-        if error:
-            raise HttpMultiException(error)
-        for error in self.match_errors:
-            if re.match(error['url'], str(request.url)):
-                if error['attempts'] <= 0:
-                    raise HttpMultiException(error['status'])
-                else:
-                    error['attempts'] = error['attempts'] - 1
-
-    async def _checkDriveHeaders(self, request: Request):
-        if self.drive_sleep > 0:
-            await asyncio.sleep(self.drive_sleep)
-        self._checkDriveError(request)
-        if request.headers.get("Authorization", "") != "Bearer " + self.getSetting('drive_auth_token'):
-            raise HTTPUnauthorized()
-
-    async def driveRefreshToken(self, request: Request):
-        params = await request.post()
-        if not self.checkClientIdandSecret(params['client_id'], params['client_secret']):
-            raise HTTPUnauthorized()
-        if params['refresh_token'] != self.getSetting('drive_refresh_token'):
-            raise HTTPUnauthorized()
-        if params['grant_type'] != 'refresh_token':
-            raise HTTPUnauthorized()
-
-        self.generateNewAccessToken()
-
-        return json_response({
-            'access_token': self.settings['drive_auth_token'],
-            'expires_in': 3600,
-            'token_type': 'doesn\'t matter'
-        })
-
-    def generateNewAccessToken(self):
-        new_token = self.generateId(20)
-        with self._settings_lock:
-            self.settings['drive_auth_token'] = new_token
-
-    def generateNewRefreshToken(self):
-        new_token = self.generateId(20)
-        with self._settings_lock:
-            self.settings['drive_refresh_token'] = new_token
-
-    async def driveAuthorize(self, request: Request):
-        query = request.query
-        if query.get('client_id') != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID) and query.get('client_id') != self.custom_drive_client_id:
-            raise HTTPUnauthorized()
-        if query.get('scope') != 'https://www.googleapis.com/auth/drive.file':
-            raise HTTPUnauthorized()
-        if query.get('response_type') != 'code':
-            raise HTTPUnauthorized()
-        if query.get('include_granted_scopes') != 'true':
-            raise HTTPUnauthorized()
-        if query.get('access_type') != 'offline':
-            raise HTTPUnauthorized()
-        if 'state' not in query:
-            raise HTTPUnauthorized()
-        if 'redirect_uri' not in query:
-            raise HTTPUnauthorized()
-        if query.get('prompt') != 'consent':
-            raise HTTPUnauthorized()
-        url = URL(query.get('redirect_uri')).with_query({'code': self.drive_auth_code, 'state': query.get('state')})
-        raise HTTPSeeOther(str(url))
-
-    async def driveToken(self, request: Request):
-        data = await request.post()
-        if data.get('redirect_uri') not in ["http://localhost:{}/drive/authorize".format(self._port), 'urn:ietf:wg:oauth:2.0:oob']:
-            raise HTTPUnauthorized()
-        if data.get('grant_type') != 'authorization_code':
-            raise HTTPUnauthorized()
-        if not self.checkClientIdandSecret(data.get('client_id'), data.get('client_secret')):
-            raise HTTPUnauthorized()
-        if data.get('code') != self.drive_auth_code:
-            raise HTTPUnauthorized()
-        self.generateNewRefreshToken()
-        return json_response({
-            'access_token': self.getSetting('drive_auth_token'),
-            'refresh_token': self.getSetting('drive_refresh_token'),
-            'client_id': data.get('client_id'),
-            'client_secret': self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
-            'token_expiry': self.timeToRfc3339String(self._time.now()),
-        })
-
-    def checkClientIdandSecret(self, client_id: str, client_secret: str) -> bool:
-        if self.custom_drive_client_id == client_id and self.custom_drive_client_secret == client_secret:
-            return True
-        if client_id == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID) == client_id and client_secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
-            return True
-
-        if self.client_id_hack is not None:
-            if client_id == self.client_id_hack and client_secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
-                return True
-        return False
-
-    def expireCreds(self):
-        self.generateNewAccessToken()
-        self.generateNewRefreshToken()
-
-    def expireRefreshToken(self):
-        self.generateNewRefreshToken()
-
-    def resetDriveAuth(self):
-        self.expireCreds()
-        self.config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, self.generateId(5))
-        self.config.override(Setting.DEFAULT_DRIVE_CLIENT_SECRET, self.generateId(5))
-
-    def getCurrentCreds(self):
-        return Creds(self._time,
-                     id=self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
-                     expiration=self._time.now() + timedelta(hours=1),
-                     access_token=self.getSetting("drive_auth_token"),
-                     refresh_token=self.getSetting("drive_refresh_token"))
 
     async def reset(self, request: Request):
         self._reset()
@@ -349,33 +193,6 @@ class SimulationServer():
     async def readFile(self, request: Request):
         return self.serve_bytes(request, self.files[request.query.get("name", "test")])
 
-    def serve_bytes(self, request: Request, bytes: bytearray, include_length: bool = True) -> Any:
-        if "Range" in request.headers:
-            # Do range request
-            if not rangePattern.match(request.headers['Range']):
-                raise HTTPBadRequest()
-
-            numbers = intPattern.findall(request.headers['Range'])
-            start = int(numbers[0])
-            end = int(numbers[1])
-
-            if start < 0:
-                raise HTTPBadRequest()
-            if start > end:
-                raise HTTPBadRequest()
-            if end > len(bytes) - 1:
-                raise HTTPBadRequest()
-            resp = Response(body=bytes[start:end + 1], status=206)
-            resp.headers['Content-Range'] = "bytes {0}-{1}/{2}".format(
-                start, end, len(bytes))
-            if include_length:
-                resp.headers["Content-length"] = str(len(bytes))
-            return resp
-        else:
-            resp = Response(body=io.BytesIO(bytes))
-            resp.headers["Content-length"] = str(len(bytes))
-            return resp
-
     async def updateSettings(self, request: Request):
         data = await request.json()
         with self._settings_lock:
@@ -384,199 +201,6 @@ class SimulationServer():
             for key in request.query:
                 self.settings[key] = request.query[key]
         return Response(text="updated")
-
-    async def driveGetItem(self, request: Request):
-        id = request.match_info.get('id')
-        await self._checkDriveHeaders(request)
-        if id not in self.items:
-            raise HTTPNotFound
-        if id in self.lostPermission:
-            return Response(
-                status=403,
-                content_type="application/json",
-                text='{"error": {"errors": [{"reason": "forbidden"}]}}')
-        request_type = request.query.get("alt", "metadata")
-        if request_type == "media":
-            # return bytes
-            item = self.items[id]
-            if 'bytes' not in item:
-                raise HTTPBadRequest
-            return self.serve_bytes(request, item['bytes'], include_length=False)
-        else:
-            fields = request.query.get("fields", "id").split(",")
-            return json_response(self.filter_fields(self.items[id], fields))
-
-    async def driveUpdate(self, request: Request):
-        id = request.match_info.get('id')
-        await self._checkDriveHeaders(request)
-        if id not in self.items:
-            return HTTPNotFound
-        update = await request.json()
-        for key in update:
-            if key in self.items[id] and isinstance(self.items[id][key], dict):
-                self.items[id][key].update(update[key])
-            else:
-                self.items[id][key] = update[key]
-        return Response()
-
-    async def driveDelete(self, request: Request):
-        id = request.match_info.get('id')
-        await self._checkDriveHeaders(request)
-        if id not in self.items:
-            raise HTTPNotFound
-        del self.items[id]
-        return Response()
-
-    async def driveQuery(self, request: Request):
-        await self._checkDriveHeaders(request)
-        query: str = request.query.get("q", "")
-        fields = self.parseFields(request.query.get('fields', 'id'))
-        if mimeTypeQueryPattern.match(query):
-            ret = []
-            mimeType = query[len("mimeType='"):-1]
-            for item in self.items.values():
-                if item.get('mimeType', '') == mimeType:
-                    ret.append(self.filter_fields(item, fields))
-            return json_response({'files': ret})
-        elif parentsQueryPattern.match(query):
-            ret = []
-            parent = query[1:-len("' in parents")]
-            if parent not in self.items:
-                raise HTTPNotFound
-            if parent in self.lostPermission:
-                return Response(
-                    status=403,
-                    content_type="application/json",
-                    text='{"error": {"errors": [{"reason": "forbidden"}]}}')
-            for item in self.items.values():
-                if parent in item.get('parents', []):
-                    ret.append(self.filter_fields(item, fields))
-            return json_response({'files': ret})
-        elif len(query) == 0:
-            ret = []
-            for item in self.items.values():
-                ret.append(self.filter_fields(item, fields))
-            return json_response({'files': ret})
-        else:
-            raise HTTPBadRequest
-
-    async def driveCreate(self, request: Request):
-        await self._checkDriveHeaders(request)
-        id = self.generateId(30)
-        item = self.formatItem(await request.json(), id)
-        self.items[id] = item
-        return json_response({'id': item['id']})
-
-    async def driveStartUpload(self, request: Request):
-        if self.simulate_out_of_drive_space:
-            return json_response({
-                "error": {
-                    "errors": [
-                        {"reason": "storageQuotaExceeded"}
-                    ]
-                }
-            }, status=400)
-        logging.getLogger().info("Drive start upload request")
-        await self._checkDriveHeaders(request)
-        if request.query.get('uploadType') != 'resumable':
-            raise HTTPBadRequest()
-        mimeType = request.headers.get('X-Upload-Content-Type', None)
-        if mimeType is None:
-            raise HTTPBadRequest()
-        size = int(request.headers.get('X-Upload-Content-Length', -1))
-        if size == -1:
-            raise HTTPBadRequest()
-        metadata = await request.json()
-        id = self.generateId()
-
-        # Validate parents
-        if 'parents' in metadata:
-            for parent in metadata['parents']:
-                if parent not in self.items:
-                    raise HTTPNotFound()
-                if parent in self.lostPermission:
-                    return Response(status=403, content_type="application/json", text='{"error": {"errors": [{"reason": "forbidden"}]}}')
-        self.upload_info['size'] = size
-        self.upload_info['mime'] = mimeType
-        self.upload_info['item'] = self.formatItem(metadata, id)
-        self.upload_info['id'] = id
-        self.upload_info['next_start'] = 0
-        metadata['bytes'] = bytearray()
-        metadata['size'] = size
-        resp = Response()
-        resp.headers['Location'] = "http://localhost:" + \
-            str(self._port) + "/upload/drive/v3/files/progress/" + id
-        return resp
-
-    async def driveContinueUpload(self, request: Request):
-        if self.waitOnChunk > 0:
-            if self.current_chunk == self.waitOnChunk:
-                self._upload_chunk_trigger.set()
-                await self._upload_chunk_wait.wait()
-            else:
-                self.current_chunk += 1
-        id = request.match_info.get('id')
-        if (self.getSetting('drive_upload_sleep') > 0):
-            await self._time.sleepAsync(self.getSetting('drive_upload_sleep'))
-        await self._checkDriveHeaders(request)
-        if self.upload_info.get('id', "") != id:
-            raise HTTPBadRequest()
-        chunk_size = int(request.headers['Content-Length'])
-        info = request.headers['Content-Range']
-        if resumeBytesPattern.match(info):
-            resp = Response(status=308)
-            if self.upload_info['next_start'] != 0:
-                resp.headers['Range'] = "bytes=0-{0}".format(self.upload_info['next_start'] - 1)
-            return resp
-        if not bytesPattern.match(info):
-            raise HTTPBadRequest()
-        numbers = intPattern.findall(info)
-        start = int(numbers[0])
-        end = int(numbers[1])
-        total = int(numbers[2])
-        if total != self.upload_info['size']:
-            raise HTTPBadRequest()
-        if start != self.upload_info['next_start']:
-            raise HTTPBadRequest()
-        if not (end == total - 1 or chunk_size % (256 * 1024) == 0):
-            raise HTTPBadRequest()
-        if end > total - 1:
-            raise HTTPBadRequest()
-
-        # get the chunk
-        received_bytes = await self.readAll(request)
-
-        # See if we shoudl fail the request
-        if self.getSetting("drive_upload_error") is not None:
-            if self.getSetting("drive_upload_error_attempts") <= 0:
-                raise HttpMultiException(self.getSetting("drive_upload_error"))
-            else:
-                self.update({"drive_upload_error_attempts": self.getSetting("drive_upload_error_attempts") - 1})
-
-        # validate the chunk
-        if len(received_bytes) != chunk_size:
-            raise HTTPBadRequest()
-
-        if len(received_bytes) != end - start + 1:
-            raise HTTPBadRequest()
-
-        self.upload_info['item']['bytes'].extend(received_bytes)
-
-        if len(self.upload_info['item']['bytes']) != end + 1:
-            raise HTTPBadRequest()
-
-        self.chunks.append(len(received_bytes))
-        if end == total - 1:
-            # upload is complete, so create the item
-            self.items[self.upload_info['id']] = self.upload_info['item']
-            return json_response({"id": self.upload_info['id']})
-        else:
-            # Return an incomplete response
-            # For some reason, the tests like to stop right here
-            resp = Response(status=308)
-            self.upload_info['next_start'] = end + 1
-            resp.headers['Range'] = "bytes=0-{0}".format(end)
-            return resp
 
     # HASSIO METHODS BELOW
     async def _verifyHassioHeader(self, request) -> bool:
@@ -848,8 +472,11 @@ class SimulationServer():
     @middleware
     async def error_middleware(self, request: Request, handler):
         self.urls.append(str(request.url))
+        resp = await self.interceptor.checkUrl(request)
+        if resp is not None:
+            return resp
         for error in self.match_errors:
-            if re.match(error['url'], str(request.url)):
+            if re.match(error['url'], request.url.path):
                 if error['attempts'] <= 0:
                     await self.readAll(request)
                     return Response(status=error['status'])
@@ -866,7 +493,7 @@ class SimulationServer():
                 raise
             else:
                 logger.printException(ex)
-            return json_response(str(ex), status=502)
+            return json_response(str(ex), status=500)
 
     def createApp(self):
         app = Application(middlewares=[self.error_middleware])
@@ -914,57 +541,23 @@ class SimulationServer():
             get('/supervisor/logs', self.supervisorLogs),
             get('/core/logs', self.coreLogs),
             get('/snapshots', self.hassioSnapshots),
-            put('/upload/drive/v3/files/progress/{id}', self.driveContinueUpload),
-            post('/upload/drive/v3/files/', self.driveStartUpload),
-            post('/drive/v3/files/', self.driveCreate),
-            get('/drive/v3/files/', self.driveQuery),
-            delete('/drive/v3/files/{id}/', self.driveDelete),
-            patch('/drive/v3/files/{id}/', self.driveUpdate),
-            get('/drive/v3/files/{id}/', self.driveGetItem),
             post('/updatesettings', self.updateSettings),
             get('/readfile', self.readFile),
             post('/uploadfile', self.uploadfile),
             post('/doareset', self.reset),
-            post('/oauth2/v4/token', self.driveRefreshToken),
-            get('/o/oauth2/v2/auth', self.driveAuthorize),
-            post('/token', self.driveToken),
             get('/hassio/ingress/self_slug', self.slugRedirect)
-        ]
+        ] + self.google.routes()
 
-    def generateId(self, length: int = 30) -> Any:
-        self.id_counter += 1
-        ret = str(self.id_counter)
-        return ret + ''.join(map(lambda x: str(x), range(0, length - len(ret))))
-        # return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
 
-    def timeToRfc3339String(self, time) -> Any:
-        return time.strftime("%Y-%m-%dT%H:%M:%SZ")
+class SimServerModule(BaseModule):
+    def __init__(self, config: Config):
+        super().__init__(config, override_dns=False)
+        self.config = config
 
-    def formatItem(self, base, id):
-        base['capabilities'] = {'canAddChildren': True,
-                                'canListChildren': True, 'canDeleteChildren': True}
-        base['trashed'] = False
-        base['id'] = id
-        base['modifiedTime'] = self.timeToRfc3339String(self._time.now())
-        return base
-
-    def parseFields(self, source: str):
-        fields = []
-        for field in source.split(","):
-            if field.startswith("files("):
-                fields.append(field[6:])
-            elif field.endswith(")"):
-                fields.append(field[:-1])
-            else:
-                fields.append(field)
-        return fields
-
-    def filter_fields(self, item: Dict[str, Any], fields) -> Dict[str, Any]:
-        ret = {}
-        for field in fields:
-            if field in item:
-                ret[field] = item[field]
-        return ret
+    @provider
+    @singleton
+    def getPorts(self) -> Ports:
+        return Ports(56153, self.config.get(Setting.PORT), self.config.get(Setting.INGRESS_PORT))
 
 
 async def main():
@@ -976,13 +569,11 @@ async def main():
         Setting.DRIVE_TOKEN_URL: str(base.with_path("token")),
         Setting.DRIVE_REFRESH_URL: str(base.with_path("oauth2/v4/token"))
     })
-    injector = Injector(BaseModule(config, override_dns=False))
-    server = injector.get(ClassAssistedBuilder[SimulationServer]).build(port=port)
+    injector = Injector(SimServerModule(config))
+    server = injector.get(SimulationServer)
     await server.reset({
         'snapshot_min_size': 1024 * 1024 * 3,
         'snapshot_max_size': 1024 * 1024 * 5,
-        "drive_refresh_token": "test_refresh_token",
-        "drive_upload_sleep": 0,
         "snapshot_wait_time": 0,
         "hassio_header": "test_header"
     })

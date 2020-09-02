@@ -26,6 +26,9 @@ from backup.creds import Creds
 from backup.server import ErrorStore
 from .faketime import FakeTime
 from .helpers import Uploader
+from dev.ports import Ports
+from dev.simulated_google import SimulatedGoogle
+from dev.request_interceptor import RequestInterceptor
 
 
 @singleton
@@ -57,11 +60,8 @@ class FsFaker():
 
 # This module should onyl ever have bindings that can also be satisfied by MainModule
 class TestModule(Module):
-    def __init__(self, cleandir, server_url, ui_port, ingress_port):
-        self.cleandir = cleandir
-        self.server_url = server_url
-        self.ui_port = ui_port
-        self.ingress_port = ingress_port
+    def __init__(self, ports: Ports):
+        self.ports = ports
 
     @provider
     @singleton
@@ -73,6 +73,11 @@ class TestModule(Module):
     def getTime(self) -> Time:
         return FakeTime()
 
+    @provider
+    @singleton
+    def getPorts(self) -> Ports:
+        return self.ports
+
 
 @pytest.yield_fixture()
 def event_loop():
@@ -82,7 +87,7 @@ def event_loop():
 
 
 @pytest.fixture
-async def injector(cleandir, server_url, ui_port, ingress_port):
+async def injector(cleandir, server_url, ports):
     drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token")
     with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
         f.write("for_unit_tests: \"password value\"\n")
@@ -110,8 +115,8 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
         Setting.DEFAULT_DRIVE_CLIENT_ID: "test_client_id",
         Setting.DEFAULT_DRIVE_CLIENT_SECRET: "test_client_secret",
         Setting.BACKUP_DIRECTORY_PATH: cleandir,
-        Setting.PORT: ui_port,
-        Setting.INGRESS_PORT: ingress_port
+        Setting.PORT: ports.ui,
+        Setting.INGRESS_PORT: ports.ingress
     })
 
     # PROBLEM: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
@@ -119,7 +124,7 @@ async def injector(cleandir, server_url, ui_port, ingress_port):
     config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 5)
 
     # logging.getLogger('injector').setLevel(logging.DEBUG)
-    return Injector([BaseModule(config), TestModule(cleandir, server_url, ui_port, ingress_port)])
+    return Injector([BaseModule(config), TestModule(ports)])
 
 
 @pytest.fixture
@@ -128,9 +133,18 @@ async def uploader(injector: Injector, server_url):
 
 
 @pytest.fixture
+async def google(injector: Injector):
+    return injector.get(SimulatedGoogle)
+
+
+@pytest.fixture
+async def interceptor(injector: Injector):
+    return injector.get(RequestInterceptor)
+
+
+@pytest.fixture
 async def server(injector, port, drive_creds: Creds, session):
-    server = injector.get(
-        ClassAssistedBuilder[SimulationServer]).build(port=port)
+    server = injector.get(SimulationServer)
     await server.reset({
         "drive_refresh_token": drive_creds.refresh_token,
         "drive_client_id": drive_creds.id,
@@ -192,23 +206,28 @@ async def server_url(port):
 
 
 @pytest.fixture
-async def port(unused_tcp_port_factory):
-    return unused_tcp_port_factory()
+async def ports(unused_tcp_port_factory):
+    return Ports(unused_tcp_port_factory(), unused_tcp_port_factory(), unused_tcp_port_factory())
 
 
 @pytest.fixture
-async def ui_url(ingress_port):
-    return URL("http://localhost").with_port(ingress_port)
+async def port(ports: Ports):
+    return ports.server
 
 
 @pytest.fixture
-async def ui_port(unused_tcp_port_factory):
-    return unused_tcp_port_factory()
+async def ui_url(ports: Ports):
+    return URL("http://localhost").with_port(ports.ingress)
 
 
 @pytest.fixture
-async def ingress_port(unused_tcp_port_factory):
-    return unused_tcp_port_factory()
+async def ui_port(ports: Ports):
+    return ports.ui
+
+
+@pytest.fixture
+async def ingress_port(ports: Ports):
+    return ports.ingress
 
 
 @pytest.fixture

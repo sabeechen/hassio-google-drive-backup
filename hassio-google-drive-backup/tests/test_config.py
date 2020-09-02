@@ -37,38 +37,26 @@ def test_validate_float():
 def test_validate_bool():
     setting = Setting.SEND_ERROR_REPORTS
     assert Config().validate({setting: True}) == defaultAnd({setting: True})
-    assert Config().validate({setting: False}
-                               ) == defaultAnd({setting: False})
-    assert Config().validate({setting: "true"}
-                               ) == defaultAnd({setting: True})
-    assert Config().validate({setting: "false"}
-                               ) == defaultAnd({setting: False})
+    assert Config().validate({setting: False}) == defaultAnd({setting: False})
+    assert Config().validate({setting: "true"}) == defaultAnd({setting: True})
+    assert Config().validate({setting: "false"}) == defaultAnd({setting: False})
     assert Config().validate({setting: "1"}) == defaultAnd({setting: True})
     assert Config().validate({setting: "0"}) == defaultAnd({setting: False})
     assert Config().validate({setting: "yes"}) == defaultAnd({setting: True})
     assert Config().validate({setting: "no"}) == defaultAnd({setting: False})
     assert Config().validate({setting: "on"}) == defaultAnd({setting: True})
-    assert Config().validate({setting: "off"}
-                               ) == defaultAnd({setting: False})
+    assert Config().validate({setting: "off"}) == defaultAnd({setting: False})
 
 
 def test_validate_string():
-    assert Config().validate({Setting.SNAPSHOT_NAME: True}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "True"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: False}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "False"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "true"}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "true"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "false"}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "false"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "1"}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "1"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "0"}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "0"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "yes"}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "yes"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "no"}) == defaultAnd(
-        {Setting.SNAPSHOT_NAME: "no"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: True}) == defaultAnd({Setting.SNAPSHOT_NAME: "True"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: False}) == defaultAnd({Setting.SNAPSHOT_NAME: "False"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "true"}) == defaultAnd({Setting.SNAPSHOT_NAME: "true"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "false"}) == defaultAnd({Setting.SNAPSHOT_NAME: "false"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "1"}) == defaultAnd({Setting.SNAPSHOT_NAME: "1"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "0"}) == defaultAnd({Setting.SNAPSHOT_NAME: "0"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "yes"}) == defaultAnd({Setting.SNAPSHOT_NAME: "yes"})
+    assert Config().validate({Setting.SNAPSHOT_NAME: "no"}) == defaultAnd({Setting.SNAPSHOT_NAME: "no"})
 
 
 def test_validate_url():
@@ -100,8 +88,7 @@ def test_validate_regex():
 
 
 def test_remove_ssl():
-    assert Config().validate({Setting.USE_SSL: True}
-                               ) == defaultAnd({Setting.USE_SSL: True})
+    assert Config().validate({Setting.USE_SSL: True}) == defaultAnd({Setting.USE_SSL: True})
     assert Config().validate({Setting.USE_SSL: False}) == defaultAnd(
         {Setting.USE_SSL: False})
     assert Config().validate({
@@ -152,14 +139,10 @@ def defaultAnd(config={}):
 def test_GenerationalConfig() -> None:
     assert Config().getGenerationalConfig() is None
 
-    assert Config().override(Setting.GENERATIONAL_DAYS,
-                               5).getGenerationalConfig() == GenConfig(days=5)
-    assert Config().override(Setting.GENERATIONAL_WEEKS,
-                               3).getGenerationalConfig() == GenConfig(days=1, weeks=3)
-    assert Config().override(Setting.GENERATIONAL_MONTHS,
-                               3).getGenerationalConfig() == GenConfig(days=1, months=3)
-    assert Config().override(Setting.GENERATIONAL_YEARS,
-                               3).getGenerationalConfig() == GenConfig(days=1, years=3)
+    assert Config().override(Setting.GENERATIONAL_DAYS, 5).getGenerationalConfig() == GenConfig(days=5)
+    assert Config().override(Setting.GENERATIONAL_WEEKS, 3).getGenerationalConfig() == GenConfig(days=1, weeks=3)
+    assert Config().override(Setting.GENERATIONAL_MONTHS, 3).getGenerationalConfig() == GenConfig(days=1, months=3)
+    assert Config().override(Setting.GENERATIONAL_YEARS, 3).getGenerationalConfig() == GenConfig(days=1, years=3)
     assert Config().override(Setting.GENERATIONAL_DELETE_EARLY, True).override(
         Setting.GENERATIONAL_DAYS, 2).getGenerationalConfig() == GenConfig(days=2, aggressive=True)
     assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(
@@ -169,8 +152,7 @@ def test_GenerationalConfig() -> None:
     assert Config().override(Setting.GENERATIONAL_DAYS, 1).override(
         Setting.GENERATIONAL_DAY_OF_WEEK, "tue").getGenerationalConfig() == GenConfig(days=1, day_of_week="tue")
 
-    assert Config().override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).override(Setting.GENERATIONAL_DAY_OF_WEEK,
-                                                                              "tue").override(Setting.GENERATIONAL_DAY_OF_YEAR, "4").getGenerationalConfig() is None
+    assert Config().override(Setting.GENERATIONAL_DAY_OF_MONTH, 3).override(Setting.GENERATIONAL_DAY_OF_WEEK, "tue").override(Setting.GENERATIONAL_DAY_OF_YEAR, "4").getGenerationalConfig() is None
 
 
 def test_from_environment():

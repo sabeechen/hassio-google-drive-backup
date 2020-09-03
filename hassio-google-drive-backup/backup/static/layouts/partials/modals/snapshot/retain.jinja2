@@ -1,0 +1,25 @@
+<div id="retainmodal" class="modal">
+  <div class="modal-content">
+    <h4>Keep this snapshot around indefinitely?</h4>
+    <p id="retain_text">
+      Select where you'd like the snapshots kept indefinitely. It won't get deleted automatically and won't count toward the maximum number of snapshots you've configured to keep
+      in Google Drive or Home Assistant. To delete it you'll either need to select "Delete" from the snapshot's menu or come back to this dialog and unckeck the options below to
+      let it get automatically cleaned up (after a few minutes).
+    </p>
+    <form>
+      <label>
+        <input type="checkbox" name="notify_for_stale_snapshots" id="retain_drive" class="filled-in checkbox-ha" />
+        <span>Keep indefinitely in Google Drive</span>
+      </label>
+      <br />
+      <label>
+        <input type="checkbox" name="notify_for_stale_snapshots" id="retain_ha" class="filled-in checkbox-ha" />
+        <span>Keep indefinitely in Home Assistant</span>
+      </label>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="danger-button modal-close waves-effect waves-light btn" id="do_retain_button">Save</a>
+    <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="delete_cancel">Cancel</a>
+  </div>
+</div>

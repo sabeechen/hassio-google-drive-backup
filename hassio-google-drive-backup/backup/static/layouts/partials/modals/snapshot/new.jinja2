@@ -1,0 +1,44 @@
+<div id="snapshotmodal" class="modal">
+  <div class="modal-content">
+    <h4>New Snapshot</h4>
+    <p>
+      Create a new snapshot immediately, using the settings you've configured for snapshots (eg full vs partial, password protection, etc). Optionally, you can set the name you'd
+      like to use for this snapshot and indicate if you'd like it to be kept indefinitely in Home Assistant or Google Drive. These options will only apply to this one-off snapshot.
+    </p>
+    <form>
+      <div class="row">
+        <div class="input-field col s12">
+          <i class="material-icons prefix">label_outline</i>
+          <input type="text" id="snapshot_name_one_off" name="snapshot_name_one_off" class="validate" onkeyup="snapshotNameOneOffExample()" />
+          <label for="snapshot_name_one_off">Snapshot Name</label>
+          <span class="helper-text"
+            >The name to use for this snapshot, or leave it blank to use the default naming scheme. Optionally you can use template variables,<a
+              target="_blank"
+              rel="noreferrer"
+              href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name"
+              >see here</a
+            >
+            for a list of all available options. Your snapshots name will look something like: <br /><span id="snapshot_name_example_one_off"></span
+          ></span>
+        </div>
+      </div>
+      <div class="row" style="margin-left: 20px">
+        <div class="col s12">
+          <label>
+            <input type="checkbox" name="retain_drive_one_off" id="retain_drive_one_off" class="filled-in checkbox-ha" />
+            <span>Keep indefinitely in Google Drive</span>
+          </label>
+          <br />
+          <label>
+            <input type="checkbox" name="retain_ha_one_off" id="retain_ha_one_off" class="filled-in checkbox-ha" />
+            <span>Keep indefinitely in Home Assistant</span>
+          </label>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="create_snapshot_button" onclick="doNewSnapshot(); return false;">Create Snapshot</a>
+    <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="cancel_snapshot">Cancel</a>
+  </div>
+</div>

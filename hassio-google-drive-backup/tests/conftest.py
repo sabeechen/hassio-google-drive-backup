@@ -29,6 +29,7 @@ from .helpers import Uploader
 from dev.ports import Ports
 from dev.simulated_google import SimulatedGoogle
 from dev.request_interceptor import RequestInterceptor
+from dev.simulated_supervisor import SimulatedSupervisor
 
 
 @singleton
@@ -143,14 +144,13 @@ async def interceptor(injector: Injector):
 
 
 @pytest.fixture
+async def supervisor(injector: Injector):
+    return injector.get(SimulatedSupervisor)
+
+
+@pytest.fixture
 async def server(injector, port, drive_creds: Creds, session):
     server = injector.get(SimulationServer)
-    await server.reset({
-        "drive_refresh_token": drive_creds.refresh_token,
-        "drive_client_id": drive_creds.id,
-        "drive_client_secret": drive_creds.secret,
-        "hassio_header": "test_header"
-    })
 
     # start the server
     logging.getLogger().info("Starting SimulationServer on port " + str(port))

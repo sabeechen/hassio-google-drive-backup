@@ -21,11 +21,12 @@ from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource, FolderFinder
 from backup.drive.drivesource import FOLDER_MIME_TYPE
-from dev.simulationserver import SimulationServer
 from backup.ha import HaSource
 from .faketime import FakeTime
 from .helpers import compareStreams
 from yarl import URL
+from dev.ports import Ports
+from dev.simulated_supervisor import SimulatedSupervisor
 
 
 class ReaderHelper:
@@ -120,7 +121,7 @@ async def test_uiserver_static_files(reader: ReaderHelper):
 
 
 @pytest.mark.asyncio
-async def test_getstatus(reader, config: Config, ha, server):
+async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
     File.touch(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
     await ha.init()
     data = await reader.getjson("getstatus")
@@ -136,7 +137,7 @@ async def test_getstatus(reader, config: Config, ha, server):
     assert data['maxSnapshotsInHasssio'] == config.get(
         Setting.MAX_SNAPSHOTS_IN_HASSIO)
     assert data['next_snapshot_text'] == "right now"
-    assert data['restore_link'] == "http://{host}:1337/hassio/snapshots"
+    assert data['restore_link'] == "https://{0}:{1}/hassio/snapshots".format("{host}", ports.server)
     assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
     assert data['warn_ingress_upgrade'] is False
     assert len(data['snapshots']) == 0
@@ -333,7 +334,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
 
 
 @pytest.mark.asyncio
-async def test_config(reader, ui_server, config: Config, server):
+async def test_config(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     update = {
         "config": {
             "days_between_snapshots": 20,
@@ -344,13 +345,13 @@ async def test_config(reader, ui_server, config: Config, server):
     assert ui_server._starts == 1
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     assert config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) == 20
-    assert server._options["days_between_snapshots"] == 20
+    assert supervisor._options["days_between_snapshots"] == 20
     assert ui_server._starts == 1
 
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_auth_and_restart(reader, ui_server, config: Config, server, restarter, coord: Coordinator):
+async def test_auth_and_restart(reader, ui_server, config: Config, restarter, coord: Coordinator, supervisor: SimulatedSupervisor):
     update = {"config": {"require_login": True,
                          "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
@@ -358,7 +359,7 @@ async def test_auth_and_restart(reader, ui_server, config: Config, server, resta
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     await restarter.waitForRestart()
     assert config.get(Setting.REQUIRE_LOGIN)
-    assert server._options['require_login']
+    assert supervisor._options['require_login']
     assert ui_server._starts == 2
 
     await reader.get("getstatus", status=401, ingress=False)
@@ -395,23 +396,23 @@ async def test_expose_extra_server_option(reader, ui_server: UiServer, config: C
 
 
 @pytest.mark.asyncio
-async def test_update_error_reports_true(reader, ui_server, config: Config, server):
+async def test_update_error_reports_true(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
     assert await reader.getjson("errorreports?send=true") == {'message': 'Configuration updated'}
     assert config.get(Setting.SEND_ERROR_REPORTS) is True
     assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert server._options["send_error_reports"] is True
+    assert supervisor._options["send_error_reports"] is True
 
 
 @pytest.mark.asyncio
-async def test_update_error_reports_false(reader, ui_server, config: Config, server):
+async def test_update_error_reports_false(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
     assert await reader.getjson("errorreports?send=false") == {'message': 'Configuration updated'}
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert server._options["send_error_reports"] is False
+    assert supervisor._options["send_error_reports"] is False
 
 
 @pytest.mark.asyncio
@@ -435,10 +436,8 @@ async def test_drive_cred_generation(reader, ui_server, snapshot, config: Config
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
-    server._options.update(
-        {"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
-    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
     config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
+    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
 
     # create three snapshots
     await ha.create(CreateOptions(time.now(), "Name1"))
@@ -702,7 +701,7 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
 
 
 @pytest.mark.asyncio
-async def test_update_sync_interval(reader, ui_server, config: Config, server):
+async def test_update_sync_interval(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     # Make sure the default saves nothing
     update = {
         "config": {
@@ -712,7 +711,7 @@ async def test_update_sync_interval(reader, ui_server, config: Config, server):
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60
-    assert "max_sync_interval_seconds" not in server._options
+    assert "max_sync_interval_seconds" not in supervisor._options
 
     # Update custom
     update = {
@@ -723,7 +722,7 @@ async def test_update_sync_interval(reader, ui_server, config: Config, server):
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60 * 2
-    assert server._options["max_sync_interval_seconds"] == 60 * 60 * 2
+    assert supervisor._options["max_sync_interval_seconds"] == 60 * 60 * 2
 
 
 @pytest.mark.asyncio

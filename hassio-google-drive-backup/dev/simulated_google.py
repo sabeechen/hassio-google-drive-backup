@@ -1,4 +1,3 @@
-import asyncio
 import re
 
 from yarl import URL
@@ -10,13 +9,11 @@ from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, delete, get,
                          json_response, patch, post, put, HTTPSeeOther)
 from injector import inject, singleton
-from .http_exception import HttpMultiException
 from .base_server import BaseServer, bytesPattern, intPattern
 from .ports import Ports
 from typing import Any, Dict
 from asyncio import Event
 from backup.creds import Creds
-from enum import Enum, unique
 
 logger = getLogger(__name__)
 
@@ -44,7 +41,7 @@ class SimulatedGoogle(BaseServer):
         self._port = ports.server
         self._auth_token = ""
         self._refresh_token = "test_refresh_token"
-        self.client_id_hack = None
+        self._client_id_hack = None
 
         # Drive item states
         self.items = {}
@@ -153,7 +150,7 @@ class SimulatedGoogle(BaseServer):
         if client_id == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID) == client_id and client_secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
             return True
 
-        if self.client_id_hack is not None:
+        if self._client_id_hack is not None:
             if client_id == self._client_id_hack and client_secret == self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET):
                 return True
         return False

@@ -1,0 +1,28 @@
+<div id="details_modal" class="modal">
+  <div class="modal-content">
+    <h4><i class="material-icons" style="font-size: 50px; padding-right: 10px; vertical-align: middle">info_outline</i><span>Snapshot Details</span></h4>
+    <p class="detail-node"><span class="left-align" style="font-weight: bold; padding: 5px">Name:</span> <span id="details_name"></span></p>
+    <p class="detail-node"><span class="left-align" style="font-weight: bold; padding: 5px">Date:</span> <span id="details_date"></span></p>
+    <p class="detail-node">
+      <span class="left-align" style="font-weight: bold; padding: 5px">Home Assistant Version:</span>
+      <span id="details_ha_version"></span>
+    </p>
+    <p class="detail-node"><span class="left-align" style="font-weight: bold; padding: 5px">Type:</span> <span id="details_type"></span></p>
+    <p class="detail-node">
+      <span class="left-align" style="font-weight: bold; padding: 5px">Password:</span>
+      <span id="details_password"></span>
+    </p>
+    <div id="details_folders_and_addons">
+      <p style="font-weight: bold; padding: 5px; margin-bottom: 0px; padding-bottom: 0px">Folders:</p>
+      <ul style="margin-left: 15px" id="details_folders"></ul>
+      <p style="font-weight: bold; padding: 5px; margin-bottom: 0px; padding-bottom: 0px">Addons:</p>
+      <ul style="margin-left: 15px" id="details_addons"></ul>
+    </div>
+    <div id="details_upload_reminder">
+      <p style="font-style: italic">To see folders and addons included in this snapshot, you must upload it to Home Assistant by selecting "Actions" -> "Upload".</p>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="save_cancel">Close</a>
+  </div>
+</div>

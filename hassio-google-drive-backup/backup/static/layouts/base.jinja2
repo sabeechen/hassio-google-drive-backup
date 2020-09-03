@@ -32,10 +32,14 @@
 </head>
 
 <body>
+  {% block navbar %}
+  {% include 'layouts/partials/navbar.jinja2' %}
+  {% endblock %}
+
   {% block content %}{% endblock %}
 
   {% block footer %}
-    {% include 'layouts/partials/footer.jinja2' %}
+  {% include 'layouts/partials/footer.jinja2' %}
   {% endblock %}
 
   {% block scripts %}{% endblock %}

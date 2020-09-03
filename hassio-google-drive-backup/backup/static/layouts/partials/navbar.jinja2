@@ -1,0 +1,137 @@
+{% if coordEnabled %}
+{% include 'layouts/partials/modals/snapshot/delete.jinja2' %}
+{% include 'layouts/partials/modals/snapshot/new.jinja2' %}
+{% include 'layouts/partials/modals/snapshot/retain.jinja2' %}
+{% include 'layouts/partials/modals/snapshot/upload.jinja2' %}
+{% include 'layouts/partials/modals/snapshot/restore.jinja2' %}
+{% include 'layouts/partials/modals/snapshot/details.jinja2' %}
+{% endif %}
+
+{% include 'layouts/partials/modals/settings.jinja2' %}
+{% include 'layouts/partials/modals/help.jinja2' %}
+{% include 'layouts/partials/modals/bug.jinja2' %}
+
+{% if coordEnabled %}
+<script type="text/javascript">
+  $(document).ready(function () {
+    $('#deletemodal').modal();
+    $('#snapshotmodal').modal();
+    $('#retainmodal').modal();
+    $('#uploadmodal').modal();
+    $('#restoremodal').modal();
+    $('#details_modal').modal();
+  });
+</script>
+{% endif %}
+
+<script type="text/javascript">
+  $(document).ready(function () {
+    $('#settings_modal').modal({
+      dismissible: false
+    });
+    $('#help_modal').modal();
+    $('#bug_modal').modal();
+    $('.tooltipped').tooltip();
+    $('.collapsible').collapsible();
+    $('.sidenav').sidenav();
+
+    const dropdownTriggers = document.querySelectorAll('.dropdown-trigger');
+    const instances = M.Dropdown.init(dropdownTriggers, { 'constrainWidth': false });
+  });
+</script>
+
+
+{% macro actionMenu(id) %}
+<ul id="{{ id }}" class="dropdown-content">
+  <li>
+    <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
+      <i class="material-icons left">add</i>Snapshot Now
+    </a>
+  </li>
+  {% if showOpenDriveLink %}
+  <li>
+    <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
+  </li>
+  {% endif %}
+  <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
+  <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
+  <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
+</ul>
+{% endmacro %}
+
+<header>
+  <nav class="non-ingress ha-blue" role="navigation">
+    <div class="nav-wrapper">
+      <a href="/" class="brand-logo">
+        <img style="vertical-align: middle" src="static/images/logo.png" width="40" height="40" />
+        <span>{{ navBarTitle or "Home Assistant Google Drive Backup" }}</span>
+      </a>
+      <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+      <ul class="right hide-on-med-and-down">
+        <li>
+          <a href="#!" onClick="loadSettings()"> <i class="material-icons"
+              style="display: inline; margin-right: 5px; vertical-align: bottom">settings</i>Settings </a>
+        </li>
+        <li>
+          <a href="/log?format=view" target="_blank" rel="noreferrer">
+            <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">code</i>Logs
+          </a>
+        </li>
+        <li>
+          <a href="#!" class="modal-trigger" data-target="help_modal">
+            <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">help</i>Get
+            Help
+          </a>
+        </li>
+        <li>
+          {% if coordEnabled %}
+          {{ actionMenu(id="main_menu_dropdown") }}
+          <a class="dropdown-trigger" href="#!" data-target="main_menu_dropdown">
+            Actions <i class="material-icons right">arrow_drop_down</i>
+          </a>
+          {% else %}
+          <a onclick="bugReport()"> <i class="material-icons"
+              style="display: inline; margin-right: 5px; vertical-align: bottom">bug_report</i>Report a bug </a>
+          {% endif %}
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <ul class="sidenav non-ingress" id="mobile-menu">
+    <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
+    <li><a href="/log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
+    {% if coordEnabled %}
+    <li><a onclick="newSnapshotClick(); return false;" style="cursor: pointer"><i
+          class="material-icons left">add</i>Snapshot Now</a></li>
+    {% if showOpenDriveLink %}
+    <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+    {% endif %}
+    <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
+    <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
+    {% endif %}
+    <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
+    <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
+  </ul>
+  <div></div>
+  <div class="ingress-only ha-blue" style="width: 100%; height: 40px">
+    {% if coordEnabled %}
+    {{ actionMenu(id="main_menu_dropdown2") }}
+    <a class="dropdown-trigger left waves-effect btn top-btn" href="#!" data-target="main_menu_dropdown2">
+      <i class="material-icons left">arrow_drop_down</i>
+      Actions
+    </a>
+    {% endif %}
+    <a href="#!" class="left btn waves-effect top-btn modal-trigger" data-target="help_modal">
+      <i class="material-icons" style="display: inline; margin-right: 5px">help</i>
+      <span style="vertical-align: top">Get Help</span>
+    </a>
+    <a href="log?format=view" target="_blank" rel="noreferrer" class="left btn waves-effect top-btn">
+      <i class="material-icons" style="display: inline; margin-right: 5px">code</i>
+      <span style="vertical-align: top">Logs</span>
+    </a>
+    <a href="#!" onClick="loadSettings()" class="left waves-effect btn top-btn">
+      <i class="material-icons" style="display: inline; margin-right: 5px">settings</i>
+      <span style="vertical-align: top">Settings</span>
+    </a>
+  </div>
+</header>

@@ -16,7 +16,7 @@ from backup.config import Config, Setting, CreateOptions, BoolValidator, Startab
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Snapshot
 from backup.exceptions import KnownError, ensureKey
-from backup.util import GlobalInfo, Estimator, Color, File
+from backup.util import GlobalInfo, Estimator, File
 from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
 from backup.ha import Password
 from backup.time import Time
@@ -70,7 +70,8 @@ class UiServer(Trigger, Startable):
         return {
             'version': VERSION,
             'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
-            'accentColor': self.config.get(Setting.ACCENT_COLOR)
+            'accentColor': self.config.get(Setting.ACCENT_COLOR),
+            'coordEnabled': self._coord.enabled()
         }
 
     async def getstatus(self, request) -> Dict[Any, Any]:
@@ -676,9 +677,17 @@ class UiServer(Trigger, Startable):
     async def index(self, request: Request):
         if not self._coord.enabled():
             template = "index.jinja2"
+            context = {
+                **self.base_context(),
+                'showOpenDriveLink': True
+            }
         else:
             template = "working.jinja2"
-        context = self.base_context()
+            context = {
+                **self.base_context(),
+                'showOpenDriveLink': True,
+                'navBarTitle': 'Snapshots'
+            }
         response = aiohttp_jinja2.render_template(template,
                                                   request,
                                                   context)
@@ -695,7 +704,10 @@ class UiServer(Trigger, Startable):
 
     @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:
-        return self.base_context()
+        return {
+            **self.base_context(),
+            'showOpenDriveLink': True
+        }
 
 
 @web.middleware

@@ -4,7 +4,8 @@
     <p>Please confirm you'd like to restore this snapshot. This process is irreversible.</p>
     <ul class="browser-default">
       <li>Changes you've made since the snapshot was created will be permanently lost.</li>
-      <li>Home Assistant and this add-on will be unresponsive until it is finished setting back up, which in some cases can take hours.</li>
+      <li>Home Assistant and this add-on will be unresponsive until it is finished setting back up, which in some cases
+        can take hours.</li>
       <li>If the snapshot doesn't have this add-on in it, you may need to reinstall the add-on</li>
     </ul>
     <form method="get" id="restore_form">
@@ -13,7 +14,8 @@
         <div class="row">
           <div class="input-field col s12 m6 l3">
             <i class="material-icons prefix">vpn_key</i>
-            <input type="password" autocomplete="new-password" id="restore_password" name="restore_password" class="validate" />
+            <input type="password" autocomplete="new-password" id="restore_password" name="restore_password"
+              class="validate" />
             <label for="restore_password">Password</label>
             <span class="helper-text">The password you used to create this snapshot.</span>
           </div>
@@ -22,7 +24,8 @@
       <div class="row" style="margin-bottom: 5px">
         <div class="col s12">
           <label>
-            <input type="checkbox" name="partial_restore" id="partial_restore" class="filled-in checkbox-ha" onchange="toggleSlide(this, 'restore_partial_details');" />
+            <input type="checkbox" name="partial_restore" id="partial_restore" class="filled-in checkbox-ha"
+              onchange="toggleSlide(this, 'restore_partial_details');" />
             <span>Restore only part of this snapshot</span>
             <br />
             <span class="helper-text">Choose which folders and add-on you'd like to restore from this snapshot.</span>
@@ -34,7 +37,8 @@
           <div class="row">
             <div class="input-field col s12">
               <label class="checkbox-label">
-                <input type="checkbox" name="restore_homeassistant" id="restore_homeassistant" class="filled-in checkbox-ha" checked />
+                <input type="checkbox" name="restore_homeassistant" id="restore_homeassistant"
+                  class="filled-in checkbox-ha" checked />
                 <span>Home Assistant <span id="restore_homeassistant_version" class="helper-text"></span></span>
                 <br />
                 <span class="helper-text">Restore Home Assistant</span>
@@ -47,31 +51,29 @@
               <ul style="margin-bottom: 0px; margin-top: 0px">
                 <li class="indented-li">
                   <label>
-                    <input
-                      settings_ignore="true"
-                      class="restore_folder_checkbox"
-                      type="checkbox"
-                      name="restore_folder_homeassistant"
-                      id="restore_folder_homeassistant"
-                      class="filled-in checkbox-ha"
-                      checked
-                    />
+                    <input settings_ignore="true" class="restore_folder_checkbox" type="checkbox"
+                      name="restore_folder_homeassistant" id="restore_folder_homeassistant"
+                      class="filled-in checkbox-ha" checked />
                     <span class="checkbox-label">Home Assistant Configuration</span>
                     <br />
-                    <span class="helper-text">Restore the files and folders from your Home Assistant config directory, eg configuration.yaml</span>
+                    <span class="helper-text">Restore the files and folders from your Home Assistant config directory,
+                      eg configuration.yaml</span>
                   </label>
                 </li>
                 <li class="indented-li">
                   <label class="checkbox-label">
-                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_ssl" id="restore_folder_ssl" class="filled-in checkbox-ha" checked />
+                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_ssl"
+                      id="restore_folder_ssl" class="filled-in checkbox-ha" checked />
                     <span class="checkbox-label">SSL</span>
                     <br />
-                    <span class="helper-text">Restore your "/ssl" directory, where your certfile and keyfile are typically stored.</span>
+                    <span class="helper-text">Restore your "/ssl" directory, where your certfile and keyfile are
+                      typically stored.</span>
                   </label>
                 </li>
                 <li class="indented-li">
                   <label class="checkbox-label">
-                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_share" id="restore_folder_share" class="filled-in checkbox-ha" checked />
+                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_share"
+                      id="restore_folder_share" class="filled-in checkbox-ha" checked />
                     <span class="checkbox-label">Share</span>
                     <br />
                     <span class="helper-text">Restore your "/share" directory.</span>
@@ -79,10 +81,12 @@
                 </li>
                 <li class="indented-li">
                   <label class="checkbox-label">
-                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_addons" id="restore_folder_addons" class="filled-in checkbox-ha" checked />
+                    <input class="restore_folder_checkbox" type="checkbox" name="restore_folder_addons"
+                      id="restore_folder_addons" class="filled-in checkbox-ha" checked />
                     <span class="checkbox-label">Local Addons</span>
                     <br />
-                    <span class="helper-text">Restore your local addons directory. This directory will be empty unless you use it for add-on development.</span>
+                    <span class="helper-text">Restore your local addons directory. This directory will be empty unless
+                      you use it for add-on development.</span>
                   </label>
                 </li>
               </ul>
@@ -99,7 +103,8 @@
     </form>
   </div>
   <div class="modal-footer">
-    <a href="#!" class="waves-effect waves-light btn-flat orange darken-4 white-text" id="do_restore_button">Restore Snapshot</a>
+    <a href="#!" class="waves-effect waves-light btn-flat orange darken-4 white-text" id="do_restore_button">Restore
+      Snapshot</a>
     <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="restore_cancel">Cancel</a>
   </div>
 </div>

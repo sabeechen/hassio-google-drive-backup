@@ -13,7 +13,7 @@
     "*.jinja2": "html"
   },
   "[html]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.tabSize": 2
+    "editor.defaultFormatter": "vscode.html-language-features",
+    "editor.tabSize": 2,
   }
 }

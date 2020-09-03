@@ -4,42 +4,14 @@
   {{ super() }}
   <script type="text/javascript">
     $(document).ready(function () {
-      // Needed to make modal dialogs work.
-      $('#deletemodal').modal();
-      $('#uploadmodal').modal();
-      $('#deletemodal').modal();
-      $('#restoremodal').modal();
-      $('#retainmodal').modal();
-      $('#snapshotmodal').modal();
-      $('#settings_modal').modal({
-        dismissible: false
-      });
-      $('#details_modal').modal();
-      $('#help_modal').modal();
-      $('#bug_modal').modal();
-
       // Every 5 seconds, refresh the metrics form the server.
       window.setInterval(refreshstats, 5000);
       refreshstats();
-
-      $('.tooltipped').tooltip();
-      $('.collapsible').collapsible();
-      $('.sidenav').sidenav();
-
-      var elems = document.querySelectorAll('.dropdown-trigger');
-      var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
     });
   </script>
 {% endblock %}
 
 {% block content %}
-
-  {% include 'layouts/partials/modals/snapshot/delete.jinja2' %}
-  {% include 'layouts/partials/modals/snapshot/new.jinja2' %}
-  {% include 'layouts/partials/modals/snapshot/retain.jinja2' %}
-  {% include 'layouts/partials/modals/snapshot/upload.jinja2' %}
-  {% include 'layouts/partials/modals/snapshot/retore.jinja2' %}
-
   <div id="snapshot-template" style="display: none">
     <div class="snapshot-ui">
       <div class="row" style="margin-bottom: 10px; margin-top: 10px;">
@@ -115,85 +87,7 @@
       </div>
     </div>
   </div>
-  {% include 'layouts/partials/modals/settings.jinja2' %}
-  {% include 'layouts/partials/modals/help.jinja2' %}
-  {% include 'layouts/partials/modals/bug.jinja2' %}
-  {% include 'layouts/partials/modals/details.jinja2' %}
   <div class='error' style='display:none' id="toast">You shouldn't see this</div>
-  <header>
-    <ul id="main_menu_dropdown" class="dropdown-content">
-      <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a></li>
-      <li><a onclick="sync('error_card')"><i class="material-icons left">autorenew</i>Sync Now</a></li>
-      <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
-      <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
-      <li><a onclick="bugReport()"><i class="material-icons">bug_report</i>Report a bug</a></li>
-    </ul>
-    <nav class="non-ingress ha-blue" role="navigation">
-      <div class="nav-wrapper">
-        <a class="brand-logo">
-          <img style="vertical-align: middle;" src="static/images/logo.png" width=40 height=40 />
-          <span>Snapshots</span>
-        </a>
-        <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
-        <ul class="right hide-on-med-and-down">
-          <li>
-            <a href="#!" onClick="loadSettings()">
-              <i class="material-icons"
-                style="display: inline; margin-right: 5px; vertical-align: bottom">settings</i>Settings
-            </a>
-          </li>
-          <li>
-            <a href="/log?format=view" target="_blank" rel="noreferrer">
-              <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">code</i>Logs
-            </a>
-          </li>
-          <li>
-            <a href="#!" class="modal-trigger" data-target="help_modal">
-              <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">help</i>Get
-              Help
-            </a>
-          </li>
-          <li>
-            <a class="dropdown-trigger" href="#!" data-target="main_menu_dropdown">
-              Actions
-              <i class="material-icons right">arrow_drop_down</i>
-            </a>
-          </li>
-        </ul>
-      </div>
-    </nav>
-    <ul class="sidenav non-ingress" id="mobile-menu">
-      <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
-      <li><a href="/log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
-      <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a></li>
-      <li><a onclick="sync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
-      <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
-      <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
-      <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
-      <li><a onclick="bugReport()"><i class="material-icons">bug_report</i>Report a bug</a></li>
-    </ul>
-    <div>
-
-    </div>
-    <div class="ingress-only ha-blue" style="width: 100%; height: 40px;">
-      <a class="dropdown-trigger left waves-effect btn top-btn" href="#!" data-target="main_menu_dropdown">
-        <i class="material-icons left">arrow_drop_down</i>
-        Actions
-      </a>
-      <a href="#!" class="left btn waves-effect top-btn modal-trigger" data-target="help_modal">
-        <i class="material-icons" style="display: inline; margin-right: 5px">help</i>
-        <span style="vertical-align: top;">Get Help</span>
-      </a>
-      <a href="log?format=view" target="_blank" rel="noreferrer" class="left btn waves-effect top-btn">
-        <i class="material-icons" style="display: inline; margin-right: 5px">code</i>
-        <span style="vertical-align: top;">Logs</span>
-      </a>
-      <a href="#!" onClick="loadSettings()" class="left waves-effect btn top-btn">
-        <i class="material-icons" style="display: inline; margin-right: 5px">settings</i>
-        <span style="vertical-align: top;">Settings</span>
-      </a>
-    </div>
-  </header>
   <main>
     <div class="container">
       <div class="section">

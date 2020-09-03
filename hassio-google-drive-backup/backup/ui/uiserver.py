@@ -704,7 +704,10 @@ class UiServer(Trigger, Startable):
 
     @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:
-        return self.base_context()
+        return {
+            **self.base_context(),
+            'showOpenDriveLink': True
+        }
 
 
 @web.middleware

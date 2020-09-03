@@ -677,11 +677,15 @@ class UiServer(Trigger, Startable):
     async def index(self, request: Request):
         if not self._coord.enabled():
             template = "index.jinja2"
-            context = self.base_context()
+            context = {
+                **self.base_context(),
+                'showOpenDriveLink': True
+            }
         else:
             template = "working.jinja2"
             context = {
                 **self.base_context(),
+                'showOpenDriveLink': True,
                 'navBarTitle': 'Snapshots'
             }
         response = aiohttp_jinja2.render_template(template,

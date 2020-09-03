@@ -48,9 +48,11 @@
       <i class="material-icons left">add</i>Snapshot Now
     </a>
   </li>
+  {% if showOpenDriveLink %}
   <li>
     <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
   </li>
+  {% endif %}
   <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
   <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
@@ -101,7 +103,9 @@
     {% if coordEnabled %}
     <li><a onclick="newSnapshotClick(); return false;" style="cursor: pointer"><i
           class="material-icons left">add</i>Snapshot Now</a></li>
+    {% if showOpenDriveLink %}
     <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+    {% endif %}
     <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
     <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
     {% endif %}

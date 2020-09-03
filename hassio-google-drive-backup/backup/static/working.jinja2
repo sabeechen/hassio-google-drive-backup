@@ -527,8 +527,8 @@
                 <br />
                 <span class="helper-text" id="expose_extra_server_help">Expose this web interface on an additional port.
                   This isn't necessary unless you'd like to avoid accessing this web interface through <a
-                    target="_blank"
-                    href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/" target="_blank" rel="noreferrer">ingress</a>.</span>
+                    target="_blank" rel="noreferrer"
+                    href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>.</span>
               </label>
             </div>
           </div>
@@ -1003,7 +1003,7 @@
         </li>
         <li>
           <h6>Get a fresh perspective</h6>
-          Take a walk, serously. Sometimes the mind gets so fixated on a problem that it can't think around it anymore.
+          Take a walk, seriously. Sometimes the mind gets so fixated on a problem that it can't think around it anymore.
           <a href="https://en.wikipedia.org/wiki/Rubber_duck_debugging" target="_blank" rel="noreferrer">Explain your problem to a duck</a> and you
           might see the solution was obvious.
         </li>
@@ -1054,11 +1054,10 @@
             </a>
           </li>
           <li>
-            <a href="log?format=view" target="_blank">
+            <a href="/log?format=view" target="_blank" rel="noreferrer">
               <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">code</i>Logs
             </a>
           </li>
-          <li>
           <li>
             <a href="#!" class="modal-trigger" data-target="help_modal">
               <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">help</i>Get
@@ -1066,25 +1065,22 @@
             </a>
           </li>
           <li>
-          <li>
             <a class="dropdown-trigger" href="#!" data-target="main_menu_dropdown2">
               Actions
               <i class="material-icons right">arrow_drop_down</i>
             </a>
-          </li>
           </li>
         </ul>
       </div>
     </nav>
     <ul class="sidenav non-ingress" id="mobile-menu">
       <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
-      <li><a href="log?format=view" target="_blank"><i class="material-icons">code</i>Logs</a></li>
-      <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a>
-      </li>
+      <li><a href="/log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
+      <li><a onclick="newSnapshotClick(); return false;"><i class="material-icons left">add</i>Snapshot Now</a></li>
       <li><a onclick="sync()"><i class="material-icons left">autorenew</i>Sync Now</a></li>
       <li><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
       <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
-      <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a>
+      <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
       <li><a onclick="bugReport()"><i class="material-icons">bug_report</i>Report a bug</a></li>
     </ul>
     <div>
@@ -1099,7 +1095,7 @@
         <i class="material-icons" style="display: inline; margin-right: 5px">help</i>
         <span style="vertical-align: top;">Get Help</span>
       </a>
-      <a href="log?format=view" target="_blank" class="left btn waves-effect top-btn">
+      <a href="log?format=view" target="_blank" rel="noreferrer" class="left btn waves-effect top-btn">
         <i class="material-icons" style="display: inline; margin-right: 5px">code</i>
         <span style="vertical-align: top;">Logs</span>
       </a>

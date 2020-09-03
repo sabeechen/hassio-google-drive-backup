@@ -111,7 +111,7 @@
                       name="settings_specify_folder_id" class="validate" />
                     <label for="settings_specify_folder_id">Snapshot Folder ID</label>
                     <span class="helper-text">The Google Drive ID of the folder you'd like to upload snapshots into. You
-                      can get this id by navigating to the folder in <a target="_blank" rel="noreferrer" href="https://drive.google.com">Google Drive</a>
+                      can get this id by navigating to the folder in <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
                       and copying it out of the URL. It should be a long sequence of characters at the end of the URL.
                       For example if the URL for my folder is
                       <a target="_blank" rel="noreferrer"
@@ -557,8 +557,7 @@
           style="font-size: 50px; padding-right: 10px; vertical-align: middle">help_outline</i><span>Get Help</span>
       </h4>
       <p class="detail-node">
-        Maybe this add-on isn't working or you just don't know what to do. You can resolve almost any issue by
-        following
+        Maybe this add-on isn't working or you just don't know what to do. You can resolve almost any issue by following
         these steps:
       </p>
       <ul class="browser-default">
@@ -571,15 +570,13 @@
 
         <li>
           <h6>Check the Forum</h6>Next, try checking the <a
-            href="https://community.home-assistant.io/t/hass-io-add-on-hass-io-google-drive-backup/" target="_blank" rel="noreferrer">add-on
-            announcement
+            href="https://community.home-assistant.io/t/hass-io-add-on-hass-io-google-drive-backup/" target="_blank" rel="noreferrer">add-on announcement
             forum post.</a> Your question might already be there, and if not its a good place to ask. If the developer
           can't answer your question, it might be that another user can help.
         </li>
         <li>
           <h6>Check the Logs</h6>This add-on makes its <a target="_blank" href="log?format=view">debug logs</a>
-          available. They're pretty cryptic, but might give you some context for whats going wrong. Sometimes, an
-          error
+          available. They're pretty cryptic, but might give you some context for whats going wrong. Sometimes, an error
           only shows up in the Home Assistant supervisor logs, which you can get to from within Home Assistant by
           clicking "Supervisor" > "System" > "System Logs" > "Refresh".
         </li>
@@ -605,23 +602,19 @@
       <ul class="browser-default">
         <li>
           <h6>Take care of yourself</h6>
-          Make sure you've had enough water to drink today. If you love coffee, it might be time to put on a new pot.
-          If
-          its late at night, now might be the time to hit the sack. Everything is more difficult when you're not at
-          your
+          Make sure you've had enough water to drink today. If you love coffee, it might be time to put on a new pot. If
+          its late at night, now might be the time to hit the sack. Everything is more difficult when you're not at your
           best.
         </li>
         <li>
           <h6>Get a fresh perspective</h6>
-          Take a walk, serously. Sometimes the mind gets so fixated on a problem that it can't think around it
-          anymore.
+          Take a walk, seriously. Sometimes the mind gets so fixated on a problem that it can't think around it anymore.
           <a href="https://en.wikipedia.org/wiki/Rubber_duck_debugging" target="_blank" rel="noreferrer">Explain your problem to a duck</a> and you
           might see the solution was obvious.
         </li>
         <li>
           <h6>Be realistic</h6>
-          In a week you're unlikely to even remember this moment. Next year, you're going to be a different person,
-          with
+          In a week you're unlikely to even remember this moment. Next year, you're going to be a different person, with
           a different mind. If you have the spare time to get frustrated at how your home automation system stores its
           backups, then whatever you've got going on in this moment is probably small potates. You've always been the
           one to decide how you react.
@@ -678,7 +671,8 @@
   <header>
     <nav class="non-ingress ha-blue" role="navigation">
       <div class="nav-wrapper">
-        <a class="brand-logo"> <img style="vertical-align: middle;" src="static/images/logo.png" width=40 height=40 />
+        <a class="brand-logo">
+          <img style="vertical-align: middle;" src="static/images/logo.png" width=40 height=40 />
           <span>Home Assistant Google Drive Backup</span>
         </a>
         <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
@@ -690,7 +684,7 @@
             </a>
           </li>
           <li>
-            <a href="/log?format=view" target="_blank">
+            <a href="/log?format=view" target="_blank" rel="noreferrer">
               <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">code</i>Logs
             </a>
           </li>
@@ -710,7 +704,7 @@
     </nav>
     <ul class="sidenav non-ingress" id="mobile-menu">
       <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
-      <li><a href="/log?format=view" target="_blank"><i class="material-icons">code</i>Logs</a></li>
+      <li><a href="/log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
       <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
       <li><a onclick="bugReport()"><i class="material-icons">bug_report</i>Report a bug</a></li>
     </ul>
@@ -722,7 +716,7 @@
         <i class="material-icons" style="display: inline; margin-right: 5px">help</i>
         <span style="vertical-align: top;">Get Help</span>
       </a>
-      <a href="log?format=view" target="_blank" class="left btn waves-effect top-btn">
+      <a href="log?format=view" target="_blank" rel="noreferrer" class="left btn waves-effect top-btn">
         <i class="material-icons" style="display: inline; margin-right: 5px">code</i>
         <span style="vertical-align: top;">Logs</span>
       </a>

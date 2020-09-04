@@ -12,7 +12,7 @@ from ..config import Config, Setting, CreateOptions
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
 from ..exceptions import (LogicError, SnapshotInProgress,
-                          SupervisorConnectionError, UploadFailed, ensureKey)
+                          UploadFailed, ensureKey)
 from .harequests import HaRequests
 from .password import Password
 from .snapshotname import SnapshotName

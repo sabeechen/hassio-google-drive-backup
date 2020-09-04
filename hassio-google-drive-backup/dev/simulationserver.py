@@ -1,7 +1,6 @@
 import re
 from typing import Dict
 from yarl import URL
-
 import aiohttp
 from aiohttp.web import (Application,
                          HTTPException,
@@ -22,6 +21,7 @@ from .base_server import BaseServer
 from .ports import Ports
 from .request_interceptor import RequestInterceptor
 from .simulated_supervisor import SimulatedSupervisor
+from .apiingress import APIIngress
 import aiorun
 
 logger = getLogger(__name__)
@@ -37,7 +37,7 @@ rangePattern = re.compile("bytes=\\d+-\\d+")
 @singleton
 class SimulationServer(BaseServer):
     @inject
-    def __init__(self, ports: Ports, time: Time, session: ClientSession, authserver: Server, config: Config, google: SimulatedGoogle, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    def __init__(self, ports: Ports, time: Time, session: ClientSession, authserver: Server, config: Config, google: SimulatedGoogle, supervisor: SimulatedSupervisor, api_ingress: APIIngress, interceptor: RequestInterceptor):
         self.interceptor = interceptor
         self.google = google
         self.supervisor = supervisor
@@ -49,6 +49,7 @@ class SimulationServer(BaseServer):
         self.urls = []
         self.relative = True
         self._authserver = authserver
+        self._api_ingress = api_ingress
 
     def wasUrlRequested(self, pattern):
         for url in self.urls:
@@ -112,8 +113,8 @@ class SimulationServer(BaseServer):
         return [
             get('/readfile', self.readFile),
             post('/uploadfile', self.uploadfile),
-            get('/hassio/ingress/self_slug', self.slugRedirect)
-        ] + self.google.routes() + self.supervisor.routes()
+            get('/ingress/self_slug', self.slugRedirect)
+        ] + self.google.routes() + self.supervisor.routes() + self._api_ingress.routes()
 
 
 class SimServerModule(BaseModule):
@@ -124,7 +125,7 @@ class SimServerModule(BaseModule):
     @provider
     @singleton
     def getPorts(self) -> Ports:
-        return Ports(56153, self.config.get(Setting.PORT), self.config.get(Setting.INGRESS_PORT))
+        return Ports(56153, 56151, 56152)
 
 
 async def main():

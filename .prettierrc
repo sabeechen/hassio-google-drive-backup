@@ -1,0 +1,14 @@
+{
+  "printWidth": 120,
+  "trailingComma": "all",
+  "quoteProps": "preserve",
+  "singleQuote": false,
+  "overrides": [
+    {
+      "files": "*.jinja2",
+      "options": {
+        "printWidth": 180
+      }
+    }
+  ]
+}

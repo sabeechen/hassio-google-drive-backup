@@ -269,7 +269,7 @@ class SimulatedSupervisor(BaseServer):
             "version": version,
             "boot": "auto" if boot else "manual",
             "ingress_entry": "/api/hassio_ingress/" + slug,
-            "state": "started" if started else "stopped" 
+            "state": "started" if started else "stopped"
         })
 
     async def _authenticate(self, request: Request):

@@ -424,6 +424,29 @@
         <div class="row">
           <div class="col s12">
             <label>
+              <input type="checkbox" settings_ignore="true" name="stop_addons" id="stop_addons"
+                class="filled-in checkbox-ha" onchange="toggleSlide(this, 'settings_stop_addons_details');" />
+              <span>Stop addons</span>
+              <br />
+              <span class="helper-text">
+                Some addons will not snapshot correctly while they are running.  Any addons you select below will
+                be stopped before a snapshot is taken and then started after it finishes.  Note that if this addon
+                is interrupted before a snapshot completes, you may have to restart the addon manually.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row" id="settings_stop_addons_details" style="display: none">
+          <div class="col s11 offset-s1">
+            <div class="row">
+              <div class="col s12">
+                <ul id="stopped_addons"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
               <span style="font-size: 15px">Look and Feel</span>
               <br />
               <span class="helper-text">Configure how this web UI looks</span>

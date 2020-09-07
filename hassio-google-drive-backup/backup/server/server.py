@@ -12,6 +12,7 @@ from backup.exceptions import GoogleCredentialsExpired, ensureKey, KnownError
 from injector import ClassAssistedBuilder, inject, singleton
 from .errorstore import ErrorStore
 from .cloudlogger import CloudLogger
+from yarl import URL
 
 
 @singleton
@@ -33,6 +34,8 @@ class Server():
     def base_context(self):
         return {
             'version': VERSION,
+            'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
+            'accentColor': self.config.get(Setting.ACCENT_COLOR)
         }
 
     async def authorize(self, request: Request):
@@ -44,8 +47,17 @@ class Server():
             code = request.query.get('code')
             try:
                 creds = (await self.exchanger.exchange(code)).serialize(include_secret=False)
-                # Redirect to "state" address with serialized creentials"
-                raise HTTPSeeOther(state + "?creds=" + urllib.parse.quote(json.dumps(creds)))
+                # Redirect to "state" address with serialized credentials"
+                url = state + "?creds=" + urllib.parse.quote(json.dumps(creds))
+                context = {
+                    **self.base_context(),
+                    'redirect_url': url,
+                    'redirect_text': URL(url).with_path("").with_query({})
+                }
+                return aiohttp_jinja2.render_template(
+                    "server-redirect.jinja2",
+                    request,
+                    context)
             except Exception as e:
                 if isinstance(e, HTTPSeeOther):
                     # expected, pass this thorugh
@@ -112,11 +124,15 @@ class Server():
 
     @aiohttp_jinja2.template('picker.jinja2')
     async def picker(self, request: Request):
+        bg = request.query.get('bg', self.config.get(Setting.BACKGROUND_COLOR))
+        ac = request.query.get('ac', self.config.get(Setting.ACCENT_COLOR))
         return {
             **self.base_context(),
             "client_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             "developer_key": self.config.get(Setting.DRIVE_PICKER_API_KEY),
-            "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0]
+            "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0],
+            'backgroundColor': bg,
+            'accentColor': ac
         }
 
     @aiohttp_jinja2.template('server-index.jinja2')

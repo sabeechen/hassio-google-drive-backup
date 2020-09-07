@@ -173,12 +173,26 @@ class HaSource(SnapshotSource[HASnapshot]):
                     logger.info("A snapshot was already in progress")
                     raise SnapshotInProgress()
 
+            # try to stop addons
+            stopped = []
+            needs_stop = self.config.get(Setting.STOP_ADDONS).split(",")
+            for addon in self.super_info.get("addons", []):
+                slug = addon.get("slug", "ignore")
+                name = addon.get("name", "Unknown")
+                if slug in needs_stop and slug != self.self_info.get("slug") and addon.get("state") == "started":
+                    stopped.append(slug)
+                    logger.info("Stopping addon '%s'", name)
+                    try:
+                        await self.harequests.stopAddon(slug)
+                    except Exception as e:
+                        logger.error("Unable to stop add '%s': %s", name, str(e))
+
             # Create the snapshot palceholder object
             self.pending_snapshot = PendingSnapshot(
                 type_name, protected, options, request, self.config, self.time)
             logger.info("Requesting a new snapshot")
             self._pending_snapshot_task = asyncio.create_task(self._requestAsync(
-                self.pending_snapshot), name="Pending Snapshot Requester")
+                self.pending_snapshot, start=stopped), name="Pending Snapshot Requester")
             await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
             self.pending_snapshot.raiseIfNeeded()
             if self.pending_snapshot.isComplete():
@@ -345,7 +359,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         if self._pending_snapshot_task and not self._pending_snapshot_task.done():
             self._pending_snapshot_task.cancel()
 
-    async def _requestAsync(self, pending: PendingSnapshot) -> None:
+    async def _requestAsync(self, pending: PendingSnapshot, start=[]) -> None:
         try:
             result = await asyncio.wait_for(self.harequests.createSnapshot(pending._request_info), timeout=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS))
             slug = ensureKey(
@@ -362,7 +376,23 @@ class HaSource(SnapshotSource[HASnapshot]):
                 logger.error("Snapshot failed:")
                 logger.printException(e)
                 pending.failed(e, self.time.now())
-        self.trigger()
+        finally:
+            if len(start) > 0:
+                # If we need to start any addons, make sure our information is up-to-date.
+                await self._refreshInfo()
+            stopped = self.config.get(Setting.STOP_ADDONS).split(",")
+            # start stopped addons
+            for addon in self.super_info.get("addons", []):
+                slug = addon.get("slug", "ignore")
+                name = addon.get("name", "Unknown")
+                should_start = slug in start or (slug in stopped and addon.get("boot") == "auto")
+                if should_start and addon.get("state", "started") == "stopped":
+                    logger.info("Starting addon '%s'", name)
+                    try:
+                        await self.harequests.startAddon(slug)
+                    except Exception as e:
+                        logger.error("Unable to start addon '%s': %s", name, str(e))
+            self.trigger()
 
     def _buildSnapshotInfo(self, options: CreateOptions):
         addons: List[str] = []

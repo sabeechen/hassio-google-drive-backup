@@ -27,7 +27,7 @@ class UrlMatch():
     def clear(self):
         self.wait_event.set()
 
-    async def _doAction(self, request):
+    async def _doAction(self, request: Request):
         if self.status is not None:
             await self._readAll(request)
             return Response(status=self.status, text=self.response)
@@ -37,13 +37,13 @@ class UrlMatch():
         elif self.sleep is not None:
             await sleep(self.sleep)
 
-    async def called(self, request):
+    async def called(self, request: Request):
         if self.attempts is None or self.attempts <= 0:
             return await self._doAction(request)
         elif self.attempts is not None:
             self.attempts -= 1
 
-    async def _readAll(self, request):
+    async def _readAll(self, request: Request):
         data = bytearray()
         content = request.content
         while True:
@@ -59,6 +59,7 @@ class RequestInterceptor:
     @inject
     def __init__(self):
         self._matchers = []
+        self._history = []
 
     def setError(self, url, status, attempts=None):
         matcher = UrlMatch(url, attempts, status)
@@ -66,6 +67,7 @@ class RequestInterceptor:
 
     def clear(self):
         self._matchers.clear()
+        self._history.clear()
 
     def setWaiter(self, url, attempts=None):
         matcher = UrlMatch(url, attempts, wait=True)
@@ -86,3 +88,9 @@ class RequestInterceptor:
 
     def record(self, request):
         pass
+
+    def urlWasCalled(self, url) -> bool:
+        for called_url in self._history:
+            if re.match(url, called_url):
+                return True
+        return False

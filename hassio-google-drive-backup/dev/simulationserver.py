@@ -135,7 +135,8 @@ async def main():
         Setting.DRIVE_AUTHORIZE_URL: str(base.with_path("o/oauth2/v2/auth")),
         Setting.AUTHENTICATE_URL: str(base.with_path("drive/authorize")),
         Setting.DRIVE_TOKEN_URL: str(base.with_path("token")),
-        Setting.DRIVE_REFRESH_URL: str(base.with_path("oauth2/v4/token"))
+        Setting.DRIVE_REFRESH_URL: str(base.with_path("oauth2/v4/token")),
+        Setting.INGRESS_PORT: 56152
     })
     injector = Injector(SimServerModule(config))
     server = injector.get(SimulationServer)

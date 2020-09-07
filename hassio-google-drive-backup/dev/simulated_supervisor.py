@@ -18,6 +18,8 @@ URL_MATCH_SNAPSHOT_DELETE = "^/snapshots/.*/remove$"
 URL_MATCH_SNAPSHOT_DOWNLOAD = "^/snapshots/.*/download$"
 URL_MATCH_MISC_INFO = "^/info$"
 URL_MATCH_CORE_API = "^/core/api.*$"
+URL_MATCH_START_ADDON = "^/addons/.*/start$"
+URL_MATCH_STOP_ADDON = "^/addons/.*/stop$"
 
 
 @singleton
@@ -42,6 +44,11 @@ class SimulatedSupervisor(BaseServer):
         self._options = self.defaultOptions()
         self._username = "user"
         self._password = "pass"
+        self._addons = all_addons.copy()
+
+        self.installAddon(self._addon_slug, "Home Assistant Google drive Backup")
+        self.installAddon("42", "The answer")
+        self.installAddon("sgadg", "sdgsagsdgsggsd")
 
     def defaultOptions(self):
         return {
@@ -64,6 +71,8 @@ class SimulatedSupervisor(BaseServer):
             get('/addons/self/info', self._selfInfo),
             get('/snapshots/{slug}/download', self._snapshotDownload),
             get('/snapshots/{slug}/info', self._snapshotDetail),
+            post('/addons/{slug}/start', self._startAddon),
+            post('/addons/{slug}/stop', self._stopAddon),
             post('/snapshots/{slug}/remove', self._deleteSnapshot),
             post('/snapshots/new/upload', self._uploadSnapshot),
             get('/snapshots/new/upload', self._uploadSnapshot),
@@ -85,6 +94,12 @@ class SimulatedSupervisor(BaseServer):
 
     def clearEntities(self):
         self._entities = {}
+
+    def addon(self, slug):
+        for addon in self._addons:
+            if addon["slug"] == slug:
+                return addon
+        return None
 
     def getAttributes(self, attribute):
         return self._attributes.get(attribute)
@@ -112,11 +127,31 @@ class SimulatedSupervisor(BaseServer):
         await self._verifyHeader(request)
         return self._formatDataResponse({'snapshots': list(self._snapshots.values())})
 
+    async def _stopAddon(self, request: Request):
+        await self._verifyHeader(request)
+        slug = request.match_info.get('slug')
+        for addon in self._addons:
+            if addon.get("slug", "") == slug:
+                if addon.get("state") == "started":
+                    addon["state"] = "stopped"
+                    return self._formatDataResponse({})
+        raise HTTPBadRequest()
+
+    async def _startAddon(self, request: Request):
+        await self._verifyHeader(request)
+        slug = request.match_info.get('slug')
+        for addon in self._addons:
+            if addon.get("slug", "") == slug:
+                if addon.get("state") == "stopped":
+                    addon["state"] = "started"
+                    return self._formatDataResponse({})
+        raise HTTPBadRequest()
+
     async def _supervisorInfo(self, request: Request):
         await self._verifyHeader(request)
         return self._formatDataResponse(
             {
-                "addons": list(all_addons).copy()
+                "addons": list(self._addons).copy()
             }
         )
 
@@ -224,6 +259,17 @@ class SimulatedSupervisor(BaseServer):
             "arch": "Arch",
             "supported_arch": "supported arch",
             "channel": "channel"
+        })
+
+    def installAddon(self, slug, name, version="v1.0", boot=True, started=True):
+        self._addons.append({
+            "name": name,
+            "slug": slug,
+            "description": slug + " description",
+            "version": version,
+            "boot": "auto" if boot else "manual",
+            "ingress_entry": "/api/hassio_ingress/" + slug,
+            "state": "started" if started else "stopped" 
         })
 
     async def _authenticate(self, request: Request):

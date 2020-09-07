@@ -80,6 +80,16 @@ class HaRequests():
             raise e
 
     @supervisor_call
+    async def startAddon(self, slug) -> None:
+        url: str = "{0}addons/{1}/start".format(self.config.get(Setting.HASSIO_URL), slug)
+        await self._postHassioData(url, {})
+
+    @supervisor_call
+    async def stopAddon(self, slug) -> None:
+        url: str = "{0}addons/{1}/stop".format(self.config.get(Setting.HASSIO_URL), slug)
+        await self._postHassioData(url, {})
+
+    @supervisor_call
     async def snapshot(self, slug):
         if slug in self.cache:
             info = self.cache[slug]
@@ -100,7 +110,11 @@ class HaRequests():
 
     @supervisor_call
     async def selfInfo(self) -> Dict[str, Any]:
-        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/self/info")
+        return await self.getAddonInfo("self")
+
+    @supervisor_call
+    async def getAddonInfo(self, addon_slug) -> Dict[str, Any]:
+        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/{0}/info".format(addon_slug))
 
     @supervisor_call
     async def hassosInfo(self) -> Dict[str, Any]:

@@ -13,7 +13,7 @@ from backup.model import DummySnapshot
 from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
 from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
-from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD
+from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD
 from dev.request_interceptor import RequestInterceptor
 
 
@@ -377,13 +377,13 @@ async def test_failed_snapshot(time, ha: HaSource, supervisor: SimulatedSupervis
     # create a blocking snapshot
     interceptor.setError(URL_MATCH_SNAPSHOT_FULL, 524)
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0)
-    supervisor.toggleBlockSnapshot()
+    await supervisor.toggleBlockSnapshot()
     snapshot_immediate = await ha.create(CreateOptions(time.now(), "Some Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Some Name"
     assert not ha.check()
     assert not snapshot_immediate.isFailed()
-    supervisor.toggleBlockSnapshot()
+    await supervisor.toggleBlockSnapshot()
 
     # let the snapshot attempt to complete
     await asyncio.wait({ha._pending_snapshot_task})
@@ -407,13 +407,13 @@ async def test_failed_snapshot_retry(ha: HaSource, time: FakeTime, config: Confi
     # create a blocking snapshot
     interceptor.setError(URL_MATCH_SNAPSHOT_FULL, 524)
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0)
-    supervisor.toggleBlockSnapshot()
+    await supervisor.toggleBlockSnapshot()
     snapshot_immediate = await ha.create(CreateOptions(time.now(), "Some Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Some Name"
     assert not ha.check()
     assert not snapshot_immediate.isFailed()
-    supervisor.toggleBlockSnapshot()
+    await supervisor.toggleBlockSnapshot()
 
     # let the snapshot attempt to complete
     await asyncio.wait({ha._pending_snapshot_task})
@@ -510,3 +510,94 @@ async def test_download_timeout(ha: HaSource, time, interceptor: RequestIntercep
     with pytest.raises(SupervisorTimeoutError):
         await direct_download.setup()
         await direct_download.read(1)
+
+
+@pytest.mark.asyncio
+async def test_start_and_stop_addon(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+    slug = "test_slug"
+    supervisor.installAddon(slug, "Test decription")
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "stopped"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "started"
+
+
+@pytest.mark.asyncio
+async def test_stop_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+    slug = "test_slug"
+    supervisor.installAddon(slug, "Test decription")
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+    interceptor.setError(URL_MATCH_STOP_ADDON, 400)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "started"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "started"
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_start_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+    slug = "test_slug"
+    supervisor.installAddon(slug, "Test decription")
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+    interceptor.setError(URL_MATCH_START_ADDON, 400)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "stopped"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "stopped"
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_ingore_self_when_stopping(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+    slug = supervisor._addon_slug
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+    interceptor.setError(URL_MATCH_START_ADDON, 400)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "started"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "started"
+    assert not interceptor.urlWasCalled(URL_MATCH_START_ADDON)
+    assert not interceptor.urlWasCalled(URL_MATCH_STOP_ADDON)
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_start_on_boot(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+    boot_slug = "boot_slug"
+    supervisor.installAddon(boot_slug, "Start on boot", boot=True, started=False)
+
+    no_boot_slug = "no_boot_slug"
+    supervisor.installAddon(no_boot_slug, "Don't start on boot", boot=False, started=False)
+    config.override(Setting.STOP_ADDONS, ",".join([boot_slug, no_boot_slug]))
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+
+    assert supervisor.addon(boot_slug)["state"] == "stopped"
+    assert supervisor.addon(no_boot_slug)["state"] == "stopped"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(boot_slug)["state"] == "stopped"
+    assert supervisor.addon(no_boot_slug)["state"] == "stopped"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(boot_slug)["state"] == "started"
+    assert supervisor.addon(no_boot_slug)["state"] == "stopped"
+    assert len(await ha.get()) == 1
+    assert not interceptor.urlWasCalled(URL_MATCH_START_ADDON)
+    assert not interceptor.urlWasCalled(URL_MATCH_STOP_ADDON)

@@ -41,6 +41,8 @@ class Setting(Enum):
     EXCLUDE_FOLDERS = "exclude_folders"
     EXCLUDE_ADDONS = "exclude_addons"
 
+    STOP_ADDONS = "stop_addons"
+
     # UI Server Options
     USE_SSL = "use_ssl"
     CERTFILE = "certfile"
@@ -146,6 +148,8 @@ _DEFAULTS = {
     # Partial snapshot settings
     Setting.EXCLUDE_FOLDERS: "",
     Setting.EXCLUDE_ADDONS: "",
+
+    Setting.STOP_ADDONS: "",
 
     # UI Server settings
     Setting.USE_SSL: False,

@@ -59,11 +59,15 @@ def test_parse_multiple():
 
 def test_format():
     parser = DurationParser()
-    parser.format(timedelta(days=1)) == "1 days"
-    parser.format(timedelta(hours=1)) == "1 hours"
-    parser.format(timedelta(minutes=1)) == "1 minutes"
-    parser.format(timedelta(days=5, hours=6, minutes=7)) == "5 days, 6 hours, 7 minutes"
-    parser.format(timedelta(days=5, hours=6, minutes=7, seconds=8)) == "5 days, 6 hours, 7 minutes, 8 seconds"
+    assert parser.format(timedelta(days=1)) == "1 days"
+    assert parser.format(timedelta(seconds=86400)) == "1 days"
+    assert parser.format(timedelta(hours=1)) == "1 hours"
+    assert parser.format(timedelta(minutes=1)) == "1 minutes"
+    assert parser.format(timedelta(seconds=60)) == "1 minutes"
+    assert parser.format(timedelta(seconds=5)) == "5 seconds"
+    assert parser.format(timedelta(seconds=1)) == "1 seconds"
+    assert parser.format(timedelta(days=5, hours=6, minutes=7)) == "5 days, 6 hours, 7 minutes"
+    assert parser.format(timedelta(days=5, hours=6, minutes=7, seconds=8)) == "5 days, 6 hours, 7 minutes, 8 seconds"
 
 
 def test_back_and_forth():

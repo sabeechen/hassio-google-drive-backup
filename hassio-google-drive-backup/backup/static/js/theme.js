@@ -309,6 +309,13 @@ function setColors(background, accent) {
     '.bmc-button span': {
       'color': text.toCss(),
     },
+    ':root': {
+      '--cls-color': text.toCss(),
+      '--cls-sec-color': text.toCss(),
+      '--cls-size': '2rem',
+      '--cls-margin': '1rem',
+      '--cls-speed': '4s',
+    }
   };
 
   const properties = Object.keys(styleSheet).map((selector) => {

@@ -99,6 +99,7 @@ class Setting(Enum):
     DRIVE_REFRESH_URL = "drive_refresh_url"
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
     DRIVE_TOKEN_URL = "drive_token_url"
+    SAVE_DRIVE_CREDS_PATH = "save_drive_creds_path"
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
@@ -194,6 +195,7 @@ _DEFAULTS = {
     Setting.CHOOSE_FOLDER_URL: "https://habackup.io/drive/picker",
     Setting.ERROR_REPORT_URL: "https://habackup.io/logerror",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
+    Setting.SAVE_DRIVE_CREDS_PATH: "token",
 
     # File locations used to store things
     Setting.FOLDER_FILE_PATH: "/data/folder.dat",

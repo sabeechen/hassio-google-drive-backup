@@ -2,6 +2,10 @@
 
 {% block head %}
   {{ super() }}
+  <script type="text/javascript">
+    var clientId = "{{ client_id }}";
+    var appId = "{{ app_id }}";
+  </script>
 {% endblock %}
 {% block content %}
   <header>

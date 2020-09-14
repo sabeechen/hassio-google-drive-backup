@@ -2,12 +2,14 @@
 <html lang="en">
 
 <head>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+  <meta content="utf-8" http-equiv="encoding">
   {% block head %}
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
   <title>Home Assistant Google Drive Backup</title>
 
   <link href="static/css/icons.css?version={{ version }}" rel="stylesheet">
+  <link href="static/css/spinner.css?version={{ version }}" rel="stylesheet">
   <link href="static/css/materialize.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/css/colpick.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/css/static.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
@@ -19,6 +21,7 @@
   </style>
 
   <script src="static/js/theme.js?version={{ version }}"></script>
+  <script src="static/js/URI.js?version={{ version }}"></script>
   <script src="static/js/jquery.js?version={{ version }}"></script>
   <script src="static/js/markdown-it.min.js?version={{ version }}"></script>
   <script src="static/js/materialize.js?version={{ version }}"></script>

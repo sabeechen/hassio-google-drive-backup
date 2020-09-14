@@ -9,11 +9,14 @@ from aiohttp.web_exceptions import (
     HTTPBadGateway,
     HTTPServiceUnavailable,
     HTTPUnauthorized,
+    HTTPNotFound
 )
 from multidict import CIMultiDict, istr
 
 from backup.logger import getLogger
 from .ports import Ports
+from .base_server import BaseServer
+from .simulated_supervisor import SimulatedSupervisor
 
 ATTR_ADMIN = "admin"
 ATTR_ENABLE = "enable"
@@ -68,48 +71,66 @@ def api_process(method):
 
 
 class Addon():
-    def __init__(self, ports: Ports):
+    def __init__(self, ports: Ports, token: str):
         self.ports = ports
         self.ip_address = "127.0.0.1"
         self.ingress_port = ports.ingress
+        self.token = token
 
 
 class SysIngress():
-    def __init__(self, ports: Ports):
+    def __init__(self, ports: Ports, token: str, cookie_value: str):
         self.ports = ports
+        self.token = token
+        self.cookie_value = cookie_value
 
     def validate_session(self, session):
-        return True
+        return session == self.cookie_value
 
     def get(self, token):
-        return Addon(self.ports)
+        if token == self.token:
+            return Addon(self.ports, self.token)
+        return None
 
 
 class CoreSysAttributes():
-    def __init__(self, ports: Ports, session: ClientSession):
-        self.sys_ingress = SysIngress(ports)
+    def __init__(self, ports: Ports, session: ClientSession, token: str, cookie_value: str):
+        self.sys_ingress = SysIngress(ports, token, cookie_value)
         self.sys_websession = session
 
 
 @singleton
-class APIIngress(CoreSysAttributes):
+class APIIngress(CoreSysAttributes, BaseServer):
     @inject
-    def __init__(self, ports: Ports, session: ClientSession):
-        super().__init__(ports, session)
+    def __init__(self, ports: Ports, session: ClientSession, supervisor: SimulatedSupervisor):
+        self.addon_token = self.generateId(10)
+        self.cookie_value = self.generateId(10)
+        super().__init__(ports, session, self.addon_token, self.cookie_value)
         self.ports = ports
+        self.supervisor = supervisor
 
     def routes(self):
         return [
-            web.post("/ingress/session", self.create_session),
-            web.get("/ingress/panels", self.panels),
-            web.get("/ingress", self.ingress_panel),
-            web.view("/ingress/{token}/{path:.*}", self.handler),
+            web.get("/startingress", self.start_ingress),
+            web.get("/hassio/ingress/{slug}", self.ingress_panel),
+            web.view("/api/hassio_ingress/{token}/{path:.*}", self.handler),
         ]
 
+    def start_ingress(self, request: web.Request):
+        resp = web.Response(status=303)
+        resp.headers[hdrs.LOCATION] = "/hassio/ingress/" + self.supervisor._addon_slug
+        resp.set_cookie(name=COOKIE_INGRESS, value=self.cookie_value, expires="Session", domain=request.url.host, path="/api/hassio_ingress/", httponly="false", secure="false")
+        return resp
+
     def ingress_panel(self, request: web.Request):
+        slug = request.match_info.get("slug")
+        if slug != self.supervisor._addon_slug:
+            raise HTTPNotFound()
         body = """
         <html>
             <head>
+                <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+                <meta content="utf-8" http-equiv="encoding">
                 <title>Simulated Supervisor Ingress Panel</title>
                 <style type="text/css" >
                     iframe {{
@@ -122,9 +143,9 @@ class APIIngress(CoreSysAttributes):
             </head>
             <body>
                 <div>
-                    The Web-UI below is loaded through an iframe.
+                    The Web-UI below is loaded through an iframe. <a href='/startingress'>Start a new ingress session</a> if you get permission errors.
                 </div>
-                <iframe src="http://localhost:{0}/ingress/token/">
+                <iframe src="/api/hassio_ingress/{1}/">
                     <html>
                         <head></head>
                         <body></body>
@@ -132,8 +153,11 @@ class APIIngress(CoreSysAttributes):
                 </iframe>
             </body>
         </html>
-        """.format(self.ports.server)
-        return web.Response(body=body, content_type="text/html")
+        """.format(self.ports.server, self.addon_token)
+        resp = web.Response(body=body, content_type="text/html")
+        resp.set_cookie(name=COOKIE_INGRESS, value=self.cookie_value, expires="Session", domain=request.url.host, path="/api/hassio_ingress/", httponly="false", secure="false")
+        return resp
+
 
     """
     The class body below here is copied from

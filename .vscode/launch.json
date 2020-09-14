@@ -97,7 +97,7 @@
             }
         },
         {
-            "name": "Build/Upload Dev Addon Container",
+            "name": "(DEV) Build/Upload Addon Container",
             "type": "python",
             "request": "launch",
             "pythonPath": "${command:python.interpreterPath}",
@@ -110,7 +110,7 @@
             }
         },
         {
-            "name": "Build/Upload Server Container",
+            "name": "(PROD) Build/Upload Server Container",
             "type": "python",
             "request": "launch",
             "pythonPath": "${command:python.interpreterPath}",
@@ -123,7 +123,20 @@
             }
         },
         {
-            "name": "Build/Upload Addon Production Containers",
+            "name": "(DEV) Build/Upload Server Container",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "${command:python.interpreterPath}",
+            "module": "hassio-google-drive-backup.dev.deploy_dev_server",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup",
+                "PORT": "12345",
+                "CLIENT_SECRET": "client_secret",
+                "CLIENT_ID": "client_id"
+            }
+        },
+        {
+            "name": "(PROD) Build/Upload Addon Containers",
             "type": "python",
             "request": "launch",
             "pythonPath": "${command:python.interpreterPath}",

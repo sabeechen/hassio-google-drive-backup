@@ -1,4 +1,3 @@
-
 tooltipBackedUp = "This snapshot has been backed up to Google Drive."
 tooltipDriveOnly = "This snapshot is only in Google Drive. Select \"Upload\" from the actions menu to Upload it to Home Assistant."
 tooltipHassio = "This snapshot is only in Home Assistant. Change the number of snapshots you keep in Drive to get it to upload."
@@ -306,88 +305,34 @@ function parseErrorInfo(e) {
   }
 }
 
-last_cred_version = -1;
-function reloadForNewCreds() {
-  var jqxhr = $.get("getstatus", function (data) {
-    last_data = data;
-    if (data.is_custom_creds) {
-      $(".hide-for-custom-creds").hide();
-      $(".hide-for-default-creds").show();
-    } else {
-      $(".hide-for-custom-creds").show();
-      $(".hide-for-default-creds").hide();
-    }
-
-    if (data.is_specify_folder) {
-      $("#flavor_auto_folder").hide();
-      $("#flavor_specific_folder").show();
-    } else {
-      $("#flavor_auto_folder").show();
-      $("#flavor_specific_folder").hide();
-    }
-
-    if (data.hasOwnProperty("cred_version")) {
-      if (last_cred_version == -1) {
-        last_cred_version = data.cred_version;
-      } else if (last_cred_version != data.cred_version) {
-        //reload
-        window.location.assign(getWindowRootUri())
-      } else {
-        last_cred_version = data.cred_version;
-      }
-    }
-    document.getElementById("authenticate-button").href = data.authenticate_url + "?redirectbacktoken=" + encodeURIComponent(getWindowRootUri() + "token");
-
-    if (!data.firstSync) {
-      snapshots = data.sources.HomeAssistant.snapshots;
-      hasSnapshots = snapshots > 0;
-      maxConfigured = data.maxSnapshotsInHasssio
-      toDelete = Math.max(0, hasSnapshots - data.maxSnapshotsInHasssio);
-      if (data.maxSnapshotsInHasssio == 0) {
-        toDelete = 0;
-      }
-      willSnapshot = data.next_snapshot != "Disabled";
-      willUpload = data.maxSnapshotsInDrive > 0;
-      toUpload = Math.min(data.maxSnapshotsInDrive, snapshots - toDelete);
-      text = "";
-      if (!hasSnapshots && !willSnapshot) {
-        text = "You have no snapshots in Home Assistant and you've configured this add-on not to create any."
-      } else if (hasSnapshots && toDelete > 0) {
-        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toDelete + " oldest snapshots(s) will be deleted</b>";
-        if (toUpload > 0) {
-          text += " and the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
-        } else {
-          text += "."
-        }
-      } else if (hasSnapshots && toUpload > 0) {
-        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
-      } else if (!hasSnapshots) {
-        text = "You have <b>no snapshots in Home Assistant</b>";
-        if (willUpload) {
-          text += ", authenticate with Google Drive to start automatically creating and backing them up."
-        } else {
-          text += ", authenticate with Google Drive to start automatically creating them."
-        }
-      } else if (willSnapshot) {
-        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already, Authenticate with Google Drive to start creating new ones on a schedule."
-      } else {
-        text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already but you haven't configured this add-on to do anything with them or create new ones."
-      }
-      $("#what_do_next_now_please_text").html(text);
-      $("#what_do_next_now_please").show();
-    }
-  })
+function getInnerHomeUri() {
+  return normalizeAddonUrl(URI(window.location.href));
 }
 
-function getWindowRootUri() {
-  var loc = window.location;
-  path = loc.pathname.replace("\\", "/");
-  path = path.replace("/reauthenticate", "/");
-  path = path.replace("/reauthenticate/", "/");
-  path = path.replace("/index.html", "/");
+function getOutterHomeUri() {
+  if (parent !== window) {
+    return normalizeAddonUrl(URI(document.referrer));
+  } else {
+    return getInnerHomeUri()
+  }
+}
+
+function normalizeAddonUrl(uri) {
+  path = uri.pathname();
+  endings = [
+    /\/reauthenticate$/g,
+    /\/reauthenticate\/$/g,
+    /\/index$/g,
+    /\/index\/$/g,
+    /\/index.html$/g,
+    /\/index.html\/$/g
+  ]
+  for (var i = 0; i < endings.length; i++) {
+    path = path.replace(endings[i], "/");
+  }
   path = path + "/";
   path = path.replace("//", "/");
-  return loc.protocol + "//" + loc.hostname + ":" + loc.port + path;
+  return uri.pathname(path).search("").fragment("").hash("").toString();
 }
 
 function cancelSync() {
@@ -766,7 +711,7 @@ function allowDeletion(always) {
 }
 
 function chooseSnapshotFolder() {
-  window.open(last_data.choose_folder_url + "&returnto=" + encodeURIComponent(getWindowRootUri() + "changefolder"));
+  window.open(last_data.choose_folder_url + "&returnto=" + encodeURIComponent(getInnerHomeUri() + "changefolder"));
 }
 
 function skipLowSpaceWarning() {

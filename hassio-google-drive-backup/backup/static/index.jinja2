@@ -2,7 +2,6 @@
 
 {% block head %}
   {{ super() }}
-  <script src="static/js/clipboard.min.js?version={{ version }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -57,6 +56,23 @@
                       The Add-on can't see any of the other files you've added to Google Drive.</h6>
                   </li>
                 </ul>
+              </div>
+            </div>
+            <div class="row center">
+              <div class="col s12">
+                
+                You might be asked to copy an authorization code from the link above.  If you do, paste it here:
+                <textarea id="google_credentials_box"></textarea>
+                <br>
+                <div class="left" style="display: none;" id="save_cred_message">
+                  <div class="cls-spinner left" id="save_cred_working">
+                    <div class="cls-signal"></div>
+                  </div>
+                  <div class="left center" style="display: flex;align-items: center;height: 52px;" id="save_cred_message"></div>
+                </div>
+                
+                <a target="_blank" class="right btn-large waves-effect waves-light ha-blue btn disabled"
+                      id="send_creds_button" onclick="send_creds($('#google_credentials_box').val())">Save</a>
               </div>
             </div>
             <br />
@@ -134,9 +150,6 @@
 
 {% block scripts %}
   <script type="text/javascript">
-    document.getElementById("authenticate-button").href =
-      "https://habackup.io/drive/authorize?redirectbacktoken=" + encodeURIComponent(getWindowRootUri() + "token");
-
     function submitCode() {
       var code = $("#code").val();
       if (!code || code.length == 0) {
@@ -167,6 +180,108 @@
       }
     }
 
+    function updateCredsButton() {
+      var text = $('#google_credentials_box').val()
+      if (text.length > 0){
+        $("#send_creds_button").removeClass('disabled');
+      } else {
+        $("#send_creds_button").addClass('disabled');
+      }
+    }
+
+    function send_creds(value) {
+      path = URI("{{save_drive_creds_path}}").query({
+        'creds': value,
+        'host': getOutterHomeUri()
+      });
+      postJson(path.toString(), {}, function(data){
+        window.location.assign(data.redirect);
+      }, 
+      function(data){
+        M.toast({ html: "Couldn't save these credentials, did you copy the whole string?" })
+      }, "Saving credentials")
+    }
+
+    last_cred_version = -1;
+    function reloadForNewCreds() {
+      var jqxhr = $.get("getstatus", function (data) {
+        last_data = data;
+        if (data.is_custom_creds) {
+          $(".hide-for-custom-creds").hide();
+          $(".hide-for-default-creds").show();
+        } else {
+          $(".hide-for-custom-creds").show();
+          $(".hide-for-default-creds").hide();
+        }
+
+        if (data.is_specify_folder) {
+          $("#flavor_auto_folder").hide();
+          $("#flavor_specific_folder").show();
+        } else {
+          $("#flavor_auto_folder").show();
+          $("#flavor_specific_folder").hide();
+        }
+
+        if (data.hasOwnProperty("cred_version")) {
+          if (last_cred_version == -1) {
+            last_cred_version = data.cred_version;
+          } else if (last_cred_version != data.cred_version) {
+            //reload
+            window.location.assign(getInnerHomeUri())
+          } else {
+            last_cred_version = data.cred_version;
+          }
+        }
+        token_url = URI(getInnerHomeUri()+ "{{ save_drive_creds_path }}");
+        return_url = getOutterHomeUri()
+        auth_url = URI(data.authenticate_url).query({
+          'redirectbacktoken': encodeURIComponent(token_url.toString()),
+          'version': encodeURIComponent("{{ version }}"),
+          'return': encodeURIComponent(return_url)
+        });
+        document.getElementById("authenticate-button").href = auth_url.toString();
+
+        if (!data.firstSync) {
+          snapshots = data.sources.HomeAssistant.snapshots;
+          hasSnapshots = snapshots > 0;
+          maxConfigured = data.maxSnapshotsInHasssio
+          toDelete = Math.max(0, hasSnapshots - data.maxSnapshotsInHasssio);
+          if (data.maxSnapshotsInHasssio == 0) {
+            toDelete = 0;
+          }
+          willSnapshot = data.next_snapshot != "Disabled";
+          willUpload = data.maxSnapshotsInDrive > 0;
+          toUpload = Math.min(data.maxSnapshotsInDrive, snapshots - toDelete);
+          text = "";
+          if (!hasSnapshots && !willSnapshot) {
+            text = "You have no snapshots in Home Assistant and you've configured this add-on not to create any."
+          } else if (hasSnapshots && toDelete > 0) {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toDelete + " oldest snapshots(s) will be deleted</b>";
+            if (toUpload > 0) {
+              text += " and the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
+            } else {
+              text += "."
+            }
+          } else if (hasSnapshots && toUpload > 0) {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
+          } else if (!hasSnapshots) {
+            text = "You have <b>no snapshots in Home Assistant</b>";
+            if (willUpload) {
+              text += ", authenticate with Google Drive to start automatically creating and backing them up."
+            } else {
+              text += ", authenticate with Google Drive to start automatically creating them."
+            }
+          } else if (willSnapshot) {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already, Authenticate with Google Drive to start creating new ones on a schedule."
+          } else {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already but you haven't configured this add-on to do anything with them or create new ones."
+          }
+          $("#what_do_next_now_please_text").html(text);
+          $("#what_do_next_now_please").show();
+        }
+      })
+    }
+
     $(document).ready(function () {
       // Needed to make modal dialogs work.
       $('.modal').modal();
@@ -176,6 +291,8 @@
       $("#client_id").keyup(updateHref);
       $("#client_secret").mouseup(updateHref);
       $("#client_id").mouseup(updateHref);
+      $("#google_credentials_box").change(updateCredsButton)
+      $("#google_credentials_box").keyup(updateCredsButton);
 
       window.setInterval(reloadForNewCreds, 5000);
       reloadForNewCreds();

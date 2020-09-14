@@ -2,6 +2,7 @@ import urllib
 import json
 import aiohttp_jinja2
 import jinja2
+import base64
 from os.path import abspath, join
 from aiohttp.web import Application, json_response, Request, TCPSite, AppRunner, post, Response, static, get
 from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError, ServerConnectionError, ServerDisconnectedError, ServerTimeoutError
@@ -13,7 +14,9 @@ from injector import ClassAssistedBuilder, inject, singleton
 from .errorstore import ErrorStore
 from .cloudlogger import CloudLogger
 from yarl import URL
+from backup.config import Version
 
+NEW_AUTH_MINIMUM = Version(0, 101, 3)
 
 @singleton
 class Server():
@@ -40,22 +43,39 @@ class Server():
 
     async def authorize(self, request: Request):
         if 'redirectbacktoken' in request.query:
+            version = Version.parse(request.query.get('version', "0"))
+            token_url = request.query.get('redirectbacktoken')
+            return_url = request.query.get('return', None)
+            state = {
+                'v': str(version),
+                'token': token_url,
+                'return': return_url
+            }
             # Someone is trying to authenticate with the add-on, direct them to the google auth url
-            raise HTTPSeeOther(await self.exchanger.getAuthorizationUrl(request.query.get('redirectbacktoken')))
+            raise HTTPSeeOther(await self.exchanger.getAuthorizationUrl(json.dumps(state)))
         elif 'state' in request.query and 'code' in request.query:
-            state = request.query.get('state')
+            state = json.loads(request.query.get('state'))
             code = request.query.get('code')
             try:
+                version = Version.parse(state["v"])
                 creds = (await self.exchanger.exchange(code)).serialize(include_secret=False)
-                # Redirect to "state" address with serialized credentials"
-                url = state + "?creds=" + urllib.parse.quote(json.dumps(creds))
+
+                if version < NEW_AUTH_MINIMUM:
+                    # Redirect back to the addon, since this is the older addon
+                    url = URL(state['token']).with_query({'creds': json.dumps(creds)})
+                    raise HTTPSeeOther(url)
+
+                serialized_creds = str(base64.b64encode(json.dumps(creds).encode("utf-8")), "utf-8")
+                url = URL(state['token']).with_query({
+                    'creds': serialized_creds,
+                    'host': state['return']})
                 context = {
                     **self.base_context(),
-                    'redirect_url': url,
-                    'redirect_text': URL(url).with_path("").with_query({})
+                    'redirect_url': str(url),
+                    'credentials_serialized': serialized_creds,
                 }
                 return aiohttp_jinja2.render_template(
-                    "server-redirect.jinja2",
+                    "authorize.jinja2",
                     request,
                     context)
             except Exception as e:

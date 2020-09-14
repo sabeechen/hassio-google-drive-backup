@@ -8,6 +8,7 @@ from urllib.parse import quote
 import aiohttp
 import pytest
 import asyncio
+import base64
 from aiohttp import BasicAuth
 from aiohttp.client import ClientSession
 
@@ -22,11 +23,13 @@ from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource, FolderFinder
 from backup.drive.drivesource import FOLDER_MIME_TYPE
 from backup.ha import HaSource
+from backup.config import VERSION
 from .faketime import FakeTime
 from .helpers import compareStreams
 from yarl import URL
 from dev.ports import Ports
 from dev.simulated_supervisor import SimulatedSupervisor
+from bs4 import BeautifulSoup
 
 
 class ReaderHelper:
@@ -426,8 +429,22 @@ async def test_drive_cred_generation(reader, ui_server, snapshot, config: Config
     assert status["last_error"]["error_type"] == ERROR_CREDS_EXPIRED
 
     # simulate the user going through the Drive authentication workflow
-    async with session.get(config.get(Setting.AUTHENTICATE_URL) + "?redirectbacktoken=" + quote(reader.getUrl(True) + "token")) as resp:
+    auth_url = URL(config.get(Setting.AUTHENTICATE_URL)).with_query({
+        "redirectbacktoken": reader.getUrl(True) + "token",
+        "version": VERSION,
+        "return": reader.getUrl(True)
+    })
+    async with session.get(auth_url) as resp:
         resp.raise_for_status()
+        html = await resp.text()
+        page = BeautifulSoup(html, 'html.parser')
+        area = page.find("textarea")
+        creds = str(area.getText()).strip()
+
+    cred_url = URL(reader.getUrl(True) + "token").with_query({"creds": creds, "host": reader.getUrl(True)})
+    async with session.get(cred_url) as resp:
+        resp.raise_for_status()
+        assert resp.url == URL(reader.getUrl(True))
     status = (await reader.getjson("sync"))["last_error"] is ERROR_CREDS_EXPIRED
     assert global_info.credVersion == 1
 
@@ -630,7 +647,8 @@ async def test_token(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveS
         "refresh_token": "new_refresh_token",
         "token_expiry": "2022-01-01T00:00:00"
     }
-    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("token?creds=" + quote(json.dumps(creds)))
+    serialized = str(base64.b64encode(json.dumps(creds).encode("utf-8")), "utf-8")
+    await reader.get("token?creds={0}&host={1}".format(quote(serialized), quote(reader.getUrl(True))))
     assert drive.drivebackend.creds.access_token == 'new_access_token'
     assert drive.drivebackend.creds.refresh_token == 'new_refresh_token'
     assert drive.drivebackend.creds.secret is None
@@ -645,7 +663,8 @@ async def test_token_with_secret(reader: ReaderHelper, coord: Coordinator, ha, d
         "refresh_token": "new_refresh_token",
         "token_expiry": "2022-01-01T00:00:00"
     }
-    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("token?creds=" + quote(json.dumps(creds)))
+    serialized = str(base64.b64encode(json.dumps(creds).encode("utf-8")), "utf-8")
+    await reader.get("token?creds={0}&host={1}".format(quote(serialized), quote(reader.getUrl(True))))
     assert drive.drivebackend.creds.access_token == 'new_access_token'
     assert drive.drivebackend.creds.refresh_token == 'new_refresh_token'
     assert drive.drivebackend.creds.secret == 'new_client_secret'
@@ -662,8 +681,9 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     await restarter.waitForRestart()
     creds = Creds(time, "id", time.now(), "token", "refresh")
-    resp = await reader.get("token?creds=" + quote(json.dumps(creds.serialize())), ingress=False)
-    assert "window.location.assign(\"/\")" in resp
+    serialized = str(base64.b64encode(json.dumps(creds.serialize()).encode("utf-8")), "utf-8")
+    await reader.get("token?creds={0}&host={1}".format(quote(serialized), quote(reader.getUrl(False))), ingress=False)
+    assert drive.drivebackend.creds.access_token == 'token'
 
 
 @pytest.mark.asyncio

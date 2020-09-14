@@ -1,0 +1,86 @@
+{% extends "layouts/base-server.jinja2" %}
+
+{% block head %}
+  {{ super() }}
+  <script type="text/javascript">
+    function redirect() {
+        let searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.has('to')) {
+            window.location.assign(searchParams.get('to'));
+        }
+        else {
+            window.location.assign("{{ redirect_url }}");
+        }
+    }
+
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+
+    function copyAuthorization() {
+      var copyText = document.getElementById("credentials_serialized");
+      copyText.select();
+      document.execCommand("copy");
+    }
+  </script>
+{% endblock %}
+
+{% block content %}
+<header>
+  <nav class="non-ingress ha-blue" role="navigation">
+    <div class="nav-wrapper">
+      <a class="brand-logo"> <img style="vertical-align: middle;" src="/static/images/logo.png" width=40 height=40 />
+        <span>Home Assistant Google Drive Backup</span>
+      </a>
+    </div>
+  </nav>
+</header>
+<main>
+  <div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      <div class="row center">
+        <h6 class="header col s12 light">
+            <div class="col s12 m8 offset-m2 l8 offset-l2" id="save_cred_message">
+              <h5 class="header center">You're almost set.</h5>
+              <br>
+              <div class="center">
+                You've authorized the addon to connect with Google Drive and created the authorization string shown below.  Most of the time
+                you can just click "Send Credentials" below to have them sent back to the addon, but depending on circumstances beyond the 
+                addon's control that might just return an error.  If that happens, instead just copy the authroization string below 
+                and paste it into the addon where you clicked the "Authenticate With Google" button that brought you here.
+              </div>
+              <br>
+              <a class="center right btn waves-effect waves-light btn-flat" target="_blank" href="{{ redirect_url }}">
+                <i class="material-icons" style="vertical-align: middle; padding-right: 5px">open_in_new</i>Send Credentials
+              </a>
+            </div>
+        </h6>
+      </div>
+      <div class="row center">
+        
+      </div>
+      <div class="row center">
+        <div class="col s12 m8 offset-m2 l4 offset-l4">
+          <h6 class="left">Authorization String:</h6>
+          <br>
+          <textarea readonly style="height: 150px" id="credentials_serialized">
+              {{ credentials_serialized }}
+          </textarea>
+        </div>
+        <br>
+        <div class="col s12 m8 offset-m2 l4 offset-l4">
+          <button id="copy_button" onclick="copyAuthorization()" class="right btn waves-effect waves-light btn-flat">
+            <i class="material-icons" style="vertical-align: middle; padding-right: 5px">content_copy</i>Copy
+          </button>
+        </div>
+        <br>
+        <div class="col s12 m8 offset-m2 l4 offset-l4 light">
+          <i>Note:</i> This string is like a password that lets the addon talk with Google Drive, so don't share it with anyone.
+        </div>
+      </div>
+      <br><br>
+    </div>
+  </div>
+</main>
+{% endblock %}

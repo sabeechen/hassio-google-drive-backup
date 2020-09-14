@@ -3,13 +3,14 @@ import ssl
 import json
 import aiohttp_jinja2
 import jinja2
+import base64
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
 from urllib.parse import quote
 
 from aiohttp import BasicAuth, hdrs, web, ClientSession
-from aiohttp.web import HTTPBadRequest, HTTPException, Request
+from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther
 from injector import ClassAssistedBuilder, inject, singleton
 
 from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, VERSION
@@ -25,13 +26,16 @@ from backup.logger import getLogger, getHistory, TraceLogger
 from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
 from backup.debugworker import DebugWorker
 from backup.drive import FolderFinder
-
+from yarl import URL
 from .debug import Debug
 
 logger = getLogger(__name__)
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
+
+MIME_TEXT_HTML = "text/html"
+MIME_JSON = "application/json"
 
 
 @singleton
@@ -71,7 +75,8 @@ class UiServer(Trigger, Startable):
             'version': VERSION,
             'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
             'accentColor': self.config.get(Setting.ACCENT_COLOR),
-            'coordEnabled': self._coord.enabled()
+            'coordEnabled': self._coord.enabled(),
+            'save_drive_creds_path': self.config.get(Setting.SAVE_DRIVE_CREDS_PATH)
         }
 
     async def getstatus(self, request) -> Dict[Any, Any]:
@@ -312,17 +317,20 @@ class UiServer(Trigger, Startable):
         await resp.write_eof()
 
     async def token(self, request: Request) -> None:
-        if 'creds' in request.query:
-            self._global_info.setIngoreErrorsForNow(True)
-            self._coord.saveCreds(Creds.load(
-                self._time, json.loads(request.query['creds'])))
-        try:
-            if request.url.port != self.config.get(Setting.PORT):
-                return await self.redirect(request, self._ha_source.getAddonUrl())
-        except:  # noqa: E722
-            # eat the error
-            pass
-        return await self.redirect(request, "/")
+        self._global_info.setIngoreErrorsForNow(True)
+        creds_deserialized = json.loads(str(base64.b64decode(request.query.get('creds').encode("utf-8")), 'utf-8'))
+        creds = Creds.load(self._time, creds_deserialized)
+        self._coord.saveCreds(creds)
+
+        # Build the redirect url
+        if 'host' in request.query:
+            redirect = request.query.get('host')
+        else:
+            redirect = self._ha_source.getAddonUrl()
+        if MIME_JSON in request.headers[hdrs.ACCEPT]:
+            return web.json_response({'redirect': str(redirect)})
+        else:
+            raise HTTPSeeOther(redirect)
 
     async def changefolder(self, request: Request) -> None:
         # update config to specify snapshot folder

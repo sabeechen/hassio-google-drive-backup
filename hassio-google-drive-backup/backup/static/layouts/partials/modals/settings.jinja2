@@ -85,36 +85,30 @@
               <span>Manually specify the snapshot folder</span>
               <br />
               <span class="helper-text">Specify manually which folder snapshots should be uploaded into in Google Drive.
-                <span class="hide-for-custom-creds">Once this setting is saved, you'll be prompted to select a folder
-                  from your Google Drive.</span>
                 If disabled, the addon will automatically create a folder in your My Drive whenever its
                 needed.</span><span id="current_folder_span"><a id="current_folder_link" target="_blank"
                   rel="noreferrer"> Click here</a> to see the folder currently being used.</span>
             </label>
             <br />
             <div id="choose_folder_controls">
-              <div class="hide-for-custom-creds">
+              <div class="input-field col s11 offset-s1">
+                <i class="material-icons prefix">folder_open</i>
+                <input type="text" settings_ignore="true" id="settings_specify_folder_id"
+                  name="settings_specify_folder_id" class="validate" />
+                <label for="settings_specify_folder_id">Snapshot Folder ID</label>
+                <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload snapshots into. You
+                  can get this id by navigating to the folder in
+                  <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
+                  and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
+                  example if the URL for my folder is
+                  <a target="_blank" rel="noreferrer"
+                    href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
+                  then the Drive ID is 1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
+                <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
+                  folder you'd like to use and paste its folder ID here.  Doing this gives the addon permission to store snapshots in that folder.</span>
                 <a href="#!" id="choose_folder_button" onclick="chooseSnapshotFolder()"
                   class="waves-effect waves-light btn-flat ha-blue" id="save_settings"
                   style="margin-left: 20px; margin-top: 10px">Choose Folder</a>
-                <span class="hide-for-custom-creds helper-text" style="vertical-align: middle"> Note: This link takes
-                  you to an external domain.</span>
-              </div>
-              <div class="hide-for-default-creds">
-                <div class="input-field col s11 offset-s1">
-                  <i class="material-icons prefix">folder_open</i>
-                  <input type="text" settings_ignore="true" id="settings_specify_folder_id"
-                    name="settings_specify_folder_id" class="validate" />
-                  <label for="settings_specify_folder_id">Snapshot Folder ID</label>
-                  <span class="helper-text">The Google Drive ID of the folder you'd like to upload snapshots into. You
-                    can get this id by navigating to the folder in
-                    <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
-                    and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
-                    example if the URL for my folder is
-                    <a target="_blank" rel="noreferrer"
-                      href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
-                    then the Drive ID is 1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
-                </div>
               </div>
             </div>
           </div>

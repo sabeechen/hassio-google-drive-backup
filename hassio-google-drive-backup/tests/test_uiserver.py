@@ -804,6 +804,7 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
     await coord.sync()
     assert folder_finder.getCachedFolder() is not None
 
+    old_folder = folder_finder.getCachedFolder()
     # Change some config
     update = {
         "config": {
@@ -814,11 +815,11 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
 
     # verify the snapshot folder was reset, which triggers the error dialog to find a new folder
-    assert folder_finder.getCachedFolder() is None
+    assert folder_finder.getCachedFolder() == old_folder
 
     await coord.waitForSyncToFinish()
     result = await reader.postjson("getstatus")
-    assert result["last_error"]["error_type"] == ERROR_BACKUP_FOLDER_MISSING
+    assert result["last_error"] is None
 
 
 @pytest.mark.asyncio

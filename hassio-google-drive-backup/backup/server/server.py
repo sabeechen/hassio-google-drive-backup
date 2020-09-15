@@ -144,6 +144,7 @@ class Server():
 
     @aiohttp_jinja2.template('picker.jinja2')
     async def picker(self, request: Request):
+        version = Version.parse(request.query.get('version', "0"))
         bg = request.query.get('bg', self.config.get(Setting.BACKGROUND_COLOR))
         ac = request.query.get('ac', self.config.get(Setting.ACCENT_COLOR))
         return {
@@ -152,7 +153,8 @@ class Server():
             "developer_key": self.config.get(Setting.DRIVE_PICKER_API_KEY),
             "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0],
             'backgroundColor': bg,
-            'accentColor': ac
+            'accentColor': ac,
+            "do_redirect": version < NEW_AUTH_MINIMUM
         }
 
     @aiohttp_jinja2.template('server-index.jinja2')

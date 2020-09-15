@@ -258,11 +258,12 @@ function handleSettingsDialog(data) {
 }
 
 function chooseFolderChanged() {
-  if ($("#specify_snapshot_folder").is(':checked') && (config.specify_snapshot_folder || config_data.is_custom_creds) && last_data && last_data.drive_enabled) {
+  if ($("#specify_snapshot_folder").is(':checked') && last_data && last_data.drive_enabled) {
     $("#choose_folder_controls").show();
   } else {
     $("#choose_folder_controls").hide();
   }
+  Materialize.updateTextFields();
 }
 
 function saveSettings() {

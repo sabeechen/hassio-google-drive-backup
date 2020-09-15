@@ -141,8 +141,12 @@ class UiServer(Trigger, Startable):
             Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
         status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
-        status['choose_folder_url'] = self.config.get(Setting.CHOOSE_FOLDER_URL) + "?bg={0}&ac={1}".format(
-            quote(self.config.get(Setting.BACKGROUND_COLOR)), quote(self.config.get(Setting.ACCENT_COLOR)))
+        choose_url = URL(self.config.get(Setting.CHOOSE_FOLDER_URL)).with_query({
+            "bg": self.config.get(Setting.BACKGROUND_COLOR),
+            "ac": self.config.get(Setting.ACCENT_COLOR),
+            "version": VERSION
+        })
+        status['choose_folder_url'] = str(choose_url)
         status['dns_info'] = self._global_info.getDnsInfo()
         status['enable_drive_upload'] = self.config.get(
             Setting.ENABLE_DRIVE_UPLOAD)
@@ -460,16 +464,9 @@ class UiServer(Trigger, Startable):
             update[key.key()] = new_config[key]
         await self._harequests.updateConfig(update)
 
-        was_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         self.config.update(new_config)
 
-        is_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
-
-        if not was_specify and is_specify and not self._coord._model.dest.isCustomCreds():
-            # Delete the reset the saved backup folder, since the preference
-            # for specifying the folder changed from false->true
-            self.folder_finder.reset()
-        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None and len(snapshot_folder_id):
+        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and snapshot_folder_id is not None and len(snapshot_folder_id):
             await self.folder_finder.save(snapshot_folder_id)
         if trigger:
             self.trigger()

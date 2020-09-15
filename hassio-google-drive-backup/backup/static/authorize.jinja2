@@ -16,12 +16,6 @@
     function sleep (time) {
         return new Promise((resolve) => setTimeout(resolve, time));
     }
-
-    function copyAuthorization() {
-      var copyText = document.getElementById("credentials_serialized");
-      copyText.select();
-      document.execCommand("copy");
-    }
   </script>
 {% endblock %}
 
@@ -70,7 +64,7 @@
         </div>
         <br>
         <div class="col s12 m8 offset-m2 l4 offset-l4">
-          <button id="copy_button" onclick="copyAuthorization()" class="right btn waves-effect waves-light btn-flat">
+          <button id="copy_button" onclick="copyFromInput('credentials_serialized')" class="right btn waves-effect waves-light btn-flat">
             <i class="material-icons" style="vertical-align: middle; padding-right: 5px">content_copy</i>Copy
           </button>
         </div>

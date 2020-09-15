@@ -5,6 +5,113 @@
   <script type="text/javascript">
     var clientId = "{{ client_id }}";
     var appId = "{{ app_id }}";
+    var picker_redirect = {{ do_redirect }};
+    var pickerApiLoaded = false;
+    var oauthToken;
+
+    function loadPicker() {
+      gapi.load('auth', { 'callback': onAuthApiLoad });
+      gapi.load('picker', { 'callback': onPickerApiLoad });
+    }
+
+    function onAuthApiLoad() {
+      var scope = ['https://www.googleapis.com/auth/drive.file'];
+      window.gapi.auth.authorize({
+        'client_id': clientId,
+        'scope': scope,
+        'immediate': false
+      }, handleAuthResult);
+    }
+
+    function onPickerApiLoad() {
+      pickerApiLoaded = true;
+      createPicker();
+    }
+
+    function handleAuthResult(authResult) {
+      if (authResult && !authResult.error) {
+        oauthToken = authResult.access_token;
+        createPicker();
+      }
+    }
+
+    // Create and render a Picker object for searching images.
+    function createPicker() {
+      if (pickerApiLoaded && oauthToken) {
+        var mydrive = new google.picker.DocsView(google.picker.ViewId.DOCS)
+          .setMode(google.picker.DocsViewMode.LIST)
+          .setIncludeFolders(true)
+          .setSelectFolderEnabled(true)
+          .setParent('root')
+          .setLabel("My Drive");
+        var sharedWithMe = new google.picker.DocsView(google.picker.FOLDERS)
+          .setMode(google.picker.DocsViewMode.LIST)
+          //.setIncludeFolders(true)
+          .setSelectFolderEnabled(true)
+          .setOwnedByMe(true)
+          .setQuery("*")
+          .setLabel("Shared With Me");
+        var sharedDrives = new google.picker.DocsView(google.picker.ViewId.DOCS)
+          .setEnableDrives(true)
+          .setMode(google.picker.DocsViewMode.LIST)
+          .setIncludeFolders(true)
+          .setSelectFolderEnabled(true);
+        var recent = new google.picker.DocsView(google.picker.ViewId.RECENTLY_PICKED)
+          .setMode(google.picker.DocsViewMode.LIST)
+          .setIncludeFolders(true)
+          .setSelectFolderEnabled(true);
+        var picker = new google.picker.PickerBuilder()
+          .disableFeature(google.picker.Feature.NAV_HIDDEN)
+          .disableFeature(google.picker.Feature.MINE_ONLY)
+          .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+          .setAppId(appId)
+          .setOAuthToken(oauthToken)
+          .addView(mydrive)
+          //.addView(sharedWithMe)
+          .addView(sharedDrives)
+          .addView(recent)
+          .setTitle("Choose a backup folder")
+          .setCallback(pickerCallback)
+          .build();
+        picker.setVisible(true);
+      }
+    }
+
+    function getQueryParams(params) {
+      let href = window.location;
+      //this expression is to get the query strings
+      let reg = new RegExp('[?&]' + params + '=([^&#]*)', 'i');
+      let queryString = reg.exec(href);
+      return queryString ? queryString[1] : null;
+    };
+
+    // A simple callback implementation.
+    function pickerCallback(data) {
+      if (data.action == google.picker.Action.PICKED) {
+        var message = "";
+        if (data.docs.length == 0) {
+          message = "No document was selected.  Please try selecting a folder again."
+        } else if (data.docs[0].mimeType != "application/vnd.google-apps.folder") {
+          // Has to be a folder.  Doesn't make sense otherwise.
+          message = "You can only backup snapshots to a folder.  Please select a folder instead."
+        }
+
+        if (message.length > 0) {
+          alert(message);
+        } else if(picker_redirect) {
+          // Redirect back to the uer's home assistant with the now authorized folder id.
+          window.location.href = decodeURIComponent(getQueryParams("returnto")) + "?id=" + data.docs[0].id
+        } else {
+          $("#drive_folder_name").html(data.docs[0].name);
+          $("#drive_folder_id").val(data.docs[0].id);
+          $("#copy_folder_card").show();
+        }
+      }
+    }
+
+    $(document).ready(function () {
+      loadPicker();
+    });
   </script>
 {% endblock %}
 {% block content %}
@@ -40,6 +147,22 @@
                       </div>
                   </div>
               </div>
+              <div class="card" id="copy_folder_card" style="display: none;">
+                <div class="card-content">
+                    <span class="card-title">Folder Choosen</span>
+                    <p>Below is the ID of the folder you chose, "<span id="drive_folder_name"></span>".  Copy this ID back into the settings dialog that brought you here 
+                      to start syncing snapshots into it.  You can close this window once its saved.
+                      <br>
+                      <textarea readonly id="drive_folder_id">
+                      </textarea>
+                    </p>
+                    <div class="card-action white-text">
+                      <button id="copy_button" onclick="copyFromInput('drive_folder_id')" class="right btn waves-effect waves-light btn-flat">
+                        <i class="material-icons" style="vertical-align: middle; padding-right: 5px">content_copy</i>Copy
+                      </button>
+                    </div>
+                </div>
+            </div>
           </div>
       </div>
     </div>

@@ -473,7 +473,7 @@ async def test_recreate_folder_when_deleted(time, drive: DriveSource, config: Co
     await drive.get()
     id = await drive.getFolderId()
     await drive.drivebackend.delete(id)
-    await drive.get()
+    assert len(await drive.get()) == 0
     assert id != await drive.getFolderId()
 
 
@@ -482,7 +482,7 @@ async def test_recreate_folder_when_losing_permissions(time, drive: DriveSource,
     await drive.get()
     id = await drive.getFolderId()
     google.lostPermission.append(id)
-    await drive.get()
+    assert len(await drive.get()) == 0
     assert id != await drive.getFolderId()
 
 

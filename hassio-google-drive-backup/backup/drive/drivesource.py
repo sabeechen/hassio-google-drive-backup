@@ -80,7 +80,7 @@ class DriveSource(SnapshotDestination):
     def isWorking(self):
         return self._uploadedAtLeastOneChunk
 
-    async def get(self) -> Dict[str, DriveSnapshot]:
+    async def get(self, allow_retry=True) -> Dict[str, DriveSnapshot]:
         parent = await self.getFolderId()
         snapshots: Dict[str, DriveSnapshot] = {}
         try:
@@ -92,16 +92,18 @@ class DriveSource(SnapshotDestination):
         except ClientResponseError as e:
             if e.status == 404:
                 # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
-                if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+                if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and allow_retry:
                     self.folder_finder.deCache()
-                    return await self.folder_finder.create()
+                    await self.folder_finder.create()
+                    return await self.get(False)
                 raise BackupFolderInaccessible(parent)
             raise e
         except GoogleDrivePermissionDenied:
             # This should always mean we lost permission on the backup folder, but at least it still exists.
-            if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+            if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and allow_retry:
                 self.folder_finder.deCache()
-                return await self.folder_finder.create()
+                await self.folder_finder.create()
+                return await self.get(False)
             raise BackupFolderInaccessible(parent)
         return snapshots
 

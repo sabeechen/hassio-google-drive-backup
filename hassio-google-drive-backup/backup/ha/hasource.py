@@ -386,6 +386,9 @@ class HaSource(SnapshotSource[HASnapshot]):
                 slug = addon.get("slug", "ignore")
                 name = addon.get("name", "Unknown")
                 should_start = slug in start or (slug in stopped and addon.get("boot") == "auto")
+                if not should_start and slug in stopped:
+                    # See if the addon is set to start on boot
+                    should_start = (await self.harequests.getAddonInfo(slug)).get("boot") == "auto"
                 if should_start and addon.get("state", "started") == "stopped":
                     logger.info("Starting addon '%s'", name)
                     try:

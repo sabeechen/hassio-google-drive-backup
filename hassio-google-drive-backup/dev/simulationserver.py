@@ -147,6 +147,7 @@ async def main():
     site = aiohttp.web.TCPSite(runner, "0.0.0.0", port=port)
     await site.start()
     print("Server started on port " + str(port))
+    print("Open a browser at http://localhost:" + str(port))
 
 
 if __name__ == '__main__':

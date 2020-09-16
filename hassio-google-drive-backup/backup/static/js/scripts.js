@@ -311,13 +311,13 @@ function getInnerHomeUri() {
 
 function getOutterHomeUri() {
   if (parent !== window) {
-    return normalizeAddonUrl(URI(document.referrer));
+    return normalizeAddonUrl(URI(parent.location.href), false);
   } else {
     return getInnerHomeUri()
   }
 }
 
-function normalizeAddonUrl(uri) {
+function normalizeAddonUrl(uri, add_trailing_slash=true) {
   path = uri.pathname();
   endings = [
     /\/reauthenticate$/g,
@@ -330,7 +330,9 @@ function normalizeAddonUrl(uri) {
   for (var i = 0; i < endings.length; i++) {
     path = path.replace(endings[i], "/");
   }
-  path = path + "/";
+  if (add_trailing_slash) {
+    path = path + "/";
+  }
   path = path.replace("//", "/");
   return uri.pathname(path).search("").fragment("").hash("").toString();
 }
@@ -736,4 +738,9 @@ function copyFromInput(id) {
   var copyText = document.getElementById(id);
   copyText.select();
   document.execCommand("copy");
+}
+
+function saveFolder(id) {
+  url = "changefolder?id=" + id
+  postJson(url, {}, refreshstats, null, "Setting snapshot folder...");
 }

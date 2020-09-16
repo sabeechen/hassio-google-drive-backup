@@ -76,7 +76,8 @@ class UiServer(Trigger, Startable):
             'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
             'accentColor': self.config.get(Setting.ACCENT_COLOR),
             'coordEnabled': self._coord.enabled(),
-            'save_drive_creds_path': self.config.get(Setting.SAVE_DRIVE_CREDS_PATH)
+            'save_drive_creds_path': self.config.get(Setting.SAVE_DRIVE_CREDS_PATH),
+            'bmc_logo_path': "static/images/bmc.svg"
         }
 
     async def getstatus(self, request) -> Dict[Any, Any]:
@@ -344,13 +345,7 @@ class UiServer(Trigger, Startable):
         await self.folder_finder.save(id)
         self._global_info.setIngoreErrorsForNow(True)
         self.trigger()
-        try:
-            if request.url.port != self.config.get(Setting.PORT):
-                return await self.redirect(request, self._ha_source.getAddonUrl())
-        except:  # noqa: E722
-            # eat the error
-            pass
-        return await self.redirect(request, "/")
+        return web.json_response({})
 
     async def sync(self, request: Request = None) -> Any:
         await self._coord.sync()

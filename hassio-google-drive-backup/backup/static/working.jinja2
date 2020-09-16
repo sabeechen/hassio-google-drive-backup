@@ -1,5 +1,35 @@
 {% extends "layouts/base.jinja2" %}
 
+{% macro chooseFolder(id) %}
+<div class="error-card-container col s11 offset-s1">
+  <div class="input-field find_parent_target">
+    <i class="material-icons prefix">folder_open</i>
+    <input type="text" id="{{ id }}" />
+    <label for="{{ id }}">Enter your folder ID here, then click "Save"</label>
+    <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload snapshots into. You
+      can get this id by navigating to the folder in
+      <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
+      and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
+      example if the URL for my folder is
+      <a target="_blank" rel="noreferrer"
+        href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
+      then the Drive ID is 1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
+    <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
+      folder you'd like to use.  Doing this gives the addon permission to store snapshots in that folder.</span>
+    <a href="#!" id="choose_folder_button" style="margin-left: 50px" onclick="chooseSnapshotFolder()"
+      class="waves-effect waves-light btn-flat ha-blue hide-for-custom-creds">
+      <i class="material-icons left">open_in_new</i>
+      Choose Folder
+    </a>
+    <a href="#!" id="choose_folder_button" onclick="saveFolder($('#{{ id }}', $(this).parent('.find_parent_target')).val())"
+      class="waves-effect waves-light btn-flat ha-blue">
+      <i class="material-icons left">save</i>
+      Save
+    </a>
+  </div>
+</div>
+{% endmacro %}
+
 {% block head %}
   {{ super() }}
   <script type="text/javascript">
@@ -575,6 +605,7 @@
                   your snapshot in.</p>
                 <p class="hide-for-default-creds">You've choosen to backup your snapshots to a folder of your choosing.
                   Please navigate to the addon settings to specify a folder to store snapshots in.</p>
+                  {{ chooseFolder(id="choose_folder_folder_missing") }}
                 <ul class="browser-default">
                   <li>
                     <p>If you'd rather not specify the folder for uploads, please return to your <a href="#!"
@@ -595,11 +626,10 @@
                   </li>
                 </ul>
                 <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to
-                  select your folder through an external domain, which is where the link below will take you.
+                  select your folder through an external domain, which is where the "Choose Folder" link will take you.
                   <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
                     target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose folder</a>
                   <a href="#" onclick="loadSettings()">Open settings</a>
                 </div>
               </div>
@@ -620,6 +650,7 @@
                   <ul class="browser-default">
                   <li>The folder was deleted</li>
                   <li>You lost permissions on the folder</li> 
+                  <li>You gave the addon an invalid folder ID</li> 
                   <li>You signed in with drive using different credentials</li>
                   <li>Something else made the folder unreadable</li>
                   </ul>
@@ -629,7 +660,9 @@
                 </p>
                 <ul class="browser-default">
                   <li class="hide-for-custom-creds">
-                    <p>Use the link below to choose a new folder to store snapshots in.</p>
+                    <p>Use the link below to choose a new folder to store snapshots in.
+                      {{ chooseFolder(id="choose_folder_folder_inaccessible") }}
+                    </p>
                   </li>
                   <li class="hide-for-default-creds">
                     <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
@@ -654,7 +687,6 @@
                   <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
                   target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
                 <div class="card-action white-text">
-                  <a href="#" onclick="chooseSnapshotFolder()" class="hide-for-custom-creds">Choose new folder</a>
                   <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
                 </div>
               </div>

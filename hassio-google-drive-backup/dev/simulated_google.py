@@ -97,6 +97,7 @@ class SimulatedGoogle(BaseServer):
             get('/drive/v3/files/{id}/', self._get),
             post('/oauth2/v4/token', self._oauth2Token),
             get('/o/oauth2/v2/auth', self._oAuth2Authorize),
+            get('/drive/customcreds', self._getCustomCred),
             post('/token', self._driveToken),
         ]
 
@@ -122,8 +123,16 @@ class SimulatedGoogle(BaseServer):
             raise HTTPUnauthorized()
         if query.get('prompt') != 'consent':
             raise HTTPUnauthorized()
+        if query.get('redirect_uri') == 'urn:ietf:wg:oauth:2.0:oob':
+            return json_response({"code": self._drive_auth_code})
         url = URL(query.get('redirect_uri')).with_query({'code': self._drive_auth_code, 'state': query.get('state')})
         raise HTTPSeeOther(str(url))
+
+    async def _getCustomCred(self, request: Request):
+        return json_response({
+            "client_id": self._custom_drive_client_id,
+            "client_secret": self._custom_drive_client_secret
+        })
 
     async def _driveToken(self, request: Request):
         data = await request.post()

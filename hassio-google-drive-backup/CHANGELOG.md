@@ -1,3 +1,23 @@
+## [0.101.3 2020-09-16]
+Note: A breaking change was made in a previous version, the binary_sensor.snapshots_stale sensor now reports its state as "on/off" instead of "true/false".  If you have automations that depend on this state, please update them.  I'll be including this notice with every changelog entry for a while.
+
+### Added
+- You can select addons to stop while a snapshot is being taken, since some addons dump corrupt data into snapshots if they aren't stopped (eg MariaDB).
+
+### Fixes
+- Added a workaround to the "401: Unauthorized" error some users are seeing on some browsers.  You can now copy Google Drive credentials from the authorization page instead of depending on a redirect.  Same goes for choosing a folder.
+- Fixed an issue causing some textbox labels to overlap with the textbox contents.
+- Fixed an issue causing some users to get redirected to the wrong endpoint during authorization.
+- Fixed a transient bug that displayed a string conversion error whent the backup folder became unavailable.
+- Fixed numerous spelling errors, all over the place.
+- Fixed an issue when using a custom sync interval that landed on day, hour, or minute boundaries. 
+
+### Technical/Cleanup
+- Thanks to @ericmatte for a massive cleanup of the project's HTML templates, namely:
+  - Remove tons of duplicated HTML
+  - Unformly templating all pages
+  - Generating the style sheet on the fly.
+
 ## [0.101.2 2020-08-24]
 Note: A breaking change was made in a previous version, the binary_sensor.snapshots_stale sensor now reports its state as "on/off" instead of "true/false".  If you have automations that depend on this state, please update them.  I'll be including this notice with every changelog entry for a while.
 

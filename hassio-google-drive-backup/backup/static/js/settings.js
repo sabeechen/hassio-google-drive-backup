@@ -255,6 +255,9 @@ function handleSettingsDialog(data) {
   M.Modal.getInstance(document.querySelector('#settings_modal')).open();
   showPallette($("#background_color"));
   showPallette($("#accent_color"));
+
+  toggleSlide(document.querySelector('#stop_addons'), 'settings_stop_addons_details');
+  M.updateTextFields();
 }
 
 function chooseFolderChanged() {
@@ -263,7 +266,7 @@ function chooseFolderChanged() {
   } else {
     $("#choose_folder_controls").hide();
   }
-  Materialize.updateTextFields();
+  M.updateTextFields();
 }
 
 function saveSettings() {

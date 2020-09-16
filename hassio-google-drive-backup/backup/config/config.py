@@ -29,6 +29,19 @@ SERVER_OPTIONS = {
     Setting.EXPOSE_EXTRA_SERVER
 }
 
+NON_UI_SETTING = {
+    Setting.HASSIO_URL,
+    Setting.AUTHENTICATE_URL,
+    Setting.DRIVE_AUTHORIZE_URL,
+    Setting.AUTHENTICATE_URL,
+    Setting.REFRESH_URL,
+    Setting.CHOOSE_FOLDER_URL,
+    Setting.DEFAULT_DRIVE_CLIENT_ID,
+    Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS,
+    Setting.LOG_LEVEL,
+    Setting.CONSOLE_LOG_LEVEL
+}
+
 
 class GenConfig():
     def __init__(self, days=0, weeks=0, months=0, years=0, day_of_week='mon', day_of_month=1, day_of_year=1, aggressive=False):
@@ -123,6 +136,11 @@ class Config():
             value = setting.validator().validate(new_config[key])
             if value is not None and (setting in KEEP_DEFAULT or value != setting.default()):
                 final_config[setting] = value
+
+        # add in non-ui settings
+        for setting in NON_UI_SETTING:
+            if self.get(setting) != setting.default() and not (setting in new_config or setting.key in new_config):
+                final_config[setting] = self.get(setting)
 
         # add defaults
         for key in ALWAYS_KEEP:

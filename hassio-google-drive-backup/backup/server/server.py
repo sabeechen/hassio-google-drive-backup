@@ -15,6 +15,7 @@ from .errorstore import ErrorStore
 from .cloudlogger import CloudLogger
 from yarl import URL
 from backup.config import Version
+from urllib.parse import unquote
 
 NEW_AUTH_MINIMUM = Version(0, 101, 3)
 
@@ -38,7 +39,8 @@ class Server():
         return {
             'version': VERSION,
             'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
-            'accentColor': self.config.get(Setting.ACCENT_COLOR)
+            'accentColor': self.config.get(Setting.ACCENT_COLOR),
+            'bmc_logo_path': "/static/images/bmc.svg"
         }
 
     async def authorize(self, request: Request):
@@ -54,7 +56,7 @@ class Server():
             # Someone is trying to authenticate with the add-on, direct them to the google auth url
             raise HTTPSeeOther(await self.exchanger.getAuthorizationUrl(json.dumps(state)))
         elif 'state' in request.query and 'code' in request.query:
-            state = json.loads(request.query.get('state'))
+            state = json.loads(unquote(request.query.get('state')))
             code = request.query.get('code')
             try:
                 version = Version.parse(state["v"])
@@ -154,7 +156,7 @@ class Server():
             "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0],
             'backgroundColor': bg,
             'accentColor': ac,
-            "do_redirect": version < NEW_AUTH_MINIMUM
+            "do_redirect": str(version < NEW_AUTH_MINIMUM).lower()
         }
 
     @aiohttp_jinja2.template('server-index.jinja2')

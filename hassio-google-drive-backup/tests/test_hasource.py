@@ -528,6 +528,27 @@ async def test_start_and_stop_addon(ha: HaSource, time, interceptor: RequestInte
 
 
 @pytest.mark.asyncio
+async def test_start_and_stop_two_addons(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+    slug1 = "test_slug_1"
+    supervisor.installAddon(slug1, "Test decription")
+
+    slug2 = "test_slug_2"
+    supervisor.installAddon(slug2, "Test decription")
+    config.override(Setting.STOP_ADDONS, ",".join([slug1, slug2]))
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+
+    assert supervisor.addon(slug1)["state"] == "started"
+    assert supervisor.addon(slug2)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug1)["state"] == "stopped"
+        assert supervisor.addon(slug2)["state"] == "stopped"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug1)["state"] == "started"
+    assert supervisor.addon(slug2)["state"] == "started"
+
+
+@pytest.mark.asyncio
 async def test_stop_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
     slug = "test_slug"
     supervisor.installAddon(slug, "Test decription")

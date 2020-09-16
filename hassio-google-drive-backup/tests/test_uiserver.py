@@ -860,3 +860,27 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
     assert folder_finder.getCachedFolder() == "12345"
+
+
+@pytest.mark.asyncio
+async def test_update_non_ui_setting(reader: ReaderHelper, server, session, coord: Coordinator, folder_finder: FolderFinder, config: Config):
+    await coord.sync()
+    # Change some config
+    update = {
+        "config": {
+            "new_snapshot_timeout_seconds": 10
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+
+    assert config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS) == 10
+
+    update = {
+        "config": {
+            "max_snapshots_in_hassio": 1
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS) == 10

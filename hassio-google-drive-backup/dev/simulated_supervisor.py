@@ -69,6 +69,7 @@ class SimulatedSupervisor(BaseServer):
             get('/auth', self._authenticate),
             get('/info', self._miscInfo),
             get('/addons/self/info', self._selfInfo),
+            get('/addons/{slug}/info', self._addonInfo),
             get('/snapshots/{slug}/download', self._snapshotDownload),
             get('/snapshots/{slug}/info', self._snapshotDetail),
             post('/addons/{slug}/start', self._startAddon),
@@ -145,6 +146,16 @@ class SimulatedSupervisor(BaseServer):
                 if addon.get("state") == "stopped":
                     addon["state"] = "started"
                     return self._formatDataResponse({})
+        raise HTTPBadRequest()
+
+    async def _addonInfo(self, request: Request):
+        await self._verifyHeader(request)
+        slug = request.match_info.get('slug')
+        for addon in self._addons:
+            if addon.get("slug", "") == slug:
+                return self._formatDataResponse({
+                    'boot': addon.get("boot"),
+                })
         raise HTTPBadRequest()
 
     async def _supervisorInfo(self, request: Request):

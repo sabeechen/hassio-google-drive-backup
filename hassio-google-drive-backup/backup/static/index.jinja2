@@ -195,7 +195,7 @@
         'host': getOutterHomeUri()
       });
       postJson(path.toString(), {}, function(data){
-        window.location.assign(data.redirect);
+        window.location.assign(getInnerHomeUri());
       }, 
       function(data){
         M.toast({ html: "Couldn't save these credentials, did you copy the whole string?" })
@@ -232,7 +232,7 @@
             last_cred_version = data.cred_version;
           }
         }
-        token_url = URI(getInnerHomeUri()+ "{{ save_drive_creds_path }}");
+        token_url = URI(getInnerHomeUri() + "{{ save_drive_creds_path }}");
         return_url = getOutterHomeUri()
         auth_url = URI(data.authenticate_url).query({
           'redirectbacktoken': encodeURIComponent(token_url.toString()),

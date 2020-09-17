@@ -13,7 +13,7 @@ Note: A breaking change was made in a previous version, the binary_sensor.snapsh
 - Fixed an issue when using a custom sync interval that landed on day, hour, or minute boundaries. 
 
 ### Technical/Cleanup
-- Thanks to @ericmatte for a massive cleanup of the project's HTML templates, namely:
+- Thanks to [@ericmatte](https://github.com/ericmatte/) for a massive cleanup of the project's HTML templates, namely:
   - Remove tons of duplicated HTML
   - Unformly templating all pages
   - Generating the style sheet on the fly.

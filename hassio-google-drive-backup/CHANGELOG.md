@@ -10,7 +10,8 @@ Note: A breaking change was made in a previous version, the binary_sensor.snapsh
 - Fixed an issue causing some users to get redirected to the wrong endpoint during authorization.
 - Fixed a transient bug that displayed a string conversion error whent the backup folder became unavailable.
 - Fixed numerous spelling errors, all over the place.
-- Fixed an issue when using a custom sync interval that landed on day, hour, or minute boundaries. 
+- Fixed an issue when using a custom sync interval that landed on day, hour, or minute boundaries.
+- Fixed some version numbers not showing up in error reports.
 
 ### Technical/Cleanup
 - Thanks to @ericmatte for a massive cleanup of the project's HTML templates, namely:
@@ -22,9 +23,9 @@ Note: A breaking change was made in a previous version, the binary_sensor.snapsh
 Note: A breaking change was made in a previous version, the binary_sensor.snapshots_stale sensor now reports its state as "on/off" instead of "true/false".  If you have automations that depend on this state, please update them.  I'll be including this notice with every changelog entry for a while.
 
 ### Added
-- Error reports now cotnain the hassos, docker, and machine version.
+- Error reports now contain the hassos, docker, and machine version.
 - Log level for the addon can be controlled with the 'log_level' and 'console_log_level' config options.
-- Added 'TRACE' level loggin for all requests, which may help with debugging some current bugs.
+- Added 'TRACE' level logging for all requests, which may help with debugging some current bugs.
 
 
 ### Fixes

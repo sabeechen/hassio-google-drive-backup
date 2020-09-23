@@ -20,7 +20,7 @@ def test_validate_int():
         {Setting.MAX_SNAPSHOTS_IN_HASSIO: 5})
 
     with raises(InvalidConfigurationValue):
-        Config().validate({'max_snapshots_in_hassio': -1})
+        Config().validate({'max_snapshots_in_hassio': -2})
 
 
 def test_validate_float():

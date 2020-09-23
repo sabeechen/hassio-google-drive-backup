@@ -4,7 +4,7 @@ from typing import Dict, Generic, List, Optional, Tuple, TypeVar
 
 from injector import inject, singleton
 
-from .backupscheme import GenerationalScheme, OldestScheme
+from .backupscheme import GenerationalScheme, OldestScheme, DeleteAfterUploadScheme
 from ..config import Config, Setting, CreateOptions
 from ..exceptions import DeleteMutlipleSnapshotsError, SimulatedError
 from ..util import GlobalInfo, Estimator
@@ -238,7 +238,10 @@ class Model():
             count -= 1
         if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
             return None
-        if self.generational_config:
+
+        if source.maxCount() == -1:
+            scheme = DeleteAfterUploadScheme(source.name(), [self.dest.name()])
+        elif self.generational_config:
             scheme = GenerationalScheme(
                 self.time, self.generational_config, count=count)
         else:

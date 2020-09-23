@@ -57,6 +57,7 @@
     "exclude_folders": "str?",
     "exclude_addons": "str?",
     "stop_addons": "str?",
+    "disable_watchdog_when_stopping": "bool?",
     "expose_extra_server": "bool?",
     "drive_experimental": "bool?",
     "drive_ipv4": "match(^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$)?",

@@ -42,6 +42,7 @@ class Setting(Enum):
     EXCLUDE_ADDONS = "exclude_addons"
 
     STOP_ADDONS = "stop_addons"
+    DISABLE_WATCHDOG_WHEN_STOPPING = "disable_watchdog_when_stopping"
 
     # UI Server Options
     USE_SSL = "use_ssl"
@@ -151,6 +152,7 @@ _DEFAULTS = {
     Setting.EXCLUDE_ADDONS: "",
 
     Setting.STOP_ADDONS: "",
+    Setting.DISABLE_WATCHDOG_WHEN_STOPPING: False,
 
     # UI Server settings
     Setting.USE_SSL: False,

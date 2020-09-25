@@ -34,7 +34,7 @@ snapshot_name: "{type} Snapshot HA {version_ha}"
 generational_days: 3
 generational_weeks: 4
 # Create partial snapshots with no folders and no configurator add-on
-exclude_folders: "homeassistant,ssl,share,addons/local"
+exclude_folders: "homeassistant,ssl,share,addons/local,media"
 exclude_addons: "core_configurator"
 # Turn off notifications and staleness sensor
 enable_snapshot_stale_sensor: false

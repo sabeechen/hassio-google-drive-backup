@@ -364,46 +364,8 @@
             <div class="row" style="margin-bottom: 0px">
               <div class="col s12">
                 <span style="font-weight: bold">Folders</span>
-                <ul>
-                  <li class="indented-li">
-                    <label>
-                      <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
-                        name="folder_homeassistant" id="folder_homeassistant" checked />
-                      <span class="checkbox-label">Home Assistant Configuration</span>
-                      <br />
-                      <span class="helper-text">Backup the files and folders from your Home Assistant config directory,
-                        eg configuration.yaml</span>
-                    </label>
-                  </li>
-                  <li class="indented-li">
-                    <label class="checkbox-label">
-                      <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
-                        name="folder_ssl" id="folder_ssl" checked />
-                      <span class="checkbox-label">SSL</span>
-                      <br />
-                      <span class="helper-text">Backup your "/ssl" directory, where your certfile and keyfile are
-                        typically stored.</span>
-                    </label>
-                  </li>
-                  <li class="indented-li">
-                    <label class="checkbox-label">
-                      <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
-                        name="folder_share" id="folder_share" checked />
-                      <span class="checkbox-label">Share</span>
-                      <br />
-                      <span class="helper-text">Backup your "/share" directory.</span>
-                    </label>
-                  </li>
-                  <li class="indented-li">
-                    <label class="checkbox-label">
-                      <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox"
-                        name="folder_addons" id="folder_addons" checked />
-                      <span class="checkbox-label">Local Addons</span>
-                      <br />
-                      <span class="helper-text">Backup your local addons directory. This directory will be empty unless
-                        you use it for add-on development.</span>
-                    </label>
-                  </li>
+                <ul id="folder_selection_list">
+    
                 </ul>
               </div>
             </div>

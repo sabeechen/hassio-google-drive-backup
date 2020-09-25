@@ -1,19 +1,5 @@
-all_folder_slugs = ['ssl', "addons/local", "homeassistant", "share"];
 settingsChanged = false;
 name_keys = {}
-function idToSlug(id) {
-  if (id == "folder_addons") {
-    return "addons/local";
-  } else if (id == "folder_homeassistant") {
-    return "homeassistant";
-  } else if (id == 'folder_share') {
-    return "share";
-  } else if (id == "folder_ssl") {
-    return "ssl";
-  } else {
-    return id;
-  }
-}
 
 function exampleSnapshotName(snapshot_type, template) {
   if (template.length == 0) {
@@ -105,21 +91,6 @@ function checkForSecret() {
   }
 }
 
-function slugToId(id) {
-  if (id == "addons/local") {
-    return "folder_addons";
-  } else if (id == "homeassistant") {
-    return "folder_homeassistant";
-  } else if (id == 'share') {
-    return "folder_share";
-  } else if (id == "ssl") {
-    return "folder_ssl";
-  } else {
-    return id;
-  }
-}
-
-
 $(document).ready(function () {
   // handle "escape" when settings dialog is presented
   $(document).keyup(function (e) {
@@ -159,7 +130,6 @@ function loadSettings() {
 }
 
 function handleSettingsDialog(data) {
-  config_data = data
   name_keys = data.name_keys;
   config = data.config;
   addons = data.addons;
@@ -173,15 +143,6 @@ function handleSettingsDialog(data) {
   setInputValue("generational_enabled",
     config.generational_days > 0 || config.generational_weeks > 0 || config.generational_months > 0 || config.generational_years > 0);
 
-  // Set the state of excluded folders.
-  var excluded_folders = [];
-  if (config.hasOwnProperty('exclude_folders') && config.exclude_folders.length > 0) {
-    excluded_folders = config.exclude_folders.split(",");
-  }
-  for (var i = 0; i < all_folder_slugs.length; i++) {
-    setInputValue(slugToId(all_folder_slugs[i]), !excluded_folders.includes(all_folder_slugs[i]));
-  }
-
   var exclude_addons = [];
   var stop_addons = []
   if (config.hasOwnProperty('exclude_addons') && config.exclude_addons.length > 0) {
@@ -191,7 +152,7 @@ function handleSettingsDialog(data) {
     stop_addons = config.stop_addons.split(",");
   }
 
-  setInputValue("partial_snapshots", excluded_folders.length > 0 || exclude_addons.length > 0);
+  setInputValue("partial_snapshots", config.exclude_folders.length > 0 || exclude_addons.length > 0);
   setInputValue("stop_addons", stop_addons.length > 0);
 
   // Set the state of excluded and stopped addons.
@@ -208,14 +169,33 @@ function handleSettingsDialog(data) {
                     </label>
                   </li>`;
     template = template
-      .replace("{id}", slugToId(addon.slug))
-      .replace("{id}", slugToId(addon.slug))
+      .replace("{id}", addon.slug)
       .replace("{description}", addon.description)
       .replace("{name}", addon.name)
       .replace("{version}", addon.installed);
 
     $("#settings_addons").append(template.replace("{checked}", exclude_addons.includes(addon.slug) ? "" : "checked").replace("{selector}", "settings_addon_checkbox"));
     $("#stopped_addons").append(template.replace("{checked}", stop_addons.includes(addon.slug) ? "checked" : "").replace("{selector}", "settings_stop_addon_checkbox"));
+  }
+
+  $("#folder_selection_list").html("");
+  for (folder of data.folders) {
+    template = `<li class="indented-li">
+                  <label class="checkbox-label">
+                    <input class="filled-in settings_folder_checkbox" settings_ignore="true" type="checkbox" name="{id}" id="{id}" data-slug="{slug}" {checked} />
+                    <span class="checkbox-label">{name}</span>
+                    <br />
+                    <span class="helper-text">{description}</span>
+                  </label>
+                </li>`;
+    template = template
+      .replace("{id}", folder.id)
+      .replace("{slug}", folder.slug)
+      .replace("{description}", folder.description)
+      .replace("{name}", folder.name)
+      .replace("{name}", folder.slug)
+      .replace("{checked}",  config.exclude_folders.includes(folder.slug) ? "" : "checked");
+    $("#folder_selection_list").append(template);
   }
 
   $("#settings_error_div").hide();
@@ -308,19 +288,19 @@ function saveSettings() {
   if ($("#partial_snapshots").prop('checked')) {
     $(".settings_folder_checkbox").each(function () {
       if (!$(this).is(":checked")) {
-        excluded_folders = excluded_folders + idToSlug($(this).attr('id')) + ",";
+        excluded_folders = excluded_folders + $(this).data("slug") + ",";
       }
     });
     $(".settings_addon_checkbox").each(function () {
       if (!$(this).is(":checked")) {
-        excluded_addons = excluded_addons + idToSlug($(this).attr('id')) + ",";
+        excluded_addons = excluded_addons + $(this).attr('id') + ",";
       }
     });
   }
   if ($("#stop_addons").prop('checked')) {
     $(".settings_stop_addon_checkbox").each(function () {
       if ($(this).is(":checked")) {
-        stop_addons = stop_addons + idToSlug($(this).attr('id')) + ",";
+        stop_addons = stop_addons + $(this).attr('id') + ",";
       }
     });
   }

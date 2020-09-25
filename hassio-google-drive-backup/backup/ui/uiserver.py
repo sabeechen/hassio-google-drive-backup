@@ -26,6 +26,7 @@ from backup.logger import getLogger, getHistory, TraceLogger
 from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
 from backup.debugworker import DebugWorker
 from backup.drive import FolderFinder
+from backup.const import FOLDERS
 from yarl import URL
 from .debug import Debug
 
@@ -375,6 +376,7 @@ class UiServer(Trigger, Startable):
         return web.json_response({
             'config': current_config,
             'addons': self._global_info.addons,
+            'folders': FOLDERS,
             'name_keys': name_keys,
             'defaults': default_config,
             'snapshot_folder': self.folder_finder.getCachedFolder(),

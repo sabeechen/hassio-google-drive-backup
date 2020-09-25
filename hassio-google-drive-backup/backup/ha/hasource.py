@@ -18,6 +18,7 @@ from .password import Password
 from .snapshotname import SnapshotName
 from ..time import Time
 from ..logger import getLogger
+from backup.const import FOLDERS
 
 logger = getLogger(__name__)
 
@@ -405,7 +406,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             'addons': [],
             'folders': []
         }
-        folders = ["ssl", "share", "homeassistant", "addons/local"]
+        folders = list(map(lambda f: f['slug'], FOLDERS))
         type_name = "Full"
         for folder in folders:
             if folder not in self.config.get(Setting.EXCLUDE_FOLDERS):

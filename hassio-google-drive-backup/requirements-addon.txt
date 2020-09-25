@@ -12,6 +12,5 @@ aiodns
 injector
 aiofiles
 aiofile
-ptvsd
 colorlog
 aiohttp-jinja2

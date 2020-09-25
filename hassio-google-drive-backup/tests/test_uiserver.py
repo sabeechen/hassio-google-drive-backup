@@ -754,7 +754,7 @@ async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: C
 
     # request the auth code from "google"
     async with session.get(data["auth_url"], allow_redirects=False) as resp:
-        code = URL(resp.headers["location"]).query["code"]
+        code = (await resp.json())["code"]
 
     drive.saveCreds(None)
     assert not drive.enabled()
@@ -830,7 +830,7 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
     data = await reader.getjson(req_path)
     assert "auth_url" in data
     async with session.get(data["auth_url"], allow_redirects=False) as resp:
-        code = URL(resp.headers["location"]).query["code"]
+        code = (await resp.json())["code"]
     drive.saveCreds(None)
     assert not drive.enabled()
     req_path = "manualauth?code={}".format(code)

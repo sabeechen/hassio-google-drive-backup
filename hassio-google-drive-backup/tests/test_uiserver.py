@@ -688,7 +688,7 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
 
 @pytest.mark.asyncio
 async def test_changefolder(reader: ReaderHelper, coord: Coordinator, ha, ui_server, folder_finder: FolderFinder):
-    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("changefolder?id=12345")
+    assert await reader.get("changefolder?id=12345") == '{}'
     assert await folder_finder.get() == "12345"
 
 
@@ -715,8 +715,7 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
     # create two folders at different times
     id = (await drive.drivebackend.createFolder(folder_metadata))['id']
 
-    resp = await reader.get("changefolder?id=" + str(id), ingress=False)
-    assert "window.location.assign(\"/\")" in resp
+    await reader.get("changefolder?id=" + str(id), ingress=False)
     assert await folder_finder.get() == id
 
 

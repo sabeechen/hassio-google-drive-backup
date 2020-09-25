@@ -113,8 +113,12 @@ class SimulationServer(BaseServer):
         return [
             get('/readfile', self.readFile),
             post('/uploadfile', self.uploadfile),
-            get('/ingress/self_slug', self.slugRedirect)
+            get('/ingress/self_slug', self.slugRedirect),
+            get('/debug/config', self.debug_config)
         ] + self.google.routes() + self.supervisor.routes() + self._api_ingress.routes()
+
+    async def debug_config(self, request: Request):
+        return json_response(self.supervisor._options)
 
 
 class SimServerModule(BaseModule):

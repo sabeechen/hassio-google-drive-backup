@@ -7,7 +7,6 @@ from .snapshots import Snapshot
 from ..time import Time
 from ..config import GenConfig
 from ..logger import getLogger
-from .model import SnapshotSource, Snapshot
 from typing import List
 logger = getLogger(__name__)
 
@@ -26,7 +25,7 @@ class DeleteAfterUploadScheme(BackupScheme):
         self.source = source
         self.destinations = destinations
 
-    def getOldest(self, snapshots: Sequence[Snapshot]) -> Optional[Snapshot]:
+    def getOldest(self, snapshots):
         for snapshot in snapshots:
             if snapshot.getSource(self.source) is None:
                 # No source, so ignore it

@@ -75,16 +75,13 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 Redundancy is the foundation of reliability. With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
 
 ### How do I restore a snapshot?
-
-If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant. If not, you'll need to start up a fresh installation of Home Assistant and do the following:
-
-- On your fresh install of Home Assistant:
-  - [Install the add-on.](#installation) Once linked with Google Drive, you should see the snapshots you created previously show up. You should see a warning pop up about finding an "Existing snapshot folder" which is expected, you can just ignore it for now.
-  - Click "Actions" -> "Upload" on the snapshot you want to use which will upload the snapshot to Home Assistant directly from Google Drive. Wait for the upload to finish.
-  - Click "Actions" -> "Restore" to be taken to the Home Assistant restore page, or just navigate there through the Home Assistant interface ("Supervisor" -> "Snapshots").
-  - You'll see the snapshot you uploaded. Click on it and select "Wipe & Restore". Wait a while for it to complete (maybe a long while). Congrats! you're back up and running.
-
-Note: You can also just copy a snapshots manually from Google Drive to your /backup folder using something like the Sambda addon. I've found the steps above to be a little easier, since it works for any operating system, network setup, etc.
+The snapshots this addon creates are exactly the same snapshots that Home Assistant makes by itself, and can be restored using any of the methods documented elsewhere.  Here are few pointers to get you started.
+- If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant.
+- If not (eg, maybe your harddrive died and you're starting over):
+  - Download one of the snapshots you've previously created from [Google Drive](https://drive.google.com).
+  - On whatever hardware you're using to run Home Assistant now, follow the [normal instructions](https://www.home-assistant.io/getting-started/) to install Home Assistant.
+  - Once its running (but before you create a user), click the link on the Home Assistant setup page that says "Alternatively you can restore from a previous snapshot" and upload the snapshot you downloaded from Google Drive.
+- If you've got snapshot that you'd like to restore to an already set up Home Assistant instance that doesn't already have this addon installed, you'll need to use soemthing like the [Samba Addon](https://www.home-assistant.io/hassio/haos_common_tasks/#installing-and-using-the-samba-add-on) to copy a snapshot downloaded from Google Drive into the /backup folder.  
 
 ### I never look at HA notifications. Can I show information about backups in my Home Assistant Interface?
 

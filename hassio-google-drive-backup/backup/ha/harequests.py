@@ -63,8 +63,7 @@ class HaRequests():
     async def upload(self, stream):
         url: str = "{0}snapshots/new/upload".format(
             self.config.get(Setting.HASSIO_URL))
-        async with stream:
-            return await self._postHassioData(url, data=stream.generator(self.config.get(Setting.DEFAULT_CHUNK_SIZE)))
+        return await self._postHassioData(url, data=stream)
 
     @supervisor_call
     async def delete(self, slug) -> None:

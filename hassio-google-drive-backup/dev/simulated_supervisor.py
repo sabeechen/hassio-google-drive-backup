@@ -218,7 +218,14 @@ class SimulatedSupervisor(BaseServer):
     async def _uploadSnapshot(self, request: Request):
         await self._verifyHeader(request)
         try:
-            received_bytes = await self.readAll(request)
+            reader = await request.multipart()
+            contents = await reader.next()
+            received_bytes = bytearray()
+            while True:
+                chunk = await contents.read_chunk()
+                if not chunk:
+                    break
+                received_bytes.extend(chunk)
             info = parseSnapshotInfo(io.BytesIO(received_bytes))
             self._snapshots[info['slug']] = info
             self._snapshot_data[info['slug']] = received_bytes

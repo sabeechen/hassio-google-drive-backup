@@ -1,4 +1,5 @@
 import asyncio
+import aiohttp
 from datetime import timedelta
 from io import IOBase
 from threading import Lock, Thread
@@ -263,7 +264,10 @@ class HaSource(SnapshotSource[HASnapshot]):
         resp = None
         try:
             snapshot.overrideStatus("Downloading {0}%", source)
-            resp = await self.harequests.upload(source)
+            async with source:
+                with aiohttp.MultipartWriter('mixed') as mpwriter:
+                    mpwriter.append(source, {'CONTENT-TYPE': 'application/tar'})
+                    resp = await self.harequests.upload(mpwriter)
             snapshot.clearStatus()
         except Exception as e:
             logger.printException(e)

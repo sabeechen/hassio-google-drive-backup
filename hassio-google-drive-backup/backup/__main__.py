@@ -2,16 +2,14 @@ import os
 
 import platform
 import asyncio
-import logging
 from aiorun import run
 from injector import Injector
 
-from .logger import getLogger, CONSOLE, HISTORY
+from .logger import getLogger
 from backup.config import Config, Setting
 from backup.module import MainModule, BaseModule
 from backup.starter import Starter
 
-from time import sleep
 from sys import argv
 from os.path import join, abspath
 

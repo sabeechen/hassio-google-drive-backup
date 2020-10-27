@@ -193,12 +193,12 @@ class HaRequests():
 
     def _getHassioHeaders(self):
         return {
-            'Authorization': 'Bearer ' + self._getToken()
+            'X-Supervisor-Token': self._getToken()
         }
 
     def _getHaHeaders(self):
         return {
-            'Authorization': 'Bearer ' + self._getToken()
+            'X-Supervisor-Token': self._getToken()
         }
 
     @supervisor_call

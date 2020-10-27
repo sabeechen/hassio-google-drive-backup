@@ -7,6 +7,7 @@ from backup.time import Time
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, get,
                          json_response, post)
+from aiohttp import hdrs, web, ClientSession
 from injector import inject, singleton
 from .base_server import BaseServer
 from .ports import Ports
@@ -121,7 +122,7 @@ class SimulatedSupervisor(BaseServer):
             await self._snapshot_lock.acquire()
 
     async def _verifyHeader(self, request) -> bool:
-        if request.headers.get("Authorization", None) != "Bearer " + self._auth_token:
+        if request.headers.get("X-Supervisor-Token", None) != self._auth_token:
             raise HTTPUnauthorized()
 
     async def _getSnapshots(self, request: Request):

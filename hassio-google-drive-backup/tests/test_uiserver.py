@@ -140,7 +140,6 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
     assert data['maxSnapshotsInHasssio'] == config.get(
         Setting.MAX_SNAPSHOTS_IN_HASSIO)
     assert data['next_snapshot_text'] == "right now"
-    assert data['restore_link'] == "https://{0}:{1}/hassio/snapshots".format("{host}", ports.server)
     assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
     assert data['warn_ingress_upgrade'] is False
     assert len(data['snapshots']) == 0

@@ -88,7 +88,8 @@ class UiServer(Trigger, Startable):
         snapshots = self._coord.snapshots()
         for snapshot in snapshots:
             status['snapshots'].append(self.getSnapshotDetails(snapshot))
-        status['restore_link'] = self._ha_source.getFullRestoreLink()
+        status['ha_url_base'] = self._ha_source.getHomeAssistantUrl()
+        status['restore_snapshot_path'] = "hassio/snapshots"
         status['drive_enabled'] = self._coord.enabled()
         status['ask_error_reports'] = not self.config.isExplicit(
             Setting.SEND_ERROR_REPORTS)

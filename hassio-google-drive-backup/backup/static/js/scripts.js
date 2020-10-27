@@ -317,7 +317,20 @@ function getOutterHomeUri() {
   }
 }
 
-function normalizeAddonUrl(uri, add_trailing_slash=true) {
+function getHomeAssistantUrl(path, alt_host) {
+  if (parent !== window) {
+    // Probably this is an ingress window
+    var start = URI(normalizeAddonUrl(URI(parent.location.href), false));
+    return start.pathname(path).toString();
+  } else {
+    // Probably this is the addon on a custom port
+    var host = URI(window.location.href).hostname();
+    return URI(alt_host.replace("{host}", host)).pathname(path).toString();
+  }
+}
+
+
+function normalizeAddonUrl(uri, add_trailing_slash = true) {
   path = uri.pathname();
   endings = [
     /\/reauthenticate$/g,
@@ -499,7 +512,7 @@ function refreshstats() {
 
         // Set up context menu
         $("#delete_link" + snapshot.slug).data('snapshot', snapshot);
-        $("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
+        //$("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
         $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
         $("#download_link" + snapshot.slug).data('snapshot', snapshot);
         $("#retain_link" + snapshot.slug).data('snapshot', snapshot);
@@ -622,7 +635,8 @@ function refreshstats() {
       $(".ha_retain_label").hide()
     }
 
-    $("#restore_hard_link").attr("href", data.restore_link.replace("{host}", window.location.hostname));
+
+    $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_snapshot_path, data.ha_url_base));
 
     last_data = data;
 

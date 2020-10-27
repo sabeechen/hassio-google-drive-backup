@@ -340,10 +340,10 @@ class HaSource(SnapshotSource[HASnapshot]):
             return ""
         return self._haUrl() + "hassio/ingress/" + str(self._info.slug)
 
-    def getFullRestoreLink(self):
+    def getHomeAssistantUrl(self):
         if not self.isInitialized():
             return ""
-        return self._haUrl() + "hassio/snapshots"
+        return self._haUrl()
 
     def _haUrl(self):
         if self._info.ha_ssl:

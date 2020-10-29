@@ -20,6 +20,7 @@ from .snapshotname import SnapshotName
 from ..time import Time
 from ..logger import getLogger
 from backup.const import FOLDERS
+from .addon_stopper import AddonStopper
 
 logger = getLogger(__name__)
 
@@ -113,7 +114,7 @@ class HaSource(SnapshotSource[HASnapshot]):
     Stores logic for interacting with the supervisor add-on API
     """
     @inject
-    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo):
+    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo, stopper: AddonStopper):
         super().__init__()
         self.config: Config = config
         self.snapshot_thread: Thread = None
@@ -131,6 +132,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.cached_retention = {}
         self._info = info
         self.pending_options = {}
+        self.stopper = stopper
 
         # This lock should be used for _ANYTHING_ that interacts with self._pending_snapshot
         self._pending_snapshot_lock = asyncio.Lock()
@@ -176,25 +178,14 @@ class HaSource(SnapshotSource[HASnapshot]):
                     raise SnapshotInProgress()
 
             # try to stop addons
-            stopped = []
-            needs_stop = self.config.get(Setting.STOP_ADDONS).split(",")
-            for addon in self.super_info.get("addons", []):
-                slug = addon.get("slug", "ignore")
-                name = addon.get("name", "Unknown")
-                if slug in needs_stop and slug != self.self_info.get("slug") and addon.get("state") == "started":
-                    stopped.append(slug)
-                    logger.info("Stopping addon '%s'", name)
-                    try:
-                        await self.harequests.stopAddon(slug)
-                    except Exception as e:
-                        logger.error("Unable to stop add '%s': %s", name, str(e))
+            await self.stopper.stopAddons(self.self_info['slug'])
 
             # Create the snapshot palceholder object
             self.pending_snapshot = PendingSnapshot(
                 type_name, protected, options, request, self.config, self.time)
             logger.info("Requesting a new snapshot")
             self._pending_snapshot_task = asyncio.create_task(self._requestAsync(
-                self.pending_snapshot, start=stopped), name="Pending Snapshot Requester")
+                self.pending_snapshot), name="Pending Snapshot Requester")
             await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
             self.pending_snapshot.raiseIfNeeded()
             if self.pending_snapshot.isComplete():
@@ -364,6 +355,10 @@ class HaSource(SnapshotSource[HASnapshot]):
         if self._pending_snapshot_task and not self._pending_snapshot_task.done():
             self._pending_snapshot_task.cancel()
 
+    def postSync(self):
+        self.stopper.allowRun()
+        self.stopper.isSnapshotting(self.pending_snapshot is not None)
+
     async def _requestAsync(self, pending: PendingSnapshot, start=[]) -> None:
         try:
             result = await asyncio.wait_for(self.harequests.createSnapshot(pending._request_info), timeout=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS))
@@ -382,24 +377,7 @@ class HaSource(SnapshotSource[HASnapshot]):
                 logger.printException(e)
                 pending.failed(e, self.time.now())
         finally:
-            if len(start) > 0:
-                # If we need to start any addons, make sure our information is up-to-date.
-                await self._refreshInfo()
-            stopped = self.config.get(Setting.STOP_ADDONS).split(",")
-            # start stopped addons
-            for addon in self.super_info.get("addons", []):
-                slug = addon.get("slug", "ignore")
-                name = addon.get("name", "Unknown")
-                should_start = slug in start or (slug in stopped and addon.get("boot") == "auto")
-                if not should_start and slug in stopped:
-                    # See if the addon is set to start on boot
-                    should_start = (await self.harequests.getAddonInfo(slug)).get("boot") == "auto"
-                if should_start and addon.get("state", "started") == "stopped":
-                    logger.info("Starting addon '%s'", name)
-                    try:
-                        await self.harequests.startAddon(slug)
-                    except Exception as e:
-                        logger.error("Unable to start addon '%s': %s", name, str(e))
+            await self.stopper.startAddons()
             self.trigger()
 
     def _buildSnapshotInfo(self, options: CreateOptions):

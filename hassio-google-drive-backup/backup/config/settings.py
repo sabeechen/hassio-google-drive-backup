@@ -101,6 +101,7 @@ class Setting(Enum):
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
     DRIVE_TOKEN_URL = "drive_token_url"
     SAVE_DRIVE_CREDS_PATH = "save_drive_creds_path"
+    STOP_ADDON_STATE_PATH = "stop_addon_state_path"
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
@@ -208,6 +209,7 @@ _DEFAULTS = {
     Setting.INGRESS_TOKEN_FILE_PATH: "/data/ingress.dat",
     Setting.CONFIG_FILE_PATH: "/data/options.json",
     Setting.ID_FILE_PATH: "/data/id.json",
+    Setting.STOP_ADDON_STATE_PATH: '/data/stop_addon_state.json',
 
     # Various timeouts and intervals
     Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,

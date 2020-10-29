@@ -29,7 +29,7 @@ def supervisor_call(func):
         except TimeoutError:
             raise SupervisorConnectionError()
         except ClientResponseError as e:
-            if e.code == 403:
+            if e.status == 403:
                 raise SupervisorPermissionError()
             raise
     return wrap_and_call
@@ -198,7 +198,7 @@ class HaRequests():
 
     def _getHaHeaders(self):
         return {
-            'X-Supervisor-Token': self._getToken()
+            'Authorization': 'Bearer ' + self._getToken()
         }
 
     @supervisor_call
@@ -258,6 +258,10 @@ class HaRequests():
     @supervisor_call
     async def updateConfig(self, config) -> None:
         return await self._postHassioData("{0}addons/self/options".format(self.config.get(Setting.HASSIO_URL)), {'options': config})
+
+    @supervisor_call
+    async def updateAddonOptions(self, slug, options):
+        return await self._postHassioData("{0}addons/{1}/options".format(self.config.get(Setting.HASSIO_URL), slug), options)
 
     async def updateEntity(self, entity, data):
         await self._postHaData("states/" + entity, data)

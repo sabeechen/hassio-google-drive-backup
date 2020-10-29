@@ -11,6 +11,7 @@
     "folder_file_path": "hassio-google-drive-backup/dev/data/folder.dat",
     "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
     "id_file_path": "hassio-google-drive-backup/dev/data/id.json",
+    "stop_addon_state_path": "hassio-google-drive-backup/dev/data/stop_addon_state.json",
     "ingress_port": 56155,
     "port": 56156
 }

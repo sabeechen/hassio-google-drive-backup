@@ -2,6 +2,7 @@ settingsChanged = false;
 name_keys = {}
 
 function exampleSnapshotName(snapshot_type, template) {
+  name_keys["{type}"] = $("#partial_snapshots").is(':checked') ? "Partial" : "Full";
   if (template.length == 0) {
     template = last_data.snapshot_name_template;
   }
@@ -162,7 +163,7 @@ function handleSettingsDialog(data) {
     addon = addons[addon];
     template = `<li class="indented-li">
                     <label>
-                      <input class="filled-in {selector}" type="checkbox" name="{id}" id="{id}" settings_ignore='true' {checked} />
+                      <input class="filled-in {selector}" type="checkbox" name="{id}" id="{id}" data-slug="{slug}" settings_ignore='true' {checked} />
                       <span>{name} <span class="helper-text">(v{version})</span></span>
                       <br />
                       <span class="helper-text">{description}</span>
@@ -170,9 +171,10 @@ function handleSettingsDialog(data) {
                   </li>`;
     template = template
       .replace("{id}", addon.slug)
+      .replace("{slug}", addon.slug)
       .replace("{description}", addon.description)
       .replace("{name}", addon.name)
-      .replace("{version}", addon.installed);
+      .replace("{version}", addon.version);
 
     $("#settings_addons").append(template.replace("{checked}", exclude_addons.includes(addon.slug) ? "" : "checked").replace("{selector}", "settings_addon_checkbox"));
     $("#stopped_addons").append(template.replace("{checked}", stop_addons.includes(addon.slug) ? "checked" : "").replace("{selector}", "settings_stop_addon_checkbox"));
@@ -293,14 +295,14 @@ function saveSettings() {
     });
     $(".settings_addon_checkbox").each(function () {
       if (!$(this).is(":checked")) {
-        excluded_addons = excluded_addons + $(this).attr('id') + ",";
+        excluded_addons = excluded_addons + $(this).data('slug') + ",";
       }
     });
   }
   if ($("#stop_addons").prop('checked')) {
     $(".settings_stop_addon_checkbox").each(function () {
       if ($(this).is(":checked")) {
-        stop_addons = stop_addons + $(this).attr('id') + ",";
+        stop_addons = stop_addons + $(this).data('slug') + ",";
       }
     });
   }

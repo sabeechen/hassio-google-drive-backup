@@ -8,7 +8,7 @@ from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
                                SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError)
 from backup.util import GlobalInfo
-from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password
+from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password, AddonStopper
 from backup.model import DummySnapshot
 from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
@@ -513,7 +513,8 @@ async def test_download_timeout(ha: HaSource, time, interceptor: RequestIntercep
 
 
 @pytest.mark.asyncio
-async def test_start_and_stop_addon(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+async def test_start_and_stop_addon(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
     slug = "test_slug"
     supervisor.installAddon(slug, "Test decription")
     config.override(Setting.STOP_ADDONS, slug)
@@ -528,7 +529,8 @@ async def test_start_and_stop_addon(ha: HaSource, time, interceptor: RequestInte
 
 
 @pytest.mark.asyncio
-async def test_start_and_stop_two_addons(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+async def test_start_and_stop_two_addons(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
     slug1 = "test_slug_1"
     supervisor.installAddon(slug1, "Test decription")
 
@@ -549,7 +551,8 @@ async def test_start_and_stop_two_addons(ha: HaSource, time, interceptor: Reques
 
 
 @pytest.mark.asyncio
-async def test_stop_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+async def test_stop_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
     slug = "test_slug"
     supervisor.installAddon(slug, "Test decription")
     config.override(Setting.STOP_ADDONS, slug)
@@ -566,7 +569,8 @@ async def test_stop_addon_failure(ha: HaSource, time, interceptor: RequestInterc
 
 
 @pytest.mark.asyncio
-async def test_start_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+async def test_start_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
     slug = "test_slug"
     supervisor.installAddon(slug, "Test decription")
     config.override(Setting.STOP_ADDONS, slug)
@@ -583,7 +587,8 @@ async def test_start_addon_failure(ha: HaSource, time, interceptor: RequestInter
 
 
 @pytest.mark.asyncio
-async def test_ingore_self_when_stopping(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
+async def test_ingore_self_when_stopping(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
     slug = supervisor._addon_slug
     config.override(Setting.STOP_ADDONS, slug)
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
@@ -598,27 +603,3 @@ async def test_ingore_self_when_stopping(ha: HaSource, time, interceptor: Reques
     assert not interceptor.urlWasCalled(URL_MATCH_START_ADDON)
     assert not interceptor.urlWasCalled(URL_MATCH_STOP_ADDON)
     assert len(await ha.get()) == 1
-
-
-@pytest.mark.asyncio
-async def test_start_on_boot(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor) -> None:
-    boot_slug = "boot_slug"
-    supervisor.installAddon(boot_slug, "Start on boot", boot=True, started=False)
-
-    no_boot_slug = "no_boot_slug"
-    supervisor.installAddon(no_boot_slug, "Don't start on boot", boot=False, started=False)
-    config.override(Setting.STOP_ADDONS, ",".join([boot_slug, no_boot_slug]))
-    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
-
-    assert supervisor.addon(boot_slug)["state"] == "stopped"
-    assert supervisor.addon(no_boot_slug)["state"] == "stopped"
-    async with supervisor._snapshot_inner_lock:
-        await ha.create(CreateOptions(time.now(), "Test Name"))
-        assert supervisor.addon(boot_slug)["state"] == "stopped"
-    assert supervisor.addon(no_boot_slug)["state"] == "stopped"
-    await ha._pending_snapshot_task
-    assert supervisor.addon(boot_slug)["state"] == "started"
-    assert supervisor.addon(no_boot_slug)["state"] == "stopped"
-    assert len(await ha.get()) == 1
-    assert not interceptor.urlWasCalled(URL_MATCH_START_ADDON)
-    assert not interceptor.urlWasCalled(URL_MATCH_STOP_ADDON)

@@ -54,6 +54,9 @@ class SnapshotSource(Trigger, Generic[T]):
     def maxCount(self) -> None:
         return 0
 
+    def postSync(self) -> None:
+        return
+
     # Gets called after reading state but before any changes are made
     # to check for additional errors.
     def checkBeforeChanges(self) -> None:
@@ -163,6 +166,8 @@ class Model():
                     await self._purge(self.dest)
                 else:
                     break
+        self.source.postSync()
+        self.dest.postSync()
 
     def isWorkingThroughUpload(self):
         return self.dest.isWorking()

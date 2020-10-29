@@ -2,7 +2,7 @@ import pytest
 from backup.module import MainModule, BaseModule
 from backup.starter import Starter
 from injector import Injector
-from backup.ha import HaUpdater, HaSource
+from backup.ha import HaUpdater, HaSource, AddonStopper
 from backup.worker import Watcher
 from backup.debugworker import DebugWorker
 from backup.config import Config
@@ -29,6 +29,7 @@ async def test_start_work(injector, server):
     assert injector.get(HaSource).isInitialized()
     assert injector.get(UiServer).running
     assert injector.get(Watcher).isStarted()
+    assert injector.get(AddonStopper).isRunning()
 
     # Config should have Restarter and Resolver subscribed
     assert len(injector.get(Config)._subscriptions) == 2

@@ -13,6 +13,7 @@
     "credentials_file_path": "hassio-google-drive-backup/dev/data/credentials.dat",
     "folder_file_path": "hassio-google-drive-backup/dev/data/folder.dat",
     "id_file_path": "hassio-google-drive-backup/dev/data/id.json",
+    "stop_addon_state_path": "hassio-google-drive-backup/dev/data/stop_addon_state.json",
     "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
     "default_drive_client_id": "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com",
     "ingress_port": 56152,

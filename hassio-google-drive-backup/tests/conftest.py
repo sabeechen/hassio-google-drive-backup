@@ -24,6 +24,7 @@ from backup.module import BaseModule
 from backup.debugworker import DebugWorker
 from backup.creds import Creds
 from backup.server import ErrorStore
+from backup.ha import AddonStopper
 from .faketime import FakeTime
 from .helpers import Uploader
 from dev.ports import Ports
@@ -112,6 +113,7 @@ async def injector(cleandir, server_url, ports):
         Setting.FOLDER_FILE_PATH: "folder.dat",
         Setting.RETAINED_FILE_PATH: "retained.json",
         Setting.ID_FILE_PATH: "id.json",
+        Setting.STOP_ADDON_STATE_PATH: "stop_addon.json",
         Setting.INGRESS_TOKEN_FILE_PATH: "ingress.dat",
         Setting.DEFAULT_DRIVE_CLIENT_ID: "test_client_id",
         Setting.DEFAULT_DRIVE_CLIENT_SECRET: "test_client_secret",
@@ -144,8 +146,12 @@ async def interceptor(injector: Injector):
 
 
 @pytest.fixture
-async def supervisor(injector: Injector):
+async def supervisor(injector: Injector, server, session):
     return injector.get(SimulatedSupervisor)
+
+@pytest.fixture
+async def addon_stopper(injector: Injector):
+    return injector.get(AddonStopper)
 
 
 @pytest.fixture

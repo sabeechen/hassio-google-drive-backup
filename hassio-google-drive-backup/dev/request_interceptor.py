@@ -86,8 +86,8 @@ class RequestInterceptor:
                 return await match.called(request)
         return None
 
-    def record(self, request):
-        pass
+    def record(self, request: Request):
+        self._history.append(str(request.url.path))
 
     def urlWasCalled(self, url) -> bool:
         for called_url in self._history:

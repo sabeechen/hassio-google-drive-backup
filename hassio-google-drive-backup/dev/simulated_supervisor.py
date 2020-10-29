@@ -21,6 +21,7 @@ URL_MATCH_MISC_INFO = "^/info$"
 URL_MATCH_CORE_API = "^/core/api.*$"
 URL_MATCH_START_ADDON = "^/addons/.*/start$"
 URL_MATCH_STOP_ADDON = "^/addons/.*/stop$"
+URL_MATCH_ADDON_INFO = "^/addons/.*/info$"
 
 
 @singleton
@@ -61,7 +62,7 @@ class SimulatedSupervisor(BaseServer):
 
     def routes(self):
         return [
-            post('/addons/self/options', self._updateOptions),
+            post('/addons/{slug}/options', self._updateOptions),
             post("/core/api/services/persistent_notification/dismiss", self._dismissNotification),
             post("/core/api/services/persistent_notification/create", self._createNotification),
             post("/core/api/events/{name}", self._haEventUpdate),
@@ -122,8 +123,11 @@ class SimulatedSupervisor(BaseServer):
             await self._snapshot_lock.acquire()
 
     async def _verifyHeader(self, request) -> bool:
-        if request.headers.get("X-Supervisor-Token", None) != self._auth_token:
-            raise HTTPUnauthorized()
+        if request.headers.get("X-Supervisor-Token", None) == self._auth_token:
+            return
+        if request.headers.get("Authorization", None) == "Bearer " + self._auth_token:
+            return
+        raise HTTPUnauthorized()
 
     async def _getSnapshots(self, request: Request):
         await self._verifyHeader(request)
@@ -156,6 +160,8 @@ class SimulatedSupervisor(BaseServer):
             if addon.get("slug", "") == slug:
                 return self._formatDataResponse({
                     'boot': addon.get("boot"),
+                    'watchdog': addon.get("watchdog"),
+                    'state': addon.get("state"),
                 })
         raise HTTPBadRequest()
 
@@ -282,10 +288,11 @@ class SimulatedSupervisor(BaseServer):
 
     def installAddon(self, slug, name, version="v1.0", boot=True, started=True):
         self._addons.append({
-            "name": name,
+            "name": 'Name for ' + name,
             "slug": slug,
             "description": slug + " description",
             "version": version,
+            "watchdog": False,
             "boot": "auto" if boot else "manual",
             "ingress_entry": "/api/hassio_ingress/" + slug,
             "state": "started" if started else "stopped"
@@ -299,8 +306,13 @@ class SimulatedSupervisor(BaseServer):
         return self._formatDataResponse({})
 
     async def _updateOptions(self, request: Request):
-        await self._verifyHeader(request)
-        self._options = (await request.json())['options'].copy()
+        slug = request.match_info.get('slug')
+
+        if slug == "self":
+            await self._verifyHeader(request)
+            self._options = (await request.json())['options'].copy()
+        else:
+            self.addon(slug).update(await request.json())
         return self._formatDataResponse({})
 
     async def _haStateUpdate(self, request: Request):

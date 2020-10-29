@@ -77,7 +77,7 @@
                     "remoteRoot": "/app" // Linux example; adjust as necessary for your OS and situation.
                 }
             ],
-            "port": 9050,                   // Set to the remote port.
+            "port": 1627,                   // Set to the remote port.
             "host": "hassio",               // Set to your remote host's public IP address.
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"

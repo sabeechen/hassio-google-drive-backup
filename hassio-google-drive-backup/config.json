@@ -84,6 +84,7 @@
     "error_report_url": "url?",
     "drive_host_name": "str?",
     "save_drive_creds_path": "str?",
+    "stop_addon_state_path": "str?",
 
     "snapshot_stale_seconds": "float(0,)?",
     "max_sync_interval_seconds": "float(300,)?",
@@ -107,7 +108,7 @@
     "default_drive_client_secret": "str?",
     "drive_picker_api_key": "str?",
     "default_chunk_size": "int(1,)?",
-    "debugger_port": "int(5000,)?",
+    "debugger_port": "int(100,)?",
     "server_project_id": "str?",
     "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?"

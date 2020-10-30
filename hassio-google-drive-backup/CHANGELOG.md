@@ -1,3 +1,17 @@
+## [0.102.0 2020-10-29]
+### Added
+ - Updated the addon's logos, thanks to [@pizzakid25](https://github.com/pizzakid25)
+ - Added support for the new /media folder.
+
+### Fixes
+ - Addons that take a long time to stop are more reliably restarted if they're stopped to take a snapshot.
+ - Addons with a watchdog have the watchdog temporarily disabled when they are stopped for a snapshot. 
+ - An issue preventing Home Assistant username/password auth from functioning.
+ - An issue preventing snapshot from being uploaded from Google Drive.
+ - An issue preventing addon version numbers from showing up in the settings dialog.
+ - Snapshot name template preview now updates to "Full" or "Partial" depending on your settings.
+ - An issue that redirected users to the wrong address to restore snapshots.
+
 ## [0.101.3 2020-09-16]
 Note: A breaking change was made in a previous version, the binary_sensor.snapshots_stale sensor now reports its state as "on/off" instead of "true/false".  If you have automations that depend on this state, please update them.  I'll be including this notice with every changelog entry for a while.
 

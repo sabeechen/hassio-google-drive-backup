@@ -28,8 +28,12 @@ class DriveSnapshot(AbstractSnapshot):
     def __init__(self, data: Dict[Any, Any]):
         props = ensureKey('appProperties', data, DRIVE_KEY_TEXT)
         retained = BoolValidator.strToBool(props.get(PROP_RETAINED, "False"))
+        if PROP_KEY_NAME in props:
+            snapshot_name = ensureKey(PROP_KEY_NAME, props, DRIVE_KEY_TEXT)
+        else:
+            snapshot_name = data['name'].replace(".tar", "")
         super().__init__(
-            name=ensureKey(PROP_KEY_NAME, props, DRIVE_KEY_TEXT),
+            name=snapshot_name,
             slug=ensureKey(PROP_KEY_SLUG, props, DRIVE_KEY_TEXT),
             date=Time.parse(
                 ensureKey(PROP_KEY_DATE, props, DRIVE_KEY_TEXT)),

@@ -59,6 +59,9 @@ class DriveSource(SnapshotDestination):
     def name(self) -> str:
         return SOURCE_GOOGLE_DRIVE
 
+    def title(self) -> str:
+        return "Google Drive"
+
     def maxCount(self) -> None:
         return self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
 
@@ -86,7 +89,7 @@ class DriveSource(SnapshotDestination):
         try:
             async for child in self.drivebackend.query("'{}' in parents".format(parent)):
                 properties = child.get('appProperties')
-                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties and not child['trashed']:
+                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and not child['trashed']:
                     snapshot = DriveSnapshot(child)
                     snapshots[snapshot.slug()] = snapshot
         except ClientResponseError as e:
@@ -123,7 +126,6 @@ class DriveSource(SnapshotDestination):
             'appProperties': {
                 PROP_KEY_SLUG: snapshot.slug(),
                 PROP_KEY_DATE: str(snapshot.date()),
-                PROP_KEY_NAME: str(snapshot.name()),
                 PROP_TYPE: str(snapshot.snapshotType()),
                 PROP_VERSION: str(snapshot.version()),
                 PROP_PROTECTED: str(snapshot.protected()),
@@ -139,6 +141,9 @@ class DriveSource(SnapshotDestination):
             'createdTime': self._timeToRfc3339String(snapshot.date()),
             'modifiedTime': self._timeToRfc3339String(snapshot.date())
         }
+
+        if len(snapshot.name().encode()) < 100:
+            file_metadata['appProperties'][PROP_KEY_NAME] = str(snapshot.name())
 
         async with source:
             try:

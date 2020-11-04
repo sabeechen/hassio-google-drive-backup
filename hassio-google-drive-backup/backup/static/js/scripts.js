@@ -35,6 +35,16 @@ function toggleLinkSlide(checkbox, target) {
   }
 }
 
+function sourceToName(source) {
+  if (source == "GoogleDrive") {
+    return "Google Drive";
+  } else if (source == "HomeAssistant") {
+    return "Home Assistant";
+  } else {
+    return "Unknown";
+  }
+}
+
 function restoreClick(target) {
   $('#restore_help_card').fadeIn(500);
   //window.top.location.replace($(target).data('url'))
@@ -179,50 +189,6 @@ function postJsonCloseErrorDialog(url, dialog_class) {
 
 function toast(text) {
   M.toast({ html: text });
-}
-
-// Triggers showing a modal confirmation dialog to delete a snapshot
-function confirmDeleteSnapshot(target) {
-  var snapshot = $(target).data('snapshot');
-  var slug = snapshot['slug'];
-  var inDrive = snapshot['inDrive'];
-  var inHA = snapshot['inHA'];
-  $("#delete_drive").attr("onClick", "deleteSnapshot('" + slug + "'," + inDrive + ",false)");
-  $("#delete_ha").attr("onClick", "deleteSnapshot('" + slug + "',false," + inHA + ")");
-  $("#delete_both").attr("onClick", "deleteSnapshot('" + slug + "'," + inDrive + "," + inHA + ")");
-  if (inDrive && inHA) {
-    $("#delete_text").text("Are you sure you want to delete this snapshot?  You can delete it in Drive, Home assistant, or both.");
-    $("#delete_drive").show();
-    $("#delete_ha").show();
-    $("#delete_both").show();
-  } else if (inDrive && !inHA) {
-    $("#delete_text").text("Are you sure you want to delete this snapshot from Google Drive?  It isn't stored in Home Assistant, so it will be gone forever.");
-    $("#delete_drive").show();
-    $("#delete_ha").hide();
-    $("#delete_both").hide();
-  } else if (!inDrive && inHA) {
-    $("#delete_text").text("Are you sure you want to delete this snapshot?  It isn't backed up, so it will be gone forever.");
-    $("#delete_drive").hide();
-    $("#delete_ha").show();
-    $("#delete_both").hide();
-  }
-}
-
-function deleteSnapshot(slug, drive, ha) {
-  //console.log("Delete: " + slug + " Drive: " + drive + " HA: " + ha)
-  message = "Deleting snapshot from ";
-  if (drive && ha) {
-    message += "Home Assistant and Google Drive"
-  } else if (drive) {
-    message += "Google Drive"
-  } else if (ha) {
-    message += "Home Assistant"
-  } else {
-    message += "<i>...nowhere?</i>"
-  }
-  // Send the delete request
-  url = "deleteSnapshot?slug=" + slug + "&drive=" + drive + "&ha=" + ha;
-  postJson(url, {}, refreshstats, null, message);
 }
 
 function htmlEntities(str) {

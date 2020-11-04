@@ -27,6 +27,9 @@ class SnapshotSource(Trigger, Generic[T]):
     def name(self) -> str:
         return "Unnamed"
 
+    def title(self) -> str:
+        return "Default"
+
     def enabled(self) -> bool:
         return True
 

@@ -152,6 +152,9 @@ class HaSource(SnapshotSource[HASnapshot]):
     def name(self) -> str:
         return SOURCE_HA
 
+    def title(self) -> str:
+        return "Home Assistant"
+
     def maxCount(self) -> None:
         return self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
 

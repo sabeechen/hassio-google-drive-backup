@@ -15,7 +15,7 @@ from injector import ClassAssistedBuilder, inject, singleton
 
 from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
-from backup.model import Coordinator, Snapshot
+from backup.model import Coordinator, Snapshot, AbstractSnapshot
 from backup.exceptions import KnownError, ensureKey
 from backup.util import GlobalInfo, Estimator, File
 from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
@@ -161,6 +161,17 @@ class UiServer(Trigger, Startable):
     def getSnapshotDetails(self, snapshot: Snapshot):
         drive = snapshot.getSource(SOURCE_GOOGLE_DRIVE)
         ha = snapshot.getSource(SOURCE_HA)
+        sources = []
+        for source_key in snapshot.sources:
+            source: AbstractSnapshot = snapshot.sources[source_key]
+            sources.append({
+                'name': source.name(),
+                'key': source_key,
+                'size': source.size(),
+                'retained': source.retained(),
+                'delete_next': snapshot.getPurges().get(source_key) or False
+            })
+
         return {
             'name': snapshot.name(),
             'slug': snapshot.slug(),
@@ -176,7 +187,8 @@ class UiServer(Trigger, Startable):
             'deleteNextDrive': snapshot.getPurges().get(SOURCE_GOOGLE_DRIVE) or False,
             'deleteNextHa': snapshot.getPurges().get(SOURCE_HA) or False,
             'driveRetain': drive.retained() if drive else False,
-            'haRetain': ha.retained() if ha else False
+            'haRetain': ha.retained() if ha else False,
+            'sources': sources
         }
 
     async def manualauth(self, request: Request) -> None:
@@ -222,20 +234,11 @@ class UiServer(Trigger, Startable):
         return web.json_response({"message": "Requested snapshot '{0}'".format(snapshot.name())})
 
     async def deleteSnapshot(self, request: Request):
-        drive = BoolValidator.strToBool(request.query.get("drive", False))
-        ha = BoolValidator.strToBool(request.query.get("ha", False))
-        slug = request.query.get("slug", "")
-        self._coord.getSnapshot(slug)
-        sources = []
-        messages = []
-        if drive:
-            messages.append("Google Drive")
-            sources.append(SOURCE_GOOGLE_DRIVE)
-        if ha:
-            messages.append("Home Assistant")
-            sources.append(SOURCE_HA)
-        await self._coord.delete(sources, slug)
-        return web.json_response({"message": "Deleted from " + " and ".join(messages)})
+        data = await request.json()
+        # Check to make sure the slug is valid.
+        self._coord.getSnapshot(data['slug'])
+        await self._coord.delete(data['sources'], data['slug'])
+        return web.json_response({"message": "Deleted from {0} places(s)".format(len(data['sources']))})
 
     async def retain(self, request: Request):
         drive = BoolValidator.strToBool(request.query.get("drive", False))

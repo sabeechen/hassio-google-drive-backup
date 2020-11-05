@@ -238,7 +238,7 @@ class UiServer(Trigger, Startable):
         # Check to make sure the slug is valid.
         self._coord.getSnapshot(data['slug'])
         await self._coord.delete(data['sources'], data['slug'])
-        return web.json_response({"message": "Deleted from {0} places(s)".format(len(data['sources']))})
+        return web.json_response({"message": "Deleted from {0} place(s)".format(len(data['sources']))})
 
     async def retain(self, request: Request):
         drive = BoolValidator.strToBool(request.query.get("drive", False))

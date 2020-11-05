@@ -67,9 +67,9 @@ class ReaderHelper:
             assert resp.status == status
             return await resp.json()
 
-    async def assertError(self, path, error_type="generic_error", status=500, ingress=True):
+    async def assertError(self, path, error_type="generic_error", status=500, ingress=True, json=None):
         logging.getLogger().info("Requesting " + path)
-        data = await self.getjson(path, status=status, ingress=ingress)
+        data = await self.getjson(path, status=status, ingress=ingress, json=json)
         assert data['error_type'] == error_type
 
 
@@ -234,7 +234,11 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_HA]['size']
     }
-    await reader.getjson("deleteSnapshot?slug={0}&drive=true&ha=false".format(slug))
+    delete_req = {
+        "slug": slug,
+        "sources": ["GoogleDrive"]
+    }
+    await reader.getjson("deleteSnapshot", json=delete_req)
     await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug))
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
@@ -276,20 +280,25 @@ async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, sessi
 
 
 @pytest.mark.asyncio
-async def test_delete(reader, ui_server, snapshot):
+async def test_delete(reader: ReaderHelper, ui_server, snapshot):
     slug = snapshot.slug()
-    await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format("bad_slug"), error_type=ERROR_NO_SNAPSHOT)
+
+    data = {"slug": "bad_slug", "sources": ["GoogleDrive"]}
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
-    assert await reader.getjson("deleteSnapshot?slug={}&drive=true&ha=false".format(slug)) == {"message": "Deleted from Google Drive"}
-    await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
+    data["slug"] = slug
+    assert await reader.getjson("deleteSnapshot", json=data) == {"message": "Deleted from 1 place(s)"}
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 0
-    assert await reader.getjson("deleteSnapshot?slug={}&drive=false&ha=true".format(slug)) == {"message": "Deleted from Home Assistant"}
+    data["sources"] = ["HomeAssistant"]
+    assert await reader.getjson("deleteSnapshot", json=data) == {"message": "Deleted from 1 place(s)"}
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 0
-    await reader.assertError("deleteSnapshot?slug={}&drive=false&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
+    data["sources"] = []
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
 
 
 @pytest.mark.asyncio

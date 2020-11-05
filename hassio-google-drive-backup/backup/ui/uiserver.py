@@ -82,6 +82,9 @@ class UiServer(Trigger, Startable):
         }
 
     async def getstatus(self, request) -> Dict[Any, Any]:
+        return web.json_response(await self.buildStatusInfo())
+
+    async def buildStatusInfo(self):
         status: Dict[Any, Any] = {}
         status['folder_id'] = self.folder_finder.getCachedFolder()
         status['snapshots'] = []
@@ -156,7 +159,10 @@ class UiServer(Trigger, Startable):
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['is_specify_folder'] = self.config.get(
             Setting.SPECIFY_SNAPSHOT_FOLDER)
-        return web.json_response(status)
+        return status
+
+    async def bootstrap(self, request) -> Dict[Any, Any]:
+        return web.Response(body="bootstrap_update_data = {0};".format(json.dumps(await self.buildStatusInfo(), indent=4)), content_type="text/javascript")
 
     def getSnapshotDetails(self, snapshot: Snapshot):
         drive = snapshot.getSource(SOURCE_GOOGLE_DRIVE)
@@ -563,6 +569,7 @@ class UiServer(Trigger, Startable):
         app.add_routes([web.get('/index.html', self.index)])
         app.add_routes([web.get('/index', self.index)])
         self._addRoute(app, self.reauthenticate)
+        self._addRoute(app, self.bootstrap)
         self._addRoute(app, self.tos)
         self._addRoute(app, self.pp)
 

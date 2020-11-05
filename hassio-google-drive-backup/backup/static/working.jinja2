@@ -34,9 +34,9 @@
   {{ super() }}
   <script type="text/javascript">
     $(document).ready(function () {
+      processStatusUpdate(bootstrap_update_data);
       // Every 5 seconds, refresh the metrics form the server.
       window.setInterval(refreshstats, 5000);
-      refreshstats();
     });
   </script>
 {% endblock %}

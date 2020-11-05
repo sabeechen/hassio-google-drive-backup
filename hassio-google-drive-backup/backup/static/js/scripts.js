@@ -356,262 +356,7 @@ last_data = null;
 error_minimum = 0
 // Refreshes the display with stats from the server.
 function refreshstats() {
-  var jqxhr = $.get("getstatus", function (data) {
-    $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots + " (" + data.sources.HomeAssistant.size + ")");
-    $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots + " (" + data.sources.GoogleDrive.size + ")");
-    $('#space_left').empty().append("x GB remaining");
-    $('#last_snapshot').empty().append(data.last_snapshot_text);
-    $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
-    $('#last_snapshot').attr("title", data.last_snapshot_detail);
-
-    $('#next_snapshot').empty().append(data.next_snapshot_text);
-    $('#next_snapshot').attr("datetime", data.next_snapshot_machine);
-    $('#next_snapshot').attr("title", data.next_snapshot_detail);
-    $('#free_space').empty().append(data.free_space + " remaining");
-    $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
-    snapshot_div = $('#snapshots')
-    slugs = []
-    var count = 0;
-    for (var key in data.snapshots) {
-      if (data.snapshots.hasOwnProperty(key)) {
-        count++;
-        snapshot = data.snapshots[key];
-        slugs.push(snapshot.slug);
-        // try to find the item
-        var template = $(".slug" + snapshot.slug)
-        var isNew = false;
-        if (template.length == 0) {
-          var template = $('#snapshot-template').find(".snapshot-ui").clone();
-          template.addClass("slug" + snapshot.slug);
-          template.addClass("active-snapshot");
-          template.data("slug", snapshot.slug);
-          var dropdown = $("#action_dropdown", template);
-          dropdown.attr("id", "action_dropdown" + snapshot.slug);
-          $("#action_dropdown_button", template).attr("data-target", "action_dropdown" + snapshot.slug);
-          $("#action_dropdown_button", template).attr('id', "action_dropdown_button" + snapshot.slug);
-
-          $("#delete_link", template).attr('id', "delete_link" + snapshot.slug);
-          $("#restore_link", template).attr('id', "restore_link" + snapshot.slug);
-          $("#upload_link", template).attr('id', "upload_link" + snapshot.slug);
-          $("#download_link", template).attr('id', "download_link" + snapshot.slug);
-          $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
-          $("#delete_option", template).attr('id', "delete_option" + snapshot.slug);
-          $("#restore_option", template).attr('id', "restore_option" + snapshot.slug);
-          $("#upload_option", template).attr('id', "upload_option" + snapshot.slug);
-          $("#download_option", template).attr('id', "download_option" + snapshot.slug);
-          $("#retain_option", template).attr('id', "retain_option" + snapshot.slug);
-          isNew = true;
-        }
-
-        $("#size", template).html(snapshot['size']);
-        $("#name", template).html(snapshot['name']);
-        $("#status", template).html(snapshot['status']);
-
-        template.data("inDrive", snapshot.inDrive);
-        template.data("inHa", snapshot.inHA);
-
-        if (snapshot.protected) {
-          $(".icon-protected", template).show();
-        } else {
-          $(".icon-protected", template).hide();
-        }
-
-        if (snapshot.deleteNextDrive && snapshot.deleteNextHa) {
-          $(".icon-warn-delete", template).show();
-          $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive and Home Assistant when a new snapshot is created.");
-        } else if (snapshot.deleteNextDrive) {
-          $(".icon-warn-delete", template).show();
-          $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive when a new snapshot is created.");
-        } else if (snapshot.deleteNextHa) {
-          $(".icon-warn-delete", template).show();
-          $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Home Assistant when a new snapshot is created.");
-        } else {
-          $(".icon-warn-delete", template).hide();
-        }
-
-        if (snapshot.driveRetain || snapshot.haRetain) {
-          $(".icon-retain", template).show();
-        } else {
-          $(".icon-retain", template).hide();
-        }
-
-        tip = "Help unavailable";
-
-        if (snapshot.status.includes("Drive")) {
-          tip = tooltipDriveOnly;
-        } else if (snapshot.status.includes("Backed Up")) {
-          tip = tooltipBackedUp;
-        } else if (snapshot.status.includes("Loading")) {
-          tip = tooltipLoading;
-        } else if (snapshot.status.includes("HA Only")) {
-          tip = tooltipHassio;
-        } else if (snapshot.status.includes("Pending")) {
-          tip = tooltipPending;
-        } else if (snapshot.status.includes("Upload")) {
-          tip = tooltipUploading;
-        } else if (snapshot.status.includes("aiting")) {
-          tip = tooltipWaiting;
-        }
-        $("#status-help", template).attr("data-tooltip", tip);
-
-        if (isNew) {
-          snapshot_div.prepend(template);
-          var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
-          var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
-        }
-
-        if (snapshot.inHA || snapshot.inDrive) {
-          $("#action_dropdown_button" + snapshot.slug).show();
-        } else {
-          $("#action_dropdown_button" + snapshot.slug).hide();
-        }
-
-        if (snapshot.inHA) {
-          $("#upload_option" + snapshot.slug).hide();
-          $("#restore_option" + snapshot.slug).show();
-        } else {
-          $("#upload_option" + snapshot.slug).show();
-          $("#restore_option" + snapshot.slug).hide();
-        }
-
-        $("#status-details", template).data('snapshot', snapshot)
-
-        // Set up context menu
-        $("#delete_link" + snapshot.slug).data('snapshot', snapshot);
-        //$("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
-        $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
-        $("#download_link" + snapshot.slug).data('snapshot', snapshot);
-        $("#retain_link" + snapshot.slug).data('snapshot', snapshot);
-      }
-    }
-
-    $(".active-snapshot").each(function () {
-      var snapshot = $(this)
-      if (!slugs.includes(snapshot.data('slug'))) {
-        snapshot.remove();
-      }
-    });
-
-    // Update the "syncing" toast message
-    if (data.syncing) {
-      if (sync_toast == null) {
-        sync_toast = M.toast({ html: '<span>Syncing...</span><button class="btn-flat toast-action" onclick="cancelSync()">Cancel</button>', displayLength: 999999999 })
-      }
-    } else {
-      // Make sure the toast isn't up
-      if (sync_toast != null) {
-        sync_toast.dismiss();
-        sync_toast = null
-      }
-    }
-
-
-    if (count == 0) {
-      if (!data.firstSync) {
-        $("#no_snapshots_block").show();
-        $("#snapshots_loading").hide();
-      } else {
-        $("#snapshots_loading").show();
-        $("#no_snapshots_block").hide();
-      }
-    } else {
-      $("#no_snapshots_block").hide();
-      $("#snapshots_loading").hide();
-    }
-
-    var found = false;
-    var error = data.last_error;
-    $('.error_card').each(function (i) {
-      var item = $(this);
-      if (data.last_error == null) {
-        if (item.is(":visible")) {
-          item.hide();
-        }
-      } else if (item.hasClass(error.error_type) && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
-        found = true;
-        if (data.hasOwnProperty('dns_info')) {
-          var dns_div = $('.dns_info', item)
-          if (dns_div.length > 0) {
-            populateDnsInfo(dns_div, data.dns_info)
-          }
-        }
-        if (error.data != null) {
-          for (key in error.data) {
-            if (!error.data.hasOwnProperty(key)) {
-              continue;
-            }
-            var value = error.data[key];
-            var index = key.lastIndexOf("#");
-            if (index > 0) {
-              var attr = key.slice(index + 1);
-              key = key.slice(0, index);
-              $("#data_" + key, item).attr(attr, value);
-            } else {
-              $("#data_" + key, item).html(value);
-            }
-          }
-        }
-        if (item.is(":hidden")) {
-          item.show()
-        }
-      } else {
-        item.hide();
-      }
-    });
-
-    if (data.last_error != null && !found && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
-      var card = $("#error_card")
-      populateGitHubInfo(card, data.last_error);
-      card.fadeIn();
-    } else {
-      $("#error_card").hide();
-    }
-
-    if (data.ask_error_reports && !found) {
-      $('#error_reports_card').fadeIn(500);
-    } else {
-      $('#error_reports_card').hide();
-    }
-
-    if (data.is_custom_creds) {
-      $(".hide-for-custom-creds").hide();
-      $(".hide-for-default-creds").show();
-    } else {
-      $(".hide-for-custom-creds").show();
-      $(".hide-for-default-creds").hide();
-    }
-
-    if (data.warn_ingress_upgrade && !hideIngress) {
-      $('#ingress_upgrade_card').fadeIn(500);
-    } else {
-      $('#ingress_upgrade_card').hide();
-    }
-
-    if (data.sources.GoogleDrive.retained > 0) {
-      $(".drive_retain_count").html(data.sources.GoogleDrive.retained)
-      $(".drive_retain_label").show()
-    } else {
-      $(".drive_retain_label").hide()
-    }
-
-    if (data.sources.HomeAssistant.retained > 0) {
-      $(".ha_retain_count").html(data.sources.HomeAssistant.retained)
-      $(".ha_retain_label").show()
-    } else {
-      $(".ha_retain_label").hide()
-    }
-
-
-    $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_snapshot_path, data.ha_url_base));
-
-    last_data = data;
-
-    $('.tooltipped').tooltip({ "exitDelay": 1000 });
-    if (error_toast != null) {
-      error_toast.dismiss();
-      error_toast = null;
-    }
-  }, "json").fail(
+  var jqxhr = $.get("getstatus", processStatusUpdate, "json").fail(
     function (e) {
       console.log("Status update failed: ");
       console.log(e);
@@ -623,6 +368,263 @@ function refreshstats() {
       }
     }
   )
+}
+
+function processStatusUpdate(data) {
+  $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots + " (" + data.sources.HomeAssistant.size + ")");
+  $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots + " (" + data.sources.GoogleDrive.size + ")");
+  $('#space_left').empty().append("x GB remaining");
+  $('#last_snapshot').empty().append(data.last_snapshot_text);
+  $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
+  $('#last_snapshot').attr("title", data.last_snapshot_detail);
+
+  $('#next_snapshot').empty().append(data.next_snapshot_text);
+  $('#next_snapshot').attr("datetime", data.next_snapshot_machine);
+  $('#next_snapshot').attr("title", data.next_snapshot_detail);
+  $('#free_space').empty().append(data.free_space + " remaining");
+  $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
+  snapshot_div = $('#snapshots')
+  slugs = []
+  var count = 0;
+  for (var key in data.snapshots) {
+    if (data.snapshots.hasOwnProperty(key)) {
+      count++;
+      snapshot = data.snapshots[key];
+      slugs.push(snapshot.slug);
+      // try to find the item
+      var template = $(".slug" + snapshot.slug)
+      var isNew = false;
+      if (template.length == 0) {
+        var template = $('#snapshot-template').find(".snapshot-ui").clone();
+        template.addClass("slug" + snapshot.slug);
+        template.addClass("active-snapshot");
+        template.data("slug", snapshot.slug);
+        var dropdown = $("#action_dropdown", template);
+        dropdown.attr("id", "action_dropdown" + snapshot.slug);
+        $("#action_dropdown_button", template).attr("data-target", "action_dropdown" + snapshot.slug);
+        $("#action_dropdown_button", template).attr('id', "action_dropdown_button" + snapshot.slug);
+
+        $("#delete_link", template).attr('id', "delete_link" + snapshot.slug);
+        $("#restore_link", template).attr('id', "restore_link" + snapshot.slug);
+        $("#upload_link", template).attr('id', "upload_link" + snapshot.slug);
+        $("#download_link", template).attr('id', "download_link" + snapshot.slug);
+        $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
+        $("#delete_option", template).attr('id', "delete_option" + snapshot.slug);
+        $("#restore_option", template).attr('id', "restore_option" + snapshot.slug);
+        $("#upload_option", template).attr('id', "upload_option" + snapshot.slug);
+        $("#download_option", template).attr('id', "download_option" + snapshot.slug);
+        $("#retain_option", template).attr('id', "retain_option" + snapshot.slug);
+        isNew = true;
+      }
+
+      $("#size", template).html(snapshot['size']);
+      $("#name", template).html(snapshot['name']);
+      $("#status", template).html(snapshot['status']);
+
+      template.data("inDrive", snapshot.inDrive);
+      template.data("inHa", snapshot.inHA);
+
+      if (snapshot.protected) {
+        $(".icon-protected", template).show();
+      } else {
+        $(".icon-protected", template).hide();
+      }
+
+      if (snapshot.deleteNextDrive && snapshot.deleteNextHa) {
+        $(".icon-warn-delete", template).show();
+        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive and Home Assistant when a new snapshot is created.");
+      } else if (snapshot.deleteNextDrive) {
+        $(".icon-warn-delete", template).show();
+        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive when a new snapshot is created.");
+      } else if (snapshot.deleteNextHa) {
+        $(".icon-warn-delete", template).show();
+        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Home Assistant when a new snapshot is created.");
+      } else {
+        $(".icon-warn-delete", template).hide();
+      }
+
+      if (snapshot.driveRetain || snapshot.haRetain) {
+        $(".icon-retain", template).show();
+      } else {
+        $(".icon-retain", template).hide();
+      }
+
+      tip = "Help unavailable";
+
+      if (snapshot.status.includes("Drive")) {
+        tip = tooltipDriveOnly;
+      } else if (snapshot.status.includes("Backed Up")) {
+        tip = tooltipBackedUp;
+      } else if (snapshot.status.includes("Loading")) {
+        tip = tooltipLoading;
+      } else if (snapshot.status.includes("HA Only")) {
+        tip = tooltipHassio;
+      } else if (snapshot.status.includes("Pending")) {
+        tip = tooltipPending;
+      } else if (snapshot.status.includes("Upload")) {
+        tip = tooltipUploading;
+      } else if (snapshot.status.includes("aiting")) {
+        tip = tooltipWaiting;
+      }
+      $("#status-help", template).attr("data-tooltip", tip);
+
+      if (isNew) {
+        snapshot_div.prepend(template);
+        var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
+        var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
+      }
+
+      if (snapshot.inHA || snapshot.inDrive) {
+        $("#action_dropdown_button" + snapshot.slug).show();
+      } else {
+        $("#action_dropdown_button" + snapshot.slug).hide();
+      }
+
+      if (snapshot.inHA) {
+        $("#upload_option" + snapshot.slug).hide();
+        $("#restore_option" + snapshot.slug).show();
+      } else {
+        $("#upload_option" + snapshot.slug).show();
+        $("#restore_option" + snapshot.slug).hide();
+      }
+
+      $("#status-details", template).data('snapshot', snapshot)
+
+      // Set up context menu
+      $("#delete_link" + snapshot.slug).data('snapshot', snapshot);
+      //$("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
+      $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
+      $("#download_link" + snapshot.slug).data('snapshot', snapshot);
+      $("#retain_link" + snapshot.slug).data('snapshot', snapshot);
+    }
+  }
+
+  $(".active-snapshot").each(function () {
+    var snapshot = $(this)
+    if (!slugs.includes(snapshot.data('slug'))) {
+      snapshot.remove();
+    }
+  });
+
+  // Update the "syncing" toast message
+  if (data.syncing) {
+    if (sync_toast == null) {
+      sync_toast = M.toast({ html: '<span>Syncing...</span><button class="btn-flat toast-action" onclick="cancelSync()">Cancel</button>', displayLength: 999999999 })
+    }
+  } else {
+    // Make sure the toast isn't up
+    if (sync_toast != null) {
+      sync_toast.dismiss();
+      sync_toast = null
+    }
+  }
+
+
+  if (count == 0) {
+    if (!data.firstSync) {
+      $("#no_snapshots_block").show();
+      $("#snapshots_loading").hide();
+    } else {
+      $("#snapshots_loading").show();
+      $("#no_snapshots_block").hide();
+    }
+  } else {
+    $("#no_snapshots_block").hide();
+    $("#snapshots_loading").hide();
+  }
+
+  var found = false;
+  var error = data.last_error;
+  $('.error_card').each(function (i) {
+    var item = $(this);
+    if (data.last_error == null) {
+      if (item.is(":visible")) {
+        item.hide();
+      }
+    } else if (item.hasClass(error.error_type) && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
+      found = true;
+      if (data.hasOwnProperty('dns_info')) {
+        var dns_div = $('.dns_info', item)
+        if (dns_div.length > 0) {
+          populateDnsInfo(dns_div, data.dns_info)
+        }
+      }
+      if (error.data != null) {
+        for (key in error.data) {
+          if (!error.data.hasOwnProperty(key)) {
+            continue;
+          }
+          var value = error.data[key];
+          var index = key.lastIndexOf("#");
+          if (index > 0) {
+            var attr = key.slice(index + 1);
+            key = key.slice(0, index);
+            $("#data_" + key, item).attr(attr, value);
+          } else {
+            $("#data_" + key, item).html(value);
+          }
+        }
+      }
+      if (item.is(":hidden")) {
+        item.show()
+      }
+    } else {
+      item.hide();
+    }
+  });
+
+  if (data.last_error != null && !found && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
+    var card = $("#error_card")
+    populateGitHubInfo(card, data.last_error);
+    card.fadeIn();
+  } else {
+    $("#error_card").hide();
+  }
+
+  if (data.ask_error_reports && !found) {
+    $('#error_reports_card').fadeIn(500);
+  } else {
+    $('#error_reports_card').hide();
+  }
+
+  if (data.is_custom_creds) {
+    $(".hide-for-custom-creds").hide();
+    $(".hide-for-default-creds").show();
+  } else {
+    $(".hide-for-custom-creds").show();
+    $(".hide-for-default-creds").hide();
+  }
+
+  if (data.warn_ingress_upgrade && !hideIngress) {
+    $('#ingress_upgrade_card').fadeIn(500);
+  } else {
+    $('#ingress_upgrade_card').hide();
+  }
+
+  if (data.sources.GoogleDrive.retained > 0) {
+    $(".drive_retain_count").html(data.sources.GoogleDrive.retained)
+    $(".drive_retain_label").show()
+  } else {
+    $(".drive_retain_label").hide()
+  }
+
+  if (data.sources.HomeAssistant.retained > 0) {
+    $(".ha_retain_count").html(data.sources.HomeAssistant.retained)
+    $(".ha_retain_label").show()
+  } else {
+    $(".ha_retain_label").hide()
+  }
+
+
+  $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_snapshot_path, data.ha_url_base));
+
+  last_data = data;
+
+  $('.tooltipped').tooltip({ "exitDelay": 1000 });
+  if (error_toast != null) {
+    error_toast.dismiss();
+    error_toast = null;
+  }
 }
 
 function populateDnsInfo(target, data) {

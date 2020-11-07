@@ -95,7 +95,7 @@ class DriveRequests():
         }
 
     def enabled(self):
-        return self.creds is not None
+        return self.creds is not None and self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
 
     def _enabledCheck(self):
         if not self.enabled():

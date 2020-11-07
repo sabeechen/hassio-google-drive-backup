@@ -130,15 +130,10 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
     data = await reader.getjson("getstatus")
     assert data['ask_error_reports'] is True
     assert data['cred_version'] == 0
-    assert data['drive_enabled'] is True
     assert data['firstSync'] is True
     assert data['folder_id'] is None
     assert data['last_error'] is None
     assert data['last_snapshot_text'] == "Never"
-    assert data['maxSnapshotsInDrive'] == config.get(
-        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
-    assert data['maxSnapshotsInHasssio'] == config.get(
-        Setting.MAX_SNAPSHOTS_IN_HASSIO)
     assert data['next_snapshot_text'] == "right now"
     assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
     assert data['warn_ingress_upgrade'] is False
@@ -149,7 +144,10 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'retained': 0,
         'snapshots': 0,
         'latest': None,
-        'size': '0.0 B'
+        'size': '0.0 B',
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -157,7 +155,11 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'retained': 0,
         'snapshots': 0,
         'latest': None,
-        'size': '0.0 B'
+        'size': '0.0 B',
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
     assert len(data['sources']) == 2
 
@@ -178,7 +180,10 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(time.now()),
-        'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -186,16 +191,19 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(time.now()),
-        'size': data['sources'][SOURCE_HA]['size']
+        'size': data['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
     assert len(data['sources']) == 2
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
+async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
     slug = snapshot.slug()
-    assert await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug)) == {
+    assert await reader.getjson("retain", json={'slug': slug, 'sources': ["GoogleDrive", "HomeAssistant"]}) == {
         'message': "Updated the snapshot's settings"
     }
     status = await reader.getjson("getstatus")
@@ -205,7 +213,10 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 1,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -213,10 +224,14 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 1,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_HA]['size']
+        'size': status['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
 
-    await reader.getjson("retain?slug={0}&drive=false&ha=false".format(slug))
+    await reader.getjson("retain", json={'slug': slug, 'sources': []})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
@@ -224,7 +239,10 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -232,14 +250,18 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_HA]['size']
+        'size': status['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
     delete_req = {
         "slug": slug,
         "sources": ["GoogleDrive"]
     }
     await reader.getjson("deleteSnapshot", json=delete_req)
-    await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug))
+    await reader.getjson("retain", json={'slug': slug, 'sources': ["HomeAssistant"]})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 0,
@@ -247,7 +269,10 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 0,
         'snapshots': 0,
         'latest': None,
-        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -255,21 +280,21 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 1,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_HA]['size']
+        'size': status['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
 
     # sync again, which should upoload the snapshot to Drive
     await coord.sync()
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
-    assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 1
-
-    # it shoudl be retained, since we indicated it should be retained in the last call with drive=true
-    assert status['snapshots'][0]['driveRetain']
-
+    assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 0
+    assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, session):
     assert len(coord.snapshots()) == 0
     status = await reader.getjson("sync")
@@ -314,8 +339,8 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     assert len(status["snapshots"]) == 2
     assert status["snapshots"][1]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][1]["name"] == "TestName"
-    assert not status["snapshots"][1]["driveRetain"]
-    assert not status["snapshots"][1]["haRetain"]
+    assert status["snapshots"][1]['sources'][0]['retained'] is False
+    assert len(status["snapshots"][1]['sources']) == 1
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName2&retain_drive=True&retain_ha=False") == {
@@ -324,11 +349,10 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     await coord.sync()
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 3
-    assert not status["snapshots"][1]["driveRetain"]
     assert status["snapshots"][2]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][2]["name"] == "TestName2"
-    assert not status["snapshots"][2]["haRetain"]
-    assert status["snapshots"][2]["driveRetain"]
+    assert status["snapshots"][2]['sources'][0]['retained'] is False
+    assert status["snapshots"][2]['sources'][1]['retained'] is True
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
@@ -337,11 +361,10 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     await coord.sync()
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 4
-    assert not status["snapshots"][1]["driveRetain"]
+    assert status["snapshots"][3]['sources'][0]['retained'] is True
+    assert status["snapshots"][3]['sources'][1]['retained'] is False
     assert status["snapshots"][3]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][3]["name"] == "TestName3"
-    assert status["snapshots"][3]["haRetain"]
-    assert not status["snapshots"][3]["driveRetain"]
 
 
 @pytest.mark.asyncio
@@ -427,7 +450,7 @@ async def test_update_error_reports_false(reader, ui_server, config: Config, sup
 
 
 @pytest.mark.asyncio
-async def test_drive_cred_generation(reader, ui_server, snapshot, config: Config, global_info: GlobalInfo, session: ClientSession, google):
+async def test_drive_cred_generation(reader: ReaderHelper, ui_server, snapshot, config: Config, global_info: GlobalInfo, session: ClientSession, google):
     status = await reader.getjson("getstatus")
     assert len(status["snapshots"]) == 1
     assert global_info.credVersion == 0
@@ -452,6 +475,7 @@ async def test_drive_cred_generation(reader, ui_server, snapshot, config: Config
     cred_url = URL(reader.getUrl(True) + "token").with_query({"creds": creds, "host": reader.getUrl(True)})
     async with session.get(cred_url) as resp:
         resp.raise_for_status()
+        # verify we got redirected to the addon main page.
         assert resp.url == URL(reader.getUrl(True))
     status = (await reader.getjson("sync"))["last_error"] is ERROR_CREDS_EXPIRED
     assert global_info.credVersion == 1

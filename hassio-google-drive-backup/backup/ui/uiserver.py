@@ -93,13 +93,10 @@ class UiServer(Trigger, Startable):
             status['snapshots'].append(self.getSnapshotDetails(snapshot))
         status['ha_url_base'] = self._ha_source.getHomeAssistantUrl()
         status['restore_snapshot_path'] = "hassio/snapshots"
-        status['drive_enabled'] = self._coord.enabled()
         status['ask_error_reports'] = not self.config.isExplicit(
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = False
         status['cred_version'] = self._global_info.credVersion
-        status['free_space'] = Estimator.asSizeString(
-            self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
             status['next_snapshot_text'] = "Disabled"
@@ -139,10 +136,6 @@ class UiServer(Trigger, Startable):
         status["syncing"] = self._coord.isSyncing()
         status["ignore_sync_error"] = self._coord.isWorkingThroughUpload()
         status["firstSync"] = self._global_info._first_sync
-        status["maxSnapshotsInHasssio"] = self.config.get(
-            Setting.MAX_SNAPSHOTS_IN_HASSIO)
-        status["maxSnapshotsInDrive"] = self.config.get(
-            Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
         status["snapshot_name_template"] = self.config.get(
             Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
@@ -165,7 +158,6 @@ class UiServer(Trigger, Startable):
         return web.Response(body="bootstrap_update_data = {0};".format(json.dumps(await self.buildStatusInfo(), indent=4)), content_type="text/javascript")
 
     def getSnapshotDetails(self, snapshot: Snapshot):
-        drive = snapshot.getSource(SOURCE_GOOGLE_DRIVE)
         ha = snapshot.getSource(SOURCE_HA)
         sources = []
         for source_key in snapshot.sources:
@@ -184,17 +176,13 @@ class UiServer(Trigger, Startable):
             'size': snapshot.sizeString(),
             'status': snapshot.status(),
             'date': self._time.toLocal(snapshot.date()).strftime("%c"),
-            'inDrive': drive is not None,
-            'inHA': ha is not None,
             'isPending': ha is not None and type(ha) is PendingSnapshot,
             'protected': snapshot.protected(),
             'type': snapshot.snapshotType(),
             'details': snapshot.details(),
-            'deleteNextDrive': snapshot.getPurges().get(SOURCE_GOOGLE_DRIVE) or False,
-            'deleteNextHa': snapshot.getPurges().get(SOURCE_HA) or False,
-            'driveRetain': drive.retained() if drive else False,
-            'haRetain': ha.retained() if ha else False,
-            'sources': sources
+            'sources': sources,
+            'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
+            'restorable': snapshot.getSource(SOURCE_HA) is not None,
         }
 
     async def manualauth(self, request: Request) -> None:
@@ -247,24 +235,21 @@ class UiServer(Trigger, Startable):
         return web.json_response({"message": "Deleted from {0} place(s)".format(len(data['sources']))})
 
     async def retain(self, request: Request):
-        drive = BoolValidator.strToBool(request.query.get("drive", False))
-        ha = BoolValidator.strToBool(request.query.get("ha", False))
-        slug = request.query.get("slug", "")
+        data = await request.json()
+        slug = data['slug']
 
         snapshot: Snapshot = self._coord.getSnapshot(slug)
+        retention = {}
+        for source in data['sources']:
+            retention[source] = True
+        for source in snapshot.sources.values():
+            if source.source() not in retention:
+                retention[source.source()] = False
 
         # override create options for future uploads
-        options = CreateOptions(self._time.now(), self.config.get(Setting.SNAPSHOT_NAME), {
-            SOURCE_GOOGLE_DRIVE: BoolValidator.strToBool(drive),
-            SOURCE_HA: BoolValidator.strToBool(ha)
-        })
+        options = CreateOptions(self._time.now(), self.config.get(Setting.SNAPSHOT_NAME), retention)
         snapshot.setOptions(options)
 
-        retention = {}
-        if snapshot.getSource(SOURCE_GOOGLE_DRIVE) is not None:
-            retention[SOURCE_GOOGLE_DRIVE] = BoolValidator.strToBool(drive)
-        if snapshot.getSource(SOURCE_HA) is not None:
-            retention[SOURCE_HA] = BoolValidator.strToBool(ha)
         await self._coord.retain(retention, slug)
         return web.json_response({'message': "Updated the snapshot's settings"})
 

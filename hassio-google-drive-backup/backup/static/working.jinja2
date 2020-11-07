@@ -42,6 +42,22 @@
 {% endblock %}
 
 {% block content %}
+  <div id="source-template" style="display: none;">
+    <div class="source-ui">
+      <div id="source-template" class="left container" style="margin-left: 15px;">
+        <h6 class="source_title"></h6>
+      </div>
+      <div class="left container source_retain_label" style="margin-left: 15px">
+        <h7 class="left"><span class="source_retain_count"></span> saved indefinitely</h7>
+      </div>
+      <div class="right">
+        <div class="right">
+          <h5 class="source_snapshot_count" style="text-align: right;"></h5>
+          <div class="source_free_space tooltipped" style="text-align: right;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="snapshot-template" style="display: none">
     <div class="snapshot-ui">
       <div class="row" style="margin-bottom: 10px; margin-top: 10px;">
@@ -1035,27 +1051,7 @@
         </div>
         <div class="row">
           <div class="col m3">
-            <div class="left container" style="margin-left: 15px">
-              <h6>In Home Assistant:</h6>
-            </div>
-            <div class="left container ha_retain_label" style="margin-left: 15px">
-              <h7 class="left"><span class="ha_retain_count"></span> saved indefinitely</h7>
-            </div>
-            <div class="right container">
-              <div class="right">
-                <h5 id="ha_snapshots" style="text-align: right;"></h5>
-                <div id="free_space" style="text-align: right;" class="tooltipped"
-                  data-tooltip="An estimate of the space available in your Home Assistant backup folder."></div>
-              </div>
-            </div>
-            <div class="left container" style="margin-left: 15px">
-              <h6>In Google Drive:</h6>
-            </div>
-            <div class="left container drive_retain_label" style="margin-left: 15px">
-              <h7 class="left"><span class="drive_retain_count"></span> saved indefinitely</h7>
-            </div>
-            <div class="right container">
-              <h5 class="right " id="drive_snapshots"></h5>
+            <div id="sources">
             </div>
             <div class="left container" style="margin-left: 15px">
               <h6>Last Snapshot:</h6>

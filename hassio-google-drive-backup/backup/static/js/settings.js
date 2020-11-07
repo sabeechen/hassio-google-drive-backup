@@ -217,7 +217,7 @@ function handleSettingsDialog(data) {
     $("#current_folder_span").hide();
   }
 
-  if (config.specify_snapshot_folder && last_data && last_data.drive_enabled) {
+  if (config.specify_snapshot_folder && last_data && last_data.sources.GoogleDrive.enabled) {
     $("#choose_folder_controls").show();
   } else {
     $("#choose_folder_controls").hide();
@@ -243,7 +243,7 @@ function handleSettingsDialog(data) {
 }
 
 function chooseFolderChanged() {
-  if ($("#specify_snapshot_folder").is(':checked') && last_data && last_data.drive_enabled) {
+  if ($("#specify_snapshot_folder").is(':checked') && last_data && last_data.sources.GoogleDrive.enabled) {
     $("#choose_folder_controls").show();
   } else {
     $("#choose_folder_controls").hide();

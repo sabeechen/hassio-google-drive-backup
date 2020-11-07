@@ -1,4 +1,48 @@
 <div id="retainmodal" class="modal">
+  <div style="display: none;" id="retain_template_container">
+    <div class="retain_template">
+      <label>
+        <input type="checkbox" class="filled-in checkbox-ha retain_source_checkbox" />
+        <span class="source_label">Keep indefinitely in Google Drive</span>
+      </label>
+    </div>
+  </div>
+  <script type="text/javascript">
+    function retainSnapshot(target) {
+      var snapshot = $(target).data('snapshot');
+      var slug = snapshot.slug;
+    
+      let form = $("#retain_options");
+      let template_source = $(".retain_template", $("#retain_template_container"));
+      form.html('');
+      for (let source of snapshot.sources){
+        let template = template_source.clone();
+        let checkbox = $(".retain_source_checkbox", template);
+        checkbox.attr('id', source.key);
+        checkbox.data('source', source.key);
+        checkbox.prop('checked', source.retained);
+        $(".source_label", template).html('Keep indefinitely in ' + sourceToName(source.key));
+        form.append(template);
+      }
+      $("#do_retain_button").attr("onClick", "doRetain('" + slug + "')");
+      M.Modal.getInstance(document.querySelector('#retainmodal')).open();
+    }
+    
+    function doRetain(slug) {
+      sources = []
+      $(".retain_source_checkbox", $("#retain_options")).each(function () {
+        let input = $(this);
+        if (input.prop('checked')) {
+          sources.push(input.data('source'));
+        }
+      });
+      data = {
+        'slug': slug,
+        'sources': sources 
+      };
+      postJson("retain", data, refreshstats, null, "Updating snapshot... ");
+    }
+  </script>
   <div class="modal-content">
     <h4>Keep this snapshot around indefinitely?</h4>
     <p id="retain_text">
@@ -6,16 +50,7 @@
       in Google Drive or Home Assistant. To delete it you'll either need to select "Delete" from the snapshot's menu or come back to this dialog and unckeck the options below to
       let it get automatically cleaned up (after a few minutes).
     </p>
-    <form>
-      <label>
-        <input type="checkbox" name="notify_for_stale_snapshots" id="retain_drive" class="filled-in checkbox-ha" />
-        <span>Keep indefinitely in Google Drive</span>
-      </label>
-      <br />
-      <label>
-        <input type="checkbox" name="notify_for_stale_snapshots" id="retain_ha" class="filled-in checkbox-ha" />
-        <span>Keep indefinitely in Home Assistant</span>
-      </label>
+    <form id="retain_options">
     </form>
   </div>
   <div class="modal-footer">

@@ -244,14 +244,14 @@
         if (!data.firstSync) {
           snapshots = data.sources.HomeAssistant.snapshots;
           hasSnapshots = snapshots > 0;
-          maxConfigured = data.maxSnapshotsInHasssio
-          toDelete = Math.max(0, hasSnapshots - data.maxSnapshotsInHasssio);
-          if (data.maxSnapshotsInHasssio == 0) {
+          maxConfigured = data.sources.HomeAssistant.max;
+          toDelete = Math.max(0, hasSnapshots - data.sources.HomeAssistant.max);
+          if (data.sources.HomeAssistant.max == 0) {
             toDelete = 0;
           }
           willSnapshot = data.next_snapshot != "Disabled";
-          willUpload = data.maxSnapshotsInDrive > 0;
-          toUpload = Math.min(data.maxSnapshotsInDrive, snapshots - toDelete);
+          willUpload = data.sources.GoogleDrive.max > 0;
+          toUpload = Math.min(data.sources.GoogleDrive.max, snapshots - toDelete);
           text = "";
           if (!hasSnapshots && !willSnapshot) {
             text = "You have no snapshots in Home Assistant and you've configured this add-on not to create any."

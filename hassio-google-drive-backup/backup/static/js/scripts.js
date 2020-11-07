@@ -82,22 +82,6 @@ function doUpload(slug, name) {
   postJson(url, {}, refreshstats, null, message);
 }
 
-function retainSnapshot(target) {
-  var slug = $(target).data('snapshot').slug;
-
-  setInputValue("retain_drive", $(target).data('snapshot').driveRetain);
-  setInputValue("retain_ha", $(target).data('snapshot').haRetain);
-  $("#do_retain_button").attr("onClick", "doRetain('" + slug + "')");
-  M.Modal.getInstance(document.querySelector('#retainmodal')).open();
-}
-
-function doRetain(slug) {
-  var drive = $("#retain_drive").prop('checked');
-  var ha = $("#retain_ha").prop('checked');
-  var url = "retain?slug=" + encodeURIComponent(slug) + "&drive=" + drive + "&ha=" + ha;
-  postJson(url, {}, refreshstats, null, "Updating snapshot... ");
-}
-
 function showDetails(target) {
   var snapshot = $(target).data('snapshot');
   var details = snapshot.details;
@@ -370,20 +354,61 @@ function refreshstats() {
   )
 }
 
-function processStatusUpdate(data) {
-  $('#ha_snapshots').empty().append(data.sources.HomeAssistant.snapshots + " (" + data.sources.HomeAssistant.size + ")");
-  $('#drive_snapshots').empty().append(data.sources.GoogleDrive.snapshots + " (" + data.sources.GoogleDrive.size + ")");
-  $('#space_left').empty().append("x GB remaining");
-  $('#last_snapshot').empty().append(data.last_snapshot_text);
-  $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
-  $('#last_snapshot').attr("title", data.last_snapshot_detail);
+function processSourcesUpdate(sources) {
+  sources_div = $('#sources');
+  for (var key in sources) {
+    if (!sources.hasOwnProperty(key)) {
+      continue;
+    }
+    let source = sources[key];
+    
+    if (!source.enabled) {
+      continue;
+    }
+    let template = $(".source_" + key);
+    let isNew = false;
+    if (template.length == 0) {
+      isNew = true;
+      template = $('#source-template').find(".source-ui").clone();
+      template.addClass("source_" + key);
+      template.addClass("active_source");
+      template.data("source", key);
+    }
 
-  $('#next_snapshot').empty().append(data.next_snapshot_text);
-  $('#next_snapshot').attr("datetime", data.next_snapshot_machine);
-  $('#next_snapshot').attr("title", data.next_snapshot_detail);
-  $('#free_space').empty().append(data.free_space + " remaining");
-  $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
-  snapshot_div = $('#snapshots')
+    $(".source_title", template).html("In " + source.title + ":");
+
+    if (source.retained > 0) {
+      $(".source_retain_count", template).html(source.retained);
+      $(".source_retain_label", template).show();
+    } else {
+      $(".source_retain_label", template).hide();
+    }
+    $(".source_snapshot_count", template).html(source.snapshots + " (" + source.size + ")");
+
+    let free_space = $('.source_free_space', template);
+    if (source.hasOwnProperty("free_space")) {
+      free_space.html(source.free_space + " remaining");
+      free_space.attr("data-tooltip", "An estimate of the space available in " + source.title + ".");
+      free_space.show();
+    } else {
+      free_space.hide();
+    }
+
+    if (isNew) {
+      sources_div.append(template);
+    }
+  }
+  $(".active_source").each(function () {
+    let source = $(this);
+    let key = source.data('source');
+    if (!(sources.hasOwnProperty(source.data('source')) && sources[key].enabled)) {
+      source.remove();
+    }
+  });
+}
+
+function processSnapshotsUpdate(data) {
+  snapshot_div = $('#snapshots');
   slugs = []
   var count = 0;
   for (var key in data.snapshots) {
@@ -421,29 +446,33 @@ function processStatusUpdate(data) {
       $("#name", template).html(snapshot['name']);
       $("#status", template).html(snapshot['status']);
 
-      template.data("inDrive", snapshot.inDrive);
-      template.data("inHa", snapshot.inHA);
-
       if (snapshot.protected) {
         $(".icon-protected", template).show();
       } else {
         $(".icon-protected", template).hide();
       }
 
-      if (snapshot.deleteNextDrive && snapshot.deleteNextHa) {
+      delete_next = [];
+      retained = false;
+      for (let source of snapshot.sources){
+        if (source.delete_next) {
+          delete_next.push(source);
+        }
+        if (source.retained) {
+          retained = true;
+        }
+      }
+      if (delete_next.length > 1) {
         $(".icon-warn-delete", template).show();
-        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive and Home Assistant when a new snapshot is created.");
-      } else if (snapshot.deleteNextDrive) {
+        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from " + delete_next.length + " places when a new snapshot is created.");
+      } else if (delete_next.length == 1) {
         $(".icon-warn-delete", template).show();
-        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Google Drive when a new snapshot is created.");
-      } else if (snapshot.deleteNextHa) {
-        $(".icon-warn-delete", template).show();
-        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from Home Assistant when a new snapshot is created.");
+        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from " + sourceToName(delete_next[0].key) + " when a new snapshot is created.");
       } else {
         $(".icon-warn-delete", template).hide();
       }
 
-      if (snapshot.driveRetain || snapshot.haRetain) {
+      if (retained) {
         $(".icon-retain", template).show();
       } else {
         $(".icon-retain", template).hide();
@@ -474,18 +503,22 @@ function processStatusUpdate(data) {
         var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
       }
 
-      if (snapshot.inHA || snapshot.inDrive) {
-        $("#action_dropdown_button" + snapshot.slug).show();
-      } else {
+      if (snapshot.isPending) {
         $("#action_dropdown_button" + snapshot.slug).hide();
+      } else {
+        $("#action_dropdown_button" + snapshot.slug).show();
       }
 
-      if (snapshot.inHA) {
-        $("#upload_option" + snapshot.slug).hide();
+      if (snapshot.restorable) {
         $("#restore_option" + snapshot.slug).show();
       } else {
-        $("#upload_option" + snapshot.slug).show();
         $("#restore_option" + snapshot.slug).hide();
+      }
+
+      if (snapshot.uploadable) {
+        $("#upload_option" + snapshot.slug).show();
+      } else {
+        $("#upload_option" + snapshot.slug).hide();
       }
 
       $("#status-details", template).data('snapshot', snapshot)
@@ -505,6 +538,27 @@ function processStatusUpdate(data) {
       snapshot.remove();
     }
   });
+  return count;
+}
+
+function processStatusUpdate(data) {
+  $('#last_snapshot').empty().append(data.last_snapshot_text);
+  $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
+  $('#last_snapshot').attr("title", data.last_snapshot_detail);
+
+  $('#next_snapshot').empty().append(data.next_snapshot_text);
+  $('#next_snapshot').attr("datetime", data.next_snapshot_machine);
+  $('#next_snapshot').attr("title", data.next_snapshot_detail);
+
+  if (data.sources.GoogleDrive.enabled && data.folder_id && data.folder_id.length > 0 ) {
+    $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
+    $('.open_drive_menu').show()
+  } else {
+    $('.open_drive_menu').hide()
+  }
+
+  processSourcesUpdate(data.sources);
+  count = processSnapshotsUpdate(data);
 
   // Update the "syncing" toast message
   if (data.syncing) {
@@ -599,20 +653,6 @@ function processStatusUpdate(data) {
     $('#ingress_upgrade_card').fadeIn(500);
   } else {
     $('#ingress_upgrade_card').hide();
-  }
-
-  if (data.sources.GoogleDrive.retained > 0) {
-    $(".drive_retain_count").html(data.sources.GoogleDrive.retained)
-    $(".drive_retain_label").show()
-  } else {
-    $(".drive_retain_label").hide()
-  }
-
-  if (data.sources.HomeAssistant.retained > 0) {
-    $(".ha_retain_count").html(data.sources.HomeAssistant.retained)
-    $(".ha_retain_label").show()
-  } else {
-    $(".ha_retain_label").hide()
   }
 
 

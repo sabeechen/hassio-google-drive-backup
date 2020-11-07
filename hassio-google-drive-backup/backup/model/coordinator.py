@@ -106,12 +106,16 @@ class Coordinator(Trigger):
     def buildSnapshotMetrics(self):
         info = {}
         for source in self._sources:
+            source_class = self._sources[source]
             source_info = {
                 'snapshots': 0,
                 'retained': 0,
                 'deletable': 0,
                 'name': source,
-                'latest': None
+                'title': source_class.title(),
+                'latest': None,
+                'max': source_class.maxCount(),
+                'enabled': source_class.enabled(),
             }
             size = 0
             latest = None
@@ -130,6 +134,10 @@ class Coordinator(Trigger):
             if latest is not None:
                 source_info['latest'] = self._time.asRfc3339String(latest)
             source_info['size'] = Estimator.asSizeString(size)
+
+            free_space = source_class.freeSpace()
+            if free_space is not None:
+                source_info['free_space'] = Estimator.asSizeString(free_space)
             info[source] = source_info
         return info
 

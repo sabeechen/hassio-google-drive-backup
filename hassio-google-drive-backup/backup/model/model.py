@@ -36,6 +36,9 @@ class SnapshotSource(Trigger, Generic[T]):
     def upload(self) -> bool:
         return True
 
+    def freeSpace(self):
+        return None
+
     async def create(self, options: CreateOptions) -> T:
         pass
 

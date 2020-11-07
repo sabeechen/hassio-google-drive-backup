@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
-from ..util import AsyncHttpGetter, GlobalInfo
+from ..util import AsyncHttpGetter, GlobalInfo, Estimator
 from ..config import Config, Setting, CreateOptions
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
@@ -114,7 +114,7 @@ class HaSource(SnapshotSource[HASnapshot]):
     Stores logic for interacting with the supervisor add-on API
     """
     @inject
-    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo, stopper: AddonStopper):
+    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo, stopper: AddonStopper, estimator: Estimator):
         super().__init__()
         self.config: Config = config
         self.snapshot_thread: Thread = None
@@ -133,6 +133,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         self._info = info
         self.pending_options = {}
         self.stopper = stopper
+        self.estimator = estimator
 
         # This lock should be used for _ANYTHING_ that interacts with self._pending_snapshot
         self._pending_snapshot_lock = asyncio.Lock()
@@ -160,6 +161,9 @@ class HaSource(SnapshotSource[HASnapshot]):
 
     def enabled(self) -> bool:
         return True
+
+    def freeSpace(self):
+        return self.estimator.getBytesFree()
 
     async def create(self, options: CreateOptions) -> HASnapshot:
         # Make sure instance info is up-to-date, for the snapshot name

@@ -909,6 +909,31 @@
             </div>
           </div>
         </div>
+        <div class="row default-hidden error_card supervisor_fs_error" id="supervisor_fs_error">
+          <div class="col s12 m9">
+            <div class="card red darken-4">
+              <div class="card-content white-text">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">error</i>
+                  <span style="vertical-align: top;">Unable to write to the file system</span>
+                </span>
+                <p>
+                  The addon was unable to write to the file system on this machine.  Normally this indicates there is a problem
+                   with the Home Assistant supervisor, which is responsible for creating the file system this addon needs to function.  Here are some reasons this might happen:
+                  <ul class="browser-default">
+                    <li>You recently upgraded Home Assistant.  Sometimes during an upgrade, the docker enviornment Home Assistant creates for the addon can get messed up.  
+                      If this is the problem, then restarting the host machine where Home assistant is running will usually resolve it.</li>
+                    <li>Your machine may have run out of space.  Home Assistant will sometimes make the file system read-only to protect itself if it is close to running out of space, causing this error.  You 
+                      should be able to see an estimate of how much space is remaining down below on this page or by going to "Supervisor" > "System" in the Home Assistant UI.</li>
+                    <li>If none of the above helps and the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+                  </ul>
+                <div class="card-action white-text">
+                  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="row default-hidden error_card google_unexpected" id="google_unexpected">
           <div class="col s12 m9">
             <div class="card red darken-4">

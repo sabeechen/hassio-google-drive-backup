@@ -10,7 +10,7 @@ from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_LOW_SPACE, ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
                      ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL,
                      ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, LOG_IN_TO_DRIVE,
-                     SUPERVISOR_PERMISSION, ERROR_GOOGLE_UNEXPECTED, ERROR_SUPERVISOR_TIMEOUT, ERROR_SUPERVISOR_UNEXPECTED)
+                     SUPERVISOR_PERMISSION, ERROR_GOOGLE_UNEXPECTED, ERROR_SUPERVISOR_TIMEOUT, ERROR_SUPERVISOR_UNEXPECTED, ERROR_SUPERVISOR_FILE_SYSTEM)
 
 
 def ensureKey(key, target, name):
@@ -425,3 +425,11 @@ class SupervisorUnexpectedError(KnownError):
     @classmethod
     def factory(cls):
         return SupervisorUnexpectedError()
+
+
+class SupervisorFileSystemError(KnownError):
+    def message(self):
+        return "The host file system is read-only.  Please restart Home Assistant and verify you have enough free space."
+
+    def code(self):
+        return ERROR_SUPERVISOR_FILE_SYSTEM

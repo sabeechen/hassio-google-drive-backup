@@ -23,6 +23,7 @@ ERROR_HA_DELETE_ERROR = "delete_error"
 ERROR_MULTIPLE_DELETES = "multiple_deletes"
 ERROR_SUPERVISOR_UNEXPECTED = "supervisor_unexpected"
 ERROR_SUPERVISOR_TIMEOUT = "supervisor_timeout"
+ERROR_SUPERVISOR_FILE_SYSTEM = "supervisor_fs_error"
 
 ERROR_EXISTING_FOLDER = "existing_backup_folder"
 ERROR_BACKUP_FOLDER_MISSING = "backup_folder_missing"

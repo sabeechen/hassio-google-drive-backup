@@ -3,6 +3,7 @@ import os
 
 from backup.config import Config, Setting, Startable
 from backup.worker import Worker
+from backup.exceptions import SupervisorFileSystemError
 from .harequests import HaRequests
 from injector import inject, singleton
 from backup.time import Time
@@ -134,6 +135,8 @@ class AddonStopper(Worker):
                 self._save()
 
     def _save(self):
-        with open(self.config.get(Setting.STOP_ADDON_STATE_PATH), "w") as file:
-            json.dump({"start": list(self.must_start), "watchdog": list(self.must_enable_watchdog)}, file)
-        
+        try:
+            with open(self.config.get(Setting.STOP_ADDON_STATE_PATH), "w") as file:
+                json.dump({"start": list(self.must_start), "watchdog": list(self.must_enable_watchdog)}, file)
+        except OSError:
+            raise SupervisorFileSystemError()

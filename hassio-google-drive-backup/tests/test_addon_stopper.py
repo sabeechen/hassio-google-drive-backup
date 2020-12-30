@@ -1,8 +1,11 @@
 import json
 import pytest
+import os
 
+from stat import S_IREAD
 from backup.config import Config, Setting
 from backup.ha import AddonStopper
+from backup.exceptions import SupervisorFileSystemError
 from .faketime import FakeTime
 from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_ADDON_INFO
 from dev.request_interceptor import RequestInterceptor
@@ -304,3 +307,25 @@ async def test_get_info_failure_on_start(supervisor: SimulatedSupervisor, addon_
     assert getSaved(config) == (set(), set())
     assert interceptor.urlWasCalled(URL_MATCH_ADDON_INFO)
     assert supervisor.addon(slug1)["state"] == "stopped"
+
+
+@pytest.mark.asyncio
+async def test_read_only_fs(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config, interceptor: RequestInterceptor) -> None:
+    # Stop an addon
+    slug1 = "test_slug_1"
+    supervisor.installAddon(slug1, "Test decription")
+    config.override(Setting.STOP_ADDONS, ",".join([slug1]))
+    addon_stopper.allowRun()
+    addon_stopper.must_start = set()
+    assert supervisor.addon(slug1)["state"] == "started"
+    await addon_stopper.stopAddons("ignore")
+    assert supervisor.addon(slug1)["state"] == "stopped"
+    await addon_stopper.check()
+    assert getSaved(config) == ({slug1}, set())
+
+    # make the state file unmodifiable
+    os.chmod(config.get(Setting.STOP_ADDON_STATE_PATH), S_IREAD)
+
+    # verify we raise a known error when trying to save.
+    with pytest.raises(SupervisorFileSystemError):
+        await addon_stopper.startAddons()

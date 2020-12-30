@@ -1,4 +1,3 @@
-import pytest
 from backup.config.durationparser import DurationParser
 from datetime import timedelta
 

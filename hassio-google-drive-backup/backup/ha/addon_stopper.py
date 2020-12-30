@@ -1,7 +1,7 @@
 import json
 import os
 
-from backup.config import Config, Setting, Startable
+from backup.config import Config, Setting
 from backup.worker import Worker
 from backup.exceptions import SupervisorFileSystemError
 from .harequests import HaRequests
@@ -115,7 +115,7 @@ class AddonStopper(Worker):
                         LOGGER.printException(e)
                         self.must_start.remove(slug)
                         changes = True
-            
+
             if len(self.must_enable_watchdog) > 0:
                 for slug in list(self.must_enable_watchdog):
                     if slug in self.must_start:

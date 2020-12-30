@@ -245,7 +245,7 @@ class HomeAssistantDeleteError(KnownError):
 
 
 class ExistingBackupFolderError(KnownError):
-    def __init__(self, existing_id: str=None, existing_name: str=None):
+    def __init__(self, existing_id: str = None, existing_name: str = None):
         self.existing_id = existing_id
         self.existing_name = existing_name
 
@@ -277,7 +277,7 @@ class BackupFolderMissingError(KnownError):
 
 
 class BackupFolderInaccessible(KnownError):
-    def __init__(self, existing_id: str=None):
+    def __init__(self, existing_id: str = None):
         self.existing_id = existing_id
 
     def message(self):

@@ -150,10 +150,11 @@ class FolderFinder():
                 return False
             return True
         except ClientResponseError as e:
-            # 404 means the folder doesn't exist (maybe it got moved?)
             if e.status == 404:
-                logger.info("Provided snapshot folder {0} is gone".format(id))
-                return False
+                # 404 means the folder doesn't exist (maybe it got moved?) but can also mean that we
+                # just don't have permission to see the folder.   Often we can still upload into it, so just
+                # let it pass without further verification and let other error handling (on upload) identify problems.
+                return True
             else:
                 raise e
         except GoogleDrivePermissionDenied:

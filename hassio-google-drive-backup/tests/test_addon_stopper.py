@@ -93,7 +93,6 @@ async def test_start_and_stop(supervisor: SimulatedSupervisor, addon_stopper: Ad
     assert getSaved(config) == (set(), set())
 
 
-
 @pytest.mark.asyncio
 async def test_stop_failure(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config, interceptor: RequestInterceptor) -> None:
     slug1 = "test_slug_1"
@@ -134,6 +133,7 @@ async def test_start_failure(supervisor: SimulatedSupervisor, addon_stopper: Add
     assert getSaved(config) == (set(), set())
     assert interceptor.urlWasCalled(URL_MATCH_START_ADDON)
     assert supervisor.addon(slug1)["state"] == "stopped"
+
 
 @pytest.mark.asyncio
 async def test_delayed_start(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config, interceptor: RequestInterceptor, time: FakeTime) -> None:

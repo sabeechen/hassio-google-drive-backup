@@ -451,7 +451,7 @@ async def test_update_error_reports_false(reader, ui_server, config: Config, sup
 
 
 @pytest.mark.asyncio
-async def test_drive_cred_generation(reader: ReaderHelper, ui_server, snapshot, config: Config, global_info: GlobalInfo, session: ClientSession, google):
+async def test_drive_cred_generation(reader: ReaderHelper, ui_server: UiServer, snapshot, config: Config, global_info: GlobalInfo, session: ClientSession, google):
     status = await reader.getjson("getstatus")
     assert len(status["snapshots"]) == 1
     assert global_info.credVersion == 0
@@ -478,7 +478,8 @@ async def test_drive_cred_generation(reader: ReaderHelper, ui_server, snapshot, 
         resp.raise_for_status()
         # verify we got redirected to the addon main page.
         assert resp.url == URL(reader.getUrl(True))
-    status = (await reader.getjson("sync"))["last_error"] is ERROR_CREDS_EXPIRED
+    await ui_server.sync(None)
+    assert global_info._last_error is None
     assert global_info.credVersion == 1
 
 

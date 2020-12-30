@@ -17,7 +17,7 @@ from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
-                          SOURCE_GOOGLE_DRIVE, SOURCE_HA, ERROR_BACKUP_FOLDER_MISSING)
+                          SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource, FolderFinder
@@ -293,6 +293,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 0
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
+
 
 @pytest.mark.asyncio
 async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, session):

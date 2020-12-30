@@ -1,6 +1,5 @@
 import os
 import os.path
-import aiofile
 from datetime import timedelta
 from typing import Any, Dict
 

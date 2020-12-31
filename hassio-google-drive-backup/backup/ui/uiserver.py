@@ -1,7 +1,6 @@
 import asyncio
 import ssl
 import json
-from _pytest import config
 from aiohttp.web_routedef import get
 import aiohttp_jinja2
 import jinja2

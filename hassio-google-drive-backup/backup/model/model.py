@@ -33,6 +33,9 @@ class SnapshotSource(Trigger, Generic[T]):
     def enabled(self) -> bool:
         return True
 
+    def needsConfiguration(self) -> bool:
+        return not self.enabled()
+
     def upload(self) -> bool:
         return True
 
@@ -89,6 +92,13 @@ class Model():
         self.simulate_error = None
         self.estimator = estimator
 
+    def enabled(self):
+        if self.source.needsConfiguration():
+            return False
+        if self.dest.needsConfiguration():
+            return False
+        return True
+
     def reinitialize(self):
         self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
 
@@ -102,7 +112,7 @@ class Model():
         if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
             return None
 
-        if not self.dest.enabled():
+        if self.dest.needsConfiguration():
             return None
         if not last_snapshot:
             return now - timedelta(minutes=1)
@@ -144,12 +154,14 @@ class Model():
         self.source.checkBeforeChanges()
         self.dest.checkBeforeChanges()
 
-        if self.dest.enabled():
-            await self._purge(self.source)
-            await self._purge(self.dest)
+        if not self.dest.needsConfiguration():
+            if self.source.enabled():
+                await self._purge(self.source)
+            if self.dest.enabled():
+                await self._purge(self.dest)
 
         next_snapshot = self.nextSnapshot(now)
-        if next_snapshot and now >= next_snapshot and self.source.enabled() and self.dest.enabled():
+        if next_snapshot and now >= next_snapshot and self.source.enabled() and not self.dest.needsConfiguration():
             await self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
             await self._purge(self.source)
 

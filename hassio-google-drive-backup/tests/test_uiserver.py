@@ -21,7 +21,7 @@ from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
 from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource, FolderFinder
-from backup.drive.drivesource import FOLDER_MIME_TYPE
+from backup.drive.drivesource import FOLDER_MIME_TYPE, DriveRequests
 from backup.ha import HaSource
 from backup.config import VERSION
 from .faketime import FakeTime
@@ -378,7 +378,7 @@ async def test_config(reader, ui_server, config: Config, supervisor: SimulatedSu
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) == 20
     assert supervisor._options["days_between_snapshots"] == 20
     assert ui_server._starts == 1
@@ -391,7 +391,7 @@ async def test_auth_and_restart(reader, ui_server, config: Config, restarter, co
                          "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert config.get(Setting.REQUIRE_LOGIN)
     assert supervisor._options['require_login']
@@ -587,7 +587,7 @@ async def test_ssl_server(reader: ReaderHelper, ui_server: UiServer, config, ser
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert ui_server._starts == 2
 
@@ -604,7 +604,7 @@ async def test_bad_ssl_config_missing_files(reader: ReaderHelper, ui_server: UiS
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert ui_server._starts == 2
 
@@ -629,7 +629,7 @@ async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: UiSer
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert ui_server._starts == 2
 
@@ -712,7 +712,7 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     creds = Creds(time, "id", time.now(), "token", "refresh")
     serialized = str(base64.b64encode(json.dumps(creds.serialize()).encode("utf-8")), "utf-8")
@@ -734,7 +734,7 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
 
     # create a folder
@@ -762,7 +762,7 @@ async def test_update_sync_interval(reader, ui_server, config: Config, superviso
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60
     assert "max_sync_interval_seconds" not in supervisor._options
 
@@ -773,7 +773,7 @@ async def test_update_sync_interval(reader, ui_server, config: Config, superviso
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60 * 2
     assert supervisor._options["max_sync_interval_seconds"] == 60 * 60 * 2
 
@@ -825,7 +825,7 @@ async def test_setting_cancels_and_resyncs(reader: ReaderHelper, ui_server: UiSe
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
     # verify the previous sync is done and another one is running
     assert sync.done()
@@ -845,7 +845,7 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
         },
         "snapshot_folder": ""
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
     # verify the snapshot folder was reset, which triggers the error dialog to find a new folder
     assert folder_finder.getCachedFolder() == old_folder
@@ -881,7 +881,7 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
         },
         "snapshot_folder": "12345"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert folder_finder.getCachedFolder() == "12345"
 
     # Un change the folder, which should keep the existing folder
@@ -891,7 +891,7 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
         },
         "snapshot_folder": ""
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert folder_finder.getCachedFolder() == "12345"
 
 
@@ -905,7 +905,7 @@ async def test_update_non_ui_setting(reader: ReaderHelper, server, session, coor
         },
         "snapshot_folder": ""
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
     assert config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS) == 10
 
@@ -915,5 +915,30 @@ async def test_update_non_ui_setting(reader: ReaderHelper, server, session, coor
         },
         "snapshot_folder": ""
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS) == 10
+
+
+@pytest.mark.asyncio
+async def test_update_disable_drive(reader: ReaderHelper, server, coord: Coordinator, config: Config, drive_requests: DriveRequests):
+    # Disable drive
+    drive_requests.creds = None
+    os.remove(config.get(Setting.CREDENTIALS_FILE_PATH))
+    assert not coord.enabled()
+    await coord.sync()
+    assert len(coord.snapshots()) == 0
+
+    # Disable Drive Upload
+    update = {
+        "config": {
+            Setting.ENABLE_DRIVE_UPLOAD.value: False
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": True}
+    assert config.get(Setting.ENABLE_DRIVE_UPLOAD) is False
+
+    # Verify the app is working fine.
+    assert coord.enabled()
+    await coord.waitForSyncToFinish()
+    assert len(coord.snapshots()) == 1

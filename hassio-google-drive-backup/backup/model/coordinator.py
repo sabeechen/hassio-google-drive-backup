@@ -50,7 +50,7 @@ class Coordinator(Trigger):
         return "Coordinator"
 
     def enabled(self) -> bool:
-        return self._model.dest.enabled()
+        return self._model.enabled()
 
     def check(self) -> bool:
         if self._time.now() >= self.nextSyncAttempt():

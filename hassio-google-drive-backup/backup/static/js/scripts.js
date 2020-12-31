@@ -200,6 +200,10 @@ function postJson(path, json, onSuccess, onFail = null, toastWhile = null) {
       if (data.hasOwnProperty("message")) {
         toast(data.message);
       }
+      if (data.hasOwnProperty("reload_page") && data.reload_page) {
+        // Reload the page
+        window.location.assign(getInnerHomeUri());
+      }
       if (onSuccess) {
         onSuccess(data);
       }

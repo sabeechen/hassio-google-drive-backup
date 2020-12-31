@@ -71,6 +71,11 @@ class DriveSource(SnapshotDestination):
     def enabled(self) -> bool:
         return self.drivebackend.enabled()
 
+    def needsConfiguration(self) -> bool:
+        if not self.config.get(Setting.ENABLE_DRIVE_UPLOAD):
+            return False
+        return super().needsConfiguration()
+
     async def create(self, options: CreateOptions) -> DriveSnapshot:
         raise LogicError("Snapshots can't be created in Drive")
 

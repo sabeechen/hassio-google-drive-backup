@@ -1,6 +1,8 @@
 import asyncio
 import ssl
 import json
+from _pytest import config
+from aiohttp.web_routedef import get
 import aiohttp_jinja2
 import jinja2
 import base64
@@ -441,19 +443,20 @@ class UiServer(Trigger, Startable):
         Password(self.config.getConfigFor(update)).resolve()
 
         validated = self.config.validate(update)
-        await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the configuration update request"), trigger=False)
+        message = await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the configuration update request"), trigger=False)
         try:
             await self.cancelSync(request)
             await self.startSync(request)
         except:  # noqa: E722
             # eat the error, just cancel optimistically
             pass
-        return web.json_response({'message': 'Settings saved'})
+        return web.json_response(message)
 
     async def _updateConfiguration(self, new_config, snapshot_folder_id=None, trigger=True):
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
+        old_drive_option = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
         await self._harequests.updateConfig(update)
 
         self.config.update(new_config)
@@ -462,7 +465,10 @@ class UiServer(Trigger, Startable):
             await self.folder_finder.save(snapshot_folder_id)
         if trigger:
             self.trigger()
-        return {'message': 'Settings saved'}
+        return {
+            'message': 'Settings saved',
+            'reload_page': self.config.get(Setting.ENABLE_DRIVE_UPLOAD) != old_drive_option
+        }
 
     def _getServerOptions(self):
         return {

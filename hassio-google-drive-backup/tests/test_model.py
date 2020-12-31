@@ -497,6 +497,29 @@ async def test_generational_delete(time, model, dest, source, simple_config):
     dest.assertThat(current=3, saved=3)
 
 
+@pytest.mark.asyncio
+async def test_delete_when_drive_disabled(time, model, dest: HelperTestSource, source: HelperTestSource, simple_config):
+    time.setNow(time.local(2019, 5, 10))
+    now = time.now()
+    dest.setEnabled(False)
+    dest.setNeedsConfiguration(False)
+
+    # Create 4 snapshots, configured to keep 3
+    source.setMax(3)
+    source.insert("Fri", time.local(2019, 5, 10, 1))
+    source.insert("Thu", time.local(2019, 5, 9, 1))
+    source.insert("Wed", time.local(2019, 5, 8, 1))
+    mon = source.insert("Mon", time.local(2019, 5, 7, 1))
+
+    await model.sync(now)
+
+    # Shoud only delete mon, the oldest one
+    source.assertThat(current=3, deleted=1)
+    assert source.deleted == [mon]
+    assert len(model.snapshots) == 3
+    dest.assertThat(current=0)
+
+
 def assertSnapshot(model, sources):
     matches = {}
     for source in sources:

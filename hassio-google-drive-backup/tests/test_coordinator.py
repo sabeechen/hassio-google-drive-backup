@@ -407,3 +407,12 @@ async def test_disabled_at_install(coord: Coordinator, dest, time):
     assert coord.check()
     await coord.sync()
     assert not coord.check()
+
+
+@pytest.mark.asyncio
+async def test_only_source_configured(coord: Coordinator, dest: HelperTestSource, time, source: HelperTestSource):
+    source.setEnabled(True)
+    dest.setEnabled(False)
+    dest.setNeedsConfiguration(False)
+    await coord.sync()
+    assert len(coord.snapshots()) == 1

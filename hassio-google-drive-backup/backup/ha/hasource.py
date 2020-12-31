@@ -51,6 +51,9 @@ class PendingSnapshot(AbstractSnapshot):
         self._pending_subverted = False
         self._start_time = time.now()
 
+    def considerForPurge(self) -> bool:
+        return False
+
     def startTime(self):
         return self._start_time
 

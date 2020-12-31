@@ -15,7 +15,7 @@ from .faketime import FakeTime
 from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
 from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD
 from dev.request_interceptor import RequestInterceptor
-
+from backup.model import Model
 
 @pytest.mark.asyncio
 async def test_sync_empty(ha) -> None:
@@ -603,3 +603,32 @@ async def test_ingore_self_when_stopping(ha: HaSource, time, interceptor: Reques
     assert not interceptor.urlWasCalled(URL_MATCH_START_ADDON)
     assert not interceptor.urlWasCalled(URL_MATCH_STOP_ADDON)
     assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_dont_purge_pending_snapshot(ha: HaSource, time, config: Config, supervisor: SimulatedSupervisor, model: Model, interceptor):
+    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 4)
+    await ha.create(CreateOptions(time.now(), "Test Name 1"))
+    await ha.create(CreateOptions(time.now(), "Test Name 2"))
+    await ha.create(CreateOptions(time.now(), "Test Name 3"))
+    await ha.create(CreateOptions(time.now(), "Test Name 4"))
+    await model.sync(time.now())
+
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.1)
+    interceptor.setSleep(URL_MATCH_SNAPSHOT_FULL, sleep=2)
+    await ha.create(CreateOptions(time.now(), "Test Name"))
+    snapshots = list((await ha.get()).values())
+    assert len(snapshots) == 5
+    snapshot = snapshots[4]
+    assert isinstance(snapshot, PendingSnapshot)
+
+    # no snapshot should get purged yet because the ending snapshot isn't considered for purging.
+    await model.sync(time.now())
+    snapshots = list((await ha.get()).values())
+    assert len(snapshots) == 5
+
+    # Wait for the snapshot to finish, then verify one gets purged.
+    await ha._pending_snapshot_task
+    await model.sync(time.now())
+    snapshots = list((await ha.get()).values())
+    assert len(snapshots) == 4

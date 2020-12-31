@@ -272,7 +272,7 @@ class Model():
         consider_purging = []
         for snapshot in snapshots:
             source_snapshot = snapshot.getSource(source.name())
-            if source_snapshot is not None and not source_snapshot.retained():
+            if source_snapshot is not None and source_snapshot.considerForPurge():
                 consider_purging.append(snapshot)
         if len(consider_purging) == 0:
             return None

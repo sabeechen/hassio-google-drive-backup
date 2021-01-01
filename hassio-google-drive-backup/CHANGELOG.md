@@ -1,3 +1,13 @@
+## [0.103.0 2020-12-31]
+### Added
+ - Logging in to Drive is no longer required if you have disabled upload to Google Drive
+ - A help dialog now comes up if the addon has trouble writing to the filesystem (this is sometimes an issue after supervisor upgrades)
+
+### Fixes
+ - Long snapshot names could cause problems uploading to Google Drive.
+ - Specifying the snapshot folder manually failed sometimes if you didn't use the "Choose Folder" link.
+ - The oldest snapshot could be prematurely deleted from Home Assistant before a one new is finished.
+
 ## [0.102.0 2020-10-29]
 ### Added
  - Updated the addon's logos, thanks to [@pizzakid25](https://github.com/pizzakid25)

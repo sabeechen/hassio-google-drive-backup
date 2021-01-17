@@ -77,3 +77,31 @@ body {
     bottom: 10%;
     right: 7%;
   }
+
+  nav {
+    box-shadow: none;
+  }
+
+  nav .brand-logo {
+    display: flex;
+    align-items: center;
+  }
+
+  nav .brand-logo img {
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
+
+  .nav-wrapper {
+    height: 56px;
+  }
+
+  .sidenav-header {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    background: #f7f7f7;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+  }

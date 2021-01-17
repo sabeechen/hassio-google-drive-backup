@@ -1,0 +1,13 @@
+{% macro header(title) -%}
+<header>
+  <nav class="non-ingress" role="navigation">
+    <div class="nav-wrapper">
+      <a class="brand-logo">
+        <img src="/static/images/logo.png" width=40 height=40 />
+        <span>{{ title }}</span>
+      </a>
+      {{ caller() }}
+    </div>
+  </nav>
+</header>
+{%- endmacro %}

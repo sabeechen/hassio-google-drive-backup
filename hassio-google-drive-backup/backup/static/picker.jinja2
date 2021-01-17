@@ -1,3 +1,4 @@
+{% import "layouts/macros.jinja2" as macros %}
 {% extends "layouts/base-server.jinja2" %}
 
 {% block head %}
@@ -115,16 +116,7 @@
   </script>
 {% endblock %}
 {% block content %}
-  <header>
-    <nav class="non-ingress ha-blue" role="navigation">
-      <div class="nav-wrapper">
-        <a class="brand-logo">
-          <img style="vertical-align: middle;" src="/static/images/logo.png" width=40 height=40 />
-          <span>Choose Backup Folder</span>
-        </a>
-      </div>
-    </nav>
-  </header>
+  {% call macros.header("Choose Backup Folder") %}{% endcall %}
   <main>
     <div class="container">
       <div class="section">

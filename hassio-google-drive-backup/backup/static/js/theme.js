@@ -169,8 +169,19 @@ function setColors(background, accent) {
   const bgModal = background.tint(text, 0.02);
 
   const styleSheet = {
+    ':root': {
+      '--cls-color': text.toCss(),
+      '--cls-sec-color': text.toCss(),
+      '--cls-size': '2rem',
+      '--cls-margin': '1rem',
+      '--cls-speed': '4s',
+      '--divider-color': 'rgba(0, 0, 0, .12)',
+      '--primary-background-color': '#fafafa',
+      '--header-text-color': 'rgb(66, 66, 66)',
+      '--sidebar-icon-color': 'rgb(33, 33, 33, 0.6)',
+    },
     'html': {
-      'background-color': background.toCss(),
+      'background-color': 'var(--primary-background-color)', // background.toCss(),
       'color': text.toCss(),
     },
     'label': {
@@ -189,11 +200,21 @@ function setColors(background, accent) {
       'background-color': accent.toCss(),
       'color': accentText.toCss(),
     },
+    'nav': {
+      'background-color': '#ffffff',
+      'border-bottom': '1px solid var(--divider-color)',
+    },
     'nav .brand-logo': {
-      'color': accentText.toCss(),
+      'color': 'var(--header-text-color)',
+    },
+    'nav a': {
+      'color': 'var(--sidebar-icon-color)',
     },
     'nav ul a': {
-      'color': accentText.toCss(),
+      'color': 'var(--header-text-color)',
+    },
+    'nav ul a i': {
+      'color': 'var(--sidebar-icon-color)',
     },
     '.accent-title': {
       'color': accentText.toCss(),
@@ -277,9 +298,6 @@ function setColors(background, accent) {
       'background-color': background.toCss(),
       'box-shadow': `0 2px 2px 0 ${shadow1.toCss()}, 0 3px 1px -2px ${shadow2.toCss()}, 0 1px 5px 0 ${shadow3.toCss()}`,
     },
-    'nav a': {
-      'color': accentText.toCss(),
-    },
     '.btn, .btn-large, .btn-small': {
       'color': accentText.toCss(),
     },
@@ -308,13 +326,6 @@ function setColors(background, accent) {
     },
     '.bmc-button span': {
       'color': text.toCss(),
-    },
-    ':root': {
-      '--cls-color': text.toCss(),
-      '--cls-sec-color': text.toCss(),
-      '--cls-size': '2rem',
-      '--cls-margin': '1rem',
-      '--cls-speed': '4s',
     },
     'textarea': {
       'color': text.toCss()

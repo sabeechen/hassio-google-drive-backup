@@ -175,23 +175,24 @@ function setColors(background, accent) {
       '--cls-size': '2rem',
       '--cls-margin': '1rem',
       '--cls-speed': '4s',
-      '--divider-color': 'rgba(0, 0, 0, .12)',
-      '--primary-background-color': '#fafafa',
       '--header-text-color': 'rgb(66, 66, 66)',
+      '--primary-background-color': '#fafafa',
+      '--primary-text-color': '#212121',
+      '--divider-color': 'rgba(0, 0, 0, .12)',
       '--sidebar-icon-color': 'rgb(33, 33, 33, 0.6)',
     },
     'html': {
       'background-color': 'var(--primary-background-color)', // background.toCss(),
-      'color': text.toCss(),
+      'color': 'var(--primary-text-color)',
     },
     'label': {
-      'color': text.toCss(),
+      'color': 'var(--primary-text-color)',
     },
     'a': {
       'color': linkAccent.toCss(),
     },
     'input': {
-      'color': text.toCss(),
+      'color': 'var(--primary-text-color)',
     },
     '.helper-text': {
       'color': help.toCss(),
@@ -236,11 +237,6 @@ function setColors(background, accent) {
     '.btn:focus, .btn-large:focus, .btn-small:focus, .btn-floating:focus': {
       'background-color': focus.toCss(),
     },
-    '.modal .modal-footer .btn, .modal .modal-footer .btn-large, .modal .modal-footer .btn-small, .modal .modal-footer .btn-flat': {
-      'margin': '6px 0',
-      'background-color': accent.toCss(),
-      'color': accentText.toCss(),
-    },
     '.dropdown-content': {
       'background-color': background.toCss(),
       'box-shadow': bgShadow,
@@ -282,7 +278,7 @@ function setColors(background, accent) {
       'color': help.toCss(),
     },
     'input:not([type]):focus:not([readonly]) + label, input[type="text"]:not(.browser-default):focus:not([readonly]) + label, input[type="password"]:not(.browser-default):focus:not([readonly]) + label, input[type="email"]:not(.browser-default):focus:not([readonly]) + label, input[type="url"]:not(.browser-default):focus:not([readonly]) + label, input[type="time"]:not(.browser-default):focus:not([readonly]) + label, input[type="date"]:not(.browser-default):focus:not([readonly]) + label, input[type="datetime"]:not(.browser-default):focus:not([readonly]) + label, input[type="datetime-local"]:not(.browser-default):focus:not([readonly]) + label, input[type="tel"]:not(.browser-default):focus:not([readonly]) + label, input[type="number"]:not(.browser-default):focus:not([readonly]) + label, input[type="search"]:not(.browser-default):focus:not([readonly]) + label, textarea.materialize-textarea:focus:not([readonly]) + label': {
-      'color': text.toCss(),
+      'color': 'var(--primary-text-color)',
     },
     'input.valid:not([type]), input.valid:not([type]):focus, input[type="text"].valid:not(.browser-default), input[type="text"].valid:not(.browser-default):focus, input[type="password"].valid:not(.browser-default), input[type="password"].valid:not(.browser-default):focus, input[type="email"].valid:not(.browser-default), input[type="email"].valid:not(.browser-default):focus, input[type="url"].valid:not(.browser-default), input[type="url"].valid:not(.browser-default):focus, input[type="time"].valid:not(.browser-default), input[type="time"].valid:not(.browser-default):focus, input[type="date"].valid:not(.browser-default), input[type="date"].valid:not(.browser-default):focus, input[type="datetime"].valid:not(.browser-default), input[type="datetime"].valid:not(.browser-default):focus, input[type="datetime-local"].valid:not(.browser-default), input[type="datetime-local"].valid:not(.browser-default):focus, input[type="tel"].valid:not(.browser-default), input[type="tel"].valid:not(.browser-default):focus, input[type="number"].valid:not(.browser-default), input[type="number"].valid:not(.browser-default):focus, input[type="search"].valid:not(.browser-default), input[type="search"].valid:not(.browser-default):focus, textarea.materialize-textarea.valid, textarea.materialize-textarea.valid:focus, .select-wrapper.valid > input.select-dropdown': {
       'border-bottom': `1px solid ${accent.toCss()}`,
@@ -325,13 +321,13 @@ function setColors(background, accent) {
       'font-size': '17px',
     },
     '.bmc-button span': {
-      'color': text.toCss(),
+      'color': 'var(--primary-text-color)',
     },
     'textarea': {
       'color': text.toCss()
     },
     '.error-card-container': {
-      'color': text.toCss(),
+      'color': 'var(--primary-text-color)',
       'background-color': background.toCss(),
       'margin': '4px',
       'box-shadow': `0 2px 2px 0 ${shadow1.toCss()}, 0 3px 1px -2px ${shadow2.toCss()}, 0 1px 5px 0 ${shadow3.toCss()}`,

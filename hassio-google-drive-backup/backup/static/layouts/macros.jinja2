@@ -11,3 +11,15 @@
   </nav>
 </header>
 {%- endmacro %}
+
+{% macro errorMessage(title, id, icon) -%}
+<div class="card default-hidden error_card {{ id }}" id="{{ id }}">
+  <div class="card-content">
+    <span class="card-title red-text text-darken-4">
+      <i class="material-icons" style="font-size: 50px; padding-right: 10px;">{{ icon }}</i>
+      <b style="vertical-align: top;">{{ title }}</b>
+    </span>
+    {{ caller() }}
+  </div>
+</div>
+{%- endmacro %}

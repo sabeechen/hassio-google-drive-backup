@@ -197,10 +197,6 @@ function setColors(background, accent) {
     '.helper-text': {
       'color': help.toCss(),
     },
-    '.ha-blue': {
-      'background-color': accent.toCss(),
-      'color': accentText.toCss(),
-    },
     'nav': {
       'background-color': '#ffffff',
       'border-bottom': '1px solid var(--divider-color)',
@@ -335,10 +331,6 @@ function setColors(background, accent) {
     },
     '.error-card-container  a': {
       'color': linkAccent.toCss(),
-    },
-    '.error-card-container .ha-blue': {
-      'background-color': accent.toCss(),
-      'color': accentText.toCss(),
     },
   };
 

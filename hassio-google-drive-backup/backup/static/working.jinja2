@@ -17,12 +17,12 @@
     <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
       folder you'd like to use.  Doing this gives the addon permission to store snapshots in that folder.</span>
     <a href="#!" id="choose_folder_button" style="margin-left: 50px" onclick="chooseSnapshotFolder()"
-      class="waves-effect waves-light btn-flat ha-blue hide-for-custom-creds">
+      class="waves-effect btn-flat hide-for-custom-creds">
       <i class="material-icons left">open_in_new</i>
       Choose Folder
     </a>
     <a href="#!" id="choose_folder_button" onclick="saveFolder($('#{{ id }}', $(this).parent('.find_parent_target')).val())"
-      class="waves-effect waves-light btn-flat ha-blue">
+      class="waves-effect btn-flat">
       <i class="material-icons left">save</i>
       Save
     </a>
@@ -73,7 +73,7 @@
             <br />
             <span class="left">Size: <span id="size"></span></span>
             <br />
-            <a class='dropdown-trigger btn right ha-blue waves-effect' href='#' data-target='action_dropdown'
+            <a class='dropdown-trigger btn right waves-effect' href='#' data-target='action_dropdown'
               id="action_dropdown_button" style="display: none;">
               <i class="material-icons medium left">keyboard_arrow_down</i>
               Actions
@@ -1012,8 +1012,8 @@
                   with new releases and aids in providing better help messages when things go wrong. If you're unsure,
                   just select "No". You can always change this in the settings menu up on the top right of the page.</p>
                 <div class="card-action white-text">
-                  <a target="_blank" class="waves-effect waves-light btn" onClick="errorReports('true');">Yes</a>
-                  <a target="_blank" class="waves-effect waves-light btn" onClick="errorReports('false');">No</a>
+                  <a target="_blank" class="waves-effect btn" onClick="errorReports('true');">Yes</a>
+                  <a target="_blank" class="waves-effect btn" onClick="errorReports('false');">No</a>
                 </div>
               </div>
             </div>
@@ -1045,9 +1045,9 @@
                   will be available through ingress.</p>
                 <br />
                 <div class="card-action white-text">
-                  <a target="_blank" class="waves-effect ha-blue waves-light btn"
+                  <a target="_blank" class="waves-effect btn"
                     onClick="exposeServer('false');">Yes</a>
-                  <a target="_blank" class="waves-effect ha-blue waves-light btn" onClick="exposeServer('true');">No</a>
+                  <a target="_blank" class="waves-effect btn" onClick="exposeServer('true');">No</a>
                 </div>
               </div>
             </div>
@@ -1065,9 +1065,9 @@
                   Assistant Web-UI the direct link may not work, so you'll just have to navigate there.</p>
                 <br />
                 <div class="card-action">
-                  <a target="_blank" id="restore_hard_link" class="waves-effect ha-blue waves-light btn" href="">Open
+                  <a target="_blank" id="restore_hard_link" class="waves-effect btn" href="">Open
                     Snapshots</a>
-                  <a target="_blank" class="waves-effect ha-blue waves-light btn modal-close"
+                  <a target="_blank" class="waves-effect btn modal-close"
                     onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
                 </div>
               </div>

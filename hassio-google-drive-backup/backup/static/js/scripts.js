@@ -220,7 +220,7 @@ function postJson(path, json, onSuccess, onFail = null, toastWhile = null) {
       if (onFail) {
         onFail(info);
       } else {
-        button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+        button_text = "&nbsp;&nbsp;<a class='waves-effect btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
         $('#error_details_paragraph').text(info.details);
 
         M.toast({ html: info.message + button_text, displayLength: 10000 });

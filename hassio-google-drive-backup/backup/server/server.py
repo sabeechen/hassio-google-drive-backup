@@ -40,7 +40,6 @@ class Server():
             'version': VERSION,
             'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
             'accentColor': self.config.get(Setting.ACCENT_COLOR),
-            'bmc_logo_path': "/static/images/bmc.svg"
         }
 
     async def authorize(self, request: Request):

@@ -213,16 +213,6 @@ function setColors(background, accent) {
     'nav ul a i': {
       'color': 'var(--sidebar-icon-color)',
     },
-    '.accent-title': {
-      'color': accentText.toCss(),
-    },
-    'footer a:link': {
-      'text-decoration': 'underline',
-      'color': accentText.textColor().tint(accentText, 0.95).toCss(),
-    },
-    '.accent-text': {
-      'color': accentText.textColor().tint(accentText, 0.95).toCss(),
-    },
     '.btn': {
       'background-color': accent.toCss(),
     },

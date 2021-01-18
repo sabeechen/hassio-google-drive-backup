@@ -12,6 +12,7 @@
 {% include 'layouts/partials/modals/settings.jinja2' %}
 {% include 'layouts/partials/modals/help.jinja2' %}
 {% include 'layouts/partials/modals/bug.jinja2' %}
+{% include 'layouts/partials/modals/about.jinja2' %}
 
 {% if coordEnabled %}
 <script type="text/javascript">
@@ -33,6 +34,7 @@
     });
     $('#help_modal').modal();
     $('#bug_modal').modal();
+    $('#about_modal').modal();
     $('.tooltipped').tooltip();
     $('.collapsible').collapsible();
     $('.sidenav').sidenav();
@@ -45,19 +47,22 @@
 
 {% macro actionMenu(id) %}
 <ul id="{{ id }}" class="dropdown-content">
-  <li>
-    <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
-      <i class="material-icons left">add</i>Snapshot Now
-    </a>
-  </li>
-  {% if showOpenDriveLink %}
-  <li>
-    <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
-  </li>
+  {% if coordEnabled %}
+    <li>
+      <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
+        <i class="material-icons left">add</i>Snapshot Now
+      </a>
+    </li>
+    {% if showOpenDriveLink %}
+    <li>
+      <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
+    </li>
+    {% endif %}
+    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
+    <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   {% endif %}
-  <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
-  <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
+  <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>About</a></li>
 </ul>
 {% endmacro %}
 
@@ -85,15 +90,10 @@
     </a>
   </li>
   <li>
-    {% if coordEnabled %}
     {{ actionMenu(id="main_menu_dropdown") }}
     <a class="dropdown-trigger" href="#!" data-target="main_menu_dropdown">
       Actions <i class="material-icons right">arrow_drop_down</i>
     </a>
-    {% else %}
-    <a onclick="bugReport()"> <i class="material-icons"
-        style="display: inline; margin-right: 5px; vertical-align: bottom">bug_report</i>Report a bug</a>
-    {% endif %}
   </li>
 </ul>
 
@@ -106,14 +106,17 @@
   <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
   <li><a href="/log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
   {% if coordEnabled %}
-  <li><a onclick="newSnapshotClick(); return false;" style="cursor: pointer"><i
-        class="material-icons left">add</i>Snapshot Now</a></li>
-  {% if showOpenDriveLink %}
-  <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
-  {% endif %}
-  <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
-  <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
+    <li>
+      <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
+        <i class="material-icons left">add</i>Snapshot Now</a>
+    </li>
+    {% if showOpenDriveLink %}
+      <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+    {% endif %}
+    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
+    <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   {% endif %}
   <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
   <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
+  <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>About</a></li>
 </ul>

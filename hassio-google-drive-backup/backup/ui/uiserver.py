@@ -79,7 +79,6 @@ class UiServer(Trigger, Startable):
             'accentColor': self.config.get(Setting.ACCENT_COLOR),
             'coordEnabled': self._coord.enabled(),
             'save_drive_creds_path': self.config.get(Setting.SAVE_DRIVE_CREDS_PATH),
-            'bmc_logo_path': "static/images/bmc.svg"
         }
 
     async def getstatus(self, request) -> Dict[Any, Any]:

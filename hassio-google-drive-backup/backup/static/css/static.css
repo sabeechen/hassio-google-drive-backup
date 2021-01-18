@@ -116,3 +116,14 @@ body {
     border-radius: 5px;
   }
 
+  .bmc-btn {
+    height: 48px !important;
+  }
+
+  .copyright {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+  }
+

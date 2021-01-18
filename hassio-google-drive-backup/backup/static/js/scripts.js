@@ -749,12 +749,14 @@ function skipLowSpaceWarning() {
 
 
 $(document).ready(function () {
-  if (window.top.location == window.location) {
-    // We're in a standard webpage, only show the header
+  if (window.top.location === window.location) {
+    // We're in a standard webpage, show the full header
     $(".ingress-only").hide();
+    $(".nav-wrapper .right").addClass("hide-on-med-and-down")
   } else {
     // We're in an ingress iframe.
     $(".non-ingress").hide();
+    $(".nav-wrapper .brand-logo").addClass("hide-on-med-and-down")
   }
   var instance = M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
 });

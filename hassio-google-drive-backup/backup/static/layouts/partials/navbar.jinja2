@@ -62,23 +62,26 @@
 {% endmacro %}
 
 {% call macros.header(navBarTitle or "Home Assistant Google Drive Backup") %}
-<a href="#" data-target="mobile-menu" class="sidenav-trigger">
+<a href="#" data-target="mobile-menu" class="sidenav-trigger non-ingress">
   <i class="material-icons">menu</i>
 </a>
-<ul class="right hide-on-med-and-down">
+<ul class="right">
   <li>
-    <a href="#!" onClick="loadSettings()"> <i class="material-icons"
-        style="display: inline; margin-right: 5px; vertical-align: bottom">settings</i>Settings </a>
+    <a href="#!" onClick="loadSettings()">
+      <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">settings</i>
+      Settings
+    </a>
   </li>
   <li>
     <a href="/log?format=view" target="_blank" rel="noreferrer">
-      <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">code</i>Logs
+      <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">code</i>
+      Logs
     </a>
   </li>
   <li>
     <a href="#!" class="modal-trigger" data-target="help_modal">
-      <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">help</i>Get
-      Help
+      <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">help</i>
+      Get Help
     </a>
   </li>
   <li>
@@ -89,10 +92,12 @@
     </a>
     {% else %}
     <a onclick="bugReport()"> <i class="material-icons"
-        style="display: inline; margin-right: 5px; vertical-align: bottom">bug_report</i>Report a bug </a>
+        style="display: inline; margin-right: 5px; vertical-align: bottom">bug_report</i>Report a bug</a>
     {% endif %}
   </li>
 </ul>
+
+{% endcall %}
 
 <ul class="sidenav non-ingress" id="mobile-menu">
   <div class="sidenav-header">
@@ -112,26 +117,3 @@
   <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
   <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
 </ul>
-
-<div class="ingress-only" style="width: 100%; height: 40px">
-  {% if coordEnabled %}
-  {{ actionMenu(id="main_menu_dropdown2") }}
-  <a class="dropdown-trigger left waves-effect btn top-btn" href="#!" data-target="main_menu_dropdown2">
-    <i class="material-icons left">arrow_drop_down</i>
-    Actions
-  </a>
-  {% endif %}
-  <a href="#!" class="left btn waves-effect top-btn modal-trigger" data-target="help_modal">
-    <i class="material-icons" style="display: inline; margin-right: 5px">help</i>
-    <span style="vertical-align: top">Get Help</span>
-  </a>
-  <a href="log?format=view" target="_blank" rel="noreferrer" class="left btn waves-effect top-btn">
-    <i class="material-icons" style="display: inline; margin-right: 5px">code</i>
-    <span style="vertical-align: top">Logs</span>
-  </a>
-  <a href="#!" onClick="loadSettings()" class="left waves-effect btn top-btn">
-    <i class="material-icons" style="display: inline; margin-right: 5px">settings</i>
-    <span style="vertical-align: top">Settings</span>
-  </a>
-</div>
-{% endcall %}

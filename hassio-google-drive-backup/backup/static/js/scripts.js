@@ -663,6 +663,8 @@ function processStatusUpdate(data) {
   $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_snapshot_path, data.ha_url_base));
 
   last_data = data;
+  
+  snapshotNameOneOffExample();
 
   $('.tooltipped').tooltip({ "exitDelay": 1000 });
   if (error_toast != null) {
@@ -715,14 +717,6 @@ function stopSimulateError() {
     })
 }
 
-function newSnapshotClick() {
-  setInputValue("retain_drive_one_off", false);
-  setInputValue("retain_ha_one_off", false);
-  setInputValue("snapshot_name_one_off", "");
-  snapshotNameOneOffExample();
-  M.Modal.getInstance(document.querySelector('#snapshotmodal')).open();
-}
-
 function doNewSnapshot() {
   var drive = $("#retain_drive_one_off").prop('checked');
   var ha = $("#retain_ha_one_off").prop('checked');
@@ -758,7 +752,11 @@ $(document).ready(function () {
     $(".non-ingress").hide();
     $(".nav-wrapper .brand-logo").addClass("hide-on-med-and-down")
   }
-  var instance = M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
+  M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
+
+  setInputValue("retain_drive_one_off", false);
+  setInputValue("retain_ha_one_off", false);
+  setInputValue("snapshot_name_one_off", "");
 });
 
 

@@ -179,7 +179,9 @@ function setColors(background, accent) {
       '--primary-background-color': '#fafafa',
       '--primary-text-color': '#212121',
       '--divider-color': 'rgba(0, 0, 0, .12)',
-      '--sidebar-icon-color': 'rgb(33, 33, 33, 0.6)',
+      '--sidebar-icon-color': 'rgba(33, 33, 33, 0.6)',
+      '--mdc-theme-primary': 'rgb(3, 169, 244)',
+      '--mdc-theme-primary-ripple': 'rgba(3, 169, 244, 0.25)',
     },
     'html': {
       'background-color': 'var(--primary-background-color)', // background.toCss(),

@@ -105,8 +105,7 @@
     </div>
   </div>
   <div class='error' style='display:none' id="toast">You shouldn't see this</div>
-  <main>
-    <div class="container">
+  <main style="margin: 0 1rem;">
       <div class="section">
         {% include 'layouts/partials/error-messages.jinja2' %}
 
@@ -181,16 +180,18 @@
             </div>
           </div>
         </div>
-        <div class="row">
+        <div class="row" style="margin-bottom: 0;">
           {% if coordEnabled %}
-          <div class="col m9">
+          <div class="col s12 m7 l8 xl9">
             <h5>New Snapshot</h5>
-            <p>
-              Create a new snapshot immediately, using the settings you've configured for the automatic snapshots
-              (eg full/partial, password, etc).
-            </p>
-            <div class="row">
-              <div class="col l12 xl10">
+            <div class="row" style="margin-bottom: 10px;">
+              <div class="col s11">
+                  Create a new snapshot immediately, using the settings you've configured for the automatic snapshots
+                  (eg full/partial, password, etc).
+              </div>
+            </div>
+            <div class="row" style="margin-bottom: 0;">
+              <div class="col m12 l10 xl8">
                 <div class="card">
                   <div class="card-content" style="padding: 6px 12px 24px 12px;">
                     <form>
@@ -240,8 +241,8 @@
             </div>
           </div>
           {% endif %}
-          <div class="col m3">
-            <h5>Statistics</h5>
+          <div class="col s12 m5 l4 xl3">
+            <h5>Snapshots Statistics</h5>
             <div id="sources">
             </div>
             <div class="left container" style="margin-left: 15px">
@@ -262,6 +263,9 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="section">
         <div class="default-hidden" id="no_snapshots_block">
           <div class="row">
             <div class='col s1'></div>
@@ -290,6 +294,5 @@
         </div>
         <div id="snapshots"></div>
       </div>
-    </div>
   </main>
 {% endblock %}

@@ -109,3 +109,10 @@ body {
     font-weight: 500;
     text-decoration: underline;
   }
+
+  .choose-folder-container {
+    padding: 5px 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+  }
+

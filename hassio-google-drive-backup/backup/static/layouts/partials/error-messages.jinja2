@@ -1,4 +1,44 @@
-{% call macros.errorMessage("Error while backing up", "error_card", "sync_problem") %}
+{# Reusable macros #}
+
+{% macro chooseFolder(id) %}
+<div class="choose-folder-container z-depth-1">
+  <div class="input-field find_parent_target">
+    <i class="material-icons prefix">folder_open</i>
+    <input type="text" id="{{ id }}" />
+    <label for="{{ id }}">Enter your folder ID here, then click "Save"</label>
+    <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload snapshots into. You
+      can get this id by navigating to the folder in
+      <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
+      and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
+      example if the URL for my folder is
+      <a target="_blank" rel="noreferrer"
+        href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
+      then the Drive ID is 1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
+    <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
+      folder you'd like to use.  Doing this gives the addon permission to store snapshots in that folder.</span>
+    <a href="#!" id="choose_folder_button" style="margin-left: 50px" onclick="chooseSnapshotFolder()"
+      class="waves-effect btn-flat hide-for-custom-creds">
+      <i class="material-icons left">open_in_new</i>
+      Choose Folder
+    </a>
+    <a href="#!" id="choose_folder_button" onclick="saveFolder($('#{{ id }}', $(this).parent('.find_parent_target')).val())"
+      class="waves-effect btn-flat">
+      <i class="material-icons left">save</i>
+      Save
+    </a>
+  </div>
+</div>
+{% endmacro %}
+
+
+{# Error messages #}
+
+{% set error_card_actions %}
+  <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
+  <a id="error_github_link" onclick="bugReport()">File this issue on Github</a>
+  <a id="download_logs_link" href="log?format=download" target="_blank">Download logs</a>
+{% endset %}
+{% call macros.errorMessage("Error while backing up", "error_card", "sync_problem", error_card_actions) %}
   <p>
     The add-on got the error below while trying to sync your snapshots. Some transient errors are expected
     (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your
@@ -9,29 +49,19 @@
   <br />
   <p id="generic_error_title" style="white-space: pre-wrap;font-family: monospace;"></p>
   <div>
-  <a onclick="toggleLinkSlide(this, 'generic_error_details');" href="#!"><i class="material-icons"
-      style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> View Exception
-    Details</a>
-  <div id="generic_error_details" class="default-hidden"
-    style="padding-left: 10px; white-space: pre-wrap;font-family: monospace;">
-    <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
-      the result from an attempt the add-on has made to ping the address. This may help in
-      determining if something in your network is blocking accesss to one of Google's API servers,
-      or if Google's API servers are having problems.</p>
-  </div>
-  </div>
-  <div class="card-action white-text">
-    <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
-  </div>
-  <div class="card-action white-text">
-    <a id="error_github_link" onclick="bugReport()">File this issue on Github</a>
-  </div>
-  <div class="card-action white-text">
-    <a id="download_logs_link" href="log?format=download" target="_blank">Download logs</a>
+    <a onclick="toggleLinkSlide(this, 'generic_error_details');" href="#!"><i class="material-icons"
+        style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> View Exception
+      Details</a>
+      <div id="generic_error_details" class="default-hidden" style="padding: 10px; font-family: monospace;">
+      </div>
   </div>
 {% endcall %}
 
-{% call macros.errorMessage("Low Disc Space", "low_space", "disc_full") %}
+{% set low_space_actions %}
+  <a href="#" onclick="sync('low_space'); return false;">Try Syncing Again</a>
+  <a href="#" onclick="skipLowSpaceWarning(); return false;">Create snapshot anyway</a>
+{% endset %}
+{% call macros.errorMessage("Low Disc Space", "low_space", "disc_full", low_space_actions) %}
   <p>
     It looks like you're low on disk space. The addon won't attempt to create a snapshot until you take
     action or more space becomes available. It looks like your backup folder in Home Assistant is
@@ -48,28 +78,24 @@
     </li>
     <li>
       Make your snapshots smaller (see <a target="_blank" rel="noreferrer" href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this tip</a>).
-      You can also click the little <i class="material-icons" style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">info</i>
+      You can also click the little <i class="material-icons" style="display: inline; font-size: 15px">info</i>
       next to snapshots below to see which parts of them are taking up the most space.
     </li>
     <li>
-      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" tyle="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on settings</a>
+      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
       to store fewer snapshots in Home Assistant.
     </li>
     <li>
-      Delete existing snapshots from Home Assistant by clicking "Action" -> "Delete" on snapshots below.  Make sure you don't need them anymore or they're backed to Google Drive.
+      Delete existing snapshots from Home Assistant by clicking <b>"Action"</b> -> <b>"Delete"</b> on snapshots below.  Make sure you don't need them anymore or they're backed to Google Drive.
     </li>
     <li>
-      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on settings</a>
+      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
       and disable "Stop on low disc space".  This will make the addon stop checking disc usage, do so at your own peril.
     </li>
     <li>
       Click "Create snapshot anyway" to bypass this warning just this one time. This is useful if you're confident that the snapshot actually will fit in the available space. Again, do so at your own peril.
     </li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('low_space'); return false;">Try Syncing Again</a>
-    <a href="#" onclick="skipLowSpaceWarning(); return false;">Create snapshot anyway</a>
-  </div>
 {% endcall %}
 
 {% call macros.errorMessage("Google Drive is Full", "drive_full_card", "disc_full") %}
@@ -86,7 +112,7 @@
       Free up space in Google Drive, GMail, or Google Photos by deleting things.
     </li>
     <li>
-      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on settings</a>
+      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
       to store fewer snapshots in Google Drive
     </li>
     <li>
@@ -109,7 +135,10 @@
   <p>To resolve this, you'll need to <a href="reauthenticate">authenticate</a> this add-on with Google again. If that still doesn't help, you may need to update the add-on</p>
 {% endcall %}
 
-{% call macros.errorMessage("Couldn't delete old snapshots in Home Assistant", "delete_error", "delete_forever") %}
+{% set delete_error_actions %}
+  <a href="#" onclick="sync('delete_error'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Couldn't delete old snapshots in Home Assistant", "delete_error", "delete_forever", delete_error_actions) %}
   <p>
     The add-on ran into an error (HTTP 400) trying to delete your oldest snapshot. This can happen
     sometimes (especially if you just installed the add-on) when Home Assistant's cache of your existing snapshots
@@ -127,12 +156,12 @@
     Syncing Again" below. If the above doesn't help, please file an issue on <a onclick="bugReport()">GitHub</a>
     to get more help.
   </p>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('delete_error'); return false;">Try Syncing Again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Couldn't Reach Google Drive (DNS error)", "google_dns", "cloud_off") %}
+{% set google_dns_actions %}
+  <a href="#" onclick="sync('google_dns'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Couldn't Reach Google Drive (DNS error)", "google_dns", "cloud_off", google_dns_actions) %}
   <p>
     The add-on couldn't resolve Google Drive's server address. Snapshots can't be backed up
     without being able to reach Google Drive.
@@ -144,28 +173,29 @@
       The server www.googleapis.com is reachable from your Home Assistant
       machine. Some ad-blocking and firewall software (eg Ad Guard, Pihole, etc) can block this
       addresses.
-      <br />
-      <div style='padding: 5px'>
-        <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns');" href="#!"><i class="material-icons"
-            style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
-        <div id="cant_reach_google_dns" class="default-hidden" style="padding-left: 10px">
-          <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
-            the result from an attempt the add-on has made to ping the address. This may help in
-            determining if something in your network is blocking accesss to one of Google's API servers,
-            or if Google's API servers are having problems.</p>
-          <div class="dns_info row"></div>
-          <div class="divider"></div>
-        </div>
-      </div>
     </li>
   </ul>
-  <p>You can also try restarting this add-on, the supervisor, or Home Assistant.</p>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('google_dns'); return false;">Try Syncing Again</a>
+  <div style="margin-top: -10px; margin-bottom: 15px;">
+    <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns');" href="#!"><i class="material-icons"
+      style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
+    <div id="cant_reach_google_dns" class="default-hidden" style="padding: 10px; font-family: monospace;">
+      <p>
+        Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
+        the result from an attempt the add-on has made to ping the address. This may help in
+        determining if something in your network is blocking accesss to one of Google's API servers,
+        or if Google's API servers are having problems.
+      </p>
+      <div class="dns_info row"></div>
+      <div class="divider"></div>
+    </div>
   </div>
+  <p>You can also try restarting this add-on, the supervisor, or Home Assistant.</p>
 {% endcall %}
 
-{% call macros.errorMessage("Google Drive Connection Timeout", "google_timeout", "cloud_off") %}
+{% set google_timeout_actions %}
+  <a href="#" onclick="sync('google_timeout'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Google Drive Connection Timeout", "google_timeout", "cloud_off", google_timeout_actions) %}
   <p>
     The connection timed out or was closed unexpectedly while trying to communicate with Google Drive.
     Snapshots can't be backed up without being able to reach Google Drive reliably. This can happen transiently from time to
@@ -178,30 +208,31 @@
       The server www.googleapis.com are reachable from your Home Assistant
       machine. Some ad-blocking and
       firewall software (eg Ad Guard, pi-hole, etc) can block or throttle traffic to this address.
-      <br />
-      <div style='padding: 5px'>
-        <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns_timeout');" href="#!">
-          <i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i>
-          Show DNS info
-        </a>
-        <div id="cant_reach_google_dns_timeout" class="default-hidden" style="padding-left: 10px">
-          <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
-            the result from an attempt the add-on has made to ping the address. This may help in
-            determining if something in your network is blocking accesss to one of Google's API servers,
-            or if Google's API servers are having problems.</p>
-          <div class="dns_info row"></div>
-          <div class="divider"></div>
-        </div>
-      </div>
     </li>
   </ul>
-  <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('google_timeout'); return false;">Try Syncing Again</a>
+  <div style="margin-top: -10px; margin-bottom: 15px;">
+    <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns_timeout');" href="#!">
+      <i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i>
+      Show DNS info
+    </a>
+    <div id="cant_reach_google_dns_timeout" class="default-hidden" style="padding: 10px; font-family: monospace;">
+      <p>
+        Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
+        the result from an attempt the add-on has made to ping the address. This may help in
+        determining if something in your network is blocking accesss to one of Google's API servers,
+        or if Google's API servers are having problems.
+      </p>
+      <div class="dns_info row"></div>
+      <div class="divider"></div>
+    </div>
   </div>
+  <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
 {% endcall %}
 
-{% call macros.errorMessage("Can't Connect to Google Drive", "google_cant_connect", "cloud_off") %}
+{% set google_cant_connect_actions %}
+  <a href="#" onclick="sync('google_cant_connect'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Can't Connect to Google Drive", "google_cant_connect", "cloud_off", google_cant_connect_actions) %}
   <p>
     Google Drive refused an attempt to connect with it. Snapshots can't be backed up without being able
     to reach Google Drive.
@@ -213,30 +244,31 @@
       The server www.googleapis.com are reachable from your Home Assistant
       machine. Some ad-blocking and
       firewall software (eg Ad Guard, pi-hole, etc) can block or throttle traffic to this address.
-      <br />
-      <div style='padding: 5px'>
-        <a onclick="toggleLinkSlide(this, 'cant_connect_google_dns');" href="#!">
-          <i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i>
-          Show DNS info
-        </a>
-        <div id="cant_connect_google_dns" class="default-hidden" style="padding-left: 10px">
-          <p>Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
-            the result from an attempt the add-on has made to ping the address. This may help in
-            determining if something in your network is blocking accesss to one of Google's API servers,
-            or if Google's API servers are having problems.</p>
-          <div class="dns_info row"></div>
-          <div class="divider"></div>
-        </div>
-      </div>
     </li>
   </ul>
-  <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('google_cant_connect'); return false;">Try Syncing Again</a>
+  <div style="margin-top: -10px; margin-bottom: 15px;">
+    <a onclick="toggleLinkSlide(this, 'cant_connect_google_dns');" href="#!">
+      <i class="material-icons" style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i>
+      Show DNS info
+    </a>
+    <div id="cant_connect_google_dns" class="default-hidden" style="padding: 10px; font-family: monospace;">
+      <p>
+        Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
+        the result from an attempt the add-on has made to ping the address. This may help in
+        determining if something in your network is blocking accesss to one of Google's API servers,
+        or if Google's API servers are having problems.
+      </p>
+      <div class="dns_info row"></div>
+      <div class="divider"></div>
+    </div>
   </div>
+  <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
 {% endcall %}
 
-{% call macros.errorMessage("Invalid Snapshot Password", "password_key_invalid", "vpn_key") %}
+{% set password_key_invalid_actions %}
+  <a href="#" onclick="sync('password_key_invalid'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Invalid Snapshot Password", "password_key_invalid", "vpn_key", password_key_invalid_actions) %}
   <p>
     The add-on couldn't find your snapshot password in your secrets.yaml file. Snapshots can't be created
     until you either configure a valid password or remove it.
@@ -248,15 +280,15 @@
   </ul>
   <p>
     Please review your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-        style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
-      settings</a>to ensure you've set the snapshot password you intended, then sync again.
+        style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+    to ensure you've set the snapshot password you intended, then sync again.
   </p>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('password_key_invalid'); return false;">Try Syncing Again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Snapshot Already in Progress", "snapshot_in_progress", "settings_backup_restore") %}
+{% set snapshot_in_progress_actions %}
+  <a href="#" onclick="sync('snapshot_in_progress'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Snapshot Already in Progress", "snapshot_in_progress", "settings_backup_restore", snapshot_in_progress_actions) %}
   <p>The add-on couldn't create a snapshot on schedule because one is already in progress. Home Assistant can
     only create one snapshot at a time. This can happen if:</p>
   <ul class="browser-default">
@@ -267,12 +299,13 @@
     snapshot in progress finishes.
     If you are certain no snapshot is in progress already or this error sticks around, you can try
     restarting the addon or Home Assistant's host machine.</p>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('snapshot_in_progress'); return false;">Try Syncing Again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Attempting to Delete Multiple Snapshots", "multiple_deletes", "delete_forever") %}
+{% set multiple_deletes_actions %}
+  <a href="#" onclick="allowDeletion('false'); return false;">Allow Deletion</a>
+  <a href="#" onclick="allowDeletion('true'); return false;">Never Ask again</a>
+{% endset %}
+{% call macros.errorMessage("Attempting to Delete Multiple Snapshots", "multiple_deletes", "delete_forever", multiple_deletes_actions) %}
   <p>The add-on attempted to delete <span id="data_GoogleDrive">(?)</span> snapshot(s) from Google
     Drive and <span id="data_HomeAssistant">(?)</span> snapshot(s) from Home Assistant.
     Under normal circumstance, the add-on will only delete one snapshot at a time (the oldest).
@@ -281,20 +314,20 @@
     Assistant.</p>
   <p>To resolve this you can:</p>
   <ul class="browser-default">
-    <li>Review the <a href="#!" onclick="loadSettings()"><i class="material-icons"
-          style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
-        settings</a> and increase the number of snapshots you keep.</li>
+    <li>
+      Review the <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+      and increase the number of snapshots you keep.
+    </li>
     <li>Click "Allow Deletion" below to permit these deletions to happen this one time.</li>
     <li>Click "Never ask again" below to permit the deletes this time and in the future (not recommended)
     </li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="allowDeletion('false'); return false;">Allow Deletion</a>
-    <a href="#" onclick="allowDeletion('true'); return false;">Never Ask again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Google Server Error", "google_server_error", "cloud_off") %}
+{% set google_server_error_actions %}
+  <a href="#" onclick="sync('google_server_error'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Google Server Error", "google_server_error", "cloud_off", google_server_error_actions) %}
   <p>Google returned a server error (HTTP code 500) while trying to backup your snapshots.</p>
   <p>This happens sometimes for reasons beyond anyone's control and almost always the problem goes away on
     its own. The add-on will attempt uploading again soon, but you can also click "Try Syncing Again"
@@ -304,17 +337,17 @@
     <li>Making sure the internet is working fine.</li>
     <li>Making sure you're able to log into your <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive
         account</a> and upload files without problems.</li>
-    <li>Reauthenting the add-on with Google Drive (click "ACTIONS" -> "Reauthorize Google Drive" up top)
+    <li>Reauthenting the add-on with Google Drive (click <b>"ACTIONS"</b> -> <b>"Reauthorize Google Drive"</b> up top)
     </li>
     <li>Restarting the add-on, Home Assistant, or the supervisor.</li>
     <li>Reinstalling the add-on.</li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('google_server_error'); return false;">Try Syncing Again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Google Session Expired", "google_session_expired", "cloud_off") %}
+{% set google_session_expired_actions %}
+  <a href="#" onclick="sync('google_session_expired'); return false;">Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Google Session Expired", "google_session_expired", "cloud_off", google_session_expired_actions) %}
   <p>Google returned a server error (HTTP code 404) while trying to upload your snapshots.</p>
   <p>In most cases, this indicates that your upload took too long to upload. According to Google's
     documentation if an upload takes longer than a week then it will be forcibly cancelled and return this
@@ -338,12 +371,14 @@
     <li>Restarting the add-on, Home Assistant, or the supervisor.</li>
     <li>Reinstalling the add-on.</li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('google_session_expired'); return false;">Try Syncing Again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Existing Backup Folder Found", "existing_backup_folder", "folder_special") %}
+{% set existing_backup_folder_actions %}
+  <a href="#" onclick="resolvefolder('true')">Use the folder</a>
+  <a href="#" onclick="chooseSnapshotFolder()">Choose a different folder</a>
+  <a href="#" onclick="resolvefolder('false')">Create a new folder</a>
+{% endset %}
+{% call macros.errorMessage("Existing Backup Folder Found", "existing_backup_folder", "folder_special", existing_backup_folder_actions) %}
   <p>The add-on found a snapshot folder named "<b><span id="data_existing_name"></span></b>" in Google
     Drive that might already have snapshots
     in it. This is normal if you've used this addon before, but you'll need to decide where snapshots
@@ -366,14 +401,12 @@
     its recommended that you use a different folder for each instance. Otherwise they'll delete
     eachother's
     snapshots!</p>
-  <div class="card-action white-text">
-    <a href="#" onclick="resolvefolder('true')">Use the folder</a>
-    <a href="#" onclick="chooseSnapshotFolder()">Choose a different folder</a>
-    <a href="#" onclick="resolvefolder('false')">Create a new folder</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Please choose a backup folder", "backup_folder_missing", "folder_special") %}
+{% set backup_folder_missing_actions %}
+  <a href="#" onclick="loadSettings()">Open settings</a>
+{% endset %}
+{% call macros.errorMessage("Please choose a backup folder", "backup_folder_missing", "folder_special", backup_folder_missing_actions) %}
   <p class="hide-for-custom-creds">You've choosen to backup your snapshots to a folder of your choosing.
     Click the link below to open a new window and select the folder in Google Drive you'd like to store
     your snapshot in.</p>
@@ -384,7 +417,7 @@
     <li>
       <p>If you'd rather not specify the folder for uploads, please return to your <a href="#!"
           onclick="loadSettings()"><i class="material-icons"
-            style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+            style="display: inline; font-size: 15px">settings</i> add-on
           settings</a> and change your preference.</p>
     </li>
     <li>
@@ -403,12 +436,12 @@
     select your folder through an external domain, which is where the "Choose Folder" link will take you.
     <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
       target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
-  <div class="card-action white-text">
-    <a href="#" onclick="loadSettings()">Open settings</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Couldn't use your backup folder", "backup_folder_inaccessible", "sync_problem") %}
+{% set backup_folder_inaccessible_actions %}
+  <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
+{% endset %}
+{% call macros.errorMessage("Couldn't use your backup folder", "backup_folder_inaccessible", "sync_problem", backup_folder_inaccessible_actions) %}
   <p>The addon couldn't use the folder you chose for storing snapshots. The addon can't backup your
     snapshots
     until you resolve this. This can happen if:
@@ -431,12 +464,12 @@
     </li>
     <li class="hide-for-default-creds">
       <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-            style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+            style="display: inline; font-size: 15px">settings</i> add-on
           settings</a> and, enter a valid "Snapshot Folder Id".</p>
     </li>
     <li>
       <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-            style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+            style="display: inline; font-size: 15px">settings</i> add-on
           settings</a> and deselect "Manually specify the snapshot folder". The addon will automatically
         create a new folder for you.</p>
     </li>
@@ -451,12 +484,12 @@
     external domain, which is where the "choose folder" link below will take you.
     <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
     target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Backup is Paused", "cancelled", "pause") %}
+{% set cancelled_actions %}
+  <a href="#" onclick="sync('cancelled')">Resume</a>
+{% endset %}
+{% call macros.errorMessage("Backup is Paused", "cancelled", "pause", cancelled_actions) %}
   <p>Sync was cancelled because you requested it. The addon will not resume syncing for another hour unless you take action.</p>
   <br />
   <p>
@@ -470,12 +503,12 @@
       <p>You can resume by clicking the link below or just waiting.</p>
     </li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('cancelled')">Resume</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_google_error", "error") %}
+{% set token_refresh_google_error_actions %}
+  <a href="#" onclick="sync('token_refresh_google_error')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_google_error", "error", token_refresh_google_error_actions) %}
   <p>
     The addon was unable to refresh your credentials with Google Drive.  When it tried, Google said:
   </p>
@@ -489,18 +522,18 @@
     <li>Something else has gone wrong with your Google Drive credentials.</li>
   </ul>
   <p>Usually this problem will resolve on its own, but you can try:</p>
-    <ul class="browser-default">
-      <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
-      <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
-        again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
-      <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
-    </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('token_refresh_google_error')">sync again</a>
-  </div>
+  <ul class="browser-default">
+    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+    <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
+      again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+  </ul>
 {% endcall %}
 
-{% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_my_error", "error") %}
+{% set token_refresh_my_error_actions %}
+  <a href="#" onclick="sync('token_refresh_my_error')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_my_error", "error", token_refresh_my_error_actions) %}
   <p>
     The addon was unable to refresh your credentials with Google Drive.  When it tried, https://habackup.io said:
   </p>
@@ -513,35 +546,35 @@
     <li>Something else has gone wrong with your Google Drive credentials.</li>
   </ul>
   <p>Usually this problem will resolve on its own, but you can try:</p>
-    <ul class="browser-default">
-      <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
-      <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
-        again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
-      <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
-    </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('token_refresh_my_error')">sync again</a>
-  </div>
+  <ul class="browser-default">
+    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+    <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
+      again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+  </ul>
 {% endcall %}
 
-{% call macros.errorMessage("Unable to Reach Home Assistant Supervisor", "supervisor_connection", "error") %}
+{% set supervisor_connection_actions %}
+  <a href="#" onclick="sync('supervisor_connection')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("Unable to Reach Home Assistant Supervisor", "supervisor_connection", "error", supervisor_connection_actions) %}
   <p>
     The addon was unable to connect to the Home Assistant Supervisor.  This addon requires the supervisor to be running to create 
     snapshots, load configuration, etc.  Without the supervisor the addon will not be able to do anything useful.  Typically this 
     should never happen, and indicates that something is wrong with your Home Assistant installation.
   </p>
-  <p>To resolve this you can try:
-    <ul class="browser-default">
-      <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
-      <li>Restarting the machine that Home Assistant runs on.  Often this resolves transient problems the Home Assistant Supervisor might have.</li>
-      <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
-    </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('supervisor_connection')">sync again</a>
-  </div>
+  <p>To resolve this you can try:</p>
+  <ul class="browser-default">
+    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+    <li>Restarting the machine that Home Assistant runs on.  Often this resolves transient problems the Home Assistant Supervisor might have.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+  </ul>
 {% endcall %}
 
-{% call macros.errorMessage("Unable to Talk to the Home Assistant Supervisor", "supervisor_permission", "error") %}
+{% set supervisor_permission_actions %}
+  <a href="#" onclick="sync('supervisor_connection')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("Unable to Talk to the Home Assistant Supervisor", "supervisor_permission", "error", supervisor_permission_actions) %}
   <p>
     The addon was unable to communicate with the Supervisor because it said the addon is unauthorized.  This addon 
     must communicate with the supervisor to create snapshots, load configuration, etc.  Without the supervisor the 
@@ -555,12 +588,12 @@
     <li>Checking the Supervisor's logs ("Supervisor" > "System" > "Logs") to see if any errors might indicate what the problem is.</li>
     <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('supervisor_connection')">sync again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("A Request to the Supervisor Timed Out", "supervisor_timeout", "error") %}
+{% set supervisor_timeout_actions %}
+  <a href="#" onclick="sync('supervisor_timeout')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("A Request to the Supervisor Timed Out", "supervisor_timeout", "error", supervisor_timeout_actions) %}
   <p>
     The addon was unable to communicate with the Supervisor because it timed out.  This addon 
     must communicate with the supervisor to create snapshots, load configuration, etc.  Without the supervisor the 
@@ -573,12 +606,12 @@
       can get into a bad state and this works around it.</li>
     <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('supervisor_timeout')">sync again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("The Supervisor Returned an Unexpected Response", "supervisor_unexpected", "error") %}
+{% set supervisor_unexpected_actions %}
+  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("The Supervisor Returned an Unexpected Response", "supervisor_unexpected", "error", supervisor_unexpected_actions) %}
   <p>
     The addon was unable to communicate with the Supervisor because it gave back an unreadable response.  
     This addon must communicate with the supervisor to create snapshots, load configuration, etc.  Without 
@@ -591,12 +624,12 @@
       can get into a bad state and this works around it.</li>
     <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Unable to write to the file system", "supervisor_fs_error", "error") %}
+{% set supervisor_fs_error_actions %}
+  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("Unable to write to the file system", "supervisor_fs_error", "error", supervisor_fs_error_actions) %}
   <p>
     The addon was unable to write to the file system on this machine.  Normally this indicates there is a problem
     with the Home Assistant supervisor, which is responsible for creating the file system this addon needs to function. Here are some reasons this might happen:
@@ -608,12 +641,12 @@
       should be able to see an estimate of how much space is remaining down below on this page or by going to "Supervisor" > "System" in the Home Assistant UI.</li>
     <li>If none of the above helps and the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Google drive Returned an Unexpected Response", "google_unexpected", "error") %}
+{% set google_unexpected_actions %}
+  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+{% endset %}
+{% call macros.errorMessage("Google drive Returned an Unexpected Response", "google_unexpected", "error", google_unexpected_actions) %}
   <p>
     The addon was unable to communicate with Google Drive because it gave back an unreadable response.  
     Withotu beign able to communicate with google drive, the addon will nto be able to back up snapshots to the cloud.
@@ -624,12 +657,12 @@
     <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.</li>
     <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Please log in to Google Drive Manually", "log_in_to_drive", "account_circle") %}
+{% set log_in_to_drive_actions %}
+  <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
+{% endset %}
+{% call macros.errorMessage("Please log in to Google Drive Manually", "log_in_to_drive", "account_circle", log_in_to_drive_actions) %}
   <p>The addon couldn't backup your snapshots because it looks like it you've never logged in 
     to the <a href="https://drive.google.com" target="_blank">Google Drive website</a> before. Doing this at 
     least once is required for applications like this to use Google Drive.
@@ -646,14 +679,11 @@
       <p><a href="reauthenticate">Reauthorize</a> the addon with Google Drive using a different account.</p>
     </li>
   </ul>
-  <div class="card-action white-text">
-    <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
-  </div>
 {% endcall %}
 
-{% call macros.errorMessage("Error details", "error_details_card", "error") %}
+{% set error_details_card_actions %}
+  <a target="_blank" onClick="$('#error_details_card').fadeOut(500)">Close</a>
+{% endset %}
+{% call macros.errorMessage("Error details", "error_details_card", "error", error_details_card_actions) %}
   <p id="error_details_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
-  <div class="card-action white-text">
-    <a target="_blank" onClick="$('#error_details_card').fadeOut(500)">Close</a>
-  </div>
 {% endcall %}

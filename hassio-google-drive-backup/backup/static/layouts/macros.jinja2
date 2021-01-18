@@ -12,7 +12,7 @@
 </header>
 {%- endmacro %}
 
-{% macro errorMessage(title, id, icon) -%}
+{% macro errorMessage(title, id, icon, actions) -%}
 <div class="card default-hidden error_card {{ id }}" id="{{ id }}">
   <div class="card-content">
     <span class="card-title red-text text-darken-4">
@@ -21,5 +21,10 @@
     </span>
     {{ caller() }}
   </div>
+  {% if actions %}
+    <div class="card-action">
+      {{actions}}
+    </div>
+  {% endif %}
 </div>
 {%- endmacro %}

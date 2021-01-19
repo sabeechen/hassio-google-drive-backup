@@ -15,18 +15,22 @@
 {% block content %}
   <div id="source-template" style="display: none;">
     <div class="source-ui">
-      <div id="source-template" class="left container" style="margin-left: 15px;">
-        <h6 class="source_title"></h6>
-      </div>
-      <div class="left container source_retain_label" style="margin-left: 15px">
-        <h7 class="left"><span class="source_retain_count"></span> saved indefinitely</h7>
-      </div>
-      <div class="right">
-        <div class="right">
-          <h5 class="source_snapshot_count" style="text-align: right;"></h5>
-          <div class="source_free_space tooltipped" style="text-align: right;"></div>
-        </div>
-      </div>
+      <h6 style="display: flex; align-items: center; margin-top: 0;">
+        <i class="source_icon material-icons" style="margin-right: 6px; color: var(--mdc-theme-primary)"></i>
+        <span>
+          <b class="source_snapshot_count"></b>
+          <span class="source_title"></span>
+        </span>
+      </h6>
+      <ul class="browser-default">
+        <li class="source_retain_label">
+          <span class="source_retain_count"></span> saved indefinitely
+        </li>
+        <li class="source_free_space">
+          <span class="source_free_space_text"></span>
+          <i class="source_free_space_tooltip tooltipped material-icons tiny">info</i>
+        </li>
+      </ul>
     </div>
   </div>
   <div id="snapshot-template" style="display: none">
@@ -243,23 +247,22 @@
           {% endif %}
           <div class="col s12 m5 l4 xl3">
             <h5>Snapshots Statistics</h5>
-            <div id="sources">
-            </div>
-            <div class="left container" style="margin-left: 15px">
-              <h6>Last Snapshot:</h6>
-            </div>
-            <div class="right container">
-              <h6 class="right">
-                <time datetime="" title="" id="last_snapshot"></time>
-              </h6>
-            </div>
-            <div class="left container" style="margin-left: 15px">
-              <h6>Next Snapshot:</h6>
-            </div>
-            <div class="right container">
-              <h6 class="right">
-                <time datetime="" title="" id="next_snapshot"></time>
-              </h6>
+            <div style="margin-top: 20px;">
+              <div id="sources">
+              </div>
+              <div class="divider"></div>
+              <p style="display: flex; align-items: center;">
+                <i class="material-icons" style="margin-right: 6px;">timer</i>
+                <span>
+                  Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 500;"></time>
+                </span>
+              </p>
+              <p style="display: flex; align-items: center;">
+                <i class="material-icons" style="margin-right: 6px;">update</i>
+                <span>
+                  Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 500;"></time>
+                </span>
+              </p>
             </div>
           </div>
         </div>

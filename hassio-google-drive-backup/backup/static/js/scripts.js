@@ -379,7 +379,8 @@ function processSourcesUpdate(sources) {
       template.data("source", key);
     }
 
-    $(".source_title", template).html("In " + source.title + ":");
+    $(".source_title", template).html("in " + source.title );
+    $(".source_icon", template).html(source.title === "Home Assistant" ? "sd_card" : "cloud_done");
 
     if (source.retained > 0) {
       $(".source_retain_count", template).html(source.retained);
@@ -389,13 +390,12 @@ function processSourcesUpdate(sources) {
     }
     $(".source_snapshot_count", template).html(source.snapshots + " (" + source.size + ")");
 
-    let free_space = $('.source_free_space', template);
     if (source.hasOwnProperty("free_space")) {
-      free_space.html(source.free_space + " remaining");
-      free_space.attr("data-tooltip", "An estimate of the space available in " + source.title + ".");
-      free_space.show();
+      $('.source_free_space_text', template).html(source.free_space + " remaining");
+      $('.source_free_space_tooltip', template).attr("data-tooltip", "An estimate of the space available in " + source.title + ".");
+      $('.source_free_space', template).show();
     } else {
-      free_space.hide();
+      $('.source_free_space', template).hide();
     }
 
     if (isNew) {

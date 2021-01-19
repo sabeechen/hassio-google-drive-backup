@@ -134,4 +134,15 @@ body {
 
   .card .card-action a .waves-ripple {
      background-color: var(--mdc-theme-primary-ripple);
-   }
+  }
+
+  .snapshot-ui .archive-icon {
+    position: relative;
+    margin-right: 15px;
+  }
+
+  .snapshot-ui .archive-icon .archive-icon-info {
+    position: absolute;
+    bottom: -3px;
+    right: -6px;
+  }

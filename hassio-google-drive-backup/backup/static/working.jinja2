@@ -34,77 +34,73 @@
     </div>
   </div>
   <div id="snapshot-template" style="display: none">
-    <div class="snapshot-ui">
-      <div class="row" style="margin-bottom: 10px; margin-top: 10px;">
-        <div class="col s1 valign-wrapper"><i class="large material-icons" style="font-size: 30px;">archive</i></div>
-        <div class="col s11">
-          <div>
-            <span id="name" class="left truncate"></span>
-            <span class="right" style="font-weight: bold;">
-              <span id="status"></span>
-              <i class="material-icons small tooltipped" id="status-help" style="font-size: 15px; vertical-align: top"
-                data-position="left" data-tooltip="error">help</i>
-            </span>
-            <br />
-            <span class="left">Size: <span id="size"></span></span>
-            <br />
-            <a class='dropdown-trigger btn right waves-effect' href='#' data-target='action_dropdown'
-              id="action_dropdown_button" style="display: none;">
-              <i class="material-icons medium left">keyboard_arrow_down</i>
-              Actions
-            </a>
-            <br />
-            <a href="#" onclick="showDetails(this);return false;" id="status-details"><i class="material-icons left"
-                style="margin-right: 3px; font-size: 15px;">info</i></a>
-            <i class="material-icons left icon-protected tooltipped" data-position="right"
-              data-tooltip="This snapshot is password protected" style="margin-right: 3px; font-size: 15px;">vpn_key</i>
-            <i class="material-icons left icon-retain tooltipped" data-position="right"
-              data-tooltip="This snapshot will be kept indefinitely until you delete it."
-              style="margin-right: 3px; font-size: 15px;">lock</i>
-            <i class="material-icons left tooltipped icon-warn-delete yellow-text text-darken-4" data-position="right"
-              data-tooltip="" style="margin-right: 3px; font-size: 15px;">warning</i>
+    <div class="snapshot-ui col s12 m6 l4 xl3">
+      <div class="card">
+        <div class="card-content">
+          <a class="dropdown-trigger btn-flat waves-effect right" href="#" data-target="action_dropdown"
+             id="action_dropdown_button" style="display: none;">
+            <i class="material-icons">more_vert</i>
+          </a>
+
+          <div style="display: flex; align-items: center;">
+            <div class="archive-icon">
+              <i class="large material-icons" style="font-size: 30px;">archive</i>
+              <div class="archive-icon-info">
+                <i class="material-icons tiny icon-retain tooltipped red-text text-darken-4" data-position="bottom"
+                data-tooltip="This snapshot is kept indefinitely until you delete it.">lock</i>
+                <i class="material-icons tiny icon-warn-delete tooltipped yellow-text text-darken-4" data-position="bottom"
+                  data-tooltip="">warning</i>
+                <i class="material-icons tiny icon-protected tooltipped blue-text text-darken-4" data-position="bottom"
+                data-tooltip="This snapshot is password protected">vpn_key</i>
+              </div>
+            </div>
+            <div>
+              <h7 id="name" class="truncate" style="font-weight: 500;"></h7>
+              <div>
+                <span id="size"></span> - 
+                <span style="display: inline-flex; align-items: center;">
+                  <span id="status"></span>
+                  <i class="material-icons tooltipped tiny" id="status-help" style="margin-left: 2px;"
+                    data-position="bottom" data-tooltip="error">help</i>
+                </span>
+              </div>
+              <ul id='action_dropdown' class='dropdown-content'>
+                <li id="delete_option">
+                  <a href="#!" onclick="showDetails(this);return false;" id="status-details">
+                    <i class="material-icons left" style="font-size: 25px">info</i>Snapshot Details
+                  </a>
+                </li>
+                <li class="divider" tabindex="-1"></li>
+                <li id="delete_option">
+                  <a href="#!" id="delete_link" data-target="deletemodal" class="modal-trigger" onClick="renderDeleteDialog(this);return false;">
+                    <i class="material-icons left" style="font-size: 25px">delete_forever</i>Delete
+                  </a>
+                </li>
+                <li id="download_option">
+                  <a href="#!" id="download_link" onClick="downloadSnapshot(this);return false;">
+                    <i class="material-icons left" style="font-size: 25px">file_download</i>Download
+                  </a>
+                </li>
+                <li class="divider" tabindex="-1"></li>
+                <li id="restore_option">
+                  <a href="#!" onclick="restoreClick(this)" id="restore_link">
+                    <i class="material-icons left" style="font-size: 25px">input</i>Restore
+                  </a>
+                </li>
+                <li id="upload_option">
+                  <a href="#!" id="upload_link" data-target="uploadmodal" class="modal-trigger" onClick="uploadSnapshot(this);return false;">
+                    <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
+                  </a>
+                </li>
+                <li id="retain_option">
+                  <a href="#!" id="retain_link" onClick="retainSnapshot(this);return false;">
+                    <i class="material-icons left" style="font-size: 25px">lock</i>Never Delete
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
-          <ul id='action_dropdown' class='dropdown-content'>
-            <li id="delete_option">
-              <a href="#!" id="delete_link" data-target="deletemodal" class="modal-trigger tooltipped"
-                data-position="left" data-tooltip="Deletes the snapshot from Home Assistant, Google Drive, or both."
-                onClick="renderDeleteDialog(this);return false;">
-                <i class="material-icons left" style="font-size: 25px">delete_forever</i>Delete
-              </a>
-            </li>
-            <li id="download_option">
-              <a href="#!" id="download_link" class="tooltipped" data-position="left"
-                data-tooltip="Save the snapshot archive to your computer."
-                onClick="downloadSnapshot(this);return false;">
-                <i class="material-icons left" style="font-size: 25px">file_download</i>Download
-              </a>
-            </li>
-            <li class="divider" tabindex="-1"></li>
-            <li id="restore_option">
-              <a href="#!" onclick="restoreClick(this)" id="restore_link" class="tooltipped" data-position="left"
-                data-tooltip="Restore the snapshot, overwriting your current configuration with this archive's.">
-                <i class="material-icons left" style="font-size: 25px">input</i>Restore
-              </a>
-            </li>
-            <li id="upload_option">
-              <a href="#!" id="upload_link" data-target="uploadmodal" class="modal-trigger tooltipped"
-                data-position="left"
-                data-tooltip="Upload the snapshot from Google Drive to Home Assistant.  <br/>You'll need to do this if you want to restore the snapshot."
-                onClick="uploadSnapshot(this);return false;">
-                <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
-              </a>
-            </li>
-            <li id="retain_option">
-              <a href="#!" id="retain_link" class="tooltipped" data-position="left"
-                data-tooltip="Keep this snapshot indefinitely until you manually delete it."
-                onClick="retainSnapshot(this);return false;">
-                <i class="material-icons left" style="font-size: 25px">lock</i>Never Delete
-              </a>
-            </li>
-          </ul>
         </div>
-      </div>
-      <div class="divider">
       </div>
     </div>
   </div>
@@ -295,7 +291,7 @@
           </div>
           <div class="divider"></div>
         </div>
-        <div id="snapshots"></div>
+        <div id="snapshots" class="row"></div>
       </div>
   </main>
 {% endblock %}

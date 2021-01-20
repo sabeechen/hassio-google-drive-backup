@@ -131,10 +131,7 @@ class Model():
             # return the next snapshot after the delta
             next = self.time.toUtc(
                 time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
-        if next < now:
-            return now
-        else:
-            return next
+        return next
 
     def nextSnapshot(self, now: datetime):
         latest = max(self.snapshots.values(),

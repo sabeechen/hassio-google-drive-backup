@@ -142,3 +142,7 @@ body {
     position: relative;
     margin-right: 18px;
   }
+
+  .tabs {
+    background-color: transparent !important;
+  }

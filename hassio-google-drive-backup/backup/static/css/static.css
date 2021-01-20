@@ -140,11 +140,5 @@ body {
 
   .snapshot-ui .archive-icon {
     position: relative;
-    margin-right: 15px;
-  }
-
-  .snapshot-ui .archive-icon .archive-icon-info {
-    position: absolute;
-    bottom: -3px;
-    right: -6px;
+    margin-right: 18px;
   }

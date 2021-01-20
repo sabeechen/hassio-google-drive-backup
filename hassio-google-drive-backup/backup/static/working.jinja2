@@ -34,29 +34,26 @@
 </div>
 <div id="snapshot-template" style="display: none">
   <div class="snapshot-ui col s12 m12 l6 xl4">
-    <div class="card">
+    <div id="snapshot_card" onclick="showDetails(this);return false;" class="card">
       <div class="card-content">
-        <a class="dropdown-trigger btn-flat waves-effect right" href="#" data-target="action_dropdown"
-          id="action_dropdown_button" style="display: none;">
-          <i class="material-icons">more_vert</i>
-        </a>
-
         <div style="display: flex; align-items: center;">
           <div class="archive-icon">
             <i class="large material-icons" style="font-size: 30px;">archive</i>
-            <div class="archive-icon-info">
-              <i class="material-icons tiny icon-retain tooltipped red-text text-darken-4" data-position="bottom"
-                data-tooltip="This snapshot is kept indefinitely until you delete it.">lock</i>
-              <i class="material-icons tiny icon-warn-delete tooltipped yellow-text text-darken-4"
-                data-position="bottom" data-tooltip="">warning</i>
-              <i class="material-icons tiny icon-protected tooltipped blue-text text-darken-4" data-position="bottom"
-                data-tooltip="This snapshot is password protected">vpn_key</i>
-            </div>
           </div>
-          <div>
+          <div style="min-width: 0;">
             <h7 id="name" class="truncate" style="font-weight: 500;"></h7>
             <div>
-              <span id="size"></span> -
+              <i class="material-icons tiny icon-retain tooltipped red-text text-darken-4" data-position="bottom"
+                style="vertical-align: -2px;"
+                data-tooltip="This snapshot is kept indefinitely until you delete it.">lock</i>
+              <i class="material-icons tiny icon-warn-delete tooltipped yellow-text text-darken-4" data-position="bottom"
+                style="vertical-align: -2px;"
+                data-tooltip="">warning</i>
+              <i class="material-icons tiny icon-protected tooltipped blue-text text-darken-4" data-position="bottom"
+                style="vertical-align: -2px;"
+                data-tooltip="This snapshot is password protected">vpn_key</i>
+              <span id="size"></span>
+              -
               <span style="display: inline-flex; align-items: center;">
                 <span id="status"></span>
                 <i class="material-icons tooltipped tiny" id="status-help" style="margin-left: 2px;"
@@ -65,42 +62,6 @@
             </div>
             <div id="type"></div>
             <div id="createdAt"></div>
-            <ul id='action_dropdown' class='dropdown-content'>
-              <li id="delete_option">
-                <a href="#!" onclick="showDetails(this);return false;" id="status-details">
-                  <i class="material-icons left" style="font-size: 25px">info</i>Snapshot Details
-                </a>
-              </li>
-              <li class="divider" tabindex="-1"></li>
-              <li id="delete_option">
-                <a href="#!" id="delete_link" data-target="deletemodal" class="modal-trigger"
-                  onClick="renderDeleteDialog(this);return false;">
-                  <i class="material-icons left" style="font-size: 25px">delete_forever</i>Delete
-                </a>
-              </li>
-              <li id="download_option">
-                <a href="#!" id="download_link" onClick="downloadSnapshot(this);return false;">
-                  <i class="material-icons left" style="font-size: 25px">file_download</i>Download
-                </a>
-              </li>
-              <li class="divider" tabindex="-1"></li>
-              <li id="restore_option">
-                <a href="#!" onclick="restoreClick(this)" id="restore_link">
-                  <i class="material-icons left" style="font-size: 25px">input</i>Restore
-                </a>
-              </li>
-              <li id="upload_option">
-                <a href="#!" id="upload_link" data-target="uploadmodal" class="modal-trigger"
-                  onClick="uploadSnapshot(this);return false;">
-                  <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
-                </a>
-              </li>
-              <li id="retain_option">
-                <a href="#!" id="retain_link" onClick="retainSnapshot(this);return false;">
-                  <i class="material-icons left" style="font-size: 25px">lock</i>Never Delete
-                </a>
-              </li>
-            </ul>
           </div>
         </div>
       </div>
@@ -144,10 +105,10 @@
               maintained by the developer. This is completely optional, but helps give him a heads up for problems
               with new releases and aids in providing better help messages when things go wrong. If you're unsure,
               just select "No". You can always change this in the settings menu up on the top right of the page.</p>
-            <div class="card-action white-text">
-              <a target="_blank" class="waves-effect btn" onClick="errorReports('true');">Yes</a>
-              <a target="_blank" class="waves-effect btn" onClick="errorReports('false');">No</a>
-            </div>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="waves-effect btn-flat" onClick="errorReports('true');">Yes</a>
+            <a target="_blank" class="waves-effect btn-flat" onClick="errorReports('false');">No</a>
           </div>
         </div>
         
@@ -174,10 +135,10 @@
             <p>You can change this option any time from the settings menu. No matter which you choose, the interface
               will be available through ingress.</p>
             <br />
-            <div class="card-action white-text">
-              <a target="_blank" class="waves-effect btn" onClick="exposeServer('false');">Yes</a>
-              <a target="_blank" class="waves-effect btn" onClick="exposeServer('true');">No</a>
-            </div>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="waves-effect btn-flat" onClick="exposeServer('false');">Yes</a>
+            <a target="_blank" class="waves-effect btn-flat" onClick="exposeServer('true');">No</a>
           </div>
         </div>
         
@@ -191,14 +152,13 @@
               Assistant Web-UI the direct link may not work, so you'll just have to navigate there.</p>
           </div>
           <div class="card-action">
-            <a target="_blank" id="restore_hard_link" class="waves-effect btn" href="">Open
-              Snapshots</a>
-            <a target="_blank" class="waves-effect btn modal-close"
+            <a target="_blank" id="restore_hard_link" class="waves-effect btn-flat" href="">Open Snapshots</a>
+            <a target="_blank" class="waves-effect btn-flat modal-close"
               onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
           </div>
         </div>
 
-        <div class="default-hidden" id="no_snapshots_block">
+        <div class="default-hidden1" id="no_snapshots_block">
           <div class="row">
             <div class='col s1'></div>
             <div class='col s2 valign-wrapper center'>

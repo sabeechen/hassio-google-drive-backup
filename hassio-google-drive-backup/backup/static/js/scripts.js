@@ -84,9 +84,15 @@ function doUpload(slug, name) {
 
 function showDetails(target) {
   var snapshot = $(target).data('snapshot');
+  if (snapshot.isPending) {
+    return;
+  }
+
   var details = snapshot.details;
-  console.log(details)
+  // console.log(details)
   $("#details_name").html(snapshot.name);
+  $("#details_name").attr("title", snapshot.name);
+
   $("#details_date").html(snapshot.date);
   $("#details_type").html(snapshot.type);
   if (snapshot.protected) {
@@ -123,6 +129,23 @@ function showDetails(target) {
     $("#details_folders_and_addons").hide();
     $("#details_upload_reminder").show();
   }
+
+  if (snapshot.restorable) {
+    $("#restore_link").show();
+  } else {
+    $("#restore_link").hide();
+  }
+
+  if (snapshot.uploadable) {
+    $("#upload_link").show();
+  } else {
+    $("#upload_link").hide();
+  }
+
+  $("#delete_link").data('snapshot', snapshot);
+  $("#upload_link").data('snapshot', snapshot);
+  $("#download_link").data('snapshot', snapshot);
+  $("#retain_link").data('snapshot', snapshot);
 
   M.Modal.getInstance(document.querySelector('#details_modal')).open();
 }
@@ -428,21 +451,12 @@ function processSnapshotsUpdate(data) {
         template.addClass("slug" + snapshot.slug);
         template.addClass("active-snapshot");
         template.data("slug", snapshot.slug);
-        var dropdown = $("#action_dropdown", template);
-        dropdown.attr("id", "action_dropdown" + snapshot.slug);
-        $("#action_dropdown_button", template).attr("data-target", "action_dropdown" + snapshot.slug);
-        $("#action_dropdown_button", template).attr('id', "action_dropdown_button" + snapshot.slug);
-
         $("#delete_link", template).attr('id', "delete_link" + snapshot.slug);
-        $("#restore_link", template).attr('id', "restore_link" + snapshot.slug);
+        $("#restore_link", template).attr('id', "restore_option" + snapshot.slug);
         $("#upload_link", template).attr('id', "upload_link" + snapshot.slug);
         $("#download_link", template).attr('id', "download_link" + snapshot.slug);
         $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
-        $("#delete_option", template).attr('id', "delete_option" + snapshot.slug);
-        $("#restore_option", template).attr('id', "restore_option" + snapshot.slug);
-        $("#upload_option", template).attr('id', "upload_option" + snapshot.slug);
-        $("#download_option", template).attr('id', "download_option" + snapshot.slug);
-        $("#retain_option", template).attr('id', "retain_option" + snapshot.slug);
+        $("#snapshot_card", template).attr('id', "snapshot_card" + snapshot.slug);
         isNew = true;
       }
 
@@ -505,36 +519,16 @@ function processSnapshotsUpdate(data) {
 
       if (isNew) {
         snapshot_div.prepend(template);
-        var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
-        var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
       }
 
       if (snapshot.isPending) {
-        $("#action_dropdown_button" + snapshot.slug).hide();
+        $("#snapshot_card" + snapshot.slug).css("cursor", "auto");
       } else {
-        $("#action_dropdown_button" + snapshot.slug).show();
+        $("#snapshot_card" + snapshot.slug).css("cursor", "pointer");
       }
 
-      if (snapshot.restorable) {
-        $("#restore_option" + snapshot.slug).show();
-      } else {
-        $("#restore_option" + snapshot.slug).hide();
-      }
-
-      if (snapshot.uploadable) {
-        $("#upload_option" + snapshot.slug).show();
-      } else {
-        $("#upload_option" + snapshot.slug).hide();
-      }
-
-      $("#status-details", template).data('snapshot', snapshot)
-
-      // Set up context menu
-      $("#delete_link" + snapshot.slug).data('snapshot', snapshot);
-      //$("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
-      $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
-      $("#download_link" + snapshot.slug).data('snapshot', snapshot);
-      $("#retain_link" + snapshot.slug).data('snapshot', snapshot);
+      // Set up context
+      $("#snapshot_card" + snapshot.slug).data('snapshot', snapshot)
     }
   }
 

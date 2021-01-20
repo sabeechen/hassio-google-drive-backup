@@ -1,4 +1,3 @@
-{% import "layouts/macros.jinja2" as macros %}
 {% extends "layouts/base.jinja2" %}
 
 {% block head %}
@@ -34,7 +33,7 @@
   </div>
 </div>
 <div id="snapshot-template" style="display: none">
-  <div class="snapshot-ui col s12 m6 l4 xl3">
+  <div class="snapshot-ui col s12 m12 l6 xl4">
     <div class="card">
       <div class="card-content">
         <a class="dropdown-trigger btn-flat waves-effect right" href="#" data-target="action_dropdown"
@@ -106,14 +105,37 @@
     </div>
   </div>
 </div>
-<div class='error' style='display:none' id="toast">You shouldn't see this</div>
-<main style="margin: 0 1rem;">
-  <div class="section">
-    {% include 'layouts/partials/error-messages.jinja2' %}
 
-    <div class="row default-hidden" id="error_reports_card">
-      <div class="col s12 m9">
-        <div class="card">
+<div class='error' style='display:none' id="toast">You shouldn't see this</div>
+
+<main style="margin: 0 1rem;">
+  <div style="margin: 20px auto; max-width: 1400px;">
+    <div class="row" style="margin-bottom: 0;">
+      <div class="col s12 m5 l4 xl3">
+        <h5>Snapshots Statistics</h5>
+        <div style="margin-top: 20px;">
+          <div id="sources">
+          </div>
+          <div class="divider"></div>
+          <p style="display: flex; align-items: center;">
+            <i class="material-icons" style="margin-right: 6px;">timer</i>
+            <span>
+              Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 500;"></time>
+            </span>
+          </p>
+          <p style="display: flex; align-items: center;">
+            <i class="material-icons" style="margin-right: 6px;">update</i>
+            <span>
+              Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 500;"></time>
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div class="col s12 m7 l8 xl9">
+        {% include 'layouts/partials/error-messages.jinja2' %}
+
+        <div class="card default-hidden" id="error_reports_card">
           <div class="card-content">
             <span class="card-title">Share Error Reports?</span>
             <p>If you select yes the text of unexpected exceptions this add-on produces will be sent to a server
@@ -126,11 +148,8 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="row default-hidden" id="ingress_upgrade_card">
-      <div class="col s12 m9">
-        <div class="card">
+        
+        <div class="card default-hidden" id="ingress_upgrade_card">
           <div class="card-content">
             <span class="card-title">Use Ingress instead?</span>
             <p>The latest version of this add-on supports <a target="_blank" rel="noreferrer"
@@ -159,11 +178,8 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="row default-hidden" id="restore_help_card">
-      <div class="col s12 m9">
-        <div class="card">
+        
+        <div class="card default-hidden" id="restore_help_card">
           <div class="card-content">
             <span class="card-title">Restore a Snapshot</span>
             <p>Snapshots must be restored through the supervisor Snapshots page. You can restore a snapshot by
@@ -179,60 +195,36 @@
               onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="row" style="margin-bottom: 0;">
-      <div class="col s12 m5 l4 xl3">
-        <h5>Snapshots Statistics</h5>
-        <div style="margin-top: 20px;">
-          <div id="sources">
+
+        <div class="default-hidden" id="no_snapshots_block">
+          <div class="row">
+            <div class='col s1'></div>
+            <div class='col s2 valign-wrapper center'>
+              <i class='red-text text-darken-4 material-icons' style="font-size: 90px">block</i>
+            </div>
+            <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
+              <p>You don't have any snapshots in Google Drive or Home Assistant. Use the "Actions" menu up top
+                create a snapshot and start backing up.</p>
+            </div>
           </div>
           <div class="divider"></div>
-          <p style="display: flex; align-items: center;">
-            <i class="material-icons" style="margin-right: 6px;">timer</i>
-            <span>
-              Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 500;"></time>
-            </span>
-          </p>
-          <p style="display: flex; align-items: center;">
-            <i class="material-icons" style="margin-right: 6px;">update</i>
-            <span>
-              Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 500;"></time>
-            </span>
-          </p>
         </div>
+        <div id="snapshots_loading">
+          <div class="row">
+            <div class='col s1'></div>
+            <div class='col s2 valign-wrapper center'>
+              <i class='material-icons' style="font-size: 90px">refresh</i>
+            </div>
+            <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
+              <p>Waiting for snapshots to load. If you don't see this go away soon, make sure the add-on is still
+                running. Info on this page may be stale until then.</p>
+            </div>
+          </div>
+          <div class="divider"></div>
+        </div>
+        <div id="snapshots" class="row"></div>
       </div>
     </div>
-  </div>
-
-  <div class="section">
-    <div class="default-hidden" id="no_snapshots_block">
-      <div class="row">
-        <div class='col s1'></div>
-        <div class='col s2 valign-wrapper center'>
-          <i class='red-text text-darken-4 material-icons' style="font-size: 90px">block</i>
-        </div>
-        <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
-          <p>You don't have any snapshots in Google Drive or Home Assistant. Use the "Actions" menu up top
-            create a snapshot and start backing up.</p>
-        </div>
-      </div>
-      <div class="divider"></div>
-    </div>
-    <div id="snapshots_loading">
-      <div class="row">
-        <div class='col s1'></div>
-        <div class='col s2 valign-wrapper center'>
-          <i class='material-icons' style="font-size: 90px">refresh</i>
-        </div>
-        <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
-          <p>Waiting for snapshots to load. If you don't see this go away soon, make sure the add-on is still
-            running. Info on this page may be stale until then.</p>
-        </div>
-      </div>
-      <div class="divider"></div>
-    </div>
-    <div id="snapshots" class="row"></div>
   </div>
 </main>
 {% endblock %}

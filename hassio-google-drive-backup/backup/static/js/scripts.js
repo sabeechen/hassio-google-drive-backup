@@ -447,6 +447,8 @@ function processSnapshotsUpdate(data) {
       }
 
       $("#size", template).html(snapshot['size']);
+      $("#type", template).html(snapshot['type'] === "full" ? "Full snapshot" : "Partial snapshot");
+      $("#createdAt", template).html(snapshot['createdAt']);
       $("#name", template).html(snapshot['name']);
       $("#status", template).html(snapshot['status']);
 

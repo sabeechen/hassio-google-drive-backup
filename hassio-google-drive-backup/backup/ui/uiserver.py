@@ -176,6 +176,7 @@ class UiServer(Trigger, Startable):
             'size': snapshot.sizeString(),
             'status': snapshot.status(),
             'date': self._time.toLocal(snapshot.date()).strftime("%c"),
+            'createdAt': self._time.formatDelta(snapshot.date()),
             'isPending': ha is not None and type(ha) is PendingSnapshot,
             'protected': snapshot.protected(),
             'type': snapshot.snapshotType(),

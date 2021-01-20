@@ -80,6 +80,8 @@ body {
   nav .brand-logo {
     display: flex;
     align-items: center;
+    white-space: nowrap;
+    height: 100%;
   }
 
   nav .brand-logo img {

@@ -4,7 +4,13 @@
     <div class="nav-wrapper">
       <a class="brand-logo">
         <img src="/static/images/logo.png" width=40 height=40 />
-        <span>{{ title }}</span>
+        <span class="hide-on-small-only">
+          {% if title %}
+          {{ title }}
+          {% else %}
+          <span class="hide-on-med-and-down">Home Assistant</span> Google Drive Backup
+          {% endif %}
+        </span>
       </a>
       {{ caller() }}
     </div>

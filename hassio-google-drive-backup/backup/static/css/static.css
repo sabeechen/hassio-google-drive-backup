@@ -127,12 +127,14 @@ body {
     padding: 0 18px;
   }
 
-  .card .card-action a {
+  .card .card-action a,
+  .btn-flat {
     color: var(--mdc-theme-primary) !important;
     font-weight: 500;
   }
 
-  .card .card-action a .waves-ripple {
+  .card .card-action a.waves-effect .waves-ripple,
+  .btn-flat.waves-effect .waves-ripple {
      background-color: var(--mdc-theme-primary-ripple);
   }
 

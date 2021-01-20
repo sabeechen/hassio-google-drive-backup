@@ -664,8 +664,6 @@ function processStatusUpdate(data) {
 
   last_data = data;
   
-  snapshotNameOneOffExample();
-
   $('.tooltipped').tooltip({ "exitDelay": 1000 });
   if (error_toast != null) {
     error_toast.dismiss();
@@ -717,6 +715,14 @@ function stopSimulateError() {
     })
 }
 
+function newSnapshotClick() {
+  setInputValue("retain_drive_one_off", false);
+  setInputValue("retain_ha_one_off", false);
+  setInputValue("snapshot_name_one_off", "");
+  snapshotNameOneOffExample();
+  M.Modal.getInstance(document.querySelector('#snapshotmodal')).open();
+}
+
 function doNewSnapshot() {
   var drive = $("#retain_drive_one_off").prop('checked');
   var ha = $("#retain_ha_one_off").prop('checked');
@@ -725,7 +731,6 @@ function doNewSnapshot() {
   postJson(url, {}, refreshstats, null, "Requesting snapshot (takes a few seconds)...");
   return false;
 }
-
 
 function allowDeletion(always) {
   var url = "confirmdelete?always=" + always;
@@ -753,10 +758,6 @@ $(document).ready(function () {
     $(".nav-wrapper .brand-logo").addClass("hide-on-med-and-down")
   }
   M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
-
-  setInputValue("retain_drive_one_off", false);
-  setInputValue("retain_ha_one_off", false);
-  setInputValue("snapshot_name_one_off", "");
 });
 
 

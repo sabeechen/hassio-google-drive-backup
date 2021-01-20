@@ -2,296 +2,237 @@
 {% extends "layouts/base.jinja2" %}
 
 {% block head %}
-  {{ super() }}
-  <script type="text/javascript">
-    $(document).ready(function () {
-      processStatusUpdate(bootstrap_update_data);
-      // Every 5 seconds, refresh the metrics form the server.
-      window.setInterval(refreshstats, 5000);
-    });
-  </script>
+{{ super() }}
+<script type="text/javascript">
+  $(document).ready(function () {
+    processStatusUpdate(bootstrap_update_data);
+    // Every 5 seconds, refresh the metrics form the server.
+    window.setInterval(refreshstats, 5000);
+  });
+</script>
 {% endblock %}
 
 {% block content %}
-  <div id="source-template" style="display: none;">
-    <div class="source-ui">
-      <h6 style="display: flex; align-items: center; margin-top: 0;">
-        <i class="source_icon material-icons" style="margin-right: 6px; color: var(--mdc-theme-primary)"></i>
-        <span>
-          <b class="source_snapshot_count"></b>
-          <span class="source_title"></span>
-        </span>
-      </h6>
-      <ul class="browser-default">
-        <li class="source_retain_label">
-          <span class="source_retain_count"></span> saved indefinitely
-        </li>
-        <li class="source_free_space">
-          <span class="source_free_space_text"></span>
-          <i class="source_free_space_tooltip tooltipped material-icons tiny">info</i>
-        </li>
-      </ul>
-    </div>
+<div id="source-template" style="display: none;">
+  <div class="source-ui">
+    <h6 style="display: flex; align-items: center; margin-top: 0;">
+      <i class="source_icon material-icons" style="margin-right: 6px; color: var(--mdc-theme-primary)"></i>
+      <span>
+        <b class="source_snapshot_count"></b>
+        <span class="source_title"></span>
+      </span>
+    </h6>
+    <ul class="browser-default">
+      <li class="source_retain_label">
+        <span class="source_retain_count"></span> saved indefinitely
+      </li>
+      <li class="source_free_space">
+        <span class="source_free_space_text"></span>
+        <i class="source_free_space_tooltip tooltipped material-icons tiny">info</i>
+      </li>
+    </ul>
   </div>
-  <div id="snapshot-template" style="display: none">
-    <div class="snapshot-ui col s12 m6 l4 xl3">
-      <div class="card">
-        <div class="card-content">
-          <a class="dropdown-trigger btn-flat waves-effect right" href="#" data-target="action_dropdown"
-             id="action_dropdown_button" style="display: none;">
-            <i class="material-icons">more_vert</i>
-          </a>
+</div>
+<div id="snapshot-template" style="display: none">
+  <div class="snapshot-ui col s12 m6 l4 xl3">
+    <div class="card">
+      <div class="card-content">
+        <a class="dropdown-trigger btn-flat waves-effect right" href="#" data-target="action_dropdown"
+          id="action_dropdown_button" style="display: none;">
+          <i class="material-icons">more_vert</i>
+        </a>
 
-          <div style="display: flex; align-items: center;">
-            <div class="archive-icon">
-              <i class="large material-icons" style="font-size: 30px;">archive</i>
-              <div class="archive-icon-info">
-                <i class="material-icons tiny icon-retain tooltipped red-text text-darken-4" data-position="bottom"
+        <div style="display: flex; align-items: center;">
+          <div class="archive-icon">
+            <i class="large material-icons" style="font-size: 30px;">archive</i>
+            <div class="archive-icon-info">
+              <i class="material-icons tiny icon-retain tooltipped red-text text-darken-4" data-position="bottom"
                 data-tooltip="This snapshot is kept indefinitely until you delete it.">lock</i>
-                <i class="material-icons tiny icon-warn-delete tooltipped yellow-text text-darken-4" data-position="bottom"
-                  data-tooltip="">warning</i>
-                <i class="material-icons tiny icon-protected tooltipped blue-text text-darken-4" data-position="bottom"
+              <i class="material-icons tiny icon-warn-delete tooltipped yellow-text text-darken-4"
+                data-position="bottom" data-tooltip="">warning</i>
+              <i class="material-icons tiny icon-protected tooltipped blue-text text-darken-4" data-position="bottom"
                 data-tooltip="This snapshot is password protected">vpn_key</i>
-              </div>
             </div>
+          </div>
+          <div>
+            <h7 id="name" class="truncate" style="font-weight: 500;"></h7>
             <div>
-              <h7 id="name" class="truncate" style="font-weight: 500;"></h7>
-              <div>
-                <span id="size"></span> - 
-                <span style="display: inline-flex; align-items: center;">
-                  <span id="status"></span>
-                  <i class="material-icons tooltipped tiny" id="status-help" style="margin-left: 2px;"
-                    data-position="bottom" data-tooltip="error">help</i>
-                </span>
-              </div>
-              <ul id='action_dropdown' class='dropdown-content'>
-                <li id="delete_option">
-                  <a href="#!" onclick="showDetails(this);return false;" id="status-details">
-                    <i class="material-icons left" style="font-size: 25px">info</i>Snapshot Details
-                  </a>
-                </li>
-                <li class="divider" tabindex="-1"></li>
-                <li id="delete_option">
-                  <a href="#!" id="delete_link" data-target="deletemodal" class="modal-trigger" onClick="renderDeleteDialog(this);return false;">
-                    <i class="material-icons left" style="font-size: 25px">delete_forever</i>Delete
-                  </a>
-                </li>
-                <li id="download_option">
-                  <a href="#!" id="download_link" onClick="downloadSnapshot(this);return false;">
-                    <i class="material-icons left" style="font-size: 25px">file_download</i>Download
-                  </a>
-                </li>
-                <li class="divider" tabindex="-1"></li>
-                <li id="restore_option">
-                  <a href="#!" onclick="restoreClick(this)" id="restore_link">
-                    <i class="material-icons left" style="font-size: 25px">input</i>Restore
-                  </a>
-                </li>
-                <li id="upload_option">
-                  <a href="#!" id="upload_link" data-target="uploadmodal" class="modal-trigger" onClick="uploadSnapshot(this);return false;">
-                    <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
-                  </a>
-                </li>
-                <li id="retain_option">
-                  <a href="#!" id="retain_link" onClick="retainSnapshot(this);return false;">
-                    <i class="material-icons left" style="font-size: 25px">lock</i>Never Delete
-                  </a>
-                </li>
-              </ul>
+              <span id="size"></span> -
+              <span style="display: inline-flex; align-items: center;">
+                <span id="status"></span>
+                <i class="material-icons tooltipped tiny" id="status-help" style="margin-left: 2px;"
+                  data-position="bottom" data-tooltip="error">help</i>
+              </span>
             </div>
+            <ul id='action_dropdown' class='dropdown-content'>
+              <li id="delete_option">
+                <a href="#!" onclick="showDetails(this);return false;" id="status-details">
+                  <i class="material-icons left" style="font-size: 25px">info</i>Snapshot Details
+                </a>
+              </li>
+              <li class="divider" tabindex="-1"></li>
+              <li id="delete_option">
+                <a href="#!" id="delete_link" data-target="deletemodal" class="modal-trigger"
+                  onClick="renderDeleteDialog(this);return false;">
+                  <i class="material-icons left" style="font-size: 25px">delete_forever</i>Delete
+                </a>
+              </li>
+              <li id="download_option">
+                <a href="#!" id="download_link" onClick="downloadSnapshot(this);return false;">
+                  <i class="material-icons left" style="font-size: 25px">file_download</i>Download
+                </a>
+              </li>
+              <li class="divider" tabindex="-1"></li>
+              <li id="restore_option">
+                <a href="#!" onclick="restoreClick(this)" id="restore_link">
+                  <i class="material-icons left" style="font-size: 25px">input</i>Restore
+                </a>
+              </li>
+              <li id="upload_option">
+                <a href="#!" id="upload_link" data-target="uploadmodal" class="modal-trigger"
+                  onClick="uploadSnapshot(this);return false;">
+                  <i class="material-icons left" style="font-size: 25px">file_upload</i>Upload
+                </a>
+              </li>
+              <li id="retain_option">
+                <a href="#!" id="retain_link" onClick="retainSnapshot(this);return false;">
+                  <i class="material-icons left" style="font-size: 25px">lock</i>Never Delete
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <div class='error' style='display:none' id="toast">You shouldn't see this</div>
-  <main style="margin: 0 1rem;">
-      <div class="section">
-        {% include 'layouts/partials/error-messages.jinja2' %}
+</div>
+<div class='error' style='display:none' id="toast">You shouldn't see this</div>
+<main style="margin: 0 1rem;">
+  <div class="section">
+    {% include 'layouts/partials/error-messages.jinja2' %}
 
-        <div class="row default-hidden" id="error_reports_card">
-          <div class="col s12 m9">
-            <div class="card">
-              <div class="card-content">
-                <span class="card-title">Share Error Reports?</span>
-                <p>If you select yes the text of unexpected exceptions this add-on produces will be sent to a server
-                  maintained by the developer. This is completely optional, but helps give him a heads up for problems
-                  with new releases and aids in providing better help messages when things go wrong. If you're unsure,
-                  just select "No". You can always change this in the settings menu up on the top right of the page.</p>
-                <div class="card-action white-text">
-                  <a target="_blank" class="waves-effect btn" onClick="errorReports('true');">Yes</a>
-                  <a target="_blank" class="waves-effect btn" onClick="errorReports('false');">No</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="row default-hidden" id="ingress_upgrade_card">
-          <div class="col s12 m9">
-            <div class="card">
-              <div class="card-content">
-                <span class="card-title">Use Ingress instead?</span>
-                <p>The latest version of this add-on supports <a target="_blank" rel="noreferrer"
-                    href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>. Ingress allows
-                  this web interface to be embeeded inside of Home Assistant, which is usually more secure because it
-                  delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and
-                  username/password). Currently this interface is being served on an additional port outside of
-                  Home Assistant which is less secure.</p>
-                <br />
-                <p><b>Select YES</b> to only use ingress to access this interface. This is recommended, as ingress is
-                  almost always more secure.
-                  In the future you can access this interface by following the "WEB UI" link from the add-on
-                  installation page or embedding it in
-                  your Home Assistant side-bar from the same place.</p>
-                <br />
-                <p><b>Select NO</b> to continue exposing a web interface on an open port with the SSL and authentication
-                  settings you choose. The port, which defaults to 1627, can be changed form the add-on page in Home
-                  Assistant.</p>
-                <br />
-                <p>You can change this option any time from the settings menu. No matter which you choose, the interface
-                  will be available through ingress.</p>
-                <br />
-                <div class="card-action white-text">
-                  <a target="_blank" class="waves-effect btn"
-                    onClick="exposeServer('false');">Yes</a>
-                  <a target="_blank" class="waves-effect btn" onClick="exposeServer('true');">No</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="row default-hidden" id="restore_help_card">
-          <div class="col s12 m9">
-            <div class="card">
-              <div class="card-content">
-                <span class="card-title">Restore a Snapshot</span>
-                <p>Snapshots must be restored through the supervisor Snapshots page. You can restore a snapshot by
-                  navigating to
-                  "Supervisor" &gt; "Snapshots" from the Home Assistant Web-UI,
-                  or by clicking the button below to navigate there by a direct link. Depending on how you access the Home
-                  Assistant Web-UI the direct link may not work, so you'll just have to navigate there.</p>
-              </div>
-              <div class="card-action">
-                <a target="_blank" id="restore_hard_link" class="waves-effect btn" href="">Open
-                  Snapshots</a>
-                <a target="_blank" class="waves-effect btn modal-close"
-                  onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="row" style="margin-bottom: 0;">
-          {% if coordEnabled %}
-          <div class="col s12 m7 l8 xl9">
-            <h5>New Snapshot</h5>
-            <div class="row" style="margin-bottom: 10px;">
-              <div class="col s11">
-                  Create a new snapshot immediately, using the settings you've configured for the automatic snapshots
-                  (eg full/partial, password, etc).
-              </div>
-            </div>
-            <div class="row" style="margin-bottom: 0;">
-              <div class="col m12 l10 xl8">
-                <div class="card">
-                  <div class="card-content" style="padding: 6px 12px 24px 12px;">
-                    <form>
-                      <div class="row" style="margin-bottom: 0;">
-                        <div class="input-field col s12">
-                          <i class="material-icons prefix">label_outline</i>
-                          <input type="text" id="snapshot_name_one_off" name="snapshot_name_one_off" class="validate"
-                            onkeyup="snapshotNameOneOffExample()" />
-                          <label for="snapshot_name_one_off">Snapshot Name</label>
-                          <span class="helper-text">The name to use for this snapshot, or leave it blank to use the default naming
-                            scheme. Optionally you can use template variables.
-                            <a target="_blank" rel="noreferrer" href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">
-                              See here
-                            </a>
-                            for a list of all available options.
-                            <div style="margin-top: 10px;">
-                              Your snapshots name will look something like:
-                              <br />
-                              <b id="snapshot_name_example_one_off"></b>
-                            </div>
-                          </span>
-                        </div>
-                      </div>
-                      <div class="row" style="margin-left: -2px">
-                        <div class="col s12">
-                          <label>
-                            <input type="checkbox" name="retain_drive_one_off" id="retain_drive_one_off"
-                              class="filled-in checkbox-ha" />
-                            <span>Keep indefinitely in Google Drive</span>
-                          </label>
-                          <br />
-                          <label>
-                            <input type="checkbox" name="retain_ha_one_off" id="retain_ha_one_off" class="filled-in checkbox-ha" />
-                            <span>Keep indefinitely in Home Assistant</span>
-                          </label>
-                        </div>
-                      </div>
-                    </form>
-                    <p style="margin-left: 10px; font-size: 12px;">These options will only apply to this one-off snapshot.</p>
-                  </div>
-                  <div class="card-action" style="padding: 12px;">
-                    <a href="#!" class="waves-effect btn-flat" id="create_snapshot_button"
-                       onclick="doNewSnapshot(); return false;">Create Snapshot</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-          <div class="col s12 m5 l4 xl3">
-            <h5>Snapshots Statistics</h5>
-            <div style="margin-top: 20px;">
-              <div id="sources">
-              </div>
-              <div class="divider"></div>
-              <p style="display: flex; align-items: center;">
-                <i class="material-icons" style="margin-right: 6px;">timer</i>
-                <span>
-                  Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 500;"></time>
-                </span>
-              </p>
-              <p style="display: flex; align-items: center;">
-                <i class="material-icons" style="margin-right: 6px;">update</i>
-                <span>
-                  Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 500;"></time>
-                </span>
-              </p>
+    <div class="row default-hidden" id="error_reports_card">
+      <div class="col s12 m9">
+        <div class="card">
+          <div class="card-content">
+            <span class="card-title">Share Error Reports?</span>
+            <p>If you select yes the text of unexpected exceptions this add-on produces will be sent to a server
+              maintained by the developer. This is completely optional, but helps give him a heads up for problems
+              with new releases and aids in providing better help messages when things go wrong. If you're unsure,
+              just select "No". You can always change this in the settings menu up on the top right of the page.</p>
+            <div class="card-action white-text">
+              <a target="_blank" class="waves-effect btn" onClick="errorReports('true');">Yes</a>
+              <a target="_blank" class="waves-effect btn" onClick="errorReports('false');">No</a>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="section">
-        <div class="default-hidden" id="no_snapshots_block">
-          <div class="row">
-            <div class='col s1'></div>
-            <div class='col s2 valign-wrapper center'>
-              <i class='red-text text-darken-4 material-icons' style="font-size: 90px">block</i>
-            </div>
-            <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
-              <p>You don't have any snapshots in Google Drive or Home Assistant. Use the "Actions" menu up top
-                create a snapshot and start backing up.</p>
+    </div>
+    <div class="row default-hidden" id="ingress_upgrade_card">
+      <div class="col s12 m9">
+        <div class="card">
+          <div class="card-content">
+            <span class="card-title">Use Ingress instead?</span>
+            <p>The latest version of this add-on supports <a target="_blank" rel="noreferrer"
+                href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>. Ingress allows
+              this web interface to be embeeded inside of Home Assistant, which is usually more secure because it
+              delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and
+              username/password). Currently this interface is being served on an additional port outside of
+              Home Assistant which is less secure.</p>
+            <br />
+            <p><b>Select YES</b> to only use ingress to access this interface. This is recommended, as ingress is
+              almost always more secure.
+              In the future you can access this interface by following the "WEB UI" link from the add-on
+              installation page or embedding it in
+              your Home Assistant side-bar from the same place.</p>
+            <br />
+            <p><b>Select NO</b> to continue exposing a web interface on an open port with the SSL and authentication
+              settings you choose. The port, which defaults to 1627, can be changed form the add-on page in Home
+              Assistant.</p>
+            <br />
+            <p>You can change this option any time from the settings menu. No matter which you choose, the interface
+              will be available through ingress.</p>
+            <br />
+            <div class="card-action white-text">
+              <a target="_blank" class="waves-effect btn" onClick="exposeServer('false');">Yes</a>
+              <a target="_blank" class="waves-effect btn" onClick="exposeServer('true');">No</a>
             </div>
           </div>
-          <div class="divider"></div>
         </div>
-        <div id="snapshots_loading">
-          <div class="row">
-            <div class='col s1'></div>
-            <div class='col s2 valign-wrapper center'>
-              <i class='material-icons' style="font-size: 90px">refresh</i>
-            </div>
-            <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
-              <p>Waiting for snapshots to load. If you don't see this go away soon, make sure the add-on is still
-                running. Info on this page may be stale until then.</p>
-            </div>
-          </div>
-          <div class="divider"></div>
-        </div>
-        <div id="snapshots" class="row"></div>
       </div>
-  </main>
+    </div>
+    <div class="row default-hidden" id="restore_help_card">
+      <div class="col s12 m9">
+        <div class="card">
+          <div class="card-content">
+            <span class="card-title">Restore a Snapshot</span>
+            <p>Snapshots must be restored through the supervisor Snapshots page. You can restore a snapshot by
+              navigating to
+              "Supervisor" &gt; "Snapshots" from the Home Assistant Web-UI,
+              or by clicking the button below to navigate there by a direct link. Depending on how you access the Home
+              Assistant Web-UI the direct link may not work, so you'll just have to navigate there.</p>
+          </div>
+          <div class="card-action">
+            <a target="_blank" id="restore_hard_link" class="waves-effect btn" href="">Open
+              Snapshots</a>
+            <a target="_blank" class="waves-effect btn modal-close"
+              onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom: 0;">
+      <div class="col s12 m5 l4 xl3">
+        <h5>Snapshots Statistics</h5>
+        <div style="margin-top: 20px;">
+          <div id="sources">
+          </div>
+          <div class="divider"></div>
+          <p style="display: flex; align-items: center;">
+            <i class="material-icons" style="margin-right: 6px;">timer</i>
+            <span>
+              Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 500;"></time>
+            </span>
+          </p>
+          <p style="display: flex; align-items: center;">
+            <i class="material-icons" style="margin-right: 6px;">update</i>
+            <span>
+              Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 500;"></time>
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="default-hidden" id="no_snapshots_block">
+      <div class="row">
+        <div class='col s1'></div>
+        <div class='col s2 valign-wrapper center'>
+          <i class='red-text text-darken-4 material-icons' style="font-size: 90px">block</i>
+        </div>
+        <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
+          <p>You don't have any snapshots in Google Drive or Home Assistant. Use the "Actions" menu up top
+            create a snapshot and start backing up.</p>
+        </div>
+      </div>
+      <div class="divider"></div>
+    </div>
+    <div id="snapshots_loading">
+      <div class="row">
+        <div class='col s1'></div>
+        <div class='col s2 valign-wrapper center'>
+          <i class='material-icons' style="font-size: 90px">refresh</i>
+        </div>
+        <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
+          <p>Waiting for snapshots to load. If you don't see this go away soon, make sure the add-on is still
+            running. Info on this page may be stale until then.</p>
+        </div>
+      </div>
+      <div class="divider"></div>
+    </div>
+    <div id="snapshots" class="row"></div>
+  </div>
+</main>
 {% endblock %}

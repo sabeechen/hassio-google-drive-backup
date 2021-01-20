@@ -2,6 +2,7 @@
 
 {% if coordEnabled %}
 {% include 'layouts/partials/modals/snapshot/delete.jinja2' %}
+{% include 'layouts/partials/modals/snapshot/new.jinja2' %}
 {% include 'layouts/partials/modals/snapshot/retain.jinja2' %}
 {% include 'layouts/partials/modals/snapshot/upload.jinja2' %}
 {% include 'layouts/partials/modals/snapshot/restore.jinja2' %}
@@ -17,6 +18,7 @@
 <script type="text/javascript">
   $(document).ready(function () {
     $('#deletemodal').modal();
+    $('#snapshotmodal').modal();
     $('#retainmodal').modal();
     $('#uploadmodal').modal();
     $('#restoremodal').modal();
@@ -46,6 +48,11 @@
 {% macro actionMenu(id) %}
 <ul id="{{ id }}" class="dropdown-content">
   {% if coordEnabled %}
+    <li>
+      <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
+        <i class="material-icons left">add</i>Snapshot Now
+      </a>
+    </li>
     {% if showOpenDriveLink %}
     <li>
       <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
@@ -99,6 +106,10 @@
   <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
   <li><a href="/log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
   {% if coordEnabled %}
+    <li>
+      <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
+        <i class="material-icons left">add</i>Snapshot Now</a>
+    </li>
     {% if showOpenDriveLink %}
       <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
     {% endif %}

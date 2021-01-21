@@ -457,6 +457,7 @@ function processSnapshotsUpdate(data) {
         $("#download_link", template).attr('id', "download_link" + snapshot.slug);
         $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
         $("#snapshot_card", template).attr('id', "snapshot_card" + snapshot.slug);
+        $("#loading", template).attr('id', "loading" + snapshot.slug);
         isNew = true;
       }
 
@@ -522,8 +523,10 @@ function processSnapshotsUpdate(data) {
       }
 
       if (snapshot.isPending) {
+        $("#loading" + snapshot.slug).show();
         $("#snapshot_card" + snapshot.slug).css("cursor", "auto");
       } else {
+        $("#loading" + snapshot.slug).hide();
         $("#snapshot_card" + snapshot.slug).css("cursor", "pointer");
       }
 

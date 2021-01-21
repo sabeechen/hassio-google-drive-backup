@@ -22,7 +22,7 @@ body {
     display: inline !important;
   }
   
-  .detail-node{ 
+  .detail-node { 
     margin-top: 0px;
     margin-bottom: 5px;
   }
@@ -31,11 +31,6 @@ body {
     box-shadow: none;
     -webkit-box-shadow: none;
     margin-right: 10px;
-  }
-
-  .danger-button {
-    color: white;
-    background-color: rgb(153, 0, 0);
   }
   
   .default-hidden {

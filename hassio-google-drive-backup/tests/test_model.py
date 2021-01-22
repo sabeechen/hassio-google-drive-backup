@@ -133,7 +133,8 @@ def test_next_time_of_day(estimator):
     assert model._nextSnapshot(
         now=now, last_snapshot=None) == now - timedelta(minutes=1)
     assert model._nextSnapshot(
-        now=now, last_snapshot=now - timedelta(days=1)) == now
+        now=now, last_snapshot=now - timedelta(days=1)) == datetime(
+        1985, 12, 5, 8, 0, tzinfo=test_tz)
     assert model._nextSnapshot(now=now, last_snapshot=now) == datetime(
         1985, 12, 6, 8, 0, tzinfo=test_tz)
     assert model._nextSnapshot(now=now, last_snapshot=datetime(
@@ -155,7 +156,7 @@ def test_next_time_of_day_drift(estimator):
     assert model._nextSnapshot(
         now=now, last_snapshot=None) == now - timedelta(minutes=1)
     assert model._nextSnapshot(
-        now=now, last_snapshot=now - timedelta(days=1) + timedelta(minutes=1)) == now
+        now=now, last_snapshot=now - timedelta(days=1) + timedelta(minutes=1)) == datetime(1985, 12, 5, 8, 0, tzinfo=test_tz)
 
 
 def test_next_time_of_day_dest_disabled(model, time, source, dest):

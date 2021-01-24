@@ -1,3 +1,11 @@
+## [0.103.1 2020-1-23]
+### Fixes
+- Thanks to intestigation by [@jhampson-dbre](https://github.com/jhampson-dbre), fixes a long standing issue that caused the "Snapshot time of day" to be ignored ([#166](https://github.com/sabeechen/hassio-google-drive-backup/issues/166)).
+- A confguration error caused old docker images from the addon to stick around after an upgrade ([#328](https://github.com/sabeechen/hassio-google-drive-backup/issues/328)).
+
+### Technical/Cleanup
+- Significantly reduced the size of the addon image. 
+
 ## [0.103.0 2020-12-31]
 ### Added
  - Logging in to Drive is no longer required if you have disabled upload to Google Drive

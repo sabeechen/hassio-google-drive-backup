@@ -1,6 +1,6 @@
 {
   "name": "Home Assistant Google Drive Backup",
-  "version": "0.103.0",
+  "version": "0.103.1",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically back up Home Assistant snapshots to Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],

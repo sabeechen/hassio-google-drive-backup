@@ -4,18 +4,14 @@
   "slug": "hassio_google_drive_backup",
   "description": "Automatically back up Home Assistant snapshots to Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
-  "startup": "application",
-  "boot": "auto",
   "url": "https://github.com/sabeechen/hassio-google-drive-backup",
   "homeassistant_api": true,
   "hassio_api": true,
   "hassio_role": "manager",
   "auth_api": true,
-  "webui": "[PROTO:use_ssl]://[HOST]:[PORT:1627]/",
   "ingress": true,
   "panel_icon": "mdi:cloud",
   "panel_title": "Snapshots",
-  "panel_admin": true,
   "map": ["ssl", "backup:rw", "config"],
   "options": {
     "max_snapshots_in_hassio": 4,
@@ -46,7 +42,7 @@
     "generational_years": "int(0,)?",
     "generational_day_of_year": "int(1,365)?",
     "generational_day_of_month": "int(1,31)?",
-    "generational_day_of_week": "match(^(mon|tue|wed|thu|fri|sat|sun)$)?",
+    "generational_day_of_week": "list(mon|tue|wed|thu|fri|sat|sun)?",
     "generational_delete_early": "bool?",
 
     "notify_for_stale_snapshots": "bool?",
@@ -115,6 +111,9 @@
   },
   "ports": {
     "1627/tcp": 1627
+  },
+  "ports_description": {
+    "1627/tcp": "Direct access to the add-on without Ingress"
   },
   "image": "sabeechen/hassio-google-drive-backup-{arch}"
 }

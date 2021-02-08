@@ -1,0 +1,13 @@
+name: Lint
+on: [push, pull_request]
+jobs:
+  build:
+    name: Add-on configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⤵️ Check out code from GitHub
+        uses: actions/checkout@v2
+      - name: 🚀 Run Home Assistant Add-on Lint on hassio-google-drive-backup
+        uses: frenck/action-addon-linter@v2
+        with:
+          path: "./hassio-google-drive-backup"

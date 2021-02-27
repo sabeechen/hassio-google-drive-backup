@@ -89,7 +89,6 @@ function showDetails(target) {
   }
 
   var details = snapshot.details;
-  // console.log(details)
   $("#details_name").html(snapshot.name);
   $("#details_name").attr("title", snapshot.name);
 

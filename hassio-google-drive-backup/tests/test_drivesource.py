@@ -4,6 +4,7 @@ from time import sleep
 
 import pytest
 import asyncio
+from yarl import URL
 from aiohttp.client_exceptions import ClientResponseError
 from backup.config import Config, Setting
 from dev.simulationserver import SimulationServer
@@ -798,3 +799,26 @@ async def test_resume_session_reused_on_http410(time, drive: DriveSource, config
 
     interceptor.setError(drive.drivebackend.last_attempt_location, 0, 410)
     await drive.save(from_snapshot, data)
+
+
+@pytest.mark.asyncio
+async def test_resume_session_reused_on_http408(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper: SnapshotHelper, interceptor: RequestInterceptor):
+    from_snapshot, data = await snapshot_helper.createFile()
+
+    # Configure the upload to fail
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 408)
+    with pytest.raises(GoogleTimeoutError):
+        await drive.save(from_snapshot, data)
+
+    # Verify a requst was made to start the upload
+    assert server.wasUrlRequested(
+        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    location = drive.drivebackend.last_attempt_location
+    assert location is not None
+
+    server.urls.clear()
+    interceptor.clear()
+    data.position(0)
+
+    await drive.save(from_snapshot, data)
+    assert interceptor.urlWasCalled(URL(location).path)

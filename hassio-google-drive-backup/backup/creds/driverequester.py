@@ -11,6 +11,7 @@ RATE_LIMIT_EXCEEDED = [403]
 TOO_MANY_REQUESTS = [429]
 INTERNAL_ERROR = [500, 503]
 PERMISSION_DENIED = [401]
+REQUEST_TIMEOUT = [408]
 
 logger = getLogger(__name__)
 
@@ -36,6 +37,8 @@ class DriveRequester():
                 raise GoogleInternalError()
             elif response.status in RATE_LIMIT_EXCEEDED or response.status in TOO_MANY_REQUESTS:
                 raise GoogleRateLimitError()
+            elif response.status in REQUEST_TIMEOUT:
+                raise GoogleTimeoutError()
             response.raise_for_status()
             return response
         except ClientConnectorError as e:

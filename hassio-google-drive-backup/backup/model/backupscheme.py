@@ -7,7 +7,6 @@ from .snapshots import Snapshot
 from ..time import Time
 from ..config import GenConfig
 from ..logger import getLogger
-from typing import List
 logger = getLogger(__name__)
 
 

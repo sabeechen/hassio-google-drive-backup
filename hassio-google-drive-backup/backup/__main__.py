@@ -1,5 +1,3 @@
-import os
-
 import platform
 import asyncio
 from aiorun import run
@@ -30,7 +28,7 @@ if __name__ == '__main__':
         config = Config.withFileOverrides(abspath(join(__file__, "../../dev/data", argv[1] + "_options.json")))
     else:
         config = Config.fromFile(Setting.CONFIG_FILE_PATH.default())
-    
+
     logger.overrideLevel(config.get(Setting.CONSOLE_LOG_LEVEL), config.get(Setting.LOG_LEVEL))
     # if config.get(Setting.DEBUGGER_PORT) is not None:
     #    port = config.get(Setting.DEBUGGER_PORT)

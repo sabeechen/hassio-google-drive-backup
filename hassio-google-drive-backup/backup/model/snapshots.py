@@ -1,7 +1,6 @@
 
 from datetime import datetime
 from typing import Dict, Optional
-from datetime import datetime
 from dateutil.tz import tzutc
 from ..util import Estimator
 
@@ -226,4 +225,3 @@ class Snapshot(object):
 
     def __repr__(self) -> str:
         return self.__str__()
-

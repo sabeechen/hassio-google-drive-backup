@@ -317,7 +317,7 @@ def test_save_creds(coord: Coordinator, source, dest):
 async def test_check_size_new_snapshot(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker):
     skipForWindows()
     fs.setFreeBytes(0)
-    with(raises(LowSpaceError)):
+    with raises(LowSpaceError):
         await coord.startSnapshot(CreateOptions(time.now(), "Test Name"))
 
 

@@ -150,6 +150,7 @@ async def interceptor(injector: Injector):
 async def supervisor(injector: Injector, server, session):
     return injector.get(SimulatedSupervisor)
 
+
 @pytest.fixture
 async def addon_stopper(injector: Injector):
     return injector.get(AddonStopper)

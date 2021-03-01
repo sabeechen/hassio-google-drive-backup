@@ -1,8 +1,6 @@
-import os
-import os.path
-from datetime import datetime, timedelta
+from datetime import datetime
 from io import IOBase
-from typing import Any, Dict
+from typing import Dict
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientResponseError

@@ -2,7 +2,7 @@ import io
 from typing import Dict
 
 from aiohttp import ClientSession
-from aiohttp.client import ClientResponse, ClientPayloadError, ClientOSError, ClientTimeout
+from aiohttp.client import ClientResponse, ClientPayloadError, ClientOSError
 from asyncio.exceptions import TimeoutError
 
 from ..exceptions import LogicError, ensureKey

@@ -1,4 +1,3 @@
-import getpass
 import subprocess
 import os
 

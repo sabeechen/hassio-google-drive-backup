@@ -538,7 +538,6 @@ async def test_wait_for_startup_no_snapshot(time: FakeTime, model: Model, dest: 
     assert not model.waiting_for_startup
 
 
-
 @pytest.mark.asyncio
 async def test_wait_for_startup_with_snapshot(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
     time.setNow(time.local(2019, 5, 10))
@@ -554,6 +553,7 @@ async def test_wait_for_startup_with_snapshot(time: FakeTime, model: Model, dest
     time.advance(minutes=10)
     assert model.nextSnapshot(time.now()) == time.now() - timedelta(minutes=1)
     assert not model.waiting_for_startup
+
 
 @pytest.mark.asyncio
 async def test_ignore_startup_delay(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):

@@ -45,9 +45,9 @@ class Coordinator(Trigger):
 
     def saveCreds(self, creds: Creds):
         if not self._model.dest.enabled():
-            # Since this is the first time saving credentials (eg the addon was just enabled).  Hold off on 
+            # Since this is the first time saving credentials (eg the addon was just enabled).  Hold off on
             # automatic snapshots for a few minutes to give the user a little while to figure out whats going on.
-            self._global_info.triggerSnapshotCooldown(timedelta(minutes=self._config.get(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES))) 
+            self._global_info.triggerSnapshotCooldown(timedelta(minutes=self._config.get(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES)))
 
         self._model.dest.saveCreds(creds)
         self._global_info.credsSaved()

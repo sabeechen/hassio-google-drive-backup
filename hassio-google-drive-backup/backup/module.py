@@ -14,7 +14,6 @@ from backup.model import Coordinator
 from backup.worker import Trigger, Watcher
 from backup.ui import UiServer, Restarter
 from backup.logger import getLogger
-from .time import AcceleratedTime, Time
 from .debugworker import DebugWorker
 from .tracing_session import TracingSession
 logger = getLogger(__name__)
@@ -62,13 +61,6 @@ class BaseModule(Module):
         if self._override_dns:
             conn = aiohttp.TCPConnector(resolver=resolver, family=socket.AF_INET)
         return TracingSession(connector=conn)
-
-    
-    #@provider
-    #@singleton
-    #def getTime(self) -> Time:
-    #    return AcceleratedTime(5000)
-    #    return AcceleratedTime(1)
 
 
 class MainModule(Module):

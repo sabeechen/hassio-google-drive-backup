@@ -1,4 +1,3 @@
-import getpass
 import subprocess
 import os
 import json
@@ -18,4 +17,3 @@ for platform in platforms:
 
 for platform in platforms:
     subprocess.run("docker push sabeechen/hassio-google-drive-backup-{0}:{1}".format(platform, version), shell=True)
-

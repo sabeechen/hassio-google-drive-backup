@@ -132,7 +132,7 @@ class Model():
                 next = self.time.toUtc(
                     time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
 
-        # Don't snapshot X minutes after startup, since that can put an unreasonable amount of strain on 
+        # Don't snapshot X minutes after startup, since that can put an unreasonable amount of strain on
         # system just booting up.
         if next is not None and next < now and now < self.info.snapshotCooldownTime() and not self.ignore_startup_delay:
             self.waiting_for_startup = True

@@ -1,14 +1,12 @@
 import asyncio
 import ssl
 import json
-from aiohttp.web_routedef import get
 import aiohttp_jinja2
 import jinja2
 import base64
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
-from urllib.parse import quote
 
 from aiohttp import BasicAuth, hdrs, web, ClientSession
 from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther

@@ -7,7 +7,6 @@ from backup.time import Time
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, get,
                          json_response, post)
-from aiohttp import hdrs, web, ClientSession
 from injector import inject, singleton
 from .base_server import BaseServer
 from .ports import Ports

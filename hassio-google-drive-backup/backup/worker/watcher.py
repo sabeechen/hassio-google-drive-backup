@@ -15,6 +15,7 @@ logger = getLogger(__name__)
 
 REPORT_DELAY_SECONDS = 5
 
+
 @singleton
 class Watcher(Trigger, FileSystemEventHandler, Startable):
     @inject

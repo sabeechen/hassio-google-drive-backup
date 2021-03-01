@@ -102,9 +102,9 @@ def test_timeOfDay(estimator) -> None:
 
 def test_next_time(estimator):
     time: FakeTime = FakeTime()
-    info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
-
+    time.setNow(now)
+    info = GlobalInfo(time)
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
@@ -126,9 +126,9 @@ def test_next_time(estimator):
 
 def test_next_time_of_day(estimator):
     time: FakeTime = FakeTime()
-    info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
-
+    time.setNow(now)
+    info = GlobalInfo(time)
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
         Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
@@ -149,8 +149,9 @@ def test_next_time_of_day(estimator):
 
 def test_next_time_of_day_drift(estimator):
     time: FakeTime = FakeTime()
-    info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
+    time.setNow(now)
+    info = GlobalInfo(time)
 
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
         Setting.SNAPSHOT_TIME_OF_DAY, '08:00')

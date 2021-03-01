@@ -3,6 +3,7 @@
 *.id
 *pychache*
 .pytest_cache/*
+htmlcov/*
 .mypy_cache/*
 *drive_creds*
 dev/backup/*.tar

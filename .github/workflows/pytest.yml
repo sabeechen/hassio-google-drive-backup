@@ -27,4 +27,16 @@ jobs:
       run: |
         pip install pytest
         pip install pytest-cov
-        pytest hassio-google-drive-backup/tests --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+        pytest hassio-google-drive-backup/tests --cov=hassio-google-drive-backup/backup --cov-report=xml --cov-report=html
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        directory: ./coverage/reports/
+        flags: unittests
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true

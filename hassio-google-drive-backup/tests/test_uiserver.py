@@ -228,7 +228,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': status['sources'][SOURCE_HA]["free_space"]
     }
 
     await reader.getjson("retain", json={'slug': slug, 'sources': []})

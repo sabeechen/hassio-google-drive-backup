@@ -14,3 +14,5 @@ dev/data/retained.json
 hassio-google-drive-backup/dev/data/id.json
 hassio-google-drive-backup/dev/data/stop_addon_state.json
 hassio-google-drive-backup/dev/data/retained.json
+junit/test-results.xml
+.coverage

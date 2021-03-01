@@ -27,7 +27,7 @@ def dest():
 
 @pytest.fixture
 def simple_config():
-    config = Config()
+    config = createConfig()
     return config
 
 
@@ -36,16 +36,20 @@ def model(source, dest, time, simple_config, global_info, estimator):
     return Model(simple_config, time, source, dest, global_info, estimator)
 
 
+def createConfig() -> Config:
+    return Config().override(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES, 0)
+
+
 def test_timeOfDay(estimator) -> None:
     time: FakeTime = FakeTime()
     info = GlobalInfo(time)
 
-    config: Config = Config()
+    config: Config = createConfig()
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
     assert model.getTimeOfDay() is None
 
-    config = Config().override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
+    config = createConfig().override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
     model = Model(config, time, default_source,
                   default_source, info, estimator)
     assert model.getTimeOfDay() == (0, 0)
@@ -101,13 +105,13 @@ def test_next_time(estimator):
     info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
 
-    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
     assert model._nextSnapshot(now=now, last_snapshot=None) is None
     assert model._nextSnapshot(now=now, last_snapshot=now) is None
 
-    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
     assert model._nextSnapshot(
@@ -125,7 +129,7 @@ def test_next_time_of_day(estimator):
     info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
 
-    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
         Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
@@ -148,7 +152,7 @@ def test_next_time_of_day_drift(estimator):
     info = GlobalInfo(time)
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
 
-    config: Config = Config().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
         Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator)
@@ -519,6 +523,45 @@ async def test_delete_when_drive_disabled(time, model, dest: HelperTestSource, s
     assert source.deleted == [mon]
     assert len(model.snapshots) == 3
     dest.assertThat(current=0)
+
+
+@pytest.mark.asyncio
+async def test_wait_for_startup_no_snapshot(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
+    time.setNow(time.local(2019, 5, 10))
+    global_info.triggerSnapshotCooldown(timedelta(minutes=10))
+    assert model.nextSnapshot(time.now()) == time.now() + timedelta(minutes=10)
+    assert model.nextSnapshot(time.now()) == global_info.snapshotCooldownTime()
+    assert model.waiting_for_startup
+
+    time.advance(minutes=10)
+    assert model.nextSnapshot(time.now()) == time.now() - timedelta(minutes=1)
+    assert not model.waiting_for_startup
+
+
+
+@pytest.mark.asyncio
+async def test_wait_for_startup_with_snapshot(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
+    time.setNow(time.local(2019, 5, 10))
+    global_info.triggerSnapshotCooldown(timedelta(minutes=10))
+
+    source.setMax(3)
+    source.insert("old", time.now() - timedelta(days=7))
+
+    assert model.nextSnapshot(time.now()) == time.now() + timedelta(minutes=10)
+    assert model.nextSnapshot(time.now()) == global_info.snapshotCooldownTime()
+    assert model.waiting_for_startup
+
+    time.advance(minutes=10)
+    assert model.nextSnapshot(time.now()) == time.now() - timedelta(minutes=1)
+    assert not model.waiting_for_startup
+
+@pytest.mark.asyncio
+async def test_ignore_startup_delay(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
+    time.setNow(time.local(2019, 5, 10))
+    global_info.triggerSnapshotCooldown(timedelta(minutes=10))
+    model.ignore_startup_delay = True
+    assert model.nextSnapshot(time.now()) == time.now() - timedelta(minutes=1)
+    assert not model.waiting_for_startup
 
 
 def assertSnapshot(model, sources):

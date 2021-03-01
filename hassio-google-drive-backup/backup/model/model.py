@@ -91,6 +91,8 @@ class Model():
         self.info = info
         self.simulate_error = None
         self.estimator = estimator
+        self.waiting_for_startup = False
+        self.ignore_startup_delay = False
 
     def enabled(self):
         if self.source.needsConfiguration():
@@ -109,29 +111,35 @@ class Model():
         return self._time_of_day
 
     def _nextSnapshot(self, now: datetime, last_snapshot: Optional[datetime]) -> Optional[datetime]:
-        if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
-            return None
-
-        if self.dest.needsConfiguration():
-            return None
-        if not last_snapshot:
-            return now - timedelta(minutes=1)
-
         timeofDay = self.getTimeOfDay()
-        if not timeofDay:
-            return last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS))
-
-        newest_local: datetime = self.time.toLocal(last_snapshot)
-        time_that_day_local = datetime(newest_local.year, newest_local.month,
-                                       newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
-        if newest_local < time_that_day_local:
-            # Latest snapshot is before the snapshot time for that day
-            next = self.time.toUtc(time_that_day_local)
+        if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
+            next = None
+        elif self.dest.needsConfiguration():
+            next = None
+        elif not last_snapshot:
+            next = now - timedelta(minutes=1)
+        elif not timeofDay:
+            next = last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS))
         else:
-            # return the next snapshot after the delta
-            next = self.time.toUtc(
-                time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
-        return next
+            newest_local: datetime = self.time.toLocal(last_snapshot)
+            time_that_day_local = datetime(newest_local.year, newest_local.month,
+                                           newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
+            if newest_local < time_that_day_local:
+                # Latest snapshot is before the snapshot time for that day
+                next = self.time.toUtc(time_that_day_local)
+            else:
+                # return the next snapshot after the delta
+                next = self.time.toUtc(
+                    time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
+
+        # Don't snapshot X minutes after startup, since that can put an unreasonable amount of strain on 
+        # system just booting up.
+        if next is not None and next < now and now < self.info.snapshotCooldownTime() and not self.ignore_startup_delay:
+            self.waiting_for_startup = True
+            return self.info.snapshotCooldownTime()
+        else:
+            self.waiting_for_startup = False
+            return next
 
     def nextSnapshot(self, now: datetime):
         latest = max(self.snapshots.values(),

@@ -119,7 +119,8 @@ async def injector(cleandir, server_url, ports):
         Setting.DEFAULT_DRIVE_CLIENT_SECRET: "test_client_secret",
         Setting.BACKUP_DIRECTORY_PATH: cleandir,
         Setting.PORT: ports.ui,
-        Setting.INGRESS_PORT: ports.ingress
+        Setting.INGRESS_PORT: ports.ingress,
+        Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 0,
     })
 
     # PROBLEM: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from

@@ -1002,7 +1002,7 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden" id="error_reports_card">
+        <div class="row default-hidden question-card" id="error_reports_card">
           <div class="col s12 m9">
             <div class="card">
               <div class="card-content">
@@ -1019,7 +1019,26 @@
             </div>
           </div>
         </div>
-        <div class="row default-hidden" id="ingress_upgrade_card">
+        <div class="row default-hidden question-card" id="snapshots_boot_waiting_card">
+          <div class="col s12 m9">
+            <div class="card">
+              <div class="card-content">
+                <span class="card-title">
+                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">timer</i>
+                  <span style="vertical-align: top;">Taking a snapshot soon</span>
+                </span>
+                <p>Since the addon just started up a few minutes ago, its going to wait a few minutes before taking a snapshot to make sure thats what you want.  Look below to see exactly how long before the next snapshot.  
+                  You can wait for that to happen, change your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                  style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
+                settings</a> to something different, or just click the button below to let the automatic snapshot happen immediately.</p>
+                <div class="card-action white-text">
+                  <a target="_blank" class="waves-effect waves-light btn" onClick="allowImmediateSnapshot();">Snapshot Now</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row default-hidden question-card" id="ingress_upgrade_card">
           <div class="col s12 m9">
             <div class="card">
               <div class="card-content">

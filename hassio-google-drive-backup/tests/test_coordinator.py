@@ -26,6 +26,7 @@ def dest():
 @pytest.fixture
 def simple_config():
     config = Config()
+    config.override(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES, 0)
     return config
 
 

@@ -40,9 +40,15 @@ class Coordinator(Trigger):
         self._sync_start = Event()
         self._sync_wait = Event()
         self._sync_wait.set()
+        self._global_info.triggerSnapshotCooldown(timedelta(minutes=self._config.get(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES)))
         self.trigger()
 
     def saveCreds(self, creds: Creds):
+        if not self._model.dest.enabled():
+            # Since this is the first time saving credentials (eg the addon was just enabled).  Hold off on 
+            # automatic snapshots for a few minutes to give the user a little while to figure out whats going on.
+            self._global_info.triggerSnapshotCooldown(timedelta(minutes=self._config.get(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES))) 
+
         self._model.dest.saveCreds(creds)
         self._global_info.credsSaved()
 
@@ -51,6 +57,12 @@ class Coordinator(Trigger):
 
     def enabled(self) -> bool:
         return self._model.enabled()
+
+    def isWaitingForStartup(self):
+        return self._model.waiting_for_startup
+
+    def ignoreStartupDelay(self):
+        self._model.ignore_startup_delay = True
 
     def check(self) -> bool:
         if self._time.now() >= self.nextSyncAttempt():

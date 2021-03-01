@@ -153,6 +153,7 @@ class UiServer(Trigger, Startable):
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['is_specify_folder'] = self.config.get(
             Setting.SPECIFY_SNAPSHOT_FOLDER)
+        status['snapshot_cooldown_active'] = self._coord.isWaitingForStartup()
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -389,6 +390,10 @@ class UiServer(Trigger, Startable):
         await self._updateConfiguration(validated)
         return web.json_response({'message': 'Configuration updated'})
 
+    async def ignorestartupcooldown(self, request: Request):
+        self._coord.ignoreStartupDelay()
+        return await self.sync(request)
+
     async def exposeserver(self, request: Request):
         expose = BoolValidator.strToBool(request.query.get("expose", False))
         if expose:
@@ -591,6 +596,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self._debug.simerror)
         self._addRoute(app, self._debug.getTasks)
         self._addRoute(app, self.makeanissue)
+        self._addRoute(app, self.ignorestartupcooldown)
 
     def _addRoute(self, app, method):
         app.add_routes([

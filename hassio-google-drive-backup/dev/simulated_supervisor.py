@@ -39,7 +39,7 @@ class SimulatedSupervisor(BaseServer):
         self._events = []
         self._attributes = {}
         self._notification = None
-        self._min_snapshot_size = 1024 * 1024 * 3
+        self._min_snapshot_size = 1024 * 1024 * 5
         self._max_snapshot_size = 1024 * 1024 * 5
         self._addon_slug = "self_slug"
         self._options = self.defaultOptions()

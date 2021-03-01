@@ -9,7 +9,7 @@ pyyaml
 dnspython
 pytest>=5.4.0
 pytest-timeout
-pytest-rerunfailures
+pytest-repeat
 pytest-asyncio
 flake8
 mypy

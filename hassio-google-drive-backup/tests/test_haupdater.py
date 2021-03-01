@@ -128,7 +128,6 @@ async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime, supe
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(5)
 async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime, snapshot, supervisor: SimulatedSupervisor):
     await updater.update()
     assert not updater._stale()
@@ -250,7 +249,6 @@ async def test_failure_logging(updater: HaUpdater, server, time: FakeTime, inter
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_publish_retries(updater: HaUpdater, server: SimulationServer, time: FakeTime, snapshot, drive, supervisor: SimulatedSupervisor):
     await updater.update()
     assert supervisor.getEntity("sensor.snapshot_backup") is not None

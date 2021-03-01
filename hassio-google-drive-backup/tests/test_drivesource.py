@@ -262,7 +262,6 @@ async def test_drive_timeout(drive, config, time: FakeTime):
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_resume_upload_attempts_exhausted(drive: DriveSource, time, snapshot_helper, interceptor: RequestInterceptor, google: SimulatedGoogle):
     # Allow an upload to update one chunk and then fail.
     from_snapshot, data = await snapshot_helper.createFile()
@@ -365,13 +364,11 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_resume_session_reused_on_http5XX(time, drive: DriveSource, config: Config, server, snapshot_helper, interceptor: RequestInterceptor):
     await verify_upload_resumed(time, drive, config, server, interceptor, 550, snapshot_helper)
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, server, snapshot_helper, interceptor: RequestInterceptor):
     from_snapshot, data = await snapshot_helper.createFile()
 

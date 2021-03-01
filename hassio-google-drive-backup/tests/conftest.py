@@ -81,7 +81,7 @@ class TestModule(Module):
         return self.ports
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def event_loop():
     if platform.system() == "Windows":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -122,10 +122,6 @@ async def injector(cleandir, server_url, ports):
         Setting.INGRESS_PORT: ports.ingress,
         Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 0,
     })
-
-    # PROBLEM: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
-    # taking waaaaaaaay too long.  Remove this line and the @pytest.mark.flaky annotations once the problem is identified.
-    config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 5)
 
     # logging.getLogger('injector').setLevel(logging.DEBUG)
     return Injector([BaseModule(config), TestModule(ports)])

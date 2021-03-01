@@ -1,5 +1,7 @@
 name: run-pytest
-on: [push]
+on: 
+  push:
+  workflow_dispatch:
 jobs:
   run-pytest:
     runs-on: ubuntu-latest

@@ -1,6 +1,7 @@
 name: run-pytest
 on: 
   push:
+  pull_request:
   workflow_dispatch:
 jobs:
   run-pytest:
@@ -28,6 +29,13 @@ jobs:
         pip install pytest
         pip install pytest-cov
         pytest hassio-google-drive-backup/tests --junitxml=junit/test-results.xml --cov=hassio-google-drive-backup/backup --cov-report=xml --cov-report=html
+    - name: Test build
+      uses: home-assistant/builder@master
+      with:
+        args: |
+          --test \
+          --all \
+          --target hassio-google-drive-backup
     - name: Upload pytest test results
       uses: actions/upload-artifact@v2
       with:

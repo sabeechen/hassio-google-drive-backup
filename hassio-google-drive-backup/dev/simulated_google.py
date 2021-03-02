@@ -215,7 +215,7 @@ class SimulatedGoogle(BaseServer):
             caps['canTrash'] = True
         if 'canDelete' not in caps:
             caps['canDelete'] = True
-        
+
         for parent in base.get("parents", []):
             parent_item = self.items[parent]
             # This simulates a very simply shared drive permissions structure

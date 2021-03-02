@@ -106,5 +106,5 @@ class DriveRequester():
                 continue
             if error["reason"] == "storageQuotaExceeded":
                 raise DriveQuotaExceeded()
-            elif error["reason"] == "forbidden":
+            elif error["reason"] in ["forbidden", "insufficientFilePermissions"]:
                 raise GoogleDrivePermissionDenied()

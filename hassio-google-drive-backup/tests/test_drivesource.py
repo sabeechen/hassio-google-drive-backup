@@ -10,7 +10,7 @@ from backup.config import Config, Setting
 from dev.simulationserver import SimulationServer
 from dev.simulated_google import SimulatedGoogle, URL_MATCH_UPLOAD_PROGRESS, URL_MATCH_FILE
 from dev.request_interceptor import RequestInterceptor
-from backup.drive import DriveSource, FolderFinder
+from backup.drive import DriveSource, FolderFinder, DriveRequests
 from backup.drive.driverequests import (BASE_CHUNK_SIZE,
                                         CHUNK_UPLOAD_TARGET_SECONDS, MAX_CHUNK_SIZE,
                                         RETRY_SESSION_ATTEMPTS)
@@ -819,3 +819,64 @@ async def test_resume_session_reused_on_http408(time, drive: DriveSource, config
 
     await drive.save(from_snapshot, data)
     assert interceptor.urlWasCalled(URL(location).path)
+
+
+@pytest.mark.asyncio
+async def test_shared_drive_manager(drive: DriveSource, time: FakeTime, folder_finder: FolderFinder, snapshot_helper: SnapshotHelper, drive_requests: DriveRequests):
+    # Make a shared drive folder
+    folder_metadata = {
+        'name': "Shared Drive",
+        'mimeType': FOLDER_MIME_TYPE,
+        'driveId': "test_shared_drive_id",
+        'appProperties': {
+            "backup_folder": "true",
+        },
+    }
+    shared_drive_folder_id = (await drive.drivebackend.createFolder(folder_metadata))['id']
+    await folder_finder.save(shared_drive_folder_id)
+
+    # Save a snapshot
+    from_snapshot, data = await snapshot_helper.createFile()
+    snapshot = await drive.save(from_snapshot, data)
+    assert len(await drive.get()) == 1
+    from_snapshot.addSource(snapshot)
+
+    # Delete the snapshot, and verify it was deleted instead of trashed
+    await drive.delete(from_snapshot)
+    assert len(await drive.get()) == 0
+    with pytest.raises(ClientResponseError) as exc:
+        await drive_requests.get(snapshot.id())
+    assert exc.value.code == 404
+
+
+@pytest.mark.asyncio
+async def test_shared_drive_content_manager(drive: DriveSource, time: FakeTime, folder_finder: FolderFinder, snapshot_helper: SnapshotHelper, drive_requests: DriveRequests):
+    # Make a shared drive folder where the user has capabilities consistent with a "content manager" role.
+    folder_metadata = {
+        'name': "Shared Drive",
+        'mimeType': FOLDER_MIME_TYPE,
+        'driveId': "test_shared_drive_id",
+        'appProperties': {
+            "backup_folder": "true",
+        },
+        'capabilities': {
+            'canDeleteChildren': False,
+            'canTrashChildren': True,
+            'canDelete': False,
+            'canTrash': True,
+        }
+    }
+
+    shared_drive_folder_id = (await drive.drivebackend.createFolder(folder_metadata))['id']
+    await folder_finder.save(shared_drive_folder_id)
+
+    # Save a snapshot
+    from_snapshot, data = await snapshot_helper.createFile()
+    snapshot = await drive.save(from_snapshot, data)
+    assert len(await drive.get()) == 1
+    from_snapshot.addSource(snapshot)
+
+    # Delete the snapshot, and verify it was onyl trashed
+    await drive.delete(from_snapshot)
+    assert len(await drive.get()) == 0
+    assert (await drive_requests.get(snapshot.id()))['trashed']

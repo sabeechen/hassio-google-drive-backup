@@ -171,6 +171,10 @@ class FolderFinder():
             elif not caps['canListChildren']:
                 return False
             elif not caps.get('canDeleteChildren', False) and not caps.get('canRemoveChildren', False):
+                driveId = folder.get("driveId")
+                if driveId and len(driveId) > 0 and caps.get("canTrashChildren", False):
+                    # Allow folders in shared drives if you can still trash items inside it. 
+                    return True
                 return False
             elif folder.get("mimeType") != FOLDER_MIME_TYPE:
                 return False

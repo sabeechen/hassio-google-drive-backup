@@ -28,7 +28,7 @@ FOLDER_NAME = 'Home Assistant Snapshots'
 DRIVE_VERSION = "v3"
 DRIVE_SERVICE = "drive"
 
-SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabilities,parents"
+SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabilities,parents,driveId"
 THUMBNAIL_MIME_TYPE = "image/png"
 QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
 CREATE_FIELDS = SELECT_FIELDS

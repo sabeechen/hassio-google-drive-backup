@@ -572,3 +572,66 @@ def assertSnapshot(model, sources):
         slug = source.slug()
     assert slug in model.snapshots
     assert model.snapshots[slug].sources == matches
+
+
+@pytest.mark.asyncio
+async def test_delete_after_upload(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
+    model.config.override(Setting.DELETE_AFTER_UPLOAD, True)
+    source.setMax(100)
+    dest.setMax(100)
+    dest.insert("Destination 1", time.now())
+    dest.reset()
+
+    # Nothing should happen on a sync, the snapshot is already backed up.
+    await model.sync(time.now())
+    dest.assertThat(current=1)
+    source.assertThat()
+
+    time.advance(days=7)
+    source.insert("Source 1", time.now())
+    source.reset()
+
+    # Source snapshot should get backed up and the deleted
+    await model.sync(time.now())
+    source.assertThat(deleted=1, current=0)
+    dest.assertThat(saved=1, current=2)
+
+
+@pytest.mark.asyncio
+async def test_delete_after_upload_multiple_deletes(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
+    model.config.override(Setting.DELETE_AFTER_UPLOAD, True)
+    source.setMax(100)
+    dest.setMax(100)
+    source.insert("Src 1", time.now())
+    time.advance(days=1)
+    source.insert("Src 2", time.now())
+    source.reset()
+
+    # Deleteing multiple snapshots should still fail with DELETE_AFTER_UPLOAD:True
+    with pytest.raises(DeleteMutlipleSnapshotsError):
+        await model.sync(time.now())
+
+    # But the snapshot should still get backed up
+    source.assertThat(current=2)
+    dest.assertThat(saved=2, current=2)
+
+
+@pytest.mark.asyncio
+async def test_delete_after_upload_simple_sync(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
+    model.config.override(Setting.DELETE_AFTER_UPLOAD, True)
+    source.setMax(100)
+    dest.setMax(100)
+
+    # A sync should create a snapshot, back it up to dest, and then delete it from source.
+    await model.sync(time.now())
+    source.assertThat(created=1, deleted=1, current=0)
+    dest.assertThat(saved=1, current=1)
+
+    time.advance(hours=1)
+    source.reset()
+    dest.reset()
+
+    # Next sync should do nothing
+    await model.sync(time.now())
+    source.assertThat()
+    dest.assertThat(current=1)

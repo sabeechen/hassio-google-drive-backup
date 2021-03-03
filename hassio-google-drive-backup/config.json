@@ -28,6 +28,7 @@
     "max_snapshots_in_google_drive": "int(0,)",
     "days_between_snapshots": "float(0,)?",
 
+    "delete_after_upload": "bool?",
     "verbose": "bool?",
     "use_ssl": "bool?",
     "certfile": "str?",

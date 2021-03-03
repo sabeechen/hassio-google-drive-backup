@@ -189,6 +189,8 @@ class Model():
                     await self._purge(self.dest)
                 else:
                     break
+            if self.config.get(Setting.DELETE_AFTER_UPLOAD):
+                await self._purge(self.source)
         self.source.postSync()
         self.dest.postSync()
 
@@ -267,7 +269,7 @@ class Model():
         if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
             return None
 
-        if source.maxCount() == -1:
+        if source == self.source and self.config.get(Setting.DELETE_AFTER_UPLOAD):
             scheme = DeleteAfterUploadScheme(source.name(), [self.dest.name()])
         elif self.generational_config:
             scheme = GenerationalScheme(

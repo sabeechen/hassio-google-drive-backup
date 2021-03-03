@@ -24,21 +24,22 @@ class DeleteAfterUploadScheme(BackupScheme):
         self.source = source
         self.destinations = destinations
 
-    def getOldest(self, snapshots):
+    def getOldest(self, snapshots: Snapshot):
+        consider = []
         for snapshot in snapshots:
+            uploaded = True
             if snapshot.getSource(self.source) is None:
                 # No source, so ignore it
-                continue
-            missing = False
+                uploaded = False
             for destination in self.destinations:
                 if snapshot.getSource(destination) is None:
-                    missing = True
-            if not missing:
-                return snapshot
+                    # its not in destination, so ignore it
+                    uploaded = False
+            if uploaded:
+                consider.append(snapshot)
 
-        # There should only be one snapshot
-        if len(snapshots) > 1:
-            min(snapshots, default=None, key=lambda s: s.date())
+        # Delete the oldest first
+        return OldestScheme().getOldest(consider)
 
 
 class OldestScheme(BackupScheme):

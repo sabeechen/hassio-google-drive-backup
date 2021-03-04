@@ -106,6 +106,7 @@ class Snapshot(object):
         self._options = None
         self._status_override = None
         self._status_override_args = None
+        self._state_detail = {}
         if snapshot is not None:
             self.addSource(snapshot)
 
@@ -122,6 +123,12 @@ class Snapshot(object):
         self.sources[snapshot.source()] = snapshot
         if snapshot.getOptions() and not self.getOptions():
             self.setOptions(snapshot.getOptions())
+
+    def getStateInfo(self):
+        return self._state_detail
+
+    def setStateDetail(self, info):
+        self._state_detail = info
 
     def removeSource(self, source):
         if source in self.sources:

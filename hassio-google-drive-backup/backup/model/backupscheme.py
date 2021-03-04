@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from calendar import monthrange
 from datetime import datetime, timedelta
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Set
 
 from .snapshots import Snapshot
 from ..time import Time
@@ -49,15 +49,21 @@ class OldestScheme(BackupScheme):
     def getOldest(self, snapshots: Sequence[Snapshot]) -> Optional[Snapshot]:
         if len(snapshots) <= self.count:
             return None
+
+        index = 0
+        for snapshot in snapshots:
+            index += 1
+            snapshot.setStateDetail(str(index))
         return min(snapshots, default=None, key=lambda s: s.date())
 
 
 class Partition(object):
-    def __init__(self, start: datetime, end: datetime, prefer: datetime, time: Time):
+    def __init__(self, start: datetime, end: datetime, prefer: datetime, time: Time, details=None):
         self.start: datetime = start
         self.end: datetime = end
         self.prefer: datetime = prefer
         self.time = time
+        self.details = details
 
     def select(self, snapshots: List[Snapshot]) -> Optional[Snapshot]:
         options: List[Snapshot] = []
@@ -116,7 +122,7 @@ class GenerationalScheme(BackupScheme):
         for x in range(0, self.config.days):
             nextDay = currentDay + timedelta(days=1)
             lookups.append(
-                Partition(currentDay, nextDay, currentDay, self.time))
+                Partition(currentDay, nextDay, currentDay, self.time, "Day {0}".format(x)))
             currentDay = self.day(currentDay - timedelta(hours=12))
 
         for x in range(0, self.config.weeks):
@@ -125,7 +131,7 @@ class GenerationalScheme(BackupScheme):
             start -= timedelta(weeks=x)
             end = start + timedelta(days=7)
             start += timedelta(days=day_of_week)
-            lookups.append(Partition(start, end, start, self.time))
+            lookups.append(Partition(start, end, start, self.time, "Week {0}".format(x)))
 
         for x in range(0, self.config.months):
             year_offset = int(x / 12)
@@ -138,19 +144,25 @@ class GenerationalScheme(BackupScheme):
             weekday, days = monthrange(start.year, start.month)
             end = start + timedelta(days=days)
             lookups.append(Partition(
-                start, end, start + timedelta(days=self.config.day_of_month - 1), self.time))
+                start, end, start + timedelta(days=self.config.day_of_month - 1), self.time,
+                "Month of {0}".format(start.strftime("%B"))))
 
         for x in range(0, self.config.years):
             start = self.time.local(last.year - x, 1, 1)
             end = self.time.local(last.year - x + 1, 1, 1)
             lookups.append(Partition(
-                start, end, start + timedelta(days=self.config.day_of_year - 1), self.time))
+                start, end, start + timedelta(days=self.config.day_of_year - 1), self.time,
+                "Year {0}".format(start.strftime("%Y"))))
 
-        keepers = set()
+        # Keep track of which snapshots are being saved for which time period.
+        detail_states = {}
+
+        keepers: Set[Snapshot] = set()
         for lookup in lookups:
             keeper = lookup.select(snapshots)
             if keeper:
                 keepers.add(keeper)
+                detail_states.setdefault(keeper.slug(), []).append(lookup.details)
 
         extras = []
         for snapshot in snapshots:
@@ -159,6 +171,15 @@ class GenerationalScheme(BackupScheme):
                     return snapshot
                 else:
                     extras.append(snapshot)
+            if snapshot.slug() not in detail_states:
+                snapshot.setStateDetail(None)
+            else:
+                # Figure out what the detail state string for this guy should be
+                detail = detail_states[snapshot.slug()]
+                if len(detail) == 1:
+                    snapshot.setStateDetail("Generation \"{0}\"".format(detail[0]))
+                else:
+                    snapshot.setStateDetail("Generations \"{0}\"".format(", ".join(detail)))
 
         if len(to_segment) <= self.count and not self.config.aggressive:
             return None

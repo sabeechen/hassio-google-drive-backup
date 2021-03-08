@@ -1,7 +1,6 @@
 
 from datetime import datetime
 from typing import Dict, Optional
-from datetime import datetime
 from dateutil.tz import tzutc
 from ..util import Estimator
 
@@ -107,6 +106,7 @@ class Snapshot(object):
         self._options = None
         self._status_override = None
         self._status_override_args = None
+        self._state_detail = {}
         if snapshot is not None:
             self.addSource(snapshot)
 
@@ -123,6 +123,12 @@ class Snapshot(object):
         self.sources[snapshot.source()] = snapshot
         if snapshot.getOptions() and not self.getOptions():
             self.setOptions(snapshot.getOptions())
+
+    def getStatusDetail(self):
+        return self._state_detail
+
+    def setStatusDetail(self, info):
+        self._state_detail = info
 
     def removeSource(self, source):
         if source in self.sources:
@@ -226,4 +232,3 @@ class Snapshot(object):
 
     def __repr__(self) -> str:
         return self.__str__()
-

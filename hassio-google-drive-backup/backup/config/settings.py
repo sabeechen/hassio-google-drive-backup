@@ -26,6 +26,7 @@ class Setting(Enum):
     SPECIFY_SNAPSHOT_FOLDER = "specify_snapshot_folder"
     WARN_FOR_LOW_SPACE = "warn_for_low_space"
     LOW_SPACE_THRESHOLD = "low_space_threshold"
+    DELETE_AFTER_UPLOAD = "delete_after_upload"
 
     # generational settings
     GENERATIONAL_DAYS = "generational_days"
@@ -115,6 +116,7 @@ class Setting(Enum):
     SERVER_PROJECT_ID = "server_project_id"
     LOG_LEVEL = "log_level"
     CONSOLE_LOG_LEVEL = "console_log_level"
+    SNAPSHOT_STARTUP_DELAY_MINUTES = "snapshot_startup_delay_minutes"
 
     def default(self):
         return _DEFAULTS[self]
@@ -137,6 +139,7 @@ _DEFAULTS = {
     Setting.SPECIFY_SNAPSHOT_FOLDER: False,
     Setting.WARN_FOR_LOW_SPACE: True,
     Setting.LOW_SPACE_THRESHOLD: 1024 * 1024 * 1024,
+    Setting.DELETE_AFTER_UPLOAD: False,
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: 0,
@@ -225,7 +228,112 @@ _DEFAULTS = {
     Setting.DEBUGGER_PORT: None,
     Setting.SERVER_PROJECT_ID: "",
     Setting.LOG_LEVEL: 'DEBUG',
-    Setting.CONSOLE_LOG_LEVEL: 'INFO'
+    Setting.CONSOLE_LOG_LEVEL: 'INFO',
+    Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 10
+}
+
+_CONFIG = {
+    # Basic snapshot settings
+    Setting.MAX_SNAPSHOTS_IN_HASSIO: "int(0,)",
+    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: "int(0,)",
+    Setting.DAYS_BETWEEN_SNAPSHOTS: "float(0,)?",
+    Setting.SNAPSHOT_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
+    Setting.SNAPSHOT_NAME: "str?",
+    Setting.SNAPSHOT_PASSWORD: "str?",
+    Setting.SPECIFY_SNAPSHOT_FOLDER: "bool?",
+    Setting.WARN_FOR_LOW_SPACE: "bool?",
+    Setting.LOW_SPACE_THRESHOLD: "int(0,)?",
+    Setting.DELETE_AFTER_UPLOAD: "bool?",
+
+    # Generational backup settings
+    Setting.GENERATIONAL_DAYS: "int(0,)?",
+    Setting.GENERATIONAL_WEEKS: "int(0,)?",
+    Setting.GENERATIONAL_MONTHS: "int(0,)?",
+    Setting.GENERATIONAL_YEARS: "int(0,)?",
+    Setting.GENERATIONAL_DAY_OF_WEEK: "match(^(mon|tue|wed|thu|fri|sat|sun)$)?",
+    Setting.GENERATIONAL_DAY_OF_MONTH: "int(1,31)?",
+    Setting.GENERATIONAL_DAY_OF_YEAR: "int(1,365)?",
+    Setting.GENERATIONAL_DELETE_EARLY: "bool?",
+
+    # Partial snapshot settings
+    Setting.EXCLUDE_FOLDERS: "str?",
+    Setting.EXCLUDE_ADDONS: "str?",
+
+    Setting.STOP_ADDONS: "str?",
+    Setting.DISABLE_WATCHDOG_WHEN_STOPPING: "bool?",
+
+    # UI Server settings
+    Setting.USE_SSL: "bool?",
+    Setting.REQUIRE_LOGIN: "bool?",
+    Setting.EXPOSE_EXTRA_SERVER: "bool?",
+    Setting.CERTFILE: "str?",
+    Setting.KEYFILE: "str?",
+    Setting.INGRESS_PORT: "int(0,)?",
+    Setting.PORT: "int(0,)?",
+
+    # Add-on options
+    Setting.NOTIFY_FOR_STALE_SNAPSHOTS: "bool?",
+    Setting.ENABLE_SNAPSHOT_STALE_SENSOR: "bool?",
+    Setting.ENABLE_SNAPSHOT_STATE_SENSOR: "bool?",
+    Setting.SEND_ERROR_REPORTS: "bool?",
+    Setting.VERBOSE: "bool?",
+    Setting.CONFIRM_MULTIPLE_DELETES: "bool?",
+    Setting.ENABLE_DRIVE_UPLOAD: "bool?",
+
+    # Theme Settings
+    Setting.BACKGROUND_COLOR: "match(#[0-9ABCDEFabcdef]{6})?",
+    Setting.ACCENT_COLOR: "match(#[0-9ABCDEFabcdef]{6})?",
+
+    # Network and DNS settings
+    Setting.ALTERNATE_DNS_SERVERS: "match(^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})(,[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})*$)?",
+    Setting.DRIVE_EXPERIMENTAL: "bool?",
+    Setting.DRIVE_IPV4: "match(^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$)?",
+    Setting.IGNORE_IPV6_ADDRESSES: "bool?",
+    Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS: "float(1,)?",
+    Setting.GOOGLE_DRIVE_PAGE_SIZE: "int(1,)?",
+
+    # Remote endpoints
+    Setting.HASSIO_URL: "url?",
+    Setting.HASSIO_TOKEN: "str?",
+    Setting.HOME_ASSISTANT_URL: "url?",
+    Setting.DRIVE_URL: "url?",
+    Setting.REFRESH_URL: "url?",
+    Setting.AUTHENTICATE_URL: "url?",
+    Setting.DRIVE_REFRESH_URL: "url?",
+    Setting.DRIVE_AUTHORIZE_URL: "url?",
+    Setting.DRIVE_TOKEN_URL: "url?",
+    Setting.CHOOSE_FOLDER_URL: "url?",
+    Setting.ERROR_REPORT_URL: "url?",
+    Setting.DRIVE_HOST_NAME: "str?",
+    Setting.SAVE_DRIVE_CREDS_PATH: "str?",
+
+    # File locations used to store things
+    Setting.FOLDER_FILE_PATH: "str?",
+    Setting.CREDENTIALS_FILE_PATH: "str?",
+    Setting.BACKUP_DIRECTORY_PATH: "str?",
+    Setting.RETAINED_FILE_PATH: "str?",
+    Setting.SECRETS_FILE_PATH: "str?",
+    Setting.INGRESS_TOKEN_FILE_PATH: "str?",
+    Setting.CONFIG_FILE_PATH: "str?",
+    Setting.ID_FILE_PATH: "str?",
+    Setting.STOP_ADDON_STATE_PATH: "str?",
+
+    # Various timeouts and intervals
+    Setting.SNAPSHOT_STALE_SECONDS: "float(0,)?",
+    Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.MAX_SYNC_INTERVAL_SECONDS: "float(300,)?",
+    Setting.DEFAULT_DRIVE_CLIENT_ID: "str?",
+    Setting.DEFAULT_DRIVE_CLIENT_SECRET: "str?",
+    Setting.DRIVE_PICKER_API_KEY: "str?",
+    Setting.DEFAULT_CHUNK_SIZE: "int(1,)?",
+    Setting.DOWNLOAD_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.DEBUGGER_PORT: "int(100,)?",
+    Setting.SERVER_PROJECT_ID: "str?",
+    Setting.LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
+    Setting.CONSOLE_LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
+    Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: "float(0,)?"
 }
 
 PRIVATE = [
@@ -288,8 +396,11 @@ for setting in Setting:
 
 with open(abspath(join(__file__, "..", "..", "..", "config.json"))) as f:
     addon_config = json.load(f)
-for key in addon_config["schema"]:
-    _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
+
+for setting in Setting:
+    _VALIDATORS[setting] = getValidator(setting.value, _CONFIG[setting])
+# for key in addon_config["schema"]:
+#     _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
 
 _VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsSecondsValidator("max_sync_interval_seconds", 1, None)
 VERSION = addon_config["version"]

@@ -50,6 +50,20 @@ class DriveSnapshot(AbstractSnapshot):
     def id(self) -> str:
         return self._id
 
+    def canDeleteDirectly(self) -> str:
+        caps = self.details().get("capabilities", {})
+        if caps.get('canDelete', False):
+            return True
+
+        # check if the item is in a shared drive
+        sharedId = self.details().get("driveId")
+        if sharedId and len(sharedId) > 0 and caps.get("canTrash", False):
+            # Its in a shared drive and trashable, so trash won't exhaust quota
+            return False
+
+        # We aren't certain we can trash or delete, so just make a try at deleting.
+        return True
+
     def __str__(self) -> str:
         return "<Drive: {0} Name: {1} Id: {2}>".format(self.slug(), self.name(), self.id())
 

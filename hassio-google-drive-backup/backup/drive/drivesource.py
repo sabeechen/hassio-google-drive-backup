@@ -1,8 +1,6 @@
-import os
-import os.path
-from datetime import datetime, timedelta
+from datetime import datetime
 from io import IOBase
-from typing import Any, Dict
+from typing import Dict
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientResponseError
@@ -117,8 +115,12 @@ class DriveSource(SnapshotDestination):
 
     async def delete(self, snapshot: Snapshot):
         item = self._validateSnapshot(snapshot)
-        logger.info("Deleting '{}' From Google Drive".format(item.name()))
-        await self.drivebackend.delete(item.id())
+        if item.canDeleteDirectly():
+            logger.info("Deleting '{}' From Google Drive".format(item.name()))
+            await self.drivebackend.delete(item.id())
+        else:
+            logger.info("Trashing '{}' in Google Drive".format(item.name()))
+            await self.drivebackend.update(item.id(), {"trashed": True})
         snapshot.removeSource(self.name())
 
     async def save(self, snapshot: AbstractSnapshot, source: AsyncHttpGetter) -> DriveSnapshot:

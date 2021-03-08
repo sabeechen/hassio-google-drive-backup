@@ -1,14 +1,12 @@
 import asyncio
 import ssl
 import json
-from aiohttp.web_routedef import get
 import aiohttp_jinja2
 import jinja2
 import base64
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
-from urllib.parse import quote
 
 from aiohttp import BasicAuth, hdrs, web, ClientSession
 from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther
@@ -153,6 +151,7 @@ class UiServer(Trigger, Startable):
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['is_specify_folder'] = self.config.get(
             Setting.SPECIFY_SNAPSHOT_FOLDER)
+        status['snapshot_cooldown_active'] = self._coord.isWaitingForStartup()
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -185,6 +184,7 @@ class UiServer(Trigger, Startable):
             'sources': sources,
             'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
             'restorable': snapshot.getSource(SOURCE_HA) is not None,
+            'status_detail': snapshot.getStatusDetail()
         }
 
     async def manualauth(self, request: Request) -> None:
@@ -390,6 +390,10 @@ class UiServer(Trigger, Startable):
         await self._updateConfiguration(validated)
         return web.json_response({'message': 'Configuration updated'})
 
+    async def ignorestartupcooldown(self, request: Request):
+        self._coord.ignoreStartupDelay()
+        return await self.sync(request)
+
     async def exposeserver(self, request: Request):
         expose = BoolValidator.strToBool(request.query.get("expose", False))
         if expose:
@@ -592,6 +596,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self._debug.simerror)
         self._addRoute(app, self._debug.getTasks)
         self._addRoute(app, self.makeanissue)
+        self._addRoute(app, self.ignorestartupcooldown)
 
     def _addRoute(self, app, method):
         app.add_routes([

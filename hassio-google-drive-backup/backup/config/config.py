@@ -78,7 +78,7 @@ class Config():
         for key in overrides.keys():
             config.override(key, overrides[key])
         return config
-    
+
     @classmethod
     def withFileOverrides(cls, override_path):
         with open(override_path, "r") as f:
@@ -197,7 +197,7 @@ class Config():
                     self._clientIdentifier = str(uuid.uuid4())
                     with open(self.get(Setting.ID_FILE_PATH), "w") as f:
                         json.dump({'id': self._clientIdentifier}, f)
-            except:
+            except Exception:
                 self._clientIdentifier = str(uuid.uuid4())
         return self._clientIdentifier
 

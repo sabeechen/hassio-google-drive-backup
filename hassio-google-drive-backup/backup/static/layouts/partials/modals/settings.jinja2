@@ -28,6 +28,17 @@
           </div>
         </div>
         <div class="row">
+          <div class="col s12">
+            <label>
+              <input type="checkbox" name="delete_after_upload" id="delete_after_upload"
+                class="filled-in checkbox-ha" />
+              <span>Delete Snapshots After Upload</span>
+              <br />
+              <span class="helper-text">Delete snapshots in Home Assistant immediately after uploading them to Google Drive.  This can be useful if you machine is low on space, but your snapshots will only be stored in the cloud.  Enabling this will cause "Snapshots in Home Assistant" to be ignored.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
           <div class="input-field col m6 s12">
             <i class="material-icons prefix">date_range</i>
             <input type="number" id="days_between_snapshots" name="days_between_snapshots" min="0" class="validate" />

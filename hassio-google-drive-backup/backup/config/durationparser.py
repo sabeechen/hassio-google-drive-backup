@@ -9,6 +9,7 @@ DAY_IDENTIFIERS = ["d", "day", "days"]
 NUMBER_REGEX = "^([0-9]*[.])?[0-9]+"
 VALID_REGEX = "^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*"
 
+
 @singleton
 class DurationParser():
     @inject
@@ -31,7 +32,7 @@ class DurationParser():
                 raise ValueError()
             length = float(match.group(0))
             if match.group(0) == part:
-                
+
                 if i < len(parts):
                     next_part = parts[i].strip().strip(',')
                     if next_part in SECOND_IDENTIFIERS or next_part in MINUTE_IDENTIFIERS or next_part in HOUR_IDENTIFIERS or next_part in DAY_IDENTIFIERS:
@@ -77,6 +78,3 @@ class DurationParser():
             return ", ".join(parts)
         else:
             return "0 seconds"
-
-                
-

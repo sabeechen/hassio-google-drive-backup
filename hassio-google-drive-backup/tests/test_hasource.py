@@ -17,6 +17,7 @@ from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON,
 from dev.request_interceptor import RequestInterceptor
 from backup.model import Model
 
+
 @pytest.mark.asyncio
 async def test_sync_empty(ha) -> None:
     assert len(await ha.get()) == 0

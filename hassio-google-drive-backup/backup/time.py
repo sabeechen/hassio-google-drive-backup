@@ -95,5 +95,3 @@ class AcceleratedTime(Time):
 
     async def sleepAsync(self, seconds: float) -> None:
         await asyncio.sleep(seconds / self.dialation)
-
-

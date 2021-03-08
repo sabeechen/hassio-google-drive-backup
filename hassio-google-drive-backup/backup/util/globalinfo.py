@@ -1,4 +1,5 @@
 
+from datetime import timedelta
 from threading import Lock
 
 from injector import inject, singleton
@@ -23,7 +24,6 @@ class GlobalInfo():
         self._last_upload = None
         self._last_success = time.now()
         self._last_sync_success = None
-        self._start_time = None
         self._last_upload_size = None
         self._last_sync_start = None
         self._last_error = None
@@ -43,6 +43,7 @@ class GlobalInfo():
         self.url = ""
         self.debug = {}
         self.lock = Lock()
+        self.snapshot_cooldown_time = time.now()
 
     def ignoreErrorsForNow(self):
         return self._ignore_errors_for_now
@@ -112,3 +113,9 @@ class GlobalInfo():
 
     def setSkipSpaceCheckOnce(self, val):
         self._skip_space_check_once = val
+
+    def triggerSnapshotCooldown(self, delay: timedelta):
+        self.snapshot_cooldown_time = self._time.now() + delay
+
+    def snapshotCooldownTime(self):
+        return self.snapshot_cooldown_time

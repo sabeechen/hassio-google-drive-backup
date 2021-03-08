@@ -1,4 +1,3 @@
-import urllib
 import json
 import aiohttp_jinja2
 import jinja2
@@ -18,6 +17,7 @@ from backup.config import Version
 from urllib.parse import unquote
 
 NEW_AUTH_MINIMUM = Version(0, 101, 3)
+
 
 @singleton
 class Server():

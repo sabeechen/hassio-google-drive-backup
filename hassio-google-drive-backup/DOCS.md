@@ -43,6 +43,8 @@ notify_for_stale_snapshots: false
 expose_extra_server: true
 # Allow sending error reports
 send_error_reports: true
+# Delete snapshots after they're uploaded to Google Drive
+delete_after_upload: true
 ```
 
 ### Option: `max_snapshots_in_hassio` (default: 4)
@@ -150,6 +152,10 @@ If true, enable additional debug logging. Useful if you start seeing errors and 
 #### Option: `send_error_reports` (default: False)
 
 When true, the text of unexpected errors will be sent to database maintained by the developer. This helps identify problems with new releases and provide better context messages when errors come up.
+
+#### Option: `delete_after_upload` (default: False)
+
+When true, snapshots are always deleted after they've been uploaded to Google Drive.  'snapshots_in_hassio' is ignored when this option is True, since a snapshot is always deleted from Home Assistant after it gets backed up to Google Drive.  Some find this useful if they only have enough space on their Home Assistant machine for one snapshot.
 
 ## FAQ
 

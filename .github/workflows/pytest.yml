@@ -1,0 +1,61 @@
+name: run-pytest
+on: 
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  run-pytest:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r hassio-google-drive-backup/dev/requirements-dev.txt
+    - name: Install fping
+      run: sudo apt-get install fping
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-line-length=300 --statistics
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pip install pytest-cov
+        pytest hassio-google-drive-backup/tests --junitxml=junit/test-results.xml --cov=hassio-google-drive-backup/backup --cov-report=xml --cov-report=html
+    - name: Test build
+      uses: home-assistant/builder@master
+      with:
+        args: |
+          --test \
+          --all \
+          --target hassio-google-drive-backup
+    - name: Upload pytest test results
+      uses: actions/upload-artifact@v2
+      with:
+        name: pytest-results
+        path: junit/test-results.xml
+      if: ${{ always() }}
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
+      with:
+        files: junit/**/*.xml
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        directory: ./coverage/reports/
+        flags: unittests
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true

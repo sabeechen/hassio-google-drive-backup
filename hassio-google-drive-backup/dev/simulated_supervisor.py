@@ -7,7 +7,6 @@ from backup.time import Time
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, get,
                          json_response, post)
-from aiohttp import hdrs, web, ClientSession
 from injector import inject, singleton
 from .base_server import BaseServer
 from .ports import Ports
@@ -40,7 +39,7 @@ class SimulatedSupervisor(BaseServer):
         self._events = []
         self._attributes = {}
         self._notification = None
-        self._min_snapshot_size = 1024 * 1024 * 3
+        self._min_snapshot_size = 1024 * 1024 * 5
         self._max_snapshot_size = 1024 * 1024 * 5
         self._addon_slug = "self_slug"
         self._options = self.defaultOptions()

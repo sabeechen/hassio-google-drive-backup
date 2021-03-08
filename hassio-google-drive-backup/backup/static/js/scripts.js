@@ -177,6 +177,13 @@ function resolvefolder(use_existing) {
   refreshstats();
 }
 
+function allowImmediateSnapshot(use_existing) {
+  var url = "ignorestartupcooldown";
+  postJson("ignorestartupcooldown", {}, refreshstats, null, "Ignoring delay...");
+  $('#snapshots_boot_waiting_card').hide();
+  refreshstats();
+}
+
 function sync(dialog_class) {
   postJsonCloseErrorDialog("startSync", dialog_class);
 }
@@ -461,6 +468,18 @@ function processSnapshotsUpdate(data) {
       $("#name", template).html(snapshot['name']);
       $("#name", template).attr('title', snapshot['name']);
       $("#status", template).html(snapshot['status']);
+      if (snapshot.status_detail) {
+        $("#gen_detail", template).show();
+        tooltip = "<span>This is a generational snapshot.<br>\nIts currently being saved for: <br><ul class='left browser-default'>\n"
+        for (let reason of snapshot.status_detail) {
+          tooltip += "<li>" + reason + "</li>\n"
+        }
+        tooltip += "<ul></span>"
+        $("#gen_detail", template).attr('data-tooltip', tooltip);
+      } else {
+        $("#gen_detail", template).hide();
+      }
+      
 
       if (snapshot.protected) {
         $(".icon-protected", template).show();
@@ -633,11 +652,28 @@ function processStatusUpdate(data) {
     $("#error_card").hide();
   }
 
-  if (data.ask_error_reports && !found) {
-    $('#error_reports_card').fadeIn(500);
-  } else {
-    $('#error_reports_card').hide();
+  // Only show one of the "question" cards at a TimeRanges, ir order to prevent the UI from blowing up
+  let question_card = null;
+  if(data.snapshot_cooldown_active) {
+    question_card = "snapshots_boot_waiting_card";
+  } else if(data.warn_ingress_upgrade && !hideIngress) {
+    question_card = "ingress_upgrade_card";
+  } else if (data.ask_error_reports && !found) {
+    question_card = "error_reports_card";
   }
+
+  $('.question-card').each(function (i) {
+    let item = $(this);
+    let id = item.attr('id');
+    let visible = item.is(":visible");
+    if (id == question_card && !visible) {
+        item.fadeIn(500);
+        item.slideDown(1000);
+    } else if (id != question_card && visible) {
+        item.slideUp(1000);
+        item.fadeOut(500);
+    }
+  });
 
   if (data.is_custom_creds) {
     $(".hide-for-custom-creds").hide();
@@ -645,12 +681,6 @@ function processStatusUpdate(data) {
   } else {
     $(".hide-for-custom-creds").show();
     $(".hide-for-default-creds").hide();
-  }
-
-  if (data.warn_ingress_upgrade && !hideIngress) {
-    $('#ingress_upgrade_card').fadeIn(500);
-  } else {
-    $('#ingress_upgrade_card').hide();
   }
 
 

@@ -1,4 +1,3 @@
-import logging
 import os
 import json
 from os.path import abspath, join
@@ -30,47 +29,7 @@ from yarl import URL
 from dev.ports import Ports
 from dev.simulated_supervisor import SimulatedSupervisor
 from bs4 import BeautifulSoup
-
-
-class ReaderHelper:
-    def __init__(self, session, ui_port, ingress_port):
-        self.session = session
-        self.ui_port = ui_port
-        self.ingress_port = ingress_port
-        self.timeout = aiohttp.ClientTimeout(total=20)
-
-    def getUrl(self, ingress=True, ssl=False):
-        if ssl:
-            protocol = "https"
-        else:
-            protocol = "http"
-        if ingress:
-            return protocol + "://localhost:" + str(self.ingress_port) + "/"
-        else:
-            return protocol + "://localhost:" + str(self.ui_port) + "/"
-
-    async def getjson(self, path, status=200, json=None, auth=None, ingress=True, ssl=False, sslcontext=None):
-        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, ssl=sslcontext, timeout=self.timeout) as resp:
-            assert resp.status == status
-            return await resp.json()
-
-    async def get(self, path, status=200, json=None, auth=None, ingress=True, ssl=False):
-        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, timeout=self.timeout) as resp:
-            if resp.status != status:
-                import logging
-                logging.getLogger().error(resp.text())
-                assert resp.status == status
-            return await resp.text()
-
-    async def postjson(self, path, status=200, json=None, ingress=True):
-        async with self.session.post(self.getUrl(ingress) + path, json=json, timeout=self.timeout) as resp:
-            assert resp.status == status
-            return await resp.json()
-
-    async def assertError(self, path, error_type="generic_error", status=500, ingress=True, json=None):
-        logging.getLogger().info("Requesting " + path)
-        data = await self.getjson(path, status=status, ingress=ingress, json=json)
-        assert data['error_type'] == error_type
+from .conftest import ReaderHelper
 
 
 @pytest.fixture
@@ -89,24 +48,10 @@ def simple_config(config):
 
 
 @pytest.fixture
-async def ui_server(injector, server):
-    os.mkdir("static")
-    server = injector.get(UiServer)
-    await server.run()
-    yield server
-    await server.shutdown()
-
-
-@pytest.fixture
 async def restarter(injector, server):
     restarter = injector.get(Restarter)
     await restarter.start()
     return restarter
-
-
-@pytest.fixture
-def reader(ui_server, session, ui_port, ingress_port):
-    return ReaderHelper(session, ui_port, ingress_port)
 
 
 @pytest.mark.asyncio
@@ -165,7 +110,6 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: FakeTime):
     data = await reader.getjson("getstatus")
     assert data['firstSync'] is False
@@ -195,7 +139,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': data['sources'][SOURCE_HA]['free_space']
     }
     assert len(data['sources']) == 2
 
@@ -228,7 +172,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': status['sources'][SOURCE_HA]["free_space"]
     }
 
     await reader.getjson("retain", json={'slug': slug, 'sources': []})
@@ -254,7 +198,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': status['sources'][SOURCE_HA]["free_space"]
     }
     delete_req = {
         "slug": slug,
@@ -284,7 +228,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': status['sources'][SOURCE_HA]["free_space"]
     }
 
     # sync again, which should upoload the snapshot to Drive
@@ -385,7 +329,6 @@ async def test_config(reader, ui_server, config: Config, supervisor: SimulatedSu
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_auth_and_restart(reader, ui_server, config: Config, restarter, coord: Coordinator, supervisor: SimulatedSupervisor):
     update = {"config": {"require_login": True,
                          "expose_extra_server": True}, "snapshot_folder": "unused"}
@@ -414,7 +357,6 @@ async def test_auth_and_restart(reader, ui_server, config: Config, restarter, co
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(100)
-@pytest.mark.flaky(5)
 async def test_expose_extra_server_option(reader, ui_server: UiServer, config: Config):
     with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
         await reader.getjson("sync", ingress=False)
@@ -484,7 +426,6 @@ async def test_drive_cred_generation(reader: ReaderHelper, ui_server: UiServer, 
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
     config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
@@ -534,7 +475,6 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_update_multiple_deletes_setting(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource, global_info: GlobalInfo):
     assert await reader.getjson("confirmdelete?always=true") == {
         'message': 'Configuration updated, I\'ll never ask again'
@@ -640,7 +580,6 @@ async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: UiSer
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
     await ha.delete(snapshot)
     # download the item from Google Drive
@@ -652,7 +591,6 @@ async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, h
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
     await drive.delete(snapshot)
     # download the item from Google Drive

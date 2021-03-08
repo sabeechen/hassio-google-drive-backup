@@ -2,8 +2,9 @@
 import pytest
 from yarl import URL
 from dev.simulationserver import SimulationServer
-from aiohttp import ClientSession, ClientResponse, hdrs
-from backup.config import Config, Setting
+from aiohttp import ClientSession, hdrs
+from backup.config import Config
+
 
 @pytest.mark.asyncio
 async def test_refresh_known_error(server: SimulationServer, session: ClientSession, config: Config, server_url: str):

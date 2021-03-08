@@ -84,9 +84,14 @@ function doUpload(slug, name) {
 
 function showDetails(target) {
   var snapshot = $(target).data('snapshot');
+  if (snapshot.isPending) {
+    return;
+  }
+
   var details = snapshot.details;
-  console.log(details)
   $("#details_name").html(snapshot.name);
+  $("#details_name").attr("title", snapshot.name);
+
   $("#details_date").html(snapshot.date);
   $("#details_type").html(snapshot.type);
   if (snapshot.protected) {
@@ -123,6 +128,23 @@ function showDetails(target) {
     $("#details_folders_and_addons").hide();
     $("#details_upload_reminder").show();
   }
+
+  if (snapshot.restorable) {
+    $("#restore_link").show();
+  } else {
+    $("#restore_link").hide();
+  }
+
+  if (snapshot.uploadable) {
+    $("#upload_link").show();
+  } else {
+    $("#upload_link").hide();
+  }
+
+  $("#delete_link").data('snapshot', snapshot);
+  $("#upload_link").data('snapshot', snapshot);
+  $("#download_link").data('snapshot', snapshot);
+  $("#retain_link").data('snapshot', snapshot);
 
   M.Modal.getInstance(document.querySelector('#details_modal')).open();
 }
@@ -220,7 +242,7 @@ function postJson(path, json, onSuccess, onFail = null, toastWhile = null) {
       if (onFail) {
         onFail(info);
       } else {
-        button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+        button_text = "&nbsp;&nbsp;<a class='waves-effect btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
         $('#error_details_paragraph').text(info.details);
 
         M.toast({ html: info.message + button_text, displayLength: 10000 });
@@ -379,7 +401,8 @@ function processSourcesUpdate(sources) {
       template.data("source", key);
     }
 
-    $(".source_title", template).html("In " + source.title + ":");
+    $(".source_title", template).html("in " + source.title );
+    $(".source_icon", template).html(source.title === "Home Assistant" ? "sd_card" : "cloud_done");
 
     if (source.retained > 0) {
       $(".source_retain_count", template).html(source.retained);
@@ -389,13 +412,12 @@ function processSourcesUpdate(sources) {
     }
     $(".source_snapshot_count", template).html(source.snapshots + " (" + source.size + ")");
 
-    let free_space = $('.source_free_space', template);
     if (source.hasOwnProperty("free_space")) {
-      free_space.html(source.free_space + " remaining");
-      free_space.attr("data-tooltip", "An estimate of the space available in " + source.title + ".");
-      free_space.show();
+      $('.source_free_space_text', template).html(source.free_space + " remaining");
+      $('.source_free_space_tooltip', template).attr("data-tooltip", "An estimate of the space available in " + source.title + ".");
+      $('.source_free_space', template).show();
     } else {
-      free_space.hide();
+      $('.source_free_space', template).hide();
     }
 
     if (isNew) {
@@ -428,26 +450,16 @@ function processSnapshotsUpdate(data) {
         template.addClass("slug" + snapshot.slug);
         template.addClass("active-snapshot");
         template.data("slug", snapshot.slug);
-        var dropdown = $("#action_dropdown", template);
-        dropdown.attr("id", "action_dropdown" + snapshot.slug);
-        $("#action_dropdown_button", template).attr("data-target", "action_dropdown" + snapshot.slug);
-        $("#action_dropdown_button", template).attr('id', "action_dropdown_button" + snapshot.slug);
-
-        $("#delete_link", template).attr('id', "delete_link" + snapshot.slug);
-        $("#restore_link", template).attr('id', "restore_link" + snapshot.slug);
-        $("#upload_link", template).attr('id', "upload_link" + snapshot.slug);
-        $("#download_link", template).attr('id', "download_link" + snapshot.slug);
-        $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
-        $("#delete_option", template).attr('id', "delete_option" + snapshot.slug);
-        $("#restore_option", template).attr('id', "restore_option" + snapshot.slug);
-        $("#upload_option", template).attr('id', "upload_option" + snapshot.slug);
-        $("#download_option", template).attr('id', "download_option" + snapshot.slug);
-        $("#retain_option", template).attr('id', "retain_option" + snapshot.slug);
+        $("#snapshot_card", template).attr('id', "snapshot_card" + snapshot.slug);
+        $("#loading", template).attr('id', "loading" + snapshot.slug);
         isNew = true;
       }
 
       $("#size", template).html(snapshot['size']);
+      $("#type", template).html(snapshot['type'] === "full" ? "Full snapshot" : "Partial snapshot");
+      $("#createdAt", template).html(snapshot['createdAt']);
       $("#name", template).html(snapshot['name']);
+      $("#name", template).attr('title', snapshot['name']);
       $("#status", template).html(snapshot['status']);
 
       if (snapshot.protected) {
@@ -503,36 +515,18 @@ function processSnapshotsUpdate(data) {
 
       if (isNew) {
         snapshot_div.prepend(template);
-        var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
-        var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
       }
 
       if (snapshot.isPending) {
-        $("#action_dropdown_button" + snapshot.slug).hide();
+        $("#loading" + snapshot.slug).show();
+        $("#snapshot_card" + snapshot.slug).css("cursor", "auto");
       } else {
-        $("#action_dropdown_button" + snapshot.slug).show();
+        $("#loading" + snapshot.slug).hide();
+        $("#snapshot_card" + snapshot.slug).css("cursor", "pointer");
       }
 
-      if (snapshot.restorable) {
-        $("#restore_option" + snapshot.slug).show();
-      } else {
-        $("#restore_option" + snapshot.slug).hide();
-      }
-
-      if (snapshot.uploadable) {
-        $("#upload_option" + snapshot.slug).show();
-      } else {
-        $("#upload_option" + snapshot.slug).hide();
-      }
-
-      $("#status-details", template).data('snapshot', snapshot)
-
-      // Set up context menu
-      $("#delete_link" + snapshot.slug).data('snapshot', snapshot);
-      //$("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
-      $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
-      $("#download_link" + snapshot.slug).data('snapshot', snapshot);
-      $("#retain_link" + snapshot.slug).data('snapshot', snapshot);
+      // Set up context
+      $("#snapshot_card" + snapshot.slug).data('snapshot', snapshot)
     }
   }
 
@@ -663,7 +657,7 @@ function processStatusUpdate(data) {
   $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_snapshot_path, data.ha_url_base));
 
   last_data = data;
-
+  
   $('.tooltipped').tooltip({ "exitDelay": 1000 });
   if (error_toast != null) {
     error_toast.dismiss();
@@ -732,7 +726,6 @@ function doNewSnapshot() {
   return false;
 }
 
-
 function allowDeletion(always) {
   var url = "confirmdelete?always=" + always;
   postJson(url, {}, refreshstats, null, "Allowing deletion and syncing...");
@@ -749,14 +742,16 @@ function skipLowSpaceWarning() {
 
 
 $(document).ready(function () {
-  if (window.top.location == window.location) {
-    // We're in a standard webpage, only show the header
+  if (window.top.location === window.location) {
+    // We're in a standard webpage, show the full header
     $(".ingress-only").hide();
+    $(".nav-wrapper .right").addClass("hide-on-med-and-down")
   } else {
     // We're in an ingress iframe.
     $(".non-ingress").hide();
+    $(".nav-wrapper .brand-logo").addClass("hide-on-med-and-down")
   }
-  var instance = M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
+  M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
 });
 
 

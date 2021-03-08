@@ -1,7 +1,7 @@
 *.pyc
 *.dat
 *.id
-*pychache*
+*pycache*
 .pytest_cache/*
 .mypy_cache/*
 *drive_creds*

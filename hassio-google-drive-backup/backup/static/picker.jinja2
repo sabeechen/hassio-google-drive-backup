@@ -1,3 +1,4 @@
+{% import "layouts/macros.jinja2" as macros %}
 {% extends "layouts/base-server.jinja2" %}
 
 {% block head %}
@@ -115,16 +116,7 @@
   </script>
 {% endblock %}
 {% block content %}
-  <header>
-    <nav class="non-ingress ha-blue" role="navigation">
-      <div class="nav-wrapper">
-        <a class="brand-logo">
-          <img style="vertical-align: middle;" src="/static/images/logo.png" width=40 height=40 />
-          <span>Choose Backup Folder</span>
-        </a>
-      </div>
-    </nav>
-  </header>
+  {% call macros.header() %}{% endcall %}
   <main>
     <div class="container">
       <div class="section">
@@ -142,8 +134,8 @@
                         <li>If you'd like to know why this page has to be hosted on an external domain, <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a>.</li>
                       </ul>
                       </p>
-                      <div class="card-action white-text">
-                          <a target="_blank" class="waves-effect waves-light btn" onclick="loadPicker();">Choose Folder</a>
+                      <div class="card-action">
+                          <a target="_blank" class="waves-effect btn" onclick="loadPicker();">Choose Folder</a>
                       </div>
                   </div>
               </div>
@@ -156,8 +148,8 @@
                       <textarea readonly id="drive_folder_id">
                       </textarea>
                     </p>
-                    <div class="card-action white-text">
-                      <button id="copy_button" onclick="copyFromInput('drive_folder_id')" class="right btn waves-effect waves-light btn-flat">
+                    <div class="card-action">
+                      <button id="copy_button" onclick="copyFromInput('drive_folder_id')" class="right btn waves-effect btn-flat">
                         <i class="material-icons" style="vertical-align: middle; padding-right: 5px">content_copy</i>Copy
                       </button>
                     </div>

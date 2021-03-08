@@ -101,6 +101,9 @@ class Model():
             return False
         return True
 
+    def allSources(self):
+        return [self.source, self.dest]
+
     def reinitialize(self):
         self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
 
@@ -165,10 +168,12 @@ class Model():
             if self.dest.enabled():
                 await self._purge(self.dest)
 
+        self._handleSnapshotDetails()
         next_snapshot = self.nextSnapshot(now)
         if next_snapshot and now >= next_snapshot and self.source.enabled() and not self.dest.needsConfiguration():
             await self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
             await self._purge(self.source)
+            self._handleSnapshotDetails()
 
         if self.dest.enabled() and self.dest.upload():
             # get the snapshots we should upload
@@ -187,10 +192,12 @@ class Model():
                 if self._nextPurge(self.dest, proposed) != dummy:
                     upload.addSource(await self.dest.save(upload, await self.source.read(upload)))
                     await self._purge(self.dest)
+                    self._handleSnapshotDetails()
                 else:
                     break
             if self.config.get(Setting.DELETE_AFTER_UPLOAD):
                 await self._purge(self.source)
+        self._handleSnapshotDetails()
         self.source.postSync()
         self.dest.postSync()
 
@@ -259,23 +266,31 @@ class Model():
                         del self.snapshots[slug]
         self.firstSync = False
 
+    def _buildDeleteScheme(self, source):
+        count = source.maxCount()
+        if source == self.source and self.config.get(Setting.DELETE_AFTER_UPLOAD):
+            return DeleteAfterUploadScheme(source.name(), [self.dest.name()])
+        elif self.generational_config:
+            return GenerationalScheme(
+                self.time, self.generational_config, count=count)
+        else:
+            return OldestScheme(count=count)
+
+    def _buildNamingScheme(self):
+        source = max(filter(SnapshotSource.enabled, self.allSources()), key=SnapshotSource.maxCount)
+        return self._buildDeleteScheme(source)
+
+    def _handleSnapshotDetails(self):
+        self._buildNamingScheme().handleNaming(self.snapshots.values())
+
     def _nextPurge(self, source: SnapshotSource, snapshots, findNext=False):
         """
         Given a list of snapshots, decides if one should be purged.
         """
-        count = source.maxCount()
-        if findNext:
-            count -= 1
         if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
             return None
 
-        if source == self.source and self.config.get(Setting.DELETE_AFTER_UPLOAD):
-            scheme = DeleteAfterUploadScheme(source.name(), [self.dest.name()])
-        elif self.generational_config:
-            scheme = GenerationalScheme(
-                self.time, self.generational_config, count=count)
-        else:
-            scheme = OldestScheme(count=count)
+        scheme = self._buildDeleteScheme(source)
         consider_purging = []
         for snapshot in snapshots:
             source_snapshot = snapshot.getSource(source.name())

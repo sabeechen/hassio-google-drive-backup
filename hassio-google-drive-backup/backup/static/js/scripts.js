@@ -468,6 +468,18 @@ function processSnapshotsUpdate(data) {
       $("#name", template).html(snapshot['name']);
       $("#name", template).attr('title', snapshot['name']);
       $("#status", template).html(snapshot['status']);
+      if (snapshot.status_detail) {
+        $("#gen_detail", template).show();
+        tooltip = "<span>This is a generational snapshot.<br>\nIts currently being saved for: <br><ul class='left browser-default'>\n"
+        for (let reason of snapshot.status_detail) {
+          tooltip += "<li>" + reason + "</li>\n"
+        }
+        tooltip += "<ul></span>"
+        $("#gen_detail", template).attr('data-tooltip', tooltip);
+      } else {
+        $("#gen_detail", template).hide();
+      }
+      
 
       if (snapshot.protected) {
         $(".icon-protected", template).show();

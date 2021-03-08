@@ -124,10 +124,10 @@ class Snapshot(object):
         if snapshot.getOptions() and not self.getOptions():
             self.setOptions(snapshot.getOptions())
 
-    def getStateInfo(self):
+    def getStatusDetail(self):
         return self._state_detail
 
-    def setStateDetail(self, info):
+    def setStatusDetail(self, info):
         self._state_detail = info
 
     def removeSource(self, source):

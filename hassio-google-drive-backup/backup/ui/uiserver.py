@@ -184,6 +184,7 @@ class UiServer(Trigger, Startable):
             'sources': sources,
             'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
             'restorable': snapshot.getSource(SOURCE_HA) is not None,
+            'status_detail': snapshot.getStatusDetail()
         }
 
     async def manualauth(self, request: Request) -> None:

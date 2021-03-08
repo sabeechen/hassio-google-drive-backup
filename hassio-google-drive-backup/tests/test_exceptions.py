@@ -1,11 +1,13 @@
 from bs4 import BeautifulSoup
-from os.path import join, abspath
 import backup.exceptions
 import inspect
+import pytest
 from backup.exceptions import KnownError, KnownTransient, SimulatedError, GoogleDrivePermissionDenied, InvalidConfigurationValue, LogicError, ProtocolError, NoSnapshot, NotUploadable, PleaseWait, UploadFailed
+from .conftest import ReaderHelper
 
 
-def test_verify_coverage():
+@pytest.mark.asyncio
+async def test_verify_coverage(ui_server, reader: ReaderHelper):
     # Get the list of exception codes
     ignore = [
         KnownError,
@@ -26,10 +28,10 @@ def test_verify_coverage():
             codes[obj().code()] = obj
 
     # Get the list of ui dialogs
+    document = await reader.get("", json=False)
+    page = BeautifulSoup(document, 'html.parser')
+
     dialogs = {}
-    with open(abspath(join(__file__, "..", "..", "backup", "static", "working.jinja2")), "r") as f:
-        text = f.read()
-    page = BeautifulSoup(text, 'html.parser')
     for div in page.find_all("div"):
         cls = div.get("class")
         if cls is None:

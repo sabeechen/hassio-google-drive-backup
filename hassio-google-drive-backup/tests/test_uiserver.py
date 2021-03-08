@@ -1,4 +1,3 @@
-import logging
 import os
 import json
 from os.path import abspath, join
@@ -30,47 +29,7 @@ from yarl import URL
 from dev.ports import Ports
 from dev.simulated_supervisor import SimulatedSupervisor
 from bs4 import BeautifulSoup
-
-
-class ReaderHelper:
-    def __init__(self, session, ui_port, ingress_port):
-        self.session = session
-        self.ui_port = ui_port
-        self.ingress_port = ingress_port
-        self.timeout = aiohttp.ClientTimeout(total=20)
-
-    def getUrl(self, ingress=True, ssl=False):
-        if ssl:
-            protocol = "https"
-        else:
-            protocol = "http"
-        if ingress:
-            return protocol + "://localhost:" + str(self.ingress_port) + "/"
-        else:
-            return protocol + "://localhost:" + str(self.ui_port) + "/"
-
-    async def getjson(self, path, status=200, json=None, auth=None, ingress=True, ssl=False, sslcontext=None):
-        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, ssl=sslcontext, timeout=self.timeout) as resp:
-            assert resp.status == status
-            return await resp.json()
-
-    async def get(self, path, status=200, json=None, auth=None, ingress=True, ssl=False):
-        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, timeout=self.timeout) as resp:
-            if resp.status != status:
-                import logging
-                logging.getLogger().error(resp.text())
-                assert resp.status == status
-            return await resp.text()
-
-    async def postjson(self, path, status=200, json=None, ingress=True):
-        async with self.session.post(self.getUrl(ingress) + path, json=json, timeout=self.timeout) as resp:
-            assert resp.status == status
-            return await resp.json()
-
-    async def assertError(self, path, error_type="generic_error", status=500, ingress=True, json=None):
-        logging.getLogger().info("Requesting " + path)
-        data = await self.getjson(path, status=status, ingress=ingress, json=json)
-        assert data['error_type'] == error_type
+from .conftest import ReaderHelper
 
 
 @pytest.fixture
@@ -89,24 +48,10 @@ def simple_config(config):
 
 
 @pytest.fixture
-async def ui_server(injector, server):
-    os.mkdir("static")
-    server = injector.get(UiServer)
-    await server.run()
-    yield server
-    await server.shutdown()
-
-
-@pytest.fixture
 async def restarter(injector, server):
     restarter = injector.get(Restarter)
     await restarter.start()
     return restarter
-
-
-@pytest.fixture
-def reader(ui_server, session, ui_port, ingress_port):
-    return ReaderHelper(session, ui_port, ingress_port)
 
 
 @pytest.mark.asyncio

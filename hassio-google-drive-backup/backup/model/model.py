@@ -266,8 +266,10 @@ class Model():
                         del self.snapshots[slug]
         self.firstSync = False
 
-    def _buildDeleteScheme(self, source):
+    def _buildDeleteScheme(self, source, findNext=False):
         count = source.maxCount()
+        if findNext:
+            count = -1
         if source == self.source and self.config.get(Setting.DELETE_AFTER_UPLOAD):
             return DeleteAfterUploadScheme(source.name(), [self.dest.name()])
         elif self.generational_config:
@@ -290,7 +292,7 @@ class Model():
         if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
             return None
 
-        scheme = self._buildDeleteScheme(source)
+        scheme = self._buildDeleteScheme(source, findNext=findNext)
         consider_purging = []
         for snapshot in snapshots:
             source_snapshot = snapshot.getSource(source.name())

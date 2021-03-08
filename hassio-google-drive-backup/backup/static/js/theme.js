@@ -150,6 +150,7 @@ function setColors(background, accent) {
       "--text-primary-color": text.shift(0.13).toCss(),
       "--text-secondary-color": text.shift(0.26).toCss(),
       "--divider-color": text.withAlpha(0.12).toCss(),
+      "--shadow-color": Color.parse(background.luminance() === 0 ? "#FFFFFF" : "#000000").withAlpha(0.14).toCss(),
       "--icon-color": text.shift(0.13).withAlpha(0.6).toCss(),
       // Accent colors
       "--accent-color": accent.toCss(),

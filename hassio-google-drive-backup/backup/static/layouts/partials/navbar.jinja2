@@ -34,10 +34,10 @@
     });
     $('#help_modal').modal();
     $('#bug_modal').modal();
-    $('#about_modal').modal();
     $('.tooltipped').tooltip();
     $('.collapsible').collapsible();
     $('.sidenav').sidenav();
+    $('.fixed-action-btn').floatingActionButton();
 
     const dropdownTriggers = document.querySelectorAll('.dropdown-trigger');
     const instances = M.Dropdown.init(dropdownTriggers, { 'constrainWidth': false });
@@ -120,3 +120,11 @@
   <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
   <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>About</a></li>
 </ul>
+
+{% if coordEnabled %}
+<div class="fixed-action-btn">
+  <a onclick="newSnapshotClick(); return false;" class="btn-floating btn-large tooltipped" data-position="left" data-tooltip="Snapshot Now">
+    <i class="large material-icons">add</i>
+  </a>
+</div>
+{% endif %}

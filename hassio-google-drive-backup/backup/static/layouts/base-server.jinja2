@@ -22,6 +22,7 @@
   <script src="/static/js/init.js?version={{ version }}"></script>
   <script src="/static/js/scripts.js?version={{ version }}"></script>
   <script src="/static/js/settings.js?version={{ version }}"></script>
+  <script src="/static/js/about.js?version={{ version }}"></script>
   <script src="/static/js/restore.js?version={{ version }}"></script>
   <style id="theme" type="text/css" data-background-color="{{ backgroundColor }}" data-accent-color="{{ accentColor }}">
     /* Dynamically created from javascript */
@@ -33,6 +34,8 @@
 <body>
   {% block content %}{% endblock %}
   
+  {% include 'layouts/partials/footer.jinja2' %}
+
   {% block scripts %}{% endblock %}
 </body>
 

@@ -450,11 +450,6 @@ function processSnapshotsUpdate(data) {
         template.addClass("slug" + snapshot.slug);
         template.addClass("active-snapshot");
         template.data("slug", snapshot.slug);
-        $("#delete_link", template).attr('id', "delete_link" + snapshot.slug);
-        $("#restore_link", template).attr('id', "restore_option" + snapshot.slug);
-        $("#upload_link", template).attr('id', "upload_link" + snapshot.slug);
-        $("#download_link", template).attr('id', "download_link" + snapshot.slug);
-        $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
         $("#snapshot_card", template).attr('id', "snapshot_card" + snapshot.slug);
         $("#loading", template).attr('id', "loading" + snapshot.slug);
         isNew = true;
@@ -464,6 +459,7 @@ function processSnapshotsUpdate(data) {
       $("#type", template).html(snapshot['type'] === "full" ? "Full snapshot" : "Partial snapshot");
       $("#createdAt", template).html(snapshot['createdAt']);
       $("#name", template).html(snapshot['name']);
+      $("#name", template).attr('title', snapshot['name']);
       $("#status", template).html(snapshot['status']);
 
       if (snapshot.protected) {

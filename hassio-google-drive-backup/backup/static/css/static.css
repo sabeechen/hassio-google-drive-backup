@@ -4,6 +4,10 @@ body {
   flex-direction: column;
 }
 
+main {
+  flex: 1 0 auto;
+}
+
 html {
   background-color: var(--background-primary-color);
   color: var(--text-primary-color);
@@ -74,18 +78,27 @@ nav ul a i,
   background-color: var(--background-modal-color);
 }
 
+.modal {
+  box-shadow: 0 24px 38px 3px var(--shadow-color), 0 9px 46px 8px var(--shadow-color), 0 11px 15px -7px var(--shadow-color);
+}
+
+.card, .dropdown-content {
+  box-shadow: 0 2px 2px 0 var(--shadow-color), 0 3px 1px -2px var(--shadow-color), 0 1px 5px 0 var(--shadow-color);
+  
+}
+
 .card .card-action a:not(.btn),
 .btn-flat {
   color: var(--accent-color);
   font-weight: 500;
 }
 
-.btn {
+.btn, .fixed-action-btn a {
   background-color: var(--accent-color);
   color: var(--accent-text-color);
 }
 
-.btn:hover {
+.btn:hover, .fixed-action-btn:hover a {
   background-color: var(--accent-hover-color);
 }
 
@@ -103,10 +116,6 @@ nav ul a i,
 .source_icon {
   color: var(--accent-color);
   margin-right: 6px;
-}
-
-main {
-  flex: 1 0 auto;
 }
 
 .icon-block .material-icons {
@@ -232,4 +241,57 @@ nav .brand-logo img {
 
 .tabs {
   background-color: transparent !important;
+}
+    
+.page-footer {
+  padding: 10px !important;
+  color: var(--text-secondary-color) !important;
+  background-color: var(--background-color);
+  border-top: 1px solid var(--divider-color);
+}
+
+.bmc-button {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  text-decoration: none;
+  color: #000000;
+  background-color: #ffdd00;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  padding: 5px;
+  font-family: Cookie, cursive;
+  font-size: 20px;
+  min-width: 128px;
+}
+
+.bmc-button img {
+  height: 22px;
+  margin-right: 6px;
+}
+
+#contributors a {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+#contributors a img {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+}
+
+#contributors-count {
+  font-size: 17px;
+  background-color: var(--divider-color);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.truncate-two-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
 }

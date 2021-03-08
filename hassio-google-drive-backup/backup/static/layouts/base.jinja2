@@ -29,6 +29,7 @@
   <script src="static/js/init.js?version={{ version }}"></script>
   <script src="static/js/scripts.js?version={{ version }}"></script>
   <script src="static/js/settings.js?version={{ version }}"></script>
+  <script src="static/js/about.js?version={{ version }}"></script>
   <script src="static/js/restore.js?version={{ version }}"></script>
   <script src="static/js/moment.js?version={{ version }}"></script>
   <script src="bootstrap?version={{ version }}"></script>
@@ -42,9 +43,7 @@
 
   {% block content %}{% endblock %}
 
-  {% block footer %}
   {% include 'layouts/partials/footer.jinja2' %}
-  {% endblock %}
 
   {% block scripts %}{% endblock %}
 </body>

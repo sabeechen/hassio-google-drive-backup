@@ -1,79 +1,297 @@
 body {
-    display: flex;
-    min-height: 100vh;
-    flex-direction: column;
-  }
-  
-  main {
-    flex: 1 0 auto;
-  }
-  
-  .icon-block .material-icons {
-      font-size: inherit;
-  }
-  
-  .indented-li {
-    padding-left: 15px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-  }
-  
-  .important-inline {
-    display: inline !important;
-  }
-  
-  .detail-node{ 
-    margin-top: 0px;
-    margin-bottom: 5px;
-  }
-  
-  .top-btn {
-    box-shadow: none;
-    -webkit-box-shadow: none;
-    margin-right: 10px;
-  }
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
 
-  .danger-button {
-    color: white;
-    background-color: rgb(153, 0, 0);
-  }
+main {
+  flex: 1 0 auto;
+}
 
-  .error_card a {
-    color: white;
-    text-decoration: underline;
-  }
-  
-  .default-hidden {
-    display: none;
-  }
-  
-  .console-error {
-    color: #b30000
-  }
-  
-  .console-warning {
-    color: #a55d00
-  }
-  
-  .console-default {
-    color: #ffffff
-  }
-  
-  .console-debug {
-    color: #3141d1
-  }
-  
-  .console-critical {
-    color: #810000
-  }
+html {
+  background-color: var(--background-primary-color);
+  color: var(--text-primary-color);
+}
 
-  .colpick {
-    z-index: 9999;
-  }
+label {
+  color: var(--text-primary-color);
+}
 
-  #toast-container {
-    top: auto !important;
-    left: auto !important;
-    bottom: 10%;
-    right: 7%;
-  }
+a {
+  color: var(--accent-link-color);
+}
+
+input {
+  color: var(--text-primary-color);
+}
+
+i.material-icons.active, input:focus + label {
+  color: var(--accent-focus-color) !important;
+} 
+
+input:focus {
+  border-bottom: 1px solid var(--accent-focus-color) !important;
+}
+
+.helper-text {
+  color: var(--helper-text-color) !important;
+}
+
+.sidenav,
+.card,
+.dropdown-content {
+  background-color: var(--background-color);
+}
+
+.dropdown-content li:hover,
+.dropdown-content li.active {
+  background-color: var(--background-hover);
+}
+
+nav {
+  background-color: var(--background-color);
+  border-bottom: 1px solid var(--divider-color);
+}
+
+nav .brand-logo {
+  color: var(--text-secondary-color);
+}
+
+nav ul a {
+  color: var(--text-secondary-color);
+}
+
+nav a i,
+nav ul a i,
+.sidenav li > a > i.material-icons {
+  color: var(--icon-color);
+}
+
+.card .card-action a.waves-effect .waves-ripple,
+.btn-flat.waves-effect .waves-ripple,
+.btn.waves-effect .waves-ripple {
+  background-color: var(--accent-ripple);
+}
+
+.modal,
+.modal .modal-footer {
+  background-color: var(--background-modal-color);
+}
+
+.modal {
+  box-shadow: 0 24px 38px 3px var(--shadow-color), 0 9px 46px 8px var(--shadow-color), 0 11px 15px -7px var(--shadow-color);
+}
+
+.card, .dropdown-content {
+  box-shadow: 0 2px 2px 0 var(--shadow-color), 0 3px 1px -2px var(--shadow-color), 0 1px 5px 0 var(--shadow-color);
+  
+}
+
+.card .card-action a:not(.btn),
+.btn-flat {
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.btn, .fixed-action-btn a {
+  background-color: var(--accent-color);
+  color: var(--accent-text-color);
+}
+
+.btn:hover, .fixed-action-btn:hover a {
+  background-color: var(--accent-hover-color);
+}
+
+.dropdown-content li > a,
+.dropdown-content li > span,
+.sidenav li > a {
+  color: var(--text-secondary-color);
+}
+
+[type="checkbox"].filled-in:checked + span:not(.lever):after {
+  border: 2px solid var(--accent-color);
+  background-color: var(--accent-color);
+}
+
+.source_icon {
+  color: var(--accent-color);
+  margin-right: 6px;
+}
+
+.icon-block .material-icons {
+  font-size: inherit;
+}
+
+.indented-li {
+  padding-left: 15px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.important-inline {
+  display: inline !important;
+}
+
+.detail-node {
+  margin-top: 0px;
+  margin-bottom: 5px;
+}
+
+.top-btn {
+  box-shadow: none;
+  -webkit-box-shadow: none;
+  margin-right: 10px;
+}
+
+.default-hidden {
+  display: none;
+}
+
+.console-error {
+  color: #b30000;
+}
+
+.console-warning {
+  color: #a55d00;
+}
+
+.console-default {
+  color: #ffffff;
+}
+
+.console-debug {
+  color: #3141d1;
+}
+
+.console-critical {
+  color: #810000;
+}
+
+.colpick {
+  z-index: 9999;
+}
+
+#toast-container {
+  top: auto !important;
+  left: auto !important;
+  bottom: 10%;
+  right: 7%;
+}
+
+nav {
+  box-shadow: none;
+}
+
+nav .brand-logo {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  height: 100%;
+}
+
+nav .brand-logo img {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+.nav-wrapper {
+  height: 56px;
+}
+
+.sidenav-header {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  background-color: var(--background-sidenav-color);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal {
+  outline: none;
+}
+
+.error_card a {
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.choose-folder-container {
+  padding: 5px 15px;
+  margin: 10px 0;
+  border-radius: 5px;
+}
+
+.bmc-btn {
+  height: 48px !important;
+}
+
+.copyright {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+}
+
+.snapshot-ui .archive-icon {
+  position: relative;
+  margin-right: 18px;
+}
+
+.tabs {
+  background-color: transparent !important;
+}
+    
+.page-footer {
+  padding: 10px !important;
+  color: var(--text-secondary-color) !important;
+  background-color: var(--background-color);
+  border-top: 1px solid var(--divider-color);
+}
+
+.bmc-button {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  text-decoration: none;
+  color: #000000;
+  background-color: #ffdd00;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  padding: 5px;
+  font-family: Cookie, cursive;
+  font-size: 20px;
+  min-width: 128px;
+}
+
+.bmc-button img {
+  height: 22px;
+  margin-right: 6px;
+}
+
+#contributors a {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+#contributors a img {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+}
+
+#contributors-count {
+  font-size: 17px;
+  background-color: var(--divider-color);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.truncate-two-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
+}

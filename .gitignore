@@ -1,7 +1,7 @@
 *.pyc
 *.dat
 *.id
-*pychache*
+*pycache*
 .pytest_cache/*
 htmlcov/*
 .mypy_cache/*

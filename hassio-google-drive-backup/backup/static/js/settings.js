@@ -171,6 +171,7 @@ function handleSettingsDialog(data) {
                   </li>`;
     template = template
       .replace("{id}", addon.slug)
+      .replace("{id}", addon.slug)
       .replace("{slug}", addon.slug)
       .replace("{description}", addon.description)
       .replace("{name}", addon.name)
@@ -191,6 +192,7 @@ function handleSettingsDialog(data) {
                   </label>
                 </li>`;
     template = template
+      .replace("{id}", folder.id)
       .replace("{id}", folder.id)
       .replace("{slug}", folder.slug)
       .replace("{description}", folder.description)

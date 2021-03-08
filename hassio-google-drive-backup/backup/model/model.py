@@ -39,6 +39,9 @@ class SnapshotSource(Trigger, Generic[T]):
     def upload(self) -> bool:
         return True
 
+    def icon(self) -> str:
+        return "sd_card"
+
     def freeSpace(self):
         return None
 

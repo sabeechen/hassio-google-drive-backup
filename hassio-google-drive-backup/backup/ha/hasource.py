@@ -153,6 +153,9 @@ class HaSource(SnapshotSource[HASnapshot]):
             self.trigger()
         return super().check()
 
+    def icon(self) -> str:
+        return "sd_card"
+
     def name(self) -> str:
         return SOURCE_HA
 

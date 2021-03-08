@@ -83,6 +83,9 @@ class DriveSource(SnapshotDestination):
             raise ExistingBackupFolderError(
                 existing.get('id'), existing.get('name'))
 
+    def icon(self) -> str:
+        return "cloud_done"
+
     def isWorking(self):
         return self._uploadedAtLeastOneChunk
 

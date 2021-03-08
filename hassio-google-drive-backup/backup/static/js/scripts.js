@@ -410,7 +410,7 @@ function processSourcesUpdate(sources) {
     }
 
     $(".source_title", template).html("in " + source.title );
-    $(".source_icon", template).html(source.title === "Home Assistant" ? "sd_card" : "cloud_done");
+    $(".source_icon", template).html(source.icon);
 
     if (source.retained > 0) {
       $(".source_retain_count", template).html(source.retained);

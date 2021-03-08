@@ -128,6 +128,7 @@ class Coordinator(Trigger):
                 'latest': None,
                 'max': source_class.maxCount(),
                 'enabled': source_class.enabled(),
+                'icon': source_class.icon(),
             }
             size = 0
             latest = None

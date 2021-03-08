@@ -1,0 +1,36 @@
+{% macro header(title) -%}
+<header>
+  <nav role="navigation">
+    <div class="nav-wrapper">
+      <a class="brand-logo" href="/">
+        <img src="/static/images/logo.png" width=40 height=40 />
+        <span class="hide-on-small-only">
+          {% if title %}
+          {{ title }}
+          {% else %}
+          <span class="hide-on-med-and-down">Home Assistant</span> Google Drive Backup
+          {% endif %}
+        </span>
+      </a>
+      {{ caller() }}
+    </div>
+  </nav>
+</header>
+{%- endmacro %}
+
+{% macro errorMessage(title, id, icon, actions) -%}
+<div class="card default-hidden error_card {{ id }}" id="{{ id }}">
+  <div class="card-content">
+    <span class="card-title red-text text-darken-4">
+      <i class="material-icons" style="font-size: 50px; padding-right: 10px;">{{ icon }}</i>
+      <b style="vertical-align: top;">{{ title }}</b>
+    </span>
+    {{ caller() }}
+  </div>
+  {% if actions %}
+    <div class="card-action">
+      {{actions}}
+    </div>
+  {% endif %}
+</div>
+{%- endmacro %}

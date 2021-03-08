@@ -117,7 +117,7 @@
       button_text = '';
       if (details.length > 0) {
         button_text =
-          "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>";
+          "&nbsp;&nbsp;<a class='waves-effect btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>";
         $('#error_details_paragraph').text(details);
       }
     
@@ -154,7 +154,7 @@
             </div>
             <div class="row">
                 <div class="col s12" style="display: flex; align-items: center;">
-                    <a class="waves-effect waves-light btn" href="log?format=download"><i class="material-icons left">file_download</i>Download logs</a>
+                    <a class="waves-effect btn" href="log?format=download"><i class="material-icons left">file_download</i>Download logs</a>
                     <label class="white-text" style="margin-top: 5px; margin-left: 20px;">
                         <input type="checkbox" name="pause" id="pause" class="filled-in" />
                         <span>Pause output</span>
@@ -168,8 +168,4 @@
             </pre>
         </div>
     </div>
-{% endblock %}
-
-{% block footer %}
-{# No footer #}
 {% endblock %}

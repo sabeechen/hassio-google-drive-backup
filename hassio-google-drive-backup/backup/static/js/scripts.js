@@ -17,6 +17,7 @@ If english isn't your first language, don't sweat it.  Just try to be clear and 
  * What logs is the add-on printing out?  You can see the detailed logs by clicking "Logs" at the right of the web-UI.
  * Are there any problematic looking logs from the supervisor?  You can get to them from the Home Assistant Interface from "Supervisor" > "System" > "System Log"
  \n\n`;
+ var name_keys = {}
 
 function toggleSlide(checkbox, target) {
   if ($(checkbox).is(':checked')) {
@@ -559,6 +560,7 @@ function processSnapshotsUpdate(data) {
 }
 
 function processStatusUpdate(data) {
+  name_keys = data.snapshot_name_keys;
   $('#last_snapshot').empty().append(data.last_snapshot_text);
   $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
   $('#last_snapshot').attr("title", data.last_snapshot_detail);
@@ -794,4 +796,15 @@ function copyFromInput(id) {
 function saveFolder(id) {
   url = "changefolder?id=" + id
   postJson(url, {}, refreshstats, null, "Setting snapshot folder...");
+}
+
+function exampleSnapshotName(snapshot_type, template) {
+  name_keys["{type}"] = $("#partial_snapshots").is(':checked') ? "Partial" : "Full";
+  if (template.length == 0) {
+    template = last_data.snapshot_name_template;
+  }
+  for (key in name_keys) {
+    template = template.replace(key, name_keys[key]);
+  }
+  return template;
 }

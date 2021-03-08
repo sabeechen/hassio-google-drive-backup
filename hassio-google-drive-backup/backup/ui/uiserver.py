@@ -152,6 +152,11 @@ class UiServer(Trigger, Startable):
         status['is_specify_folder'] = self.config.get(
             Setting.SPECIFY_SNAPSHOT_FOLDER)
         status['snapshot_cooldown_active'] = self._coord.isWaitingForStartup()
+        name_keys = {}
+        for key in SNAPSHOT_NAME_KEYS:
+            name_keys[key] = SNAPSHOT_NAME_KEYS[key](
+                "Full", self._time.now(), self._ha_source.getHostInfo())
+        status['snapshot_name_keys'] = name_keys
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -360,10 +365,6 @@ class UiServer(Trigger, Startable):
 
     async def getconfig(self, request: Request):
         await self._ha_source.refresh()
-        name_keys = {}
-        for key in SNAPSHOT_NAME_KEYS:
-            name_keys[key] = SNAPSHOT_NAME_KEYS[key](
-                "Full", self._time.now(), self._ha_source.getHostInfo())
         current_config = {}
         for setting in Setting:
             current_config[setting.key()] = self.config.getForUi(setting)
@@ -374,7 +375,6 @@ class UiServer(Trigger, Startable):
             'config': current_config,
             'addons': self._global_info.addons,
             'folders': FOLDERS,
-            'name_keys': name_keys,
             'defaults': default_config,
             'snapshot_folder': self.folder_finder.getCachedFolder(),
             'is_custom_creds': self._coord._model.dest.isCustomCreds()

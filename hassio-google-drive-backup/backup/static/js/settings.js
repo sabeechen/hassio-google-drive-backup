@@ -1,16 +1,4 @@
 settingsChanged = false;
-name_keys = {}
-
-function exampleSnapshotName(snapshot_type, template) {
-  name_keys["{type}"] = $("#partial_snapshots").is(':checked') ? "Partial" : "Full";
-  if (template.length == 0) {
-    template = last_data.snapshot_name_template;
-  }
-  for (key in name_keys) {
-    template = template.replace(key, name_keys[key]);
-  }
-  return template;
-}
 
 function showPallette(element) {
   let target = $(element);
@@ -131,7 +119,6 @@ function loadSettings() {
 }
 
 function handleSettingsDialog(data) {
-  name_keys = data.name_keys;
   config = data.config;
   addons = data.addons;
   defaults = data.defaults

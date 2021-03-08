@@ -195,7 +195,7 @@ class GenerationalScheme(BackupScheme):
             if part.selected is not None:
                 if part.selected.getStatusDetail() is None:
                     part.selected.setStatusDetail([])
-                part.selected.getstatusDetail().append(part.details)
+                part.selected.getStatusDetail().append(part.details)
 
     def day(self, date: datetime):
         local = self.time.toLocal(date)

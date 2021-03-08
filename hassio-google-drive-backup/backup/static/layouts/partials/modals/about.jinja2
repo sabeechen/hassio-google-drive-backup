@@ -11,15 +11,26 @@
       <a class="bmc-button" target="_blank" rel="noreferrer" href="https://www.buymeacoffee.com/sabeechen" style="margin-top: 10px;">
         <img src="{{ bmc_logo_path }}" alt="Support me"><span>Buy me a coffee</span>
       </a>
+      <form action="https://www.paypal.com/donate" method="post" target="_top">
+        <input type="hidden" name="hosted_button_id" value="MPVZAWC3WRRLY" />
+        <input type="image" src="https://www.paypalobjects.com/webstatic/en_US/i/buttons/PP_logo_h_100x26.png" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+      </form>
+      <br>
     </p>
 
     <h5>
       Contributors <span><span id="contributors-count"></span></span>
     </h5>
-    <p id="contributors" style="margin-bottom: 6px;">
+    <div id="contributors-loading" class="progress" style="width: 30%;">
+      <div class="indeterminate"></div>
+    </div>
+    <p id="contributors-extra" style="margin-bottom: 6px;">
+    </p>
+    <p id="contributors-simple" style="margin-bottom: 6px;">
     </p>
     <a href="https://github.com/sabeechen/hassio-google-drive-backup/graphs/contributors">
-      + <span id="contributors-more-link-count"></span> contributors
+      + <span id="contributors-more-link-count"></span> more
     </a>
 
     <h5>Connect</h5>

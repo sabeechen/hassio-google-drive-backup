@@ -270,12 +270,12 @@ nav .brand-logo img {
   margin-right: 6px;
 }
 
-#contributors a {
+#contributors-simple a {
   margin-right: 8px;
   margin-bottom: 8px;
 }
 
-#contributors a img {
+#contributors-simple a img {
   width: 32px;
   height: 32px;
   border-radius: 9999px;
@@ -287,6 +287,23 @@ nav .brand-logo img {
   padding: 2px 8px;
   border-radius: 9999px;
   font-weight: 500;
+}
+
+.contributor-name {
+  vertical-align: middle;
+}
+
+#contributors-extra a {
+  margin-right: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  align-content: center;
+}
+
+#contributors-extra a img {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
 }
 
 .truncate-two-lines {

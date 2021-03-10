@@ -67,12 +67,6 @@ nav ul a i,
   color: var(--icon-color);
 }
 
-.card .card-action a.waves-effect .waves-ripple,
-.btn-flat.waves-effect .waves-ripple,
-.btn.waves-effect .waves-ripple {
-  background-color: var(--accent-ripple);
-}
-
 .modal,
 .modal .modal-footer {
   background-color: var(--background-modal-color);
@@ -85,21 +79,6 @@ nav ul a i,
 .card, .dropdown-content {
   box-shadow: 0 2px 2px 0 var(--shadow-color), 0 3px 1px -2px var(--shadow-color), 0 1px 5px 0 var(--shadow-color);
   
-}
-
-.card .card-action a:not(.btn),
-.btn-flat {
-  color: var(--accent-color);
-  font-weight: 500;
-}
-
-.btn, .fixed-action-btn a {
-  background-color: var(--accent-color);
-  color: var(--accent-text-color);
-}
-
-.btn:hover, .fixed-action-btn:hover a {
-  background-color: var(--accent-hover-color);
 }
 
 .dropdown-content li > a,
@@ -141,6 +120,14 @@ nav ul a i,
   box-shadow: none;
   -webkit-box-shadow: none;
   margin-right: 10px;
+}
+
+.icon-warn-delete {
+  color: var(--icon-warn);
+}
+
+.input-field > label {
+  color: var(--input-label);
 }
 
 .default-hidden {
@@ -214,17 +201,12 @@ nav .brand-logo img {
 
 .error_card a {
   font-weight: 500;
-  text-decoration: underline;
 }
 
 .choose-folder-container {
   padding: 5px 15px;
   margin: 10px 0;
   border-radius: 5px;
-}
-
-.bmc-btn {
-  height: 48px !important;
 }
 
 .copyright {
@@ -255,24 +237,41 @@ nav .brand-logo img {
   align-items: center;
   height: 30px;
   text-decoration: none;
-  color: #000000;
-  background-color: #ffdd00;
+  color: var(--accent-text-color);
+  background-color: var(--accent-color);
   border-radius: 5px;
   border: 1px solid transparent;
   padding: 5px;
   font-family: Cookie, cursive;
   font-size: 20px;
   min-width: 128px;
+  white-space: nowrap;
 }
 
-.bmc-button img {
+.bmc-button svg {
   height: 22px;
-  margin-right: 6px;
+}
+
+.bmc-cup {
+  fill: var(--accent-color)
+}
+
+.bmc-outline {
+  fill: var(--accent-dark)
 }
 
 #contributors-simple a {
   margin-right: 8px;
   margin-bottom: 8px;
+}
+
+.btn-floating {
+  background-color: var(--accent-color);
+  color: var(--accent-text-color);
+}
+
+.btn-floating:hover {
+  background-color: var(--accent-color);
 }
 
 #contributors-simple a img {
@@ -311,4 +310,95 @@ nav .brand-logo img {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;  
   overflow: hidden;
+}
+
+.divider {
+  background-color: var(--divider-color);
+}
+
+textarea {
+  background-color: var(--background-primary-color);
+  color: var(--text-primary-color);
+}
+
+.card .card-action a:not(.btn):not(.btn-large):not(.btn-small):not(.btn-large):not(.btn-floating) {
+  color: var(--accent-color);
+}
+
+.card .card-action a:not(.btn):not(.btn-large):not(.btn-small):not(.btn-large):not(.btn-floating):hover {
+  color: var(--accent-hover-color);
+}
+
+.btn-flat {
+  background-color: transparent;
+  color: var(--accent-color);
+  font-weight: 500;
+  -webkit-transition: all .3s ease;
+  transition: all .3s ease;
+  text-transform: uppercase;
+}
+
+.btn-flat:hover {
+  color: var(--accent-hover-color);
+  background-color: var(--accent-bg-hover-color);
+}
+
+.btn-flat:focus {
+  color: var(--accent-hover-color);
+  background-color: var(--accent-bg-hover-color);
+}
+
+.btn-high-vis {
+  color: var(--accent-hover-color);
+  background-color: var(--accent-bg-hover-color);
+}
+
+.btn-high-vis:hover {
+  color: var(--accent-hover-color);
+  background-color: var(--accent-bg-hover-color);
+}
+
+.danger-btn {
+  color: var(--danger-text);
+}
+
+.danger-btn:hover {
+  color: var(--danger-bg);
+  background-color: var(--danger-text);
+}
+
+.danger-text {
+  color: var(--danger-text);
+}
+
+.blue-icon {
+  color: var(--blue-icon);
+}
+
+.card .card-action {
+  padding: 8px 24px;
+}
+
+.card-title > .material-icons {
+  font-size: 50px;
+  padding-right: 10px;
+}
+
+.card-title > span {
+  vertical-align: top;
+}
+
+.inline-icon {
+  display: inline; 
+  margin-right: 2px; 
+  vertical-align: middle; 
+  font-size: 15px;
+}
+
+.btn-flat .material-icons {
+  display: inline;
+  margin-right: 5px;
+  vertical-align: middle;
+  font-size: 20px;
+  padding-bottom: 3px;
 }

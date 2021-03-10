@@ -36,9 +36,9 @@
 {# Error messages #}
 
 {% set error_card_actions %}
-  <a id="error_github_search" href="#" target="_blank">Find similar issues</a>
-  <a id="error_github_link" onclick="bugReport()">File this issue on Github</a>
-  <a id="download_logs_link" href="log?format=download" target="_blank">Download logs</a>
+  <a class="btn-flat" id="error_github_search" href="#" target="_blank"><i class="material-icons">search</i>Find similar issues</a>
+  <a class="btn-flat" id="error_github_link" onclick="bugReport()"><i class="material-icons">bug_report</i>File this issue on Github</a>
+  <a class="btn-flat" id="download_logs_link" href="log?format=download" target="_blank"><i class="material-icons">file_download</i>Download logs</a>
 {% endset %}
 {% call macros.errorMessage("Error while backing up", "error_card", "sync_problem", error_card_actions) %}
   <p>
@@ -60,10 +60,10 @@
 {% endcall %}
 
 {% set low_space_actions %}
-  <a href="#" onclick="sync('low_space'); return false;">Try Syncing Again</a>
-  <a href="#" onclick="skipLowSpaceWarning(); return false;">Create snapshot anyway</a>
+  <a class="btn-flat" href="#" onclick="sync('low_space'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="skipLowSpaceWarning(); return false;"><i class="material-icons">add</i>Create snapshot anyway</a>
 {% endset %}
-{% call macros.errorMessage("Low Disc Space", "low_space", "disc_full", low_space_actions) %}
+{% call macros.errorMessage("Low Disk Space", "low_space", "disc_full", low_space_actions) %}
   <p>
     It looks like you're low on disk space. The addon won't attempt to create a snapshot until you take
     action or more space becomes available. It looks like your backup folder in Home Assistant is
@@ -79,7 +79,7 @@
       Free up space in Home Assistant. Addons like the <a target="_blank" rel="noreferrer" href="https://www.home-assistant.io/addons/configurator/">Configurator</a> can help you see what files might be taking up space.
     </li>
     <li>
-      Make your snapshots smaller (see <a target="_blank" rel="noreferrer" href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big">this tip</a>).
+      Make your snapshots smaller (see <a target="_blank" rel="noreferrer" href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive-why-are-my-snapshots-so-big">this tip</a>).
       You can also click the little <i class="material-icons" style="display: inline; font-size: 15px">info</i>
       next to snapshots below to see which parts of them are taking up the most space.
     </li>
@@ -88,11 +88,11 @@
       to store fewer snapshots in Home Assistant.
     </li>
     <li>
-      Delete existing snapshots from Home Assistant by clicking <b>"Action"</b> -> <b>"Delete"</b> on snapshots below.  Make sure you don't need them anymore or they're backed to Google Drive.
+      Delete existing snapshots from Home Assistant by clicking <b>"Action"</b> -> <b>"Delete"</b> on snapshots below.  Make sure either you don't need them anymore or they're backed up to Google Drive.
     </li>
     <li>
       Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-      and disable "Stop on low disc space".  This will make the addon stop checking disc usage, do so at your own peril.
+      and disable "Stop on low disk space".  This will make the addon stop checking disk usage, do so at your own peril.
     </li>
     <li>
       Click "Create snapshot anyway" to bypass this warning just this one time. This is useful if you're confident that the snapshot actually will fit in the available space. Again, do so at your own peril.
@@ -100,7 +100,10 @@
   </ul>
 {% endcall %}
 
-{% call macros.errorMessage("Google Drive is Full", "drive_full", "disc_full") %}
+{% set drive_full_actions %}
+    <a class="btn-flat" href="#" onclick="sync('drive_full'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
+{% endset %}
+{% call macros.errorMessage("Google Drive is Full", "drive_full", "disc_full", drive_full_actions) %}
   <p>
     Google Drive is full, backups can't continue until space is available. You can go to Google Drive's
     <a href="https://drive.google.com/drive/quota" target="_blank" rel="noreferrer">quota page</a>
@@ -138,7 +141,7 @@
 {% endcall %}
 
 {% set delete_error_actions %}
-  <a href="#" onclick="sync('delete_error'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('delete_error'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Couldn't delete old snapshots in Home Assistant", "delete_error", "delete_forever", delete_error_actions) %}
   <p>
@@ -161,7 +164,7 @@
 {% endcall %}
 
 {% set google_dns_actions %}
-  <a href="#" onclick="sync('google_dns'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('google_dns'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Couldn't Reach Google Drive (DNS error)", "google_dns", "cloud_off", google_dns_actions) %}
   <p>
@@ -195,7 +198,7 @@
 {% endcall %}
 
 {% set google_timeout_actions %}
-  <a href="#" onclick="sync('google_timeout'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('google_timeout'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Google Drive Connection Timeout", "google_timeout", "cloud_off", google_timeout_actions) %}
   <p>
@@ -232,7 +235,7 @@
 {% endcall %}
 
 {% set google_cant_connect_actions %}
-  <a href="#" onclick="sync('google_cant_connect'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('google_cant_connect'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Can't Connect to Google Drive", "google_cant_connect", "cloud_off", google_cant_connect_actions) %}
   <p>
@@ -268,7 +271,7 @@
 {% endcall %}
 
 {% set password_key_invalid_actions %}
-  <a href="#" onclick="sync('password_key_invalid'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('password_key_invalid'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Invalid Snapshot Password", "password_key_invalid", "vpn_key", password_key_invalid_actions) %}
   <p>
@@ -288,7 +291,7 @@
 {% endcall %}
 
 {% set snapshot_in_progress_actions %}
-  <a href="#" onclick="sync('snapshot_in_progress'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('snapshot_in_progress'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Snapshot Already in Progress", "snapshot_in_progress", "settings_backup_restore", snapshot_in_progress_actions) %}
   <p>The add-on couldn't create a snapshot on schedule because one is already in progress. Home Assistant can
@@ -304,8 +307,8 @@
 {% endcall %}
 
 {% set multiple_deletes_actions %}
-  <a href="#" onclick="allowDeletion('false'); return false;">Allow Deletion</a>
-  <a href="#" onclick="allowDeletion('true'); return false;">Never Ask again</a>
+  <a class="btn-flat" href="#" onclick="allowDeletion('false'); return false;"><i class="material-icons">delete</i>Allow Deletion</a>
+  <a class="btn-flat" href="#" onclick="allowDeletion('true'); return false;"><i class="material-icons">delete_forever</i>Never Ask again</a>
 {% endset %}
 {% call macros.errorMessage("Attempting to Delete Multiple Snapshots", "multiple_deletes", "delete_forever", multiple_deletes_actions) %}
   <p>The add-on attempted to delete <span id="data_GoogleDrive">(?)</span> snapshot(s) from Google
@@ -327,7 +330,7 @@
 {% endcall %}
 
 {% set google_server_error_actions %}
-  <a href="#" onclick="sync('google_server_error'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('google_server_error'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Google Server Error", "google_server_error", "cloud_off", google_server_error_actions) %}
   <p>Google returned a server error (HTTP code 500) while trying to backup your snapshots.</p>
@@ -347,7 +350,7 @@
 {% endcall %}
 
 {% set google_session_expired_actions %}
-  <a href="#" onclick="sync('google_session_expired'); return false;">Try Syncing Again</a>
+  <a class="btn-flat" href="#" onclick="sync('google_session_expired'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Google Session Expired", "google_session_expired", "cloud_off", google_session_expired_actions) %}
   <p>Google returned a server error (HTTP code 404) while trying to upload your snapshots.</p>
@@ -376,9 +379,9 @@
 {% endcall %}
 
 {% set existing_backup_folder_actions %}
-  <a href="#" onclick="resolvefolder('true')">Use the folder</a>
-  <a href="#" onclick="chooseSnapshotFolder()">Choose a different folder</a>
-  <a href="#" onclick="resolvefolder('false')">Create a new folder</a>
+  <a class="btn-flat" href="#" onclick="resolvefolder('true')"><i class="material-icons">folder</i>Use the folder</a>
+  <a class="btn-flat" href="#" onclick="chooseSnapshotFolder()"><i class="material-icons">open_in_new</i>Choose a different folder</a>
+  <a class="btn-flat" href="#" onclick="resolvefolder('false')"><i class="material-icons">create_new_folder</i>Create a new folder</a>
 {% endset %}
 {% call macros.errorMessage("Existing Backup Folder Found", "existing_backup_folder", "folder_special", existing_backup_folder_actions) %}
   <p>The add-on found a snapshot folder named "<b><span id="data_existing_name"></span></b>" in Google
@@ -406,7 +409,7 @@
 {% endcall %}
 
 {% set backup_folder_missing_actions %}
-  <a href="#" onclick="loadSettings()">Open settings</a>
+  <a class="btn-flat" href="#" onclick="loadSettings()"><i class="material-icons">settings</i>Open settings</a>
 {% endset %}
 {% call macros.errorMessage("Please choose a backup folder", "backup_folder_missing", "folder_special", backup_folder_missing_actions) %}
   <p class="hide-for-custom-creds">You've choosen to backup your snapshots to a folder of your choosing.
@@ -441,7 +444,7 @@
 {% endcall %}
 
 {% set backup_folder_inaccessible_actions %}
-  <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
+  <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>Try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Couldn't use your backup folder", "backup_folder_inaccessible", "sync_problem", backup_folder_inaccessible_actions) %}
   <p>The addon couldn't use the folder you chose for storing snapshots. The addon can't backup your
@@ -489,7 +492,7 @@
 {% endcall %}
 
 {% set cancelled_actions %}
-  <a href="#" onclick="sync('cancelled')">Resume</a>
+  <a class="btn-flat" href="#" onclick="sync('cancelled')"><i class="material-icons">play_arrow</i>Resume</a>
 {% endset %}
 {% call macros.errorMessage("Backup is Paused", "cancelled", "pause", cancelled_actions) %}
   <p>Sync was cancelled because you requested it. The addon will not resume syncing for another hour unless you take action.</p>
@@ -508,7 +511,7 @@
 {% endcall %}
 
 {% set token_refresh_google_error_actions %}
-  <a href="#" onclick="sync('token_refresh_google_error')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('token_refresh_google_error')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_google_error", "error", token_refresh_google_error_actions) %}
   <p>
@@ -533,7 +536,7 @@
 {% endcall %}
 
 {% set token_refresh_my_error_actions %}
-  <a href="#" onclick="sync('token_refresh_my_error')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('token_refresh_my_error')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_my_error", "error", token_refresh_my_error_actions) %}
   <p>
@@ -557,7 +560,7 @@
 {% endcall %}
 
 {% set supervisor_connection_actions %}
-  <a href="#" onclick="sync('supervisor_connection')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('supervisor_connection')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Unable to Reach Home Assistant Supervisor", "supervisor_connection", "error", supervisor_connection_actions) %}
   <p>
@@ -569,12 +572,12 @@
   <ul class="browser-default">
     <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
     <li>Restarting the machine that Home Assistant runs on.  Often this resolves transient problems the Home Assistant Supervisor might have.</li>
-    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+    <li>If the problem persists, <a href="#!" onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
   </ul>
 {% endcall %}
 
 {% set supervisor_permission_actions %}
-  <a href="#" onclick="sync('supervisor_connection')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('supervisor_connection')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Unable to Talk to the Home Assistant Supervisor", "supervisor_permission", "error", supervisor_permission_actions) %}
   <p>
@@ -593,7 +596,7 @@
 {% endcall %}
 
 {% set supervisor_timeout_actions %}
-  <a href="#" onclick="sync('supervisor_timeout')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('supervisor_timeout')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("A Request to the Supervisor Timed Out", "supervisor_timeout", "error", supervisor_timeout_actions) %}
   <p>
@@ -611,7 +614,7 @@
 {% endcall %}
 
 {% set supervisor_unexpected_actions %}
-  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("The Supervisor Returned an Unexpected Response", "supervisor_unexpected", "error", supervisor_unexpected_actions) %}
   <p>
@@ -629,7 +632,7 @@
 {% endcall %}
 
 {% set supervisor_fs_error_actions %}
-  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Unable to write to the file system", "supervisor_fs_error", "error", supervisor_fs_error_actions) %}
   <p>
@@ -646,7 +649,7 @@
 {% endcall %}
 
 {% set google_unexpected_actions %}
-  <a href="#" onclick="sync('supervisor_unexpected')">sync again</a>
+  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Google drive Returned an Unexpected Response", "google_unexpected", "error", google_unexpected_actions) %}
   <p>
@@ -662,7 +665,7 @@
 {% endcall %}
 
 {% set log_in_to_drive_actions %}
-  <a href="#" onclick="sync('backup_folder_inaccessible')">sync now</a>
+  <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Please log in to Google Drive Manually", "log_in_to_drive", "account_circle", log_in_to_drive_actions) %}
   <p>The addon couldn't backup your snapshots because it looks like it you've never logged in 
@@ -684,7 +687,7 @@
 {% endcall %}
 
 {% set error_details_card_actions %}
-  <a target="_blank" onClick="$('#error_details_card').fadeOut(500)">Close</a>
+  <a class="btn-flat" target="_blank" onClick="$('#error_details_card').fadeOut(500)"><i class="material-icons">close</i>Close</a>
 {% endset %}
 {% call macros.errorMessage("Error details", "error_details_card", "error", error_details_card_actions) %}
   <p id="error_details_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>

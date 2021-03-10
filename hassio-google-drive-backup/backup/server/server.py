@@ -35,11 +35,11 @@ class Server():
         self.config = config
         self.error_store = error_store
 
-    def base_context(self):
+    def base_context(self, request: Request):
         return {
             'version': VERSION,
-            'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
-            'accentColor': self.config.get(Setting.ACCENT_COLOR),
+            'backgroundColor': request.query.get('bg', self.config.get(Setting.BACKGROUND_COLOR)),
+            'accentColor': request.query.get('ac', self.config.get(Setting.ACCENT_COLOR)),
             'bmc_logo_path': "/static/images/bmc.svg"
         }
 
@@ -51,7 +51,9 @@ class Server():
             state = {
                 'v': str(version),
                 'token': token_url,
-                'return': return_url
+                'return': return_url,
+                'bg': self.base_context(request).get('backgroundColor'),
+                'ac': self.base_context(request).get('accentColor'),
             }
             # Someone is trying to authenticate with the add-on, direct them to the google auth url
             raise HTTPSeeOther(await self.exchanger.getAuthorizationUrl(json.dumps(state)))
@@ -72,10 +74,14 @@ class Server():
                     'creds': serialized_creds,
                     'host': state['return']})
                 context = {
-                    **self.base_context(),
+                    **self.base_context(request),
                     'redirect_url': str(url),
                     'credentials_serialized': serialized_creds,
                 }
+                if 'bg' in state:
+                    context['backgroundColor'] = state['bg']
+                if 'ac' in state:
+                    context['accentColor'] = state['ac']
                 return aiohttp_jinja2.render_template(
                     "authorize.jinja2",
                     request,
@@ -150,7 +156,7 @@ class Server():
         bg = request.query.get('bg', self.config.get(Setting.BACKGROUND_COLOR))
         ac = request.query.get('ac', self.config.get(Setting.ACCENT_COLOR))
         return {
-            **self.base_context(),
+            **self.base_context(request),
             "client_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             "developer_key": self.config.get(Setting.DRIVE_PICKER_API_KEY),
             "app_id": self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID).split("-")[0],
@@ -161,7 +167,7 @@ class Server():
 
     @aiohttp_jinja2.template('server-index.jinja2')
     async def index(self, request: Request):
-        return self.base_context()
+        return self.base_context(request)
 
     def buildApp(self, app):
         path = abspath(join(__file__, "..", "..", "static"))

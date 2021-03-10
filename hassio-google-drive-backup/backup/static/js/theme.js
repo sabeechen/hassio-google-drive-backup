@@ -123,20 +123,45 @@ class Color {
   withAlpha(alpha) {
     return new Color(this.r, this.g, this.b, alpha);
   }
+
+  // Return a color close to this but also legible against bg_color.
+  // This is used in some places to make the UI minimally useable even 
+  // if the user picks stupid bg/accent colors.
+  makeLegible(bg_color) {
+    let ideal = bg_color.textColor();
+    let contrast = bg_color.contrast(this);
+    // This has a bunch of magic constants that were choosen experimentally.
+    // Don't fuck with them.
+    let contrast_threshold = 2.5;
+    if (contrast > contrast_threshold) {
+      return this;
+    } else {
+      const scale = 1 - (contrast - 1) / (contrast_threshold - 1);
+      return this.tint(ideal, scale * 0.5);
+    }
+  }
 }
 
 function setColors(background, accent) {
-  const text = background.textColor();
+  themeStyleContainer.dataset.backgroundColor = background.toHex();
+  themeStyleContainer.dataset.accentColor = accent.toHex();
 
-  const contrastThreshold = 4.5;
-  const contrast = background.contrast(accent);
-  let linkAccent = accent;
-  if (contrast < contrastThreshold) {
-    // do some adjustment to make the UI more readable if the contrast is really bad
-    const scale = 1 - (contrast - 1) / (contrastThreshold - 1);
-    linkAccent = linkAccent.tint(text, scale * 0.5);
+  let text = background.textColor();
+  accent = accent.makeLegible(background);
+  let linkAccent = accent.makeLegible(background);
+
+  let drop_shadow = Color.black();
+  let bg_lum = background.luminance();
+  if (bg_lum < 0.05) {
+    drop_shadow = Color.white().tint(Color.black(), 0.3);
   }
 
+  let icon_warn = Color.parse("#f57f17").makeLegible(background);
+  let input_label = Color.parse("#9e9e9e").makeLegible(background);
+  let danger_text = Color.parse("#FF0000").tint(text, 0.25).makeLegible(background);
+  let danger_bg = danger_text.textColor();
+  let blue_icon = Color.parse("#0D47A1").makeLegible(background);
+  
   const styleSheet = {
     ":root": {
       // Cls colors
@@ -150,13 +175,20 @@ function setColors(background, accent) {
       "--text-primary-color": text.shift(0.13).toCss(),
       "--text-secondary-color": text.shift(0.26).toCss(),
       "--divider-color": text.withAlpha(0.12).toCss(),
-      "--shadow-color": Color.parse(background.luminance() === 0 ? "#FFFFFF" : "#000000").withAlpha(0.14).toCss(),
+      "--shadow-color": drop_shadow.withAlpha(0.14).toCss(),
       "--icon-color": text.shift(0.13).withAlpha(0.6).toCss(),
+      "--icon-warn": icon_warn.toCss(),
+      "--input-label": input_label.toCss(),
+      "--danger-text": danger_text.toCss(),
+      "--danger-bg": danger_text.textColor().toCss(),
+      "--blue-icon": blue_icon.toCss(),
       // Accent colors
       "--accent-color": accent.toCss(),
+      "--accent-dark": accent.darken(0.3).toCss(),
       "--accent-text-color": accent.textColor().toCss(),
       "--accent-focus-color": accent.saturate(1.2).toCss(),
-      "--accent-hover-color": accent.saturate(1.8).toCss(),
+      "--accent-hover-color": accent.textColor().toCss(),
+      "--accent-bg-hover-color": accent.toCss(),
       "--accent-link-color": linkAccent.toCss(),
       "--accent-ripple": linkAccent.withAlpha(0.2).toCss(),
       // Background colors

@@ -582,7 +582,7 @@ function processStatusUpdate(data) {
   // Update the "syncing" toast message
   if (data.syncing) {
     if (sync_toast == null) {
-      sync_toast = M.toast({ html: '<span>Syncing...</span><button class="btn-flat toast-action" onclick="cancelSync()">Cancel</button>', displayLength: 999999999 })
+      sync_toast = M.toast({ html: '<span>Syncing...</span><a class="btn-flat toast-action" onclick="cancelSync()">Cancel</button>', displayLength: 999999999 })
     }
   } else {
     // Make sure the toast isn't up

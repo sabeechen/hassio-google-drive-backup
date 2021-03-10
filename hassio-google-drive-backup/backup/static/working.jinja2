@@ -33,7 +33,7 @@
   </div>
 </div>
 <div id="snapshot-template" style="display: none">
-  <div class="snapshot-ui col s12 m12 l6 xl4">
+  <div class="snapshot-ui col s12 m12 l6 xl6">
     <div id="snapshot_card" onclick="showDetails(this);return false;" class="card">
       <div class="card-content">
         <div style="display: flex; align-items: center;">
@@ -46,13 +46,13 @@
           <div style="min-width: 0;">
             <h7 id="name" class="truncate" style="font-weight: 500;"></h7>
             <div>
-              <i class="material-icons tiny icon-retain tooltipped red-text text-darken-4" data-position="bottom"
+              <i class="material-icons tiny icon-retain tooltipped danger-text" data-position="bottom"
                 style="vertical-align: -2px;"
                 data-tooltip="This snapshot is kept indefinitely until you delete it.">lock</i>
-              <i class="material-icons tiny icon-warn-delete tooltipped yellow-text text-darken-4" data-position="bottom"
+              <i class="material-icons tiny icon-warn-delete tooltipped" data-position="bottom"
                 style="vertical-align: -2px;"
                 data-tooltip="">warning</i>
-              <i class="material-icons tiny icon-protected tooltipped blue-text text-darken-4" data-position="bottom"
+              <i class="material-icons tiny icon-protected tooltipped blue-icon" data-position="bottom"
                 style="vertical-align: -2px;"
                 data-tooltip="This snapshot is password protected">vpn_key</i>
               <i class="material-icons tiny tooltipped" id="gen_detail" data-position="bottom" data-tooltip="Override" style="margin-right: 3px; font-size: 15px;">assignment</i>
@@ -99,20 +99,23 @@
         </div>
       </div>
 
-      <div class="col s12 m7 l8 xl9">
+      <div class="col s12 m7 l8 xl9 row">
         {% include 'layouts/partials/error-messages.jinja2' %}
 
-        <div class="card default-hidden question-card" id="error_reports_card">
+        <div class="card default-hidden question-card s12" id="error_reports_card">
           <div class="card-content">
-            <span class="card-title">Share Error Reports?</span>
+            <span class="card-title">
+              <i class="material-icons">info_outline</i>
+              <span>Share Error Reports?</span>
+            </span>
             <p>If you select yes the text of unexpected exceptions this add-on produces will be sent to a server
               maintained by the developer. This is completely optional, but helps give him a heads up for problems
               with new releases and aids in providing better help messages when things go wrong. If you're unsure,
               just select "No". You can always change this in the settings menu up on the top right of the page.</p>
           </div>
           <div class="card-action">
-            <a target="_blank" class="waves-effect btn-flat" onClick="errorReports('true');">Yes</a>
-            <a target="_blank" class="waves-effect btn-flat" onClick="errorReports('false');">No</a>
+            <a target="_blank" class="btn-flat" onClick="errorReports('true');"><i class="material-icons">check</i>Yes</a>
+            <a target="_blank" class="btn-flat" onClick="errorReports('false');"><i class="material-icons">close</i>No</a>
           </div>
         </div>
         
@@ -141,8 +144,8 @@
             <br />
           </div>
           <div class="card-action">
-            <a target="_blank" class="waves-effect btn-flat" onClick="exposeServer('false');">Yes</a>
-            <a target="_blank" class="waves-effect btn-flat" onClick="exposeServer('true');">No</a>
+            <a target="_blank" class="btn-flat" onClick="exposeServer('false');"><i class="material-icons">check</i>Yes</a>
+            <a target="_blank" class="btn-flat" onClick="exposeServer('true');"><i class="material-icons">close</i>No</a>
           </div>
         </div>
         <div class="card default-hidden" id="restore_help_card">
@@ -155,31 +158,25 @@
               Assistant Web-UI the direct link may not work, so you'll just have to navigate there.</p>
           </div>
           <div class="card-action">
-            <a target="_blank" id="restore_hard_link" class="waves-effect btn-flat" href="">Open Snapshots</a>
-            <a target="_blank" class="waves-effect btn-flat modal-close"
-              onClick="$('#restore_help_card').fadeOut(500)">Dismiss</a>
+            <a target="_blank" id="restore_hard_link" class="btn-flat"><i class="material-icons">open_in_new</i>Open Snapshots</a>
+            <a target="_blank" class="btn-flat modal-close" onClick="$('#restore_help_card').fadeOut(500)"><i class="material-icons">close</i>Dismiss</a>
           </div>
         </div>
         <div class="card default-hidden question-card" id="snapshots_boot_waiting_card">
-          <div class="col s12 m9">
-            <div class="card">
-              <div class="card-content">
-                <span class="card-title">
-                  <i class="material-icons" style="font-size: 50px; padding-right: 10px;">timer</i>
-                  <span style="vertical-align: top;">Taking a snapshot soon</span>
-                </span>
-                <p>Since the addon just started up a few minutes ago, its going to wait a few minutes before taking a snapshot to make sure thats what you want.  Look below to see exactly how long before the next snapshot.  
-                  You can wait for that to happen, change your <a href="#!" onclick="loadSettings()"><i class="material-icons"
-                  style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>add-on
-                settings</a> to something different, or just click the button below to let the automatic snapshot happen immediately.</p>
-                <div class="card-action white-text">
-                  <a target="_blank" class="waves-effect waves-light btn" onClick="allowImmediateSnapshot();">Snapshot Now</a>
-                </div>
-              </div>
-            </div>
+          <div class="card-content">
+            <span class="card-title">
+              <i class="material-icons">timer</i>
+              <span>Taking a snapshot soon</span>
+            </span>
+            <p>Since the addon just started up a few minutes ago, its going to wait a few minutes before taking a snapshot to make sure thats what you want.  Look below to see exactly how long before the next snapshot.  
+              You can wait for that to happen, change your <a href="#!" onclick="loadSettings()"><i class="material-icons inline-icon">settings</i>add-on
+            settings</a> to something different, or just click the button below to let the automatic snapshot happen immediately.</p>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="btn-flat" onClick="allowImmediateSnapshot();"><i class="material-icons">alarm_on</i>Snapshot Now</a>
           </div>
         </div>
-        <div class="default-hidden1" id="no_snapshots_block">
+        <div class="default-hidden" id="no_snapshots_block">
           <div class="row">
             <div class='col s1'></div>
             <div class='col s2 valign-wrapper center'>
@@ -205,7 +202,7 @@
           </div>
           <div class="divider"></div>
         </div>
-        <div id="snapshots" class="row"></div>
+        <div id="snapshots" class="s12 row"></div>
       </div>
     </div>
   </div>

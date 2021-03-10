@@ -106,7 +106,7 @@ class Snapshot(object):
         self._options = None
         self._status_override = None
         self._status_override_args = None
-        self._state_detail = {}
+        self._state_detail = None
         if snapshot is not None:
             self.addSource(snapshot)
 

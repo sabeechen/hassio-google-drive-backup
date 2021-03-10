@@ -1,4 +1,6 @@
 import asyncio
+from asyncio.tasks import sleep
+from datetime import timedelta
 import random
 import io
 
@@ -85,7 +87,8 @@ class SimulatedSupervisor(BaseServer):
             get('/supervisor/info', self._supervisorInfo),
             get('/supervisor/logs', self._supervisorLogs),
             get('/core/logs', self._coreLogs),
-            get('/snapshots', self._getSnapshots)
+            get('/snapshots', self._getSnapshots),
+            get('/debug/insert/snapshot', self._debug_insert_snapshot)
         ]
 
     def getEvents(self):
@@ -199,13 +202,13 @@ class SimulatedSupervisor(BaseServer):
             }
         )
 
-    async def _newSnapshot(self, request: Request):
-        if self._snapshot_lock.locked():
-            raise HTTPBadRequest()
-        input_json = await request.json()
+    async def _internalNewSnapshot(self, request: Request, input_json, verify_header=True):
         async with self._snapshot_lock:
             async with self._snapshot_inner_lock:
-                await self._verifyHeader(request)
+                if 'wait' in input_json:
+                    await sleep(input_json['wait'])
+                if verify_header:
+                    await self._verifyHeader(request)
                 slug = self.generateId(8)
                 password = input_json.get('password', None)
                 data = createSnapshotTar(
@@ -220,6 +223,12 @@ class SimulatedSupervisor(BaseServer):
                 self._snapshots[slug] = snapshot_info
                 self._snapshot_data[slug] = bytearray(data.getbuffer())
                 return self._formatDataResponse({"slug": slug})
+
+    async def _newSnapshot(self, request: Request):
+        if self._snapshot_lock.locked():
+            raise HTTPBadRequest()
+        input_json = await request.json()
+        return await self._internalNewSnapshot(request, input_json)
 
     async def _uploadSnapshot(self, request: Request):
         await self._verifyHeader(request)
@@ -340,3 +349,10 @@ class SimulatedSupervisor(BaseServer):
         print("Dismissed notification with: {}".format(await request.json()))
         self._notification = None
         return Response()
+
+    async def _debug_insert_snapshot(self, request: Request) -> bool:
+        days_back = int(request.query.get("days"))
+        date = self._time.now() - timedelta(days=days_back)
+        name = date.strftime("Full Snapshot %Y-%m-%d %H:%M-%S")
+        wait = int(request.query.get("wait", 0))
+        return await self._internalNewSnapshot(request, {'name': name, 'wait': wait}, verify_header=False)

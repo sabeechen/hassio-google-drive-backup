@@ -92,7 +92,8 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'size': '0.0 B',
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'cloud_done',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -104,7 +105,8 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': "0.0 B",
+        'icon': 'sd_card',
     }
     assert len(data['sources']) == 2
 
@@ -127,7 +129,8 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'cloud_done',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -139,7 +142,8 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': data['sources'][SOURCE_HA]['free_space']
+        'free_space': data['sources'][SOURCE_HA]['free_space'],
+        'icon': 'sd_card',
     }
     assert len(data['sources']) == 2
 
@@ -160,7 +164,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'cloud_done',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -172,7 +177,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': status['sources'][SOURCE_HA]["free_space"]
+        'free_space': status['sources'][SOURCE_HA]["free_space"],
+        'icon': 'sd_card',
     }
 
     await reader.getjson("retain", json={'slug': slug, 'sources': []})
@@ -186,7 +192,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'cloud_done',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -198,7 +205,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': status['sources'][SOURCE_HA]["free_space"]
+        'free_space': status['sources'][SOURCE_HA]["free_space"],
+        'icon': 'sd_card',
     }
     delete_req = {
         "slug": slug,
@@ -216,7 +224,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'cloud_done',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -228,7 +237,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': status['sources'][SOURCE_HA]["free_space"]
+        'free_space': status['sources'][SOURCE_HA]["free_space"],
+        'icon': 'sd_card',
     }
 
     # sync again, which should upoload the snapshot to Drive

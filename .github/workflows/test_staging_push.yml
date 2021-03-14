@@ -1,0 +1,27 @@
+name: push_to_staging
+on: 
+  workflow_dispatch:
+    branches:
+      - dev
+      - master
+      - main
+
+jobs:
+  run-pytest:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+    # Check out the current branch
+    - uses: actions/checkout@v2
+      with:
+        path: dev
+    # Check out the staging barnch
+    - uses: actions/checkout@v2
+      with:
+        path: staging
+        repository: sabeechen/hgdb-dev-staging
+    - run: |
+          python3 staging/update.py dev staging

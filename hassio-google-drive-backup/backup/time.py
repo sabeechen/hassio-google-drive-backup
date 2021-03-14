@@ -54,25 +54,31 @@ class Time(object):
             delta = relativedelta(time, now)
             flavor = ""
         if delta.years > 0:
-            return "{0} years{1}".format(delta.years, flavor)
+            plural = "s" if delta.years > 1 else ""
+            return "{0} year{2}{1}".format(delta.years, flavor, plural)
         if (delta.months != 0):
+            plural = "s" if delta.months > 1 else ""
             if delta.days > 15:
-                return "{0} months{1}".format(delta.months + 1, flavor)
-            return "{0} months{1}".format(delta.months, flavor)
+                return "{0} month{2}{1}".format(delta.months + 1, flavor, plural)
+            return "{0} month{2}{1}".format(delta.months, flavor, plural)
         if (delta.days != 0):
+            plural = "s" if delta.days > 1 else ""
             if delta.hours >= 12:
-                return "{0} days{1}".format(delta.days + 1, flavor)
-            return "{0} days{1}".format(delta.days, flavor)
+                return "{0} day{2}{1}".format(delta.days + 1, flavor, plural)
+            return "{0} day{2}{1}".format(delta.days, flavor, plural)
         if (delta.hours != 0):
+            plural = "s" if delta.hours > 1 else ""
             if delta.minutes >= 30:
-                return "{0} hours{1}".format(delta.hours + 1, flavor)
-            return "{0} hours{1}".format(delta.hours, flavor)
+                return "{0} hour{2}{1}".format(delta.hours + 1, flavor, plural)
+            return "{0} hour{2}{1}".format(delta.hours, flavor, plural)
         if (delta.minutes != 0):
+            plural = "s" if delta.minutes > 1 else ""
             if delta.minutes >= 30:
-                return "{0} minutes{1}".format(delta.minutes + 1, flavor)
-            return "{0} minutes{1}".format(delta.minutes, flavor)
+                return "{0} minute{2}{1}".format(delta.minutes + 1, flavor, plural)
+            return "{0} minute{2}{1}".format(delta.minutes, flavor, plural)
         if (delta.seconds != 0):
-            return "{0} seconds{1}".format(delta.seconds, flavor)
+            plural = "s" if delta.seconds > 1 else ""
+            return "{0} second{2}{1}".format(delta.seconds, flavor, plural)
         return "right now"
 
     def asRfc3339String(self, time: datetime) -> str:

@@ -205,7 +205,7 @@ function postJson(path, json, onSuccess, onFail = null, toastWhile = null) {
       if (onFail) {
         onFail(info);
       } 
-      button_text = "&nbsp;&nbsp;<a class='waves-effect btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+      button_text = "&nbsp;&nbsp;<a class='btn-flat' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
       $('#error_details_paragraph').text(info.details);
 
       M.toast({ html: info.message + button_text, displayLength: 10000 });
@@ -575,7 +575,8 @@ function processStatusUpdate(data) {
   var error = data.last_error;
   $('.error_card').each(function (i) {
     var item = $(this);
-    if (item.attr('id') == "error_card") {
+    let id = item.attr('id');
+    if (id == "error_card" || id == "error_details_card") {
       // This card gets handled separately because it catches any other error.
       return;
     }

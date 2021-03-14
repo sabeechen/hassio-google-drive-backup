@@ -93,7 +93,7 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
-        'icon': 'cloud_done',
+        'icon': 'google-drive',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -106,7 +106,7 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
         'free_space': "0.0 B",
-        'icon': 'sd_card',
+        'icon': 'home-assistant',
     }
     assert len(data['sources']) == 2
 
@@ -130,7 +130,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
-        'icon': 'cloud_done',
+        'icon': 'google-drive',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -143,7 +143,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
         'free_space': data['sources'][SOURCE_HA]['free_space'],
-        'icon': 'sd_card',
+        'icon': 'home-assistant',
     }
     assert len(data['sources']) == 2
 
@@ -151,7 +151,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
 @pytest.mark.asyncio
 async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
     slug = snapshot.slug()
-    assert await reader.getjson("retain", json={'slug': slug, 'sources': ["GoogleDrive", "HomeAssistant"]}) == {
+    assert await reader.getjson("retain", json={'slug': slug, 'sources': {"GoogleDrive": True, "HomeAssistant": True}}) == {
         'message': "Updated the snapshot's settings"
     }
     status = await reader.getjson("getstatus")
@@ -165,7 +165,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
-        'icon': 'cloud_done',
+        'icon': 'google-drive',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -178,10 +178,10 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
-        'icon': 'sd_card',
+        'icon': 'home-assistant',
     }
 
-    await reader.getjson("retain", json={'slug': slug, 'sources': []})
+    await reader.getjson("retain", json={'slug': slug, 'sources': {"GoogleDrive": False, "HomeAssistant": False}})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
@@ -193,7 +193,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
-        'icon': 'cloud_done',
+        'icon': 'google-drive',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -206,14 +206,14 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
-        'icon': 'sd_card',
+        'icon': 'home-assistant',
     }
     delete_req = {
         "slug": slug,
         "sources": ["GoogleDrive"]
     }
     await reader.getjson("deleteSnapshot", json=delete_req)
-    await reader.getjson("retain", json={'slug': slug, 'sources': ["HomeAssistant"]})
+    await reader.getjson("retain", json={'slug': slug, 'sources': {"HomeAssistant": True}})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 0,
@@ -225,7 +225,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
-        'icon': 'cloud_done',
+        'icon': 'google-drive',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -238,7 +238,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
-        'icon': 'sd_card',
+        'icon': 'home-assistant',
     }
 
     # sync again, which should upoload the snapshot to Drive
@@ -590,24 +590,24 @@ async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: UiSer
 
 
 @pytest.mark.asyncio
-async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
+async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, ha: HaSource, session, time):
     await ha.delete(snapshot)
     # download the item from Google Drive
     from_drive = await drive.read(snapshot)
     # Download rom the web server
     from_server = AsyncHttpGetter(
-        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session, time=time)
     await compareStreams(from_drive, from_server)
 
 
 @pytest.mark.asyncio
-async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
+async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot, drive: DriveSource, ha: HaSource, session, time):
     await drive.delete(snapshot)
     # download the item from Google Drive
     from_ha = await ha.read(snapshot)
     # Download rom the web server
     from_server = AsyncHttpGetter(
-        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session, time=time)
     await compareStreams(from_ha, from_server)
 
 

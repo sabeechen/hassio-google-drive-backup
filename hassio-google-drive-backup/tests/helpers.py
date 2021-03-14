@@ -10,6 +10,7 @@ from injector import inject, singleton
 
 from backup.util import AsyncHttpGetter
 from backup.model import SimulatedSource
+from backup.time import Time
 
 all_folders = [
     "share",
@@ -24,6 +25,7 @@ all_addons = [
         "description": "The robots you already know, but sexier. See what they don't want you to see.",
         "version": "0.69",
         "size": 0.0,
+        "logo": True,
         "state": "started"
     },
     {
@@ -32,6 +34,7 @@ all_addons = [
         "description": "What CAN'T you do with Home Assistant?",
         "version": "0.5",
         "size": 0.0,
+        "logo": True,
         "state": "started"
     },
     {
@@ -40,6 +43,7 @@ all_addons = [
         "description": "Explore the meaning of the universe by contemplating whats missing.",
         "version": "0.-1",
         "size": 0.0,
+        "logo": False,
         "state": "started"
     }
 ]
@@ -172,12 +176,13 @@ class HelperTestSource(SimulatedSource):
 @singleton
 class Uploader():
     @inject
-    def __init__(self, host, session: ClientSession):
+    def __init__(self, host, session: ClientSession, time: Time):
         self.host = host
         self.session = session
+        self.time = time
 
     async def upload(self, data):
         async with await self.session.post(self.host + "/uploadfile", data=data) as resp:
             resp.raise_for_status()
-        source = AsyncHttpGetter(self.host + "/readfile", {}, self.session)
+        source = AsyncHttpGetter(self.host + "/readfile", {}, self.session, time=self.time)
         return source

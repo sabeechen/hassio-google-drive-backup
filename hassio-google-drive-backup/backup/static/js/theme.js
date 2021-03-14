@@ -152,7 +152,7 @@ function setColors(background, accent) {
 
   let drop_shadow = Color.black();
   let bg_lum = background.luminance();
-  if (bg_lum < 0.05) {
+  if (bg_lum < 0.02) {
     drop_shadow = Color.white().tint(Color.black(), 0.3);
   }
 
@@ -190,6 +190,7 @@ function setColors(background, accent) {
       "--accent-hover-color": accent.textColor().toCss(),
       "--accent-bg-hover-color": accent.toCss(),
       "--accent-link-color": linkAccent.toCss(),
+      "--progress-bg": accent.tint(background, 0.75).toCss(),
       "--accent-ripple": linkAccent.withAlpha(0.2).toCss(),
       // Background colors
       "--background-color": background.toCss(),

@@ -157,7 +157,8 @@ class DriveRequests():
                               otherErrorFactory=GoogleUnexpectedError.factory,
                               timeout=ClientTimeout(
                                   sock_connect=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS),
-                                  sock_read=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
+                                  sock_read=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)),
+                              time=self.time)
         return ret
 
     async def query(self, query):

@@ -12,6 +12,7 @@ from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError
 from ..model import HASnapshot, Snapshot
 from ..logger import getLogger
+from backup.time import Time
 
 logger = getLogger(__name__)
 
@@ -40,10 +41,11 @@ class HaRequests():
     Stores logic for interacting with the supervisor add-on API
     """
     @inject
-    def __init__(self, config: Config, session: ClientSession):
+    def __init__(self, config: Config, session: ClientSession, time: Time):
         self.config: Config = config
         self.cache = {}
         self.session = session
+        self._time = time
 
     @supervisor_call
     async def createSnapshot(self, info):
@@ -152,7 +154,8 @@ class HaRequests():
                               timeoutFactory=SupervisorTimeoutError.factory,
                               otherErrorFactory=SupervisorUnexpectedError.factory,
                               timeout=ClientTimeout(sock_connect=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS),
-                                                    sock_read=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
+                                                    sock_read=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)),
+                              time=self._time)
         return ret
 
     @supervisor_call
@@ -184,6 +187,12 @@ class HaRequests():
                 return {}
 
             return details["data"]
+
+    async def getAddonLogo(self, slug: str):
+        url = "{0}addons/{1}/logo".format(self.config.get(Setting.HASSIO_URL), slug)
+        async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
+            resp.raise_for_status()
+            return (resp.headers['Content-Type'], await resp.read())
 
     def _getToken(self):
         configured = self.config.get(Setting.HASSIO_TOKEN)

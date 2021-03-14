@@ -18,11 +18,11 @@ from .harequests import HaRequests
 from .password import Password
 from .snapshotname import SnapshotName
 from ..time import Time
-from ..logger import getLogger
+from ..logger import getLogger, StandardLogger
 from backup.const import FOLDERS
 from .addon_stopper import AddonStopper
 
-logger = getLogger(__name__)
+logger: StandardLogger = getLogger(__name__)
 
 
 class PendingSnapshot(AbstractSnapshot):
@@ -38,7 +38,7 @@ class PendingSnapshot(AbstractSnapshot):
             protected=protected,
             retained=False,
             uploadable=False,
-            details={})
+            details=None)
         self._config = config
         self._failed = False
         self._complete = False
@@ -137,6 +137,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.pending_options = {}
         self.stopper = stopper
         self.estimator = estimator
+        self._addons = {}
 
         # This lock should be used for _ANYTHING_ that interacts with self._pending_snapshot
         self._pending_snapshot_lock = asyncio.Lock()
@@ -154,7 +155,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         return super().check()
 
     def icon(self) -> str:
-        return "sd_card"
+        return "home-assistant"
 
     def name(self) -> str:
         return SOURCE_HA
@@ -267,15 +268,18 @@ class HaSource(SnapshotSource[HASnapshot]):
         self._info.upload(0)
         resp = None
         try:
-            snapshot.overrideStatus("Downloading {0}%", source)
+            snapshot.overrideStatus("Loading {0}%", source)
+            snapshot.setUploadSource(self.title(), source)
             async with source:
                 with aiohttp.MultipartWriter('mixed') as mpwriter:
                     mpwriter.append(source, {'CONTENT-TYPE': 'application/tar'})
                     resp = await self.harequests.upload(mpwriter)
             snapshot.clearStatus()
+            snapshot.clearUploadSource()
         except Exception as e:
             logger.printException(e)
             snapshot.overrideStatus("Failed!")
+            snapshot.uploadFailure(logger.formatException(e))
         if resp and 'slug' in resp and resp['slug'] == snapshot.slug():
             self.config.setRetained(snapshot.slug(), True)
             return await self.harequests.snapshot(snapshot.slug())
@@ -317,6 +321,10 @@ class HaSource(SnapshotSource[HASnapshot]):
                 "slug", self.self_info, "addon metdata")
             self._info.url = self.getAddonUrl()
 
+            self._addons = {}
+            for addon in self.super_info['addons']:
+                self._addons[addon.get('slug', "default")] = addon
+
             self._info.addDebugInfo("self_info", self.self_info)
             self._info.addDebugInfo("host_info", self.host_info)
             self._info.addDebugInfo("ha_info", self.ha_info)
@@ -325,6 +333,9 @@ class HaSource(SnapshotSource[HASnapshot]):
             logger.debug("Failed to connect to supervisor")
             logger.debug(logger.formatException(e))
             raise e
+
+    def addonHasLogo(self, slug):
+        return self._addons.get(slug, {}).get('logo', False)
 
     def getAddonUrl(self):
         """

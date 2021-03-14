@@ -8,7 +8,7 @@ from backup.config import Config
 from backup.time import Time
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, get,
-                         json_response, post)
+                         json_response, post, FileResponse)
 from injector import inject, singleton
 from .base_server import BaseServer
 from .ports import Ports
@@ -77,6 +77,7 @@ class SimulatedSupervisor(BaseServer):
             get('/snapshots/{slug}/info', self._snapshotDetail),
             post('/addons/{slug}/start', self._startAddon),
             post('/addons/{slug}/stop', self._stopAddon),
+            get('/addons/{slug}/logo', self._logoAddon),
             post('/snapshots/{slug}/remove', self._deleteSnapshot),
             post('/snapshots/new/upload', self._uploadSnapshot),
             get('/snapshots/new/upload', self._uploadSnapshot),
@@ -145,6 +146,10 @@ class SimulatedSupervisor(BaseServer):
                     return self._formatDataResponse({})
         raise HTTPBadRequest()
 
+    async def _logoAddon(self, request: Request):
+        await self._verifyHeader(request)
+        return FileResponse('hassio-google-drive-backup/backup/static/images/logo.png')
+
     async def _startAddon(self, request: Request):
         await self._verifyHeader(request)
         slug = request.match_info.get('slug')
@@ -202,7 +207,7 @@ class SimulatedSupervisor(BaseServer):
             }
         )
 
-    async def _internalNewSnapshot(self, request: Request, input_json, verify_header=True):
+    async def _internalNewSnapshot(self, request: Request, input_json, date=None, verify_header=True):
         async with self._snapshot_lock:
             async with self._snapshot_inner_lock:
                 if 'wait' in input_json:
@@ -214,7 +219,7 @@ class SimulatedSupervisor(BaseServer):
                 data = createSnapshotTar(
                     slug,
                     input_json.get('name', "Default name"),
-                    date=self._time.now(),
+                    date=date or self._time.now(),
                     padSize=int(random.uniform(self._min_snapshot_size, self._max_snapshot_size)),
                     included_folders=input_json.get('folders', None),
                     included_addons=input_json.get('addons', None),
@@ -302,6 +307,7 @@ class SimulatedSupervisor(BaseServer):
             "version": version,
             "watchdog": False,
             "boot": "auto" if boot else "manual",
+            "logo": True,
             "ingress_entry": "/api/hassio_ingress/" + slug,
             "state": "started" if started else "stopped"
         })
@@ -355,4 +361,4 @@ class SimulatedSupervisor(BaseServer):
         date = self._time.now() - timedelta(days=days_back)
         name = date.strftime("Full Snapshot %Y-%m-%d %H:%M-%S")
         wait = int(request.query.get("wait", 0))
-        return await self._internalNewSnapshot(request, {'name': name, 'wait': wait}, verify_header=False)
+        return await self._internalNewSnapshot(request, {'name': name, 'wait': wait}, date=date, verify_header=False)

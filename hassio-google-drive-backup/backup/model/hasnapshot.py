@@ -24,7 +24,7 @@ class HASnapshot(AbstractSnapshot):
             size=float(ensureKey("size", data, HA_KEY_TEXT)) * 1024 * 1024,
             source=SOURCE_HA,
             snapshotType=ensureKey('type', data, HA_KEY_TEXT),
-            version=ensureKey('homeassistant', data, HA_KEY_TEXT),
+            version=ensureKey('homeassistant', data, HA_KEY_TEXT).get('version'),
             protected=ensureKey('protected', data, HA_KEY_TEXT),
             retained=retained,
             uploadable=True,

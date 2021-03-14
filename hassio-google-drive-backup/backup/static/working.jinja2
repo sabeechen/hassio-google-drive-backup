@@ -1,6 +1,7 @@
 {% extends "layouts/base.jinja2" %}
 
 {% block head %}
+{% include 'layouts/partials/icons.jinja2' %}
 {{ super() }}
 <script type="text/javascript">
   $(document).ready(function () {
@@ -15,7 +16,9 @@
 <div id="source-template" style="display: none;">
   <div class="source-ui">
     <h6 style="display: flex; align-items: center; margin-top: 0;">
-      <i class="source_icon material-icons"></i>
+      <svg class="source-icon">
+        <use xlink:href="#dummy" />
+      </svg>
       <span>
         <b class="source_snapshot_count"></b>
         <span class="source_title"></span>
@@ -44,23 +47,22 @@
             </div>
           </div>
           <div style="min-width: 0;">
-            <h7 id="name" class="truncate" style="font-weight: 500;"></h7>
+            <h7 id="name" class="truncate" style="font-weight: 600;"></h7>
             <div>
-              <i class="material-icons tiny icon-retain tooltipped danger-text" data-position="bottom"
-                style="vertical-align: -2px;"
+              <i class="material-icons snapshot-card-icon icon-retain tooltipped danger-text" data-position="bottom"
                 data-tooltip="This snapshot is kept indefinitely until you delete it.">lock</i>
-              <i class="material-icons tiny icon-warn-delete tooltipped" data-position="bottom"
-                style="vertical-align: -2px;"
+              <i class="material-icons snapshot-card-icon icon-warn-delete tooltipped" data-position="bottom"
+    
                 data-tooltip="">warning</i>
-              <i class="material-icons tiny icon-protected tooltipped blue-icon" data-position="bottom"
-                style="vertical-align: -2px;"
+              <i class="material-icons snapshot-card-icon icon-protected tooltipped blue-icon" data-position="bottom"
                 data-tooltip="This snapshot is password protected">vpn_key</i>
-              <i class="material-icons tiny tooltipped" id="gen_detail" data-position="bottom" data-tooltip="Override" style="margin-right: 3px; font-size: 15px;">assignment</i>
+              <i class="material-icons snapshot-card-icon tooltipped" id="gen_detail" data-position="bottom" 
+                data-tooltip="Override">date_range</i>
               <span id="size"></span>
               -
-              <span style="display: inline-flex; align-items: center;">
+              <span>
                 <span id="status"></span>
-                <i class="material-icons tooltipped tiny" id="status-help" style="margin-left: 2px;"
+                <i class="material-icons tooltipped snapshot-help-icon" id="status-help"
                   data-position="bottom" data-tooltip="error">help</i>
               </span>
             </div>
@@ -87,13 +89,13 @@
           <p style="display: flex; align-items: center;">
             <i class="material-icons" style="margin-right: 6px;">timer</i>
             <span>
-              Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 500;"></time>
+              Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 600;"></time>
             </span>
           </p>
           <p style="display: flex; align-items: center;">
             <i class="material-icons" style="margin-right: 6px;">update</i>
             <span>
-              Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 500;"></time>
+              Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 600;"></time>
             </span>
           </p>
         </div>

@@ -84,7 +84,7 @@ class DriveSource(SnapshotDestination):
                 existing.get('id'), existing.get('name'))
 
     def icon(self) -> str:
-        return "cloud_done"
+        return "google-drive"
 
     def isWorking(self):
         return self._uploadedAtLeastOneChunk
@@ -126,7 +126,7 @@ class DriveSource(SnapshotDestination):
             await self.drivebackend.update(item.id(), {"trashed": True})
         snapshot.removeSource(self.name())
 
-    async def save(self, snapshot: AbstractSnapshot, source: AsyncHttpGetter) -> DriveSnapshot:
+    async def save(self, snapshot: Snapshot, source: AsyncHttpGetter) -> DriveSnapshot:
         retain = snapshot.getOptions() and snapshot.getOptions().retain_sources.get(self.name(), False)
         parent_id = await self.getFolderId()
         file_metadata = {
@@ -162,6 +162,7 @@ class DriveSource(SnapshotDestination):
                 size = source.size()
                 self._info.upload(size)
                 snapshot.overrideStatus("Uploading {0}%", source)
+                snapshot.setUploadSource(self.title(), source)
                 async for progress in self.drivebackend.create(source, file_metadata, MIME_TYPE):
                     self._uploadedAtLeastOneChunk = True
                     if isinstance(progress, float):
@@ -181,6 +182,7 @@ class DriveSource(SnapshotDestination):
                 # created the snapshot item on this request.
                 raise BackupFolderInaccessible(parent_id)
             finally:
+                snapshot.clearUploadSource()
                 self._uploadedAtLeastOneChunk = False
                 snapshot.clearStatus()
 

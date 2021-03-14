@@ -40,23 +40,24 @@ class DriveSnapshot(AbstractSnapshot):
             size=int(ensureKey("size", data, DRIVE_KEY_TEXT)),
             source=SOURCE_GOOGLE_DRIVE,
             snapshotType=props.get(PROP_TYPE, "?"),
-            version=props.get(PROP_VERSION, "?"),
+            version=props.get(PROP_VERSION, None),
             protected=BoolValidator.strToBool(props.get(PROP_PROTECTED, "?")),
             retained=retained,
             uploadable=False,
-            details=data)
+            details=None)
+        self._drive_data = data
         self._id = ensureKey('id', data, DRIVE_KEY_TEXT)
 
     def id(self) -> str:
         return self._id
 
     def canDeleteDirectly(self) -> str:
-        caps = self.details().get("capabilities", {})
+        caps = self._drive_data.get("capabilities", {})
         if caps.get('canDelete', False):
             return True
 
         # check if the item is in a shared drive
-        sharedId = self.details().get("driveId")
+        sharedId = self._drive_data.get("driveId")
         if sharedId and len(sharedId) > 0 and caps.get("canTrash", False):
             # Its in a shared drive and trashable, so trash won't exhaust quota
             return False

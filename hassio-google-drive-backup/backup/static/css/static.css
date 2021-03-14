@@ -92,9 +92,12 @@ nav ul a i,
   background-color: var(--accent-color);
 }
 
-.source_icon {
-  color: var(--accent-color);
+.source-icon {
   margin-right: 6px;
+  fill: var(--accent-color);
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
 }
 
 .icon-block .material-icons {
@@ -332,7 +335,7 @@ textarea {
 .btn-flat {
   background-color: transparent;
   color: var(--accent-color);
-  font-weight: 500;
+  font-weight: 600;
   -webkit-transition: all .3s ease;
   transition: all .3s ease;
   text-transform: uppercase;
@@ -363,6 +366,20 @@ textarea {
 }
 
 .danger-btn:hover {
+  color: var(--danger-bg);
+  background-color: var(--danger-text);
+}
+
+.card .card-action .danger-btn a:not(.btn):not(.btn-large):not(.btn-small):not(.btn-large):not(.btn-floating) {
+	color: var(--danger-text);
+}
+
+.high-vis-danger-btn {
+  color: var(--danger-bg);
+  background-color: var(--danger-text);
+}
+
+.high-vis-danger-btn:hover {
   color: var(--danger-bg);
   background-color: var(--danger-text);
 }
@@ -401,4 +418,108 @@ textarea {
   vertical-align: middle;
   font-size: 20px;
   padding-bottom: 3px;
+}
+
+.detail-badge {
+  margin: 8px 8px;
+  white-space: nowrap;
+  align-content: center;
+}
+
+.detail-badge .material-icons {
+  display: inline; 
+  margin-right: 2px; 
+  vertical-align: bottom; 
+}
+
+.spinner-layer {
+  border-color: var(--accent-color);
+}
+
+.preloader-wrapper.inline {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+.sub-detail {
+  font-size: 12px;
+}
+
+.sub-detail .material-icons {
+  font-size: 16px;
+}
+
+.progress .determinate {
+  background-color: var(--accent-color);
+}
+
+.progress .indeterminate {
+  background-color: var(--accent-color);
+}
+
+.progress {
+  background: var(--progress-bg);
+}
+
+.indent {
+  margin-left: 36px;
+}
+
+blockquote {
+	border-left: 5px solid var(--accent-color);
+}
+
+.content-logo {
+	max-height: 2rem;
+	margin-right: 15px;
+}
+
+span.content-logo > i {
+  font-size: 2rem;
+}
+
+.sub {
+  color: var(--input-label);
+  font-size: 12px;
+}
+
+.content-icon {
+  margin-right: 6px;
+  fill: var(--text-primary-color);
+  width: 2rem;
+  height: 2rem;
+  vertical-align: middle;
+}
+
+.detail-badge {
+  line-height: 1;
+}
+
+.detail-name {
+  line-height: 1.2;
+}
+
+.snapshot-card-icon {
+    vertical-align: -2px;
+    font-size: 1rem;
+}
+
+.snapshot-help-icon {
+  vertical-align: 3px;
+  display: inline;
+  font-size: 0.75rem;
+  margin-left: 2px;
+}
+
+input.valid:not([type]), input.valid:not([type]):focus, input[type="text"].valid:not(.browser-default), input[type="text"].valid:not(.browser-default):focus, input[type="password"].valid:not(.browser-default), input[type="password"].valid:not(.browser-default):focus, input[type="email"].valid:not(.browser-default), input[type="email"].valid:not(.browser-default):focus, input[type="url"].valid:not(.browser-default), input[type="url"].valid:not(.browser-default):focus, input[type="time"].valid:not(.browser-default), input[type="time"].valid:not(.browser-default):focus, input[type="date"].valid:not(.browser-default), input[type="date"].valid:not(.browser-default):focus, input[type="datetime"].valid:not(.browser-default), input[type="datetime"].valid:not(.browser-default):focus, input[type="datetime-local"].valid:not(.browser-default), input[type="datetime-local"].valid:not(.browser-default):focus, input[type="tel"].valid:not(.browser-default), input[type="tel"].valid:not(.browser-default):focus, input[type="number"].valid:not(.browser-default), input[type="number"].valid:not(.browser-default):focus, input[type="search"].valid:not(.browser-default), input[type="search"].valid:not(.browser-default):focus, textarea.materialize-textarea.valid, textarea.materialize-textarea.valid:focus, .select-wrapper.valid > input.select-dropdown {
+	border-bottom: 1px solid var(--accent-color);
+	-webkit-box-shadow: 0 1px 0 0 var(--accent-color);
+	box-shadow: 0 1px 0 0 var(--accent-color);
+}
+
+input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default):focus:not([readonly]), input[type="password"]:not(.browser-default):focus:not([readonly]), input[type="email"]:not(.browser-default):focus:not([readonly]), input[type="url"]:not(.browser-default):focus:not([readonly]), input[type="time"]:not(.browser-default):focus:not([readonly]), input[type="date"]:not(.browser-default):focus:not([readonly]), input[type="datetime"]:not(.browser-default):focus:not([readonly]), input[type="datetime-local"]:not(.browser-default):focus:not([readonly]), input[type="tel"]:not(.browser-default):focus:not([readonly]), input[type="number"]:not(.browser-default):focus:not([readonly]), input[type="search"]:not(.browser-default):focus:not([readonly]), textarea.materialize-textarea:focus:not([readonly]) {
+	border-bottom: 1px solid var(--accent-color);
+	-webkit-box-shadow: 0 1px 0 0 var(--accent-color);
+	box-shadow: 0 1px 0 0 var(--accent-color);
 }

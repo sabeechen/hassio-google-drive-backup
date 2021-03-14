@@ -83,71 +83,26 @@ function doUpload(slug, name) {
   postJson(url, {}, refreshstats, null, message);
 }
 
-function showDetails(target) {
-  var snapshot = $(target).data('snapshot');
-  if (snapshot.isPending) {
-    return;
-  }
-
-  var details = snapshot.details;
-  $("#details_name").html(snapshot.name);
-  $("#details_name").attr("title", snapshot.name);
-
-  $("#details_date").html(snapshot.date);
-  $("#details_type").html(snapshot.type);
-  if (snapshot.protected) {
-    $("#details_password").html("yes");
+function configureDetailBadge(name, text, show) {
+  let container = $('.' + name);
+  let span = $('.detail-name', container);
+  if (show) {
+    span.html(text);
+    container.show();
   } else {
-    $("#details_password").html("no");
+    container.hide();
   }
-  if (details) {
-    $("#details_ha_version").html(details.homeassistant);
-    $("#details_folders").html("")
-    for (folder in details.folders) {
-      folder = details.folders[folder];
-      if (folder == "share") {
-        folder = "Share";
-      } else if (folder == "ssl") {
-        folder = "SSL";
-      } else if (folder == "addons/local") {
-        folder = "Local add-ons";
-      } else if (folder == "homeassistant") {
-        folder = "Home Assistant Configuration"
+}
+ var SIZE_SI = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+function asSizeString(size) {
+  current = size * 1.0;
+  for (let id in SIZE_SI) {
+      if (current < 1024) {
+          return (Math.round(current * 10) / 10) + " " + SIZE_SI[id];
       }
-      $("#details_folders").append("<li>" + folder + "</li>");
-    }
-
-    $("#details_addons").html("")
-    for (addon in details.addons) {
-      addon = details.addons[addon];
-      $("#details_addons").append("<li>" + addon.name + " <span class='grey-text text-darken-2'>(v" + addon.version + ") " + addon.size + "MB</span></li>")
-    }
-    $("#details_folders_and_addons").show();
-    $("#details_upload_reminder").hide();
-  } else {
-    $("#details_ha_version").html("?");
-    $("#details_folders_and_addons").hide();
-    $("#details_upload_reminder").show();
+      current /= 1024
   }
-
-  if (snapshot.restorable) {
-    $("#restore_link").show();
-  } else {
-    $("#restore_link").hide();
-  }
-
-  if (snapshot.uploadable) {
-    $("#upload_link").show();
-  } else {
-    $("#upload_link").hide();
-  }
-
-  $("#delete_link").data('snapshot', snapshot);
-  $("#upload_link").data('snapshot', snapshot);
-  $("#download_link").data('snapshot', snapshot);
-  $("#retain_link").data('snapshot', snapshot);
-
-  M.Modal.getInstance(document.querySelector('#details_modal')).open();
+  return "Beyond mortal comprehension"
 }
 
 function errorReports(send) {
@@ -249,12 +204,11 @@ function postJson(path, json, onSuccess, onFail = null, toastWhile = null) {
       var info = parseErrorInfo(e);
       if (onFail) {
         onFail(info);
-      } else {
-        button_text = "&nbsp;&nbsp;<a class='waves-effect btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
-        $('#error_details_paragraph').text(info.details);
+      } 
+      button_text = "&nbsp;&nbsp;<a class='waves-effect btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+      $('#error_details_paragraph').text(info.details);
 
-        M.toast({ html: info.message + button_text, displayLength: 10000 });
-      }
+      M.toast({ html: info.message + button_text, displayLength: 10000 });
     }
   )
 }
@@ -410,7 +364,7 @@ function processSourcesUpdate(sources) {
     }
 
     $(".source_title", template).html("in " + source.title );
-    $(".source_icon", template).html(source.icon);
+    $("use", template).attr('xlink:href', "#" + source.icon);
 
     if (source.retained > 0) {
       $(".source_retain_count", template).html(source.retained);
@@ -445,6 +399,9 @@ function processSnapshotsUpdate(data) {
   snapshot_div = $('#snapshots');
   slugs = []
   var count = 0;
+  let detail_modal = document.getElementById('details_modal');
+  let detail_modal_slug = $("#details_modal").data('slug');
+  detail_modal = M.Modal.getInstance(detail_modal);
   for (var key in data.snapshots) {
     if (data.snapshots.hasOwnProperty(key)) {
       count++;
@@ -471,11 +428,7 @@ function processSnapshotsUpdate(data) {
       $("#status", template).html(snapshot['status']);
       if (snapshot.status_detail) {
         $("#gen_detail", template).show();
-        tooltip = "<span>This is a generational snapshot.<br>\nIts currently being saved for: <br><ul class='left browser-default'>\n"
-        for (let reason of snapshot.status_detail) {
-          tooltip += "<li>" + reason + "</li>\n"
-        }
-        tooltip += "<ul></span>"
+        tooltip = "Kept generationally for " + snapshot.status_detail[0];
         $("#gen_detail", template).attr('data-tooltip', tooltip);
       } else {
         $("#gen_detail", template).hide();
@@ -546,10 +499,22 @@ function processSnapshotsUpdate(data) {
       }
 
       // Set up context
-      $("#snapshot_card" + snapshot.slug).data('snapshot', snapshot)
+      $("#snapshot_card" + snapshot.slug).data('snapshot', snapshot);
+
+      // Update the detail modal is necessary
+      if (detail_modal_slug == snapshot.slug && detail_modal && detail_modal.isOpen) {
+        setValuesForSnapshotUpdate(snapshot);
+      }
     }
   }
 
+  // Close the detail modal if the snapshot is no longer present
+  if (detail_modal && detail_modal.isOpen && !slugs.includes(detail_modal_slug)) {
+    detail_modal.close();
+    toast("Snapshot Deleted");
+  }
+
+  // Remove the snapshot card if the snapshot was deleted.
   $(".active-snapshot").each(function () {
     var snapshot = $(this)
     if (!slugs.includes(snapshot.data('slug'))) {

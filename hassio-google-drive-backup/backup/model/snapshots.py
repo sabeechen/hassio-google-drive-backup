@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Optional
 from dateutil.tz import tzutc
 from ..util import Estimator
@@ -107,6 +107,9 @@ class Snapshot(object):
         self._status_override = None
         self._status_override_args = None
         self._state_detail = None
+        self._upload_source = None
+        self._upload_source_name = None
+        self._upload_fail_info = None
         if snapshot is not None:
             self.addSource(snapshot)
 
@@ -139,6 +142,16 @@ class Snapshot(object):
     def getPurges(self):
         return self._purgeNext
 
+    def uploadInfo(self):
+        if not self._upload_source:
+            return {}
+        elif self._upload_source.progress() == 100:
+            return {}
+        else:
+            return {
+                'progress': self._upload_source.progress()
+            }
+
     def getSource(self, source: str):
         return self.sources.get(source, None)
 
@@ -169,13 +182,30 @@ class Snapshot(object):
 
     def version(self) -> str:
         for snapshot in self.sources.values():
-            return snapshot.snapshotType()
-        return "?"
+            if snapshot.version() is not None:
+                return snapshot.version()
+        return None
 
     def details(self):
         for snapshot in self.sources.values():
-            return snapshot.details()
-        return "?"
+            if snapshot.details() is not None:
+                return snapshot.details()
+        return {}
+
+    def getUploadInfo(self, time):
+        if self._upload_source_name is None:
+            return None
+        ret = {
+            'name': self._upload_source_name
+        }
+        if self._upload_fail_info:
+            ret['failure'] = self._upload_fail_info
+        elif self._upload_source is not None:
+            ret['progress'] = self._upload_source.progress()
+            ret['speed'] = self._upload_source.speed(timedelta(seconds=20))
+            ret['total'] = self._upload_source.position()
+            ret['started'] = time.formatDelta(self._upload_source.startTime())
+        return ret
 
     def protected(self) -> bool:
         for snapshot in self.sources.values():
@@ -219,6 +249,20 @@ class Snapshot(object):
     def overrideStatus(self, format, *args) -> None:
         self._status_override = format
         self._status_override_args = args
+
+    def setUploadSource(self, source_name: str, source):
+        self._upload_source = source
+        self._upload_source_name = source_name
+        self._upload_fail_info = None
+
+    def clearUploadSource(self):
+        self._upload_source = None
+        self._upload_source_name = None
+        self._upload_fail_info = None
+
+    def uploadFailure(self, info):
+        self._upload_source = None
+        self._upload_fail_info = info
 
     def clearStatus(self):
         self._status_override = None

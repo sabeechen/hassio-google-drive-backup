@@ -19,7 +19,7 @@ from ..time import Time
 from .driverequests import DriveRequests
 from .folderfinder import FolderFinder
 from .thumbnail import THUMBNAIL_IMAGE
-from ..model import SnapshotDestination, AbstractSnapshot, DriveSnapshot, Snapshot
+from ..model import SnapshotDestination, DriveSnapshot, Snapshot
 from ..logger import getLogger
 from ..creds.creds import Creds
 

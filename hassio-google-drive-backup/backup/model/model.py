@@ -272,7 +272,7 @@ class Model():
     def _buildDeleteScheme(self, source, findNext=False):
         count = source.maxCount()
         if findNext:
-            count = -1
+            count -= 1
         if source == self.source and self.config.get(Setting.DELETE_AFTER_UPLOAD):
             return DeleteAfterUploadScheme(source.name(), [self.dest.name()])
         elif self.generational_config:

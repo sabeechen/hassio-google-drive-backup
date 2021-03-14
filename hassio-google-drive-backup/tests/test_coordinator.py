@@ -165,6 +165,9 @@ async def test_retain_errors(coord: Coordinator, source, dest, snapshot):
 
 @pytest.mark.asyncio
 async def test_freshness(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, snapshot: Snapshot, time: FakeTime):
+    source.setMax(2)
+    dest.setMax(2)
+    await coord.sync()
     assert snapshot.getPurges() == {
         source.name(): False,
         dest.name(): False

@@ -520,3 +520,14 @@ input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default
 	-webkit-box-shadow: 0 1px 0 0 var(--accent-color);
 	box-shadow: 0 1px 0 0 var(--accent-color);
 }
+
+.toast .toast-action {
+  color: var(--accent-color);
+  font-weight: 600;
+  margin-right: 0px;
+}
+
+.toast .toast-action:hover {
+  color: var(--accent-hover-color);
+  background-color: var(--accent-bg-hover-color);
+}

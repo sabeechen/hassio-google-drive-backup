@@ -575,6 +575,10 @@ function processStatusUpdate(data) {
   var error = data.last_error;
   $('.error_card').each(function (i) {
     var item = $(this);
+    if (item.attr('id') == "error_card") {
+      // This card gets handled separately because it catches any other error.
+      return;
+    }
     if (data.last_error == null) {
       if (item.is(":visible")) {
         item.hide();
@@ -613,8 +617,10 @@ function processStatusUpdate(data) {
 
   if (data.last_error != null && !found && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
     var card = $("#error_card")
+    if (!card.is(":visible")) {
+      card.fadeIn();
+    }
     populateGitHubInfo(card, data.last_error);
-    card.fadeIn();
   } else {
     $("#error_card").hide();
   }

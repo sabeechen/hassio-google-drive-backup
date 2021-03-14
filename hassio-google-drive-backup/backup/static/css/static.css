@@ -202,10 +202,6 @@ nav .brand-logo img {
   outline: none;
 }
 
-.error_card a {
-  font-weight: 500;
-}
-
 .choose-folder-container {
   padding: 5px 15px;
   margin: 10px 0;
@@ -448,6 +444,7 @@ textarea {
 
 .sub-detail .material-icons {
   font-size: 16px;
+  vertical-align: text-bottom;
 }
 
 .progress .determinate {

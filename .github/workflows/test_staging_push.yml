@@ -25,10 +25,20 @@ jobs:
         repository: sabeechen/hgdb-dev-staging
     - run: |
           python3 staging/update.py dev staging
-    - name: Test build
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+    - name: Publish Staging image
       uses: home-assistant/builder@master
       with:
         args: |
-          --test \
           --amd64 \
           --target dev/hassio-google-drive-backup
+    - run: |
+          cd staging
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git diff --staged

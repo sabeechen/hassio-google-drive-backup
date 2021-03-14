@@ -119,6 +119,8 @@ class Setting(Enum):
     SNAPSHOT_STARTUP_DELAY_MINUTES = "snapshot_startup_delay_minutes"
 
     def default(self):
+        if "staging" in VERSION and self in _STAGING_DEFAULTS:
+            return _STAGING_DEFAULTS[self]
         return _DEFAULTS[self]
 
     def validator(self):
@@ -230,6 +232,14 @@ _DEFAULTS = {
     Setting.LOG_LEVEL: 'DEBUG',
     Setting.CONSOLE_LOG_LEVEL: 'INFO',
     Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 10
+}
+
+_STAGING_DEFAULTS = {
+    Setting.AUTHENTICATE_URL: "https://dev.habackup.io/drive/authorize",
+    Setting.REFRESH_URL: "https://dev.habackup.io/drive/refresh",
+    Setting.CHOOSE_FOLDER_URL: "https://dev.habackup.io/drive/picker",
+    Setting.ERROR_REPORT_URL: "https://dev.habackup.io/logerror",
+    Setting.DEFAULT_DRIVE_CLIENT_ID: "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com",
 }
 
 _CONFIG = {

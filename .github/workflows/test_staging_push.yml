@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  run-pytest:
+  upload_to_staging:
     runs-on: ubuntu-latest
     steps:
     - name: Set up Python
@@ -25,3 +25,10 @@ jobs:
         repository: sabeechen/hgdb-dev-staging
     - run: |
           python3 staging/update.py dev staging
+    - name: Test build
+      uses: home-assistant/builder@master
+      with:
+        args: |
+          --test \
+          --amd64 \
+          --target dev/hassio-google-drive-backup

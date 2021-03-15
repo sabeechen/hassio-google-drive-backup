@@ -4,7 +4,7 @@ from aiorun import run
 from injector import Injector
 
 from .logger import getLogger
-from backup.config import Config, Setting
+from backup.config import Config, Setting, isStaging
 from backup.module import MainModule, BaseModule
 from backup.starter import Starter
 
@@ -30,10 +30,11 @@ if __name__ == '__main__':
         config = Config.fromFile(Setting.CONFIG_FILE_PATH.default())
 
     logger.overrideLevel(config.get(Setting.CONSOLE_LOG_LEVEL), config.get(Setting.LOG_LEVEL))
-    # if config.get(Setting.DEBUGGER_PORT) is not None:
-    #    port = config.get(Setting.DEBUGGER_PORT)
-    #    logger.info("Starting debugger on port {}".format(port))
-    #    ptvsd.enable_attach(('0.0.0.0', port))
+    if isStaging() and config.get(Setting.DEBUGGER_PORT):
+        import ptvsd
+        port = config.get(Setting.DEBUGGER_PORT)
+        logger.info("Starting debugger on port {}".format(port))
+        ptvsd.enable_attach(('0.0.0.0', port))
 
     if platform.system() == "Windows":
         # Needed for dev on windows machines

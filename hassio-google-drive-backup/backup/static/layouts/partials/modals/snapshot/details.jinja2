@@ -273,7 +273,9 @@
           } else if (slug == "homeassistant") {
             folder = "HA Config Folder";
             icon = "folder-home";
-            subtext = `v${snapshot.haVersion}`;
+            if (snapshot.haVersion) {
+              subtext = `v${snapshot.haVersion}`;
+            }
           } else if (slug == "media") {
             folder = "Media Folder";
             icon = "folder-music";

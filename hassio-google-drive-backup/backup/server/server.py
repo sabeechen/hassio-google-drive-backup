@@ -173,6 +173,7 @@ class Server():
         path = abspath(join(__file__, "..", "..", "static"))
         app.add_routes([
             static("/static", path, append_version=True),
+            static("/drive/static", path, append_version=True),
             get("/drive/picker", self.picker),
             get("/", self.index),
             get("/drive/authorize", self.authorize),

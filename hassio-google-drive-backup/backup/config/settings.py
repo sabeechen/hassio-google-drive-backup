@@ -414,3 +414,7 @@ for setting in Setting:
 
 _VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsSecondsValidator("max_sync_interval_seconds", 1, None)
 VERSION = addon_config["version"]
+
+
+def isStaging():
+    return "staging" in VERSION

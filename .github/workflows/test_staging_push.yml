@@ -18,11 +18,14 @@ jobs:
     - uses: actions/checkout@v2
       with:
         path: dev
+        persist-credentials: false
     # Check out the staging barnch
     - uses: actions/checkout@v2
       with:
         path: staging
         repository: sabeechen/hgdb-dev-staging
+        persist-credentials: true
+        token: ${{ secrets.STAGING_REPO_TOKEN }}
     - run: |
           python3 staging/update.py dev staging
     - name: Login to DockerHub

@@ -143,9 +143,9 @@ class APIIngress(CoreSysAttributes, BaseServer):
             </head>
             <body>
                 <div>
-                    The Web-UI below is loaded through an iframe. <a href='/startingress'>Start a new ingress session</a> if you get permission errors.
+                    The Web-UI below is loaded through an iframe. <a href='startingress'>Start a new ingress session</a> if you get permission errors.
                 </div>
-                <iframe src="/api/hassio_ingress/{0}/">
+                <iframe src="api/hassio_ingress/{0}/">
                     <html>
                         <head></head>
                         <body></body>

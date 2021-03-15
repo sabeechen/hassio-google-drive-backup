@@ -1,10 +1,9 @@
 name: push_to_staging
 on: 
   workflow_dispatch:
+  push:
     branches:
       - dev
-      - master
-      - main
 
 jobs:
   upload_to_staging:

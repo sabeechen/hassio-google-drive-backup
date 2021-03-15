@@ -2,8 +2,36 @@
 #    gcloud config set project hassio-drive-backup 
 #    gcloud builds submit --config cloudbuild-server.yaml
 
+#steps:
+#- name: 'gcr.io/cloud-builders/docker'
+#  args: [ 'build', '-f', 'Dockerfile-server', '-t', 'gcr.io/$PROJECT_ID/authserver', '.' ]
+#images:
+#- 'gcr.io/$PROJECT_ID/authserver'
+
 steps:
+# Build the container image
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'Dockerfile-server', '-t', 'gcr.io/$PROJECT_ID/authserver', '.' ]
+  args: ['build', '-f', 'Dockerfile-server', '-t', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_VERSION}', '.']
+# Push the container image to Container Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_VERSION}']
+# Deploy container image to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'run'
+  - 'deploy'
+  - '${_SERVICE_NAME}'
+  - '--image'
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_VERSION}'
+  - '--region'
+  - '${_REGION}'
+  - '--platform'
+  - 'managed'
+substitutions:
+  _PROJECT_ID: "hassio-drive-backup-dev"
+  _SERVICE_NAME: "authserver-dev" # default value
+  _VERSION: "test-deployment" # default value
+  _REGION: "us-central1"
 images:
-- 'gcr.io/$PROJECT_ID/authserver'
+- 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_VERSION}'

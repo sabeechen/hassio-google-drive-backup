@@ -38,8 +38,15 @@ jobs:
         args: |
           --amd64 \
           --target dev/hassio-google-drive-backup
+    - run: cd dev
+    - uses: actions-hub/gcloud@master
+        env:
+          PROJECT_ID: ${{secrets.DEV_GOOGLE_PROJECT_ID}}
+          APPLICATION_CREDENTIALS: ${{secrets.DEV_GOOGLE_SERVICE_KEY}}
+        with:
+          args: deploy --config cloudbuild-dev.yaml .
     - run: |
-          cd staging
+          cd ..\staging
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .

@@ -6,46 +6,60 @@ on:
       - dev
 
 jobs:
-  upload_to_staging:
+  deploy_to_staging:
     runs-on: ubuntu-latest
     steps:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    # Check out the current branch
+  
+    - name: Check out dev repo
     - uses: actions/checkout@v2
       with:
         path: dev
         persist-credentials: false
-    # Check out the staging barnch
-    - uses: actions/checkout@v2
+    
+    - name: Checkout Staging Repo
+      uses: actions/checkout@v2
       with:
         path: staging
         repository: sabeechen/hgdb-dev-staging
         persist-credentials: true
         token: ${{ secrets.STAGING_REPO_TOKEN }}
-    - run: |
+
+    - name: Update addon verison number
+      run: |
           python3 staging/update.py dev staging
+
     - name: Login to DockerHub
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-    - name: Publish Staging image
+
+    - name: Publish Staging Addon image
       uses: home-assistant/builder@master
       with:
         args: |
           --amd64 \
           --target dev/hassio-google-drive-backup
-    - run: cd dev
-    - uses: actions-hub/gcloud@master
-        env:
-          PROJECT_ID: ${{secrets.DEV_GOOGLE_PROJECT_ID}}
-          APPLICATION_CREDENTIALS: ${{secrets.DEV_GOOGLE_SERVICE_KEY}}
-        with:
-          args: deploy --config cloudbuild-dev.yaml .
-    - run: |
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        project_id: ${{secrets.DEV_GOOGLE_PROJECT_ID}}
+        service_account_key: ${{secrets.DEV_GOOGLE_SERVICE_KEY}}
+        export_default_credentials: true
+
+    - name: Deploy Staging Server Image
+      run: |
+          gcloud info
+          cd dev
+          gcloud builds submit --config cloudbuild-dev.yaml .
+
+    - name: Publish Staging Addon Version
+      run: |
           cd ..\staging
           git config user.name github-actions
           git config user.email github-actions@github.com

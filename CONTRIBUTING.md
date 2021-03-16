@@ -2,7 +2,7 @@
 
 ## About the project
 
-The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whome you can reach out to for guidance. Before digging in to this, you might be helpful to familiarize yourself with some of the technologies used in the project.
+The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whome you can reach out to for guidance. Before digging in to this, it might be helpful to familiarize yourself with some of the technologies used in the project.
 
 - [Developing Addons for Home Assistant](https://developers.home-assistant.io/docs/add-ons) - Useful to understand how addons work.
 - [Python](https://www.python.org/) - The addon is written in python 3.8 and makes heavy use of the asyncio framework.
@@ -11,6 +11,16 @@ The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whome
 - [Visual Studio Code](https://code.visualstudio.com/) - The addon codebase is designed to work with Visual Studio code, but in practice you could use any editor (it would be harder). These instructions assume you're using VSCode, its a free cross-platform download.
 - [Docker](https://www.docker.com/) - All Home Assistant addons run in their own docker cotnainer, and while you could certainly contribute without knowing much about it, knowledge of the basic commands will help.
 
+## Approval Process
+ - Please only make PR's against the [dev branch](https://github.com/sabeechen/hassio-google-drive-backup/tree/dev).  Making a PR against master/main will result in an embarrassing song-and-dance where I ignore your PR for a little while, then ask you to remake it against dev, then ignore it again for a little while out of spite.  Neither of us wants this, and you can avoid it by making it against dev in the first place.
+ - If you're making a small change that fixes a bug I'm going to approve your PR quickly and heap you with praise.  If you make a huge change without talking to me first I'm going to review your PR slowly and move through it with suspicion.  A spectrum exists between those two extremes.  Please try to understand that I'm the one ultimately on the line for the addon's reputation.
+   - Breaking up a large change into smaller manageable pieces make things easier.
+   - You can reach out to me in any of these ways to talk about a change you're considering:
+     - Preferred: [File an issue on github](https://github.com/sabeechen/hassio-google-drive-backup/issues) proposing your changes.
+     - Next best: Email: stephen@beechens.com
+     - Acceptable but worst: Home Assistant Forums: [@sabeechen](https://community.home-assistant.io/u/sabeechen/summary)
+ - Any submissions to the dev branch get automatically built and pushed to a staging version of the addon that you can install using [this repository](https://github.com/sabeechen/hgdb-dev-staging).  Its identical to the "Production" addon but talks to [https://dev.habackup.io](https://dev.habackup.io) instead of [https://habackup.io](https://habackup.io).
+ - Releases of the addon are made as-needed for bug fixes and new features.  If you've made a signifigant change to the addon, you can expect me to communicate to you when you can expect to see it released.  Important fixes will often demand an out-of-schedule rushed release.
 ## Setting up a Development Environment
 
 1. Install [Visual Studio Code](https://code.visualstudio.com/)
@@ -33,13 +43,13 @@ The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whome
 Here are some pointers about how things work that might get you to where you want to get faster:
 
 - Constructor dependencies are handled through dependency injection. You can look at the attributes defined on most any class or constructor to see how they should be defined.
-- The project has almost **100% test coverage**. If you change something, your PR **must** include tests that cover it. The only exception is all the javascript, which has no unit tests.
+- The project has almost **100% test coverage** and the expectation for all submissions (including my own) is that they will not lower that number. If you change something, your PR **must** include tests that cover it. The only exception is all the javascript, which has no unit tests.
 - The web server for the addon is in `uiserver.py`.
 - You'll want to make your changes to the `dev` branch, since the `master` branch is where new releases are made.
 
 ## Trying Out Changes
 
-To try out changes locally during development, I've written a server that simulates Home Assistant, Supervisor, habackup.io, and Google Drive HTTP endpoints that the addon expects in [simulationserver.py](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/dev/simulationserver.py). Its a beast of a class and doeas a lot. It simulates the services for development and is also used to make unit tests work.
+To try out changes locally during development, I've written a server that simulates Home Assistant, the Supervisor, habackup.io, and Google Drive HTTP endpoints that the addon expects in [simulationserver.py](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/dev/simulationserver.py). Its a beast of a class and doeas a lot. It simulates the services for development and is also used to make unit tests work.
 
 To give it a shot, open up Visual Studio's "Run" Dialog and start up `Run Mock Backend Server`. Then also run one of these options:
 
@@ -49,7 +59,7 @@ To give it a shot, open up Visual Studio's "Run" Dialog and start up `Run Mock B
 
 ## Testing you changes in Home Assistant
 
-For some chages, just testing locally might noe bt enough, you may want to run it as a real addon. You can do this roughly following the instuction for [Add-on Testing](https://developers.home-assistant.io/docs/add-ons/testing#local-build). Here are the two methods I've found work best:
+For some chages, just testing locally might not be enough, you may want to run it as a real addon. You can do this roughly following the instuction for [Add-on Testing](https://developers.home-assistant.io/docs/add-ons/testing#local-build). Here are the two methods I've found work best:
 
 - ### Building a Local Addon Container in Home Assistant
   Copy the folder `hassio-google-drive-backup` (the one with `config.json` inside it) into the local addon folder (you'll need the samba addon or something similar to do so). Modify the uploaded `config.json` to remove the `"image"` line near the bottom. Then in Home Assistant Web-UI go to <kbd>Supervisor</kbd> -> <kbd>Addon-Store</kbd>, <kbd>Reload</kbd>, and the addon should show up under "Local Addons". It should includes buttons for building the container, starting/stopping etc.
@@ -73,9 +83,9 @@ For some chages, just testing locally might noe bt enough, you may want to run i
 
 I haven't tried using the Supervisor's new devcontainers for development yet (the addon predates this), let me know if you can get that working well.
 
-## Running Test
+## Running Tests
 
-You shoudl be abel to run tests from within the Visual Studio tests tab. Make sure all the tests pass before you to make a PR. You can also run them from the command line with:
+You should be abel to run tests from within the Visual Studio tests tab. Make sure all the tests pass before you to make a PR. You can also run them from the command line with:
 
 ```bash
 > python3.8 -m pytest hassio-google-drive-backup
@@ -84,4 +94,4 @@ You shoudl be abel to run tests from within the Visual Studio tests tab. Make su
 ## Writing Tests
 
 Test dependencies get injected by `pytest`, which are defined in the [conftest.py](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/tests/conftest.py) file. This is resonsible for starting the simulation server, mocking necessary classes, etc.
-Most classes hve their own test file in the [tests](https://github.com/sabeechen/hassio-google-drive-backup/tree/master/hassio-google-drive-backup/tests) directory. If you change anything in the code, you must also submit tests with your PR that verify that change. The only exception is that all the addon's javascript, I've never found a good way to do Javascript tests.
+Most classes have their own test file in the [tests](https://github.com/sabeechen/hassio-google-drive-backup/tree/master/hassio-google-drive-backup/tests) directory. If you change anything in the code, you must also submit tests with your PR that verify that change. The only exception is that all the addon's javascript, I've never found a good way to do Javascript tests.

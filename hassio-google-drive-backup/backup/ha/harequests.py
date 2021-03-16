@@ -189,7 +189,7 @@ class HaRequests():
             return details["data"]
 
     async def getAddonLogo(self, slug: str):
-        url = "{0}addons/{1}/logo".format(self.config.get(Setting.HASSIO_URL), slug)
+        url = "{0}addons/{1}/icon".format(self.config.get(Setting.HASSIO_URL), slug)
         async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
             resp.raise_for_status()
             return (resp.headers['Content-Type'], await resp.read())

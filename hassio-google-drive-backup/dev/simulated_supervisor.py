@@ -78,6 +78,7 @@ class SimulatedSupervisor(BaseServer):
             post('/addons/{slug}/start', self._startAddon),
             post('/addons/{slug}/stop', self._stopAddon),
             get('/addons/{slug}/logo', self._logoAddon),
+            get('/addons/{slug}/icon', self._logoAddon),
             post('/snapshots/{slug}/remove', self._deleteSnapshot),
             post('/snapshots/new/upload', self._uploadSnapshot),
             get('/snapshots/new/upload', self._uploadSnapshot),

@@ -11,7 +11,6 @@
   "hassio_api": true,
   "hassio_role": "manager",
   "auth_api": true,
-  "webui": "[PROTO:use_ssl]://[HOST]:[PORT:1627]/",
   "ingress": true,
   "panel_icon": "mdi:cloud",
   "panel_title": "Snapshots",
@@ -20,8 +19,7 @@
   "options": {
     "max_snapshots_in_hassio": 4,
     "max_snapshots_in_google_drive": 4,
-    "days_between_snapshots": 3,
-    "use_ssl": false
+    "days_between_snapshots": 3
   },
   "schema": {
     "max_snapshots_in_hassio": "int(0,)",
@@ -30,7 +28,7 @@
 
     "delete_after_upload": "bool?",
     "verbose": "bool?",
-    "use_ssl": "bool?",
+    "use_ssl": "bool",
     "certfile": "str?",
     "keyfile": "str?",
     "require_login": "bool?",
@@ -39,7 +37,6 @@
     "snapshot_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
     "specify_snapshot_folder": "bool?",
     "warn_for_low_space": "bool?",
-    "low_space_threshold": "int(0,)?",
 
     "generational_days": "int(0,)?",
     "generational_weeks": "int(0,)?",
@@ -65,52 +62,15 @@
     "ignore_ipv6_addresses": "bool?",
     "confirm_multiple_deletes": "bool?",
     "google_drive_timeout_seconds": "float(1,)?",
-    "google_drive_page_size": "int(1,)?",
     "alternate_dns_servers": "match(^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})(,[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})*$)?",
     "enable_drive_upload": "bool?",
 
     "background_color": "match(#[0-9ABCDEFabcdef]{6})?",
     "accent_color": "match(#[0-9ABCDEFabcdef]{6})?",
 
-    "hassio_url": "url?",
-    "home_assistant_url": "url?",
-    "hassio_header": "str?",
-    "drive_url": "url?",
-    "authenticate_url": "url?",
-    "refresh_url": "url?",
-    "drive_refresh_url": "url?",
-    "drive_token_url": "url?",
-    "drive_authorize_url": "url?",
-    "choose_folder_url": "url?",
-    "error_report_url": "url?",
-    "drive_host_name": "str?",
-    "save_drive_creds_path": "str?",
-    "stop_addon_state_path": "str?",
-
-    "snapshot_stale_seconds": "float(0,)?",
     "max_sync_interval_seconds": "float(300,)?",
-    "pending_snapshot_timeout_seconds": "float(0,)?",
-    "failed_snapshot_timeout_seconds": "float(0,)?",
-    "new_snapshot_timeout_seconds": "float(0,)?",
-    "download_timeout_seconds": "float(0,)?",
-
-    "ingress_port": "int(0,)?",
     "port": "int(0,)?",
-
-    "folder_file_path": "str?",
-    "config_file_path": "str?",
-    "retained_file_path": "str?",
-    "secrets_file_path": "str?",
-    "id_file_path": "str?",
-    "backup_directory_path": "str?",
-    "credentials_file_path": "str?",
-    "ingress_token_file_path": "str?",
-    "default_drive_client_id": "str?",
-    "default_drive_client_secret": "str?",
-    "drive_picker_api_key": "str?",
-    "default_chunk_size": "int(1,)?",
     "debugger_port": "int(100,)?",
-    "server_project_id": "str?",
     "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?"
   },

@@ -45,19 +45,6 @@ jobs:
           --amd64 \
           --target dev/hassio-google-drive-backup
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@master
-      with:
-        project_id: ${{secrets.DEV_GOOGLE_PROJECT_ID}}
-        service_account_key: ${{secrets.DEV_GOOGLE_SERVICE_KEY}}
-        export_default_credentials: true
-
-    - name: Deploy Staging Server Image
-      run: |
-          gcloud info
-          cd dev/hassio-google-drive-backup
-          gcloud builds submit --config cloudbuild-dev.yaml .
-
     - name: Publish Staging Addon Version
       run: |
           cd ..\staging

@@ -34,6 +34,7 @@ THUMBNAIL_MIME_TYPE = "image/png"
 QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
 CREATE_FIELDS = SELECT_FIELDS
 URL_FILES = "/drive/v3/files/"
+URL_ABOUT = "/drive/v3/about"
 URL_START_UPLOAD = "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true"
 URL_AUTH = "/oauth2/v4/token"
 PAGE_SIZE = 100
@@ -192,6 +193,12 @@ class DriveRequests():
         resp = await self.retryRequest("DELETE", URL_FILES + id + "/?supportsAllDrives=true")
         async with resp:
             pass
+
+    async def getAboutInfo(self):
+        q = {
+                "fields": 'storageQuota'
+            }
+        return await self.retryRequest("GET", URL_ABOUT + "?" + urlencode(q), is_json=True)
 
     async def create(self, stream, metadata, mime_type):
         # Upload logic is complicated. See https://developers.google.com/drive/api/v3/manage-uploads#resumable

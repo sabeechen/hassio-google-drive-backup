@@ -45,6 +45,7 @@ class DriveSource(SnapshotDestination):
         self.folder_finder = folderfinder
         self._info = info
         self._uploadedAtLeastOneChunk = False
+        self._drive_info = None
 
     def saveCreds(self, creds: Creds) -> None:
         logger.info("Saving new Google Drive credentials")
@@ -74,6 +75,11 @@ class DriveSource(SnapshotDestination):
             return False
         return super().needsConfiguration()
 
+    def freeSpace(self):
+        if self._drive_info and self._drive_info.get("storageQuota") is not None and not self.folder_finder.currentIsSharedDrive():
+            return int(self._drive_info.get("storageQuota").get("limit")) - int((self._drive_info.get("storageQuota").get("usage")))
+        return super().freeSpace()
+
     async def create(self, options: CreateOptions) -> DriveSnapshot:
         raise LogicError("Snapshots can't be created in Drive")
 
@@ -91,6 +97,12 @@ class DriveSource(SnapshotDestination):
 
     async def get(self, allow_retry=True) -> Dict[str, DriveSnapshot]:
         parent = await self.getFolderId()
+        try:
+            self._drive_info = await self.drivebackend.getAboutInfo()
+        except Exception as e:
+            # This is just used to get the remaining space in Drive, which is a 
+            # nice to have.  Just log the error to debug if we can't get it
+            logger.debug("Unable to retrieve Google Drive storage info: " + str(e))
         snapshots: Dict[str, DriveSnapshot] = {}
         try:
             async for child in self.drivebackend.query("'{}' in parents".format(parent)):

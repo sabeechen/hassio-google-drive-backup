@@ -38,12 +38,20 @@ class FolderFinder():
         # prompt for what to do about it.
         self._existing_folder = None
         self._use_existing = None
+        self._folder_details = None
 
     def resolveExisting(self, val):
         if self._existing_folder:
             self._use_existing = val
         else:
             self._use_existing = None
+
+    def _isSharedDrive(self, folder):
+        driveId = folder.get("driveId", None)
+        return driveId and len(driveId) > 0
+
+    def currentIsSharedDrive(self):
+        return self._folder_details and self._isSharedDrive(self._folder_details)
 
     async def get(self):
         if self._existing_folder and self._use_existing is not None:
@@ -74,7 +82,10 @@ class FolderFinder():
 
     async def save(self, folder: Any) -> str:
         if not isinstance(folder, str):
+            self._folder_details = folder
             folder = folder.get('id')
+        else:
+            self._folder_details = None
         logger.info("Saving snapshot folder: " + folder)
         with open(self.config.get(Setting.FOLDER_FILE_PATH), 'w') as folder_file:
             folder_file.write(folder)
@@ -148,6 +159,7 @@ class FolderFinder():
             if not self._isValidFolder(folder):
                 logger.info("Provided snapshot folder {0} is invalid".format(id))
                 return False
+            self._folder_details = folder
             return True
         except ClientResponseError as e:
             if e.status == 404:
@@ -171,8 +183,7 @@ class FolderFinder():
             elif not caps['canListChildren']:
                 return False
             elif not caps.get('canDeleteChildren', False) and not caps.get('canRemoveChildren', False):
-                driveId = folder.get("driveId")
-                if driveId and len(driveId) > 0 and caps.get("canTrashChildren", False):
+                if self._isSharedDrive(folder) and caps.get("canTrashChildren", False):
                     # Allow folders in shared drives if you can still trash items inside it.
                     return True
                 return False
@@ -192,5 +203,6 @@ class FolderFinder():
             },
         }
         folder = await self.drivebackend.createFolder(file_metadata)
+        self._folder_details = folder
         await self.save(folder)
         return folder.get('id')

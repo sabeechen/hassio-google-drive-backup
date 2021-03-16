@@ -98,6 +98,7 @@ class SimulatedGoogle(BaseServer):
             post('/oauth2/v4/token', self._oauth2Token),
             get('/o/oauth2/v2/auth', self._oAuth2Authorize),
             get('/drive/customcreds', self._getCustomCred),
+            get('/drive/v3/about', self._driveAbout),
             post('/token', self._driveToken),
         ]
 
@@ -260,6 +261,14 @@ class SimulatedGoogle(BaseServer):
             else:
                 self.items[id][key] = update[key]
         return Response()
+
+    async def _driveAbout(self, request: Request):
+        return json_response({
+            'storageQuota': {
+                'usage': 1024 * 1024 * 1024,
+                'limit': 5 * 1024 * 1024 * 1024
+            }
+        })
 
     async def _delete(self, request: Request):
         id = request.match_info.get('id')

@@ -131,6 +131,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
+        'free_space': "4.0 GB",
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -166,6 +167,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
+        'free_space': "4.0 GB",
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -194,6 +196,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
+        'free_space': "4.0 GB",
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -226,6 +229,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
+        'free_space': "4.0 GB",
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,

@@ -76,15 +76,7 @@ def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, includ
         "date": date.isoformat(),
         "type": snapshot_type,
         "protected": password is not None,
-        "homeassistant": {
-            "ssl": True,
-            "watchdog": True,
-            "port": 8123,
-            "wait_boot": 600,
-            "boot": True,
-            "version": "0.92.2",
-            "refresh_token": "fake_token"
-        },
+        "homeassistant": "0.92.2",
         "folders": folders,
         "addons": addons,
         "repositories": [

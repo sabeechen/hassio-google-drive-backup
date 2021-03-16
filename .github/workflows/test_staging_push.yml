@@ -55,7 +55,7 @@ jobs:
     - name: Deploy Staging Server Image
       run: |
           gcloud info
-          cd dev
+          cd dev/hassio-google-drive-backup
           gcloud builds submit --config cloudbuild-dev.yaml .
 
     - name: Publish Staging Addon Version

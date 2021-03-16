@@ -42,7 +42,7 @@ jobs:
       uses: home-assistant/builder@master
       with:
         args: |
-          --amd64 \
+          --all \
           --target dev/hassio-google-drive-backup
 
     - name: Publish Staging Addon Version

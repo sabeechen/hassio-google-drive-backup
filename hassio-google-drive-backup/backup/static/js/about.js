@@ -1,7 +1,84 @@
-var contributorsLoaded = false;
+let contributorsLoaded = false;
+
+const CONTRIBUTORS_API_URL = "https://api.github.com/repos/sabeechen/hassio-google-drive-backup/contributors";
+const CONTRIBUTOR_COMMIT_URL = "https://github.com/sabeechen/hassio-google-drive-backup/commits?author={AUTHOR}";
+const CONTRIBUTORS_COUNT_TO_SHOW = 14;
+
+const EXTRA_CONTRIBUTORS = {
+  "sabeechen": "Original author. Did most of this.",
+  "ericmatte": "Redesigned the UI with divine HTML and CSS wizardry.",
+  "jhampson-dbre": "Fixed a really nasty timing bug.",
+};
+
+function createElementFromHTML(htmlString) {
+  var div = document.createElement("div");
+  div.innerHTML = htmlString.trim();
+  return div.firstChild;
+}
+
+function showElement(id) {
+  document.getElementById(id).classList.remove("default-hidden");
+}
+
+function hideElement(id) {
+  document.getElementById(id).classList.add("default-hidden");
+}
+
+async function preloadImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(img);
+  });
+}
+
+const extraContributorTemplate = `
+<div class="contributor-extra">
+  <div class="contributor-img-wrapper"></div>
+  <div>
+    <div>
+      <a href="{hrefUsername}" target="_blank">{username}</a>
+      -
+      <a href="{hrefContributions}" target="_blank">{contributions}</a>
+    </div>
+    <div>{details}</div>
+  </div>
+</div>
+`;
+
+async function loadContributor(contributor) {
+  const img = await preloadImage(contributor.avatar_url);
+  img.className = "contributor-img";
+  img.title = `@${contributor.login}`;
+  img.alt = img.title;
+
+  const a = document.createElement("a");
+  a.href = contributor.html_url;
+  a.target = "_blank";
+  a.appendChild(img);
+
+  if (contributor.login in EXTRA_CONTRIBUTORS) {
+    const div = createElementFromHTML(
+      extraContributorTemplate
+        .replace("{hrefUsername}", contributor.html_url)
+        .replace("{username}", `@${contributor.login}`)
+        .replace("{hrefContributions}", CONTRIBUTOR_COMMIT_URL.replace("{AUTHOR}", contributor.login))
+        .replace("{contributions}", `${contributor.contributions} contributions`)
+        .replace("{details}", EXTRA_CONTRIBUTORS[contributor.login]),
+    );
+    div.querySelector(".contributor-img-wrapper").appendChild(a);
+
+    return { element: div, isExtra: true };
+  } else {
+    return { element: a, isExtra: false };
+  }
+}
+
 async function fetchContributors() {
-  const data = await fetch("https://api.github.com/repos/sabeechen/hassio-google-drive-backup/contributors");
-  const contributorsCountToShow = 14;
+  const data = await fetch(CONTRIBUTORS_API_URL);
+  showElement("contributors-loading");
+  hideElement("contributors-count");
+  hideElement("contributors");
 
   if (data.ok) {
     const contributors = await data.json();
@@ -9,70 +86,26 @@ async function fetchContributors() {
     const containerExtra = document.getElementById("contributors-extra");
     containerSimple.innerHTML = "";
     containerExtra.innerHTML = "";
-    extra_info = {
-      'sabeechen': 'Original author.  Did most of this.',
-      'ericmatte': 'Redesigned the UI with divine HTML and CSS wizardry.',
-      'jhampson-dbre': "Fixed a really nasty timing bug." 
-    };
-    contributors.slice(0, contributorsCountToShow).forEach((contributor) => {
-      if (contributor.login in extra_info) {
-        const img = document.createElement("img");
-        img.src = contributor.avatar_url;
-        img.className = "contributor-img";
-        img.title = `@${contributor.login}`;
-        img.alt = img.title;
 
-        const a = document.createElement("a");
-        a.href = `https://github.com/${contributor.login}`;
-        a.target = "_blank";
-        a.appendChild(img);
+    const contributorsToShow = contributors.slice(0, CONTRIBUTORS_COUNT_TO_SHOW);
+    const contributorItems = await Promise.all(contributorsToShow.map((contributor) => loadContributor(contributor)));
 
-        const name = document.createElement("span");
-        name.innerHTML = `@${contributor.login}<br>${contributor.contributions} contributions`;
-        name.classList.add('contributor-name');
-        name.classList.add('center')
-        a.appendChild(name);
-
-        const div = document.createElement("div");
-        div.appendChild(a);
-
-        const detail = document.createElement("span");
-        detail.innerHTML = extra_info[contributor.login];
-        div.append(detail);
-        containerExtra.appendChild(div);
-        containerExtra.appendChild(document.createElement("br"));
-      } else {
-        const img = document.createElement("img");
-        img.src = contributor.avatar_url;
-        img.className = "contributor-img";
-        img.title = `@${contributor.login}`;
-        img.alt = img.title;
-
-        const a = document.createElement("a");
-        a.href = `https://github.com/${contributor.login}`;
-        a.target = "_blank";
-        a.appendChild(img);
-        containerSimple.appendChild(a);
-      }
+    contributorItems.forEach((item) => {
+      (item.isExtra ? containerExtra : containerSimple).appendChild(item.element);
     });
 
-    document.getElementById("contributors-more-link-count").innerHTML = contributors.length - contributorsCountToShow;
-    document.getElementById("contributors-count").innerHTML = contributors.length;
-    document.getElementById("contributors-count").classList.remove('default-hidden');
-    document.getElementById("contributors-loading").classList.add('default-hidden');
-  } else {
-    document.getElementById("contributors-loading").classList.add('default-hidden');
+    document.getElementById("contributors-more-link-count").innerText = contributors.length - CONTRIBUTORS_COUNT_TO_SHOW;
+    document.getElementById("contributors-count").innerText = contributors.length;
+    showElement("contributors-count");
+    showElement("contributors");
+    contributorsLoaded = true;
   }
+
+  hideElement("contributors-loading");
 }
 
 $(document).ready(function () {
-  M.Modal.init(document.querySelector("#about_modal"));
+  M.Modal.init(document.querySelector("#about_modal"), {
+    onOpenStart: () => fetchContributors(),
+  });
 });
-
-function openAbout() {
-  if (!contributorsLoaded) {
-    fetchContributors();
-    contributorsLoaded = true;
-  }
-  M.Modal.getInstance(document.getElementById("about_modal")).open();
-}

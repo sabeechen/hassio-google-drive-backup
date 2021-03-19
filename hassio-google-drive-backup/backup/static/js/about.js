@@ -75,6 +75,8 @@ async function loadContributor(contributor) {
 }
 
 async function fetchContributors() {
+  if (contributorsLoaded) return;
+  
   const data = await fetch(CONTRIBUTORS_API_URL);
   showElement("contributors-loading");
   hideElement("contributors-count");

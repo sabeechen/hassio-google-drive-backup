@@ -258,12 +258,6 @@ nav .brand-logo img {
 .bmc-outline {
   fill: var(--accent-dark)
 }
-
-#contributors-simple a {
-  margin-right: 8px;
-  margin-bottom: 8px;
-}
-
 .btn-floating {
   background-color: var(--accent-color);
   color: var(--accent-text-color);
@@ -273,7 +267,17 @@ nav .brand-logo img {
   background-color: var(--accent-color);
 }
 
-#contributors-simple a img {
+#contributors-simple a {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+#contributors-extra .contributor-img-wrapper a {
+  display: flex;
+  margin-right: 8px;
+}
+
+#contributors a img {
   width: 32px;
   height: 32px;
   border-radius: 9999px;
@@ -287,21 +291,10 @@ nav .brand-logo img {
   font-weight: 500;
 }
 
-.contributor-name {
-  vertical-align: middle;
-}
-
-#contributors-extra a {
-  margin-right: 8px;
-  margin-bottom: 8px;
+.contributor-extra {
   display: flex;
-  align-content: center;
-}
-
-#contributors-extra a img {
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .truncate-two-lines {

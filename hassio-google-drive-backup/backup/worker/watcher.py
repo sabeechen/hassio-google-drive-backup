@@ -92,6 +92,6 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
         else:
             return super().check()
 
-    def stop(self):
+    async def stop(self):
         self.observer.stop()
         self.observer.join()

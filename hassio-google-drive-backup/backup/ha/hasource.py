@@ -9,7 +9,7 @@ from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
 from ..util import AsyncHttpGetter, GlobalInfo, Estimator
-from ..config import Config, Setting, CreateOptions
+from ..config import Config, Setting, CreateOptions, Startable
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
 from ..exceptions import (LogicError, SnapshotInProgress,
@@ -112,7 +112,7 @@ class PendingSnapshot(AbstractSnapshot):
 
 
 @singleton
-class HaSource(SnapshotSource[HASnapshot]):
+class HaSource(SnapshotSource[HASnapshot], Startable):
     """
     Stores logic for interacting with the supervisor add-on API
     """
@@ -218,6 +218,11 @@ class HaSource(SnapshotSource[HASnapshot]):
             await self.init()
         except Exception:
             pass
+
+    async def stop(self):
+        if self._pending_snapshot_task:
+            self._pending_snapshot_task.cancel()
+            await asyncio.wait([self._pending_snapshot_task])
 
     async def get(self) -> Dict[str, HASnapshot]:
         if not self._initialized:

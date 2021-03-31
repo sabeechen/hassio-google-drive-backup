@@ -40,6 +40,11 @@ class Worker(Startable):
         self._task = asyncio.create_task(self.work(), name=self._name)
         return self._task
 
+    async def stop(self):
+        if self._task is not None:
+            self._task.cancel()
+            await asyncio.wait([self._task])
+
     def isRunning(self):
         if self._task is None:
             return False

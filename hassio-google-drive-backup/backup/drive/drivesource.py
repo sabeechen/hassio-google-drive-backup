@@ -100,7 +100,7 @@ class DriveSource(SnapshotDestination):
         try:
             self._drive_info = await self.drivebackend.getAboutInfo()
         except Exception as e:
-            # This is just used to get the remaining space in Drive, which is a 
+            # This is just used to get the remaining space in Drive, which is a
             # nice to have.  Just log the error to debug if we can't get it
             logger.debug("Unable to retrieve Google Drive storage info: " + str(e))
         snapshots: Dict[str, DriveSnapshot] = {}

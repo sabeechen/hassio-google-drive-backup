@@ -252,11 +252,11 @@ nav .brand-logo img {
 }
 
 .bmc-cup {
-  fill: var(--accent-color)
+  fill: var(--accent-dark)
 }
 
 .bmc-outline {
-  fill: var(--accent-dark)
+  fill: var(--accent-color)
 }
 .btn-floating {
   background-color: var(--accent-color);

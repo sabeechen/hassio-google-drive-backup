@@ -1,6 +1,7 @@
 # Home Assistant Google Drive Backup
 
 ![screenshot](images/screenshot.png)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fsabeechen%2Fhassio-google-drive-backup.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fsabeechen%2Fhassio-google-drive-backup?ref=badge_shield)
 
 ## About
 
@@ -246,3 +247,7 @@ The add-on will only delete an old snapshot if a new one exists to replace it, s
 ### Can I exclude specific sub-folders from my snapshot?
 
 The addon uses the supervisor to create snapshots, and the supervisor only permits you to include or exclude the 5 main folders (home assistant configuration, share, SSL, media, and local addons). Excluding specific subfolders, or only including specific subfolders from a snapshot isn't possible today.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fsabeechen%2Fhassio-google-drive-backup.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fsabeechen%2Fhassio-google-drive-backup?ref=badge_large)

@@ -10,7 +10,7 @@
             "request": "launch",
             "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
-            "args": ["dev"],
+            "args": ["--config", "hassio-google-drive-backup/dev/data/dev_options.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
             }
@@ -21,7 +21,7 @@
             "request": "launch",
             "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
-            "args": ["drive_dev"],
+            "args": ["--config", "hassio-google-drive-backup/dev/data/drive_dev_options.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
             }
@@ -32,7 +32,7 @@
             "request": "launch",
             "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
-            "args": ["drive"],
+            "args": ["--config", "hassio-google-drive-backup/dev/data/drive_options.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
             }

@@ -122,9 +122,20 @@ class SimulationServer(BaseServer):
 
 
 class SimServerModule(BaseModule):
-    def __init__(self, config: Config):
-        super().__init__(config, override_dns=False)
-        self.config = config
+    def __init__(self, base_url: URL):
+        super().__init__(override_dns=False)
+        self._base_url = base_url
+
+    @provider
+    @singleton
+    def getConfig(self) -> Config:
+        return Config.withOverrides({
+            Setting.DRIVE_AUTHORIZE_URL: str(self._base_url.with_path("o/oauth2/v2/auth")),
+            Setting.AUTHENTICATE_URL: str(self._base_url.with_path("drive/authorize")),
+            Setting.DRIVE_TOKEN_URL: str(self._base_url.with_path("token")),
+            Setting.DRIVE_REFRESH_URL: str(self._base_url.with_path("oauth2/v4/token")),
+            Setting.INGRESS_PORT: 56152
+        })
 
     @provider
     @singleton
@@ -135,14 +146,7 @@ class SimServerModule(BaseModule):
 async def main():
     port = 56153
     base = URL("http://localhost").with_port(port)
-    config = Config.withOverrides({
-        Setting.DRIVE_AUTHORIZE_URL: str(base.with_path("o/oauth2/v2/auth")),
-        Setting.AUTHENTICATE_URL: str(base.with_path("drive/authorize")),
-        Setting.DRIVE_TOKEN_URL: str(base.with_path("token")),
-        Setting.DRIVE_REFRESH_URL: str(base.with_path("oauth2/v4/token")),
-        Setting.INGRESS_PORT: 56152
-    })
-    injector = Injector(SimServerModule(config))
+    injector = Injector(SimServerModule(base))
     server = injector.get(SimulationServer)
 
     # start the server

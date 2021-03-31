@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 
 from dateutil.tz import gettz
@@ -41,6 +42,8 @@ class FakeTime(Time):
     async def sleepAsync(self, seconds: float):
         self.sleeps.append(seconds)
         self._now = self._now + timedelta(seconds=seconds)
+        # allow the task to be interrupted if such a thing is requested.
+        await asyncio.sleep(0)
 
     def clearSleeps(self):
         self.sleeps = []

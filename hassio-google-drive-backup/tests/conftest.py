@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from os.path import join
 import tempfile
 import asyncio
 import platform
@@ -16,7 +17,7 @@ from backup.config import Config, Setting
 from backup.model import Coordinator
 from dev.simulationserver import SimulationServer
 from backup.drive import DriveRequests, DriveSource, FolderFinder
-from backup.util import GlobalInfo, Estimator, Resolver
+from backup.util import GlobalInfo, Estimator, Resolver, LocalCache
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
 from backup.model import Model
@@ -105,8 +106,9 @@ class ReaderHelper:
 
 # This module should onyl ever have bindings that can also be satisfied by MainModule
 class TestModule(Module):
-    def __init__(self, ports: Ports):
+    def __init__(self, config: Config, ports: Ports):
         self.ports = ports
+        self.config = config
 
     @provider
     @singleton
@@ -123,6 +125,11 @@ class TestModule(Module):
     def getPorts(self) -> Ports:
         return self.ports
 
+    @provider
+    @singleton
+    def getConfig(self) -> Config:
+        return self.config
+
 
 @pytest.fixture
 def event_loop():
@@ -132,15 +139,8 @@ def event_loop():
 
 
 @pytest.fixture
-async def injector(cleandir, server_url, ports):
-    drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token")
-    with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
-        f.write("for_unit_tests: \"password value\"\n")
-
-    with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
-        f.write(json.dumps(drive_creds.serialize()))
-
-    config = Config.withOverrides({
+async def generate_config(server_url, ports, cleandir):
+    return Config.withOverrides({
         Setting.DRIVE_URL: server_url,
         Setting.HASSIO_URL: server_url + "/",
         Setting.HOME_ASSISTANT_URL: server_url + "/core/api/",
@@ -166,8 +166,17 @@ async def injector(cleandir, server_url, ports):
         Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 0,
     })
 
-    # logging.getLogger('injector').setLevel(logging.DEBUG)
-    return Injector([BaseModule(config), TestModule(ports)])
+
+@pytest.fixture
+async def injector(cleandir, ports, generate_config):
+    drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token")
+    with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
+        f.write("for_unit_tests: \"password value\"\n")
+
+    with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
+        f.write(json.dumps(drive_creds.serialize()))
+
+    return Injector([BaseModule(), TestModule(generate_config, ports)])
 
 
 @pytest.fixture
@@ -218,6 +227,11 @@ async def server(injector, port, drive_creds: Creds, session):
     await server.start(port)
     yield server
     await server.stop()
+
+
+@pytest.fixture
+async def local_cache(injector):
+    return injector.get(LocalCache)
 
 
 @pytest.fixture

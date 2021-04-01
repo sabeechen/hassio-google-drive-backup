@@ -156,6 +156,7 @@ async def generate_config(server_url, ports, cleandir):
         Setting.FOLDER_FILE_PATH: "folder.dat",
         Setting.RETAINED_FILE_PATH: "retained.json",
         Setting.ID_FILE_PATH: "id.json",
+        Setting.DATA_CACHE_FILE_PATH: "data_cache.json",
         Setting.STOP_ADDON_STATE_PATH: "stop_addon.json",
         Setting.INGRESS_TOKEN_FILE_PATH: "ingress.dat",
         Setting.DEFAULT_DRIVE_CLIENT_ID: "test_client_id",

@@ -1,8 +1,9 @@
-from .asynchttpgetter import AsyncHttpGetter  # noqa: F401
-from .backoff import Backoff  # noqa: F401
-from .estimator import Estimator  # noqa: F401
-from .globalinfo import GlobalInfo  # noqa: F401
-from .resolver import Resolver  # noqa: F401
-from .file import File  # noqa: F401
-from .rangelookup import RangeLookup  # noqa: F401
-from .local_cache import LocalCache  # noqa: F401
+# flake8: noqa
+from .asynchttpgetter import AsyncHttpGetter
+from .backoff import Backoff
+from .estimator import Estimator
+from .globalinfo import GlobalInfo
+from .resolver import Resolver
+from .file import File
+from .rangelookup import RangeLookup
+from .data_cache import DataCache, KEY_CREATED, KEY_I_MADE_THIS, KEY_PENDING, KEY_SNPASHOTS

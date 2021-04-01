@@ -4,10 +4,13 @@ import json
 import os
 
 KEY_SNPASHOTS = "snapshots"
+KEY_I_MADE_THIS = "i_made_this"
+KEY_PENDING = "pending"
+KEY_CREATED = "created"
 
 
 @singleton
-class LocalCache:
+class DataCache:
     @inject
     def __init__(self, config: Config):
         self._config = config
@@ -16,22 +19,11 @@ class LocalCache:
         self._load()
 
     def _load(self):
-        if not os.path.isfile(self._config.get(Setting.RETAINED_FILE_PATH)):
+        if not os.path.isfile(self._config.get(Setting.DATA_CACHE_FILE_PATH)):
             self._data = {KEY_SNPASHOTS: {}}
             return
-        with open(self._config.get(Setting.RETAINED_FILE_PATH)) as f:
-            data = json.load(f)
-        if data.get('retained'):
-            # upgrade from the old retained file structure
-            new_data = {KEY_SNPASHOTS: {}}
-            for slug in data.get('retained'):
-                new_data[KEY_SNPASHOTS][slug] = {
-                    'retained': True
-                }
-            self.save(new_data)
-        else:
-            new_data = data
-        self._data = new_data
+        with open(self._config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
+            self._data = json.load(f)
 
     def save(self, data=None):
         if data is None:

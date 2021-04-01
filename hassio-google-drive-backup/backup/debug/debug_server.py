@@ -20,4 +20,3 @@ class DebugServer(Startable):
                 port = self._config.get(Setting.DEBUGGER_PORT)
                 logger.info("Starting debugger on port {}".format(port))
                 ptvsd.enable_attach(('0.0.0.0', port))
-        return super().start()

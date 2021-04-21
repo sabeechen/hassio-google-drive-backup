@@ -24,10 +24,19 @@ class SimulatedSource(SnapshotDestination):
         self.host_info = {}
         self.snapshot_type = "Full"
         self.working = False
+        self.needConfig = None
 
     def setEnabled(self, value):
         self._enabled = value
         return self
+
+    def needsConfiguration(self) -> bool:
+        if self.needConfig is not None:
+            return self.needConfig
+        return super().needsConfiguration()
+
+    def setNeedsConfiguration(self, value: bool):
+        self.needConfig = value
 
     def setUpload(self, value):
         self._upload = value

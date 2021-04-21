@@ -1,0 +1,52 @@
+{% extends "layouts/base-server.jinja2" %}
+
+{% block head %}
+  {{ super() }}
+  <script type="text/javascript">
+    function redirect() {
+        let searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.has('to')) {
+            window.location.assign(searchParams.get('to'));
+        }
+        else {
+            window.location.assign("{{ redirect_url }}");
+        }
+    }
+
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+
+    $(document).ready(function () {
+        sleep(1500).then(() => {
+            redirect();
+        });
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<header>
+  <nav class="non-ingress ha-blue" role="navigation">
+    <div class="nav-wrapper">
+      <a class="brand-logo"> <img style="vertical-align: middle;" src="/static/images/logo.png" width=40 height=40 />
+        <span>Home Assistant Google Drive Backup</span>
+      </a>
+    </div>
+  </nav>
+</header>
+<main>
+  <div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      <h5 class="header center">That should be it.</h5>
+      <div class="row center">
+        <h6 class="header col s12 light"> 
+            Redirecting you back to your Home Assistant server at <a href="{{ redirect_url }}" >{{ redirect_text }}</a>
+        </h6>
+      </div>
+      <br><br>
+    </div>
+  </div>
+</main>
+{% endblock %}

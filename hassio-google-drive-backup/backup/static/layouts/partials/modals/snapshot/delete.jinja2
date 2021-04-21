@@ -1,0 +1,106 @@
+<div id="deletemodal" class="modal">
+  <script type="text/javascript">
+    function renderDeleteDialog(target) {
+      var snapshot = $(target).data('snapshot');
+      var slug = snapshot['slug'];
+      var sources = snapshot['sources'];
+      let list = $('#delete_sources');
+      list.html('');
+      for (let source of snapshot.sources) {
+        let template = `<li>
+          <label>
+            <input type="checkbox" name="{id}" id="{id}" data-sourcename='{id}' class="filled-in checkbox-ha" onchange="deleteOneChanged(this);" />
+            <span>{name}</span>
+            <br />
+          </label>
+        </li>`
+        template = template.replaceAll("{id}", source.key);
+        template = template.replaceAll("{name}", sourceToName(source.key));
+        list.append(template);
+      }
+      if (snapshot.sources.length > 1) {
+        $("#delete_multiple_text").show();
+        $("#delete_single_text").hide();
+        $("#delete_button").addClass("disabled");
+        $("#delete_dialog_everywhere").prop('checked', false);
+        $("#delete_everywhere_input").show();
+        list.show();
+      } else {
+        $("#delete_multiple_text").hide();
+        $("#delete_single_text").show();
+        $("#delete_button").removeClass("disabled");
+        $("input", $("#delete_sources")).prop('checked', true);
+        $("#delete_everywhere_input").hide();
+        list.hide();
+      }
+      $("#delete_button").attr("onClick", "doDeleteSnapshot('" + slug + "')");
+    }
+
+    function doDeleteSnapshot(slug) {
+      sources = []
+      $("input", $("#delete_sources")).each(function () {
+        let input = $(this);
+        if (input.prop('checked')) {
+          sources.push(input.data('sourcename'));
+        }
+      });
+
+      //console.log("Delete: " + slug + " Drive: " + drive + " HA: " + ha)
+      message = "Deleting snapshot from ";
+      if (sources.length == 1) {
+        message += sourceToName(sources[0])
+      } else if (sources.length > 1) {
+        message += " " + sources.length + " places"
+      } else {
+        message += "<i>...nowhere?</i>"
+        return;
+      }
+      // Send the delete request
+      data = {
+        'slug': slug,
+        'sources': sources,
+      };
+      postJson("deleteSnapshot", data, refreshstats, null, message);
+    }
+
+    function deleteEverywhereChanged(item) {
+      var checked = $(item).is(':checked');
+      $("input", $("#delete_sources")).prop('checked', checked);
+      deleteOneChanged(null);
+    }
+
+    function deleteOneChanged(item) {
+      let selected = false;
+      $("input", $("#delete_sources")).each(function () {
+        selected = selected || $(this).prop('checked');
+      });
+
+      if (selected) {
+        $("#delete_button").removeClass("disabled");
+      } else {
+        $("#delete_button").addClass("disabled");
+      }
+    }
+
+  </script>
+  <div class="modal-content">
+    <h4>Are you sure?</h4>
+    <p id="delete_multiple_text">
+      Choose below where you'd like to delete snapshots from, or check "Delete Everywhere" to delete the snapshot from everywhere.  Be careful!  There is no way to recover a snapshot once you've deleted it.
+    </p>
+    <p id="delete_single_text">
+       Be careful!  There is no way to recover a snapshot once you've deleted it and it doesn't look like this snapshot is backed up anywhere else.
+    </p>
+    <label id="delete_everywhere_input">
+      <input type="checkbox" name="delete_dialog_everywhere" id="delete_dialog_everywhere" class="filled-in checkbox-ha" onchange="deleteEverywhereChanged(this)" />
+      <span>Delete Everywhere</span>
+      <br />
+    </label>
+    <ul id="delete_sources" style="margin-left:20px">
+    </ul>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="danger-button modal-close waves-effect waves-light btn disabled" id="delete_button">Delete</a>
+    <a href="#!" class="modal-close waves-effect waves-light btn-flat" id="delete_cancel">Cancel</a>
+  </div>
+</div>

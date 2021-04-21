@@ -57,19 +57,19 @@ class DurationParser():
 
     def format(self, duration: timedelta):
         parts = []
-        if duration > timedelta(days=1):
+        if duration >= timedelta(days=1):
             days = int(duration.days)
             parts.append("{} days".format(days))
             duration = duration - timedelta(days=days)
-        if duration > timedelta(hours=1):
+        if duration >= timedelta(hours=1):
             hours = int(duration.seconds / (60 * 60))
             parts.append("{} hours".format(hours))
             duration = duration - timedelta(hours=hours)
-        if duration > timedelta(minutes=1):
+        if duration >= timedelta(minutes=1):
             minutes = int(duration.seconds / 60)
             parts.append("{} minutes".format(minutes))
             duration = duration - timedelta(minutes=minutes)
-        if duration > timedelta(seconds=1):
+        if duration >= timedelta(seconds=1):
             seconds = int(duration.seconds)
             parts.append("{} seconds".format(seconds))
             duration = duration - timedelta(seconds=seconds)

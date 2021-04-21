@@ -1,7 +1,7 @@
 {
     "drive_url": "http://localhost:56153",
     "hassio_url": "http://localhost:56153/",
-    "home_assistant_url": "http://localhost:56153/homeassistant/api/",
+    "home_assistant_url": "http://localhost:56153/core/api/",
     "hassio_header": "test_header",
     "retained_file_path": "hassio-google-drive-backup/dev/data/retained.json",
     "backup_directory_path": "hassio-google-drive-backup/dev/backup",
@@ -11,6 +11,7 @@
     "credentials_file_path": "hassio-google-drive-backup/dev/data/credentials.dat",
     "folder_file_path": "hassio-google-drive-backup/dev/data/folder.dat",
     "id_file_path": "hassio-google-drive-backup/dev/data/id.json",
+    "stop_addon_state_path": "hassio-google-drive-backup/dev/data/stop_addon_state.json",
     "authenticate_url": "http://localhost:56153/drive/authorize",
     "drive_refresh_url": "http://localhost:56153/oauth2/v4/token",
     "refresh_url": "http://localhost:56153/drive/refresh",

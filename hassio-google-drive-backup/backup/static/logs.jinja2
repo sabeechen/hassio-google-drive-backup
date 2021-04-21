@@ -1,0 +1,175 @@
+{% extends "layouts/base.jinja2" %}
+
+{% block head %}
+  {{ super() }}
+  <style type="text/css">
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+    }
+
+    #wrapper {
+        min-height: 100%;
+    }
+  </style>
+  <script type="text/javascript">
+    toasted = false;
+    running = false;
+    
+    function closeHello() {
+      $('#hello_card').hide();
+      $('#hello_card').data('closed', true);
+    }
+    
+    function refreshLogs() {
+      if ($('#pause').is(':checked')) {
+        return;
+      }
+      var complete = false;
+      if (running) {
+        return;
+      }
+      running = true;
+      $.ajax({
+        url: 'log?format=colored&catchup=true',
+        success: function (data) {
+          console.log(data);
+          if (data.length > 0) {
+            $('#logwindow').append(data);
+            $('#log_container').animate(
+              { scrollTop: $('#log_container').prop('scrollHeight') },
+              250
+            );
+          }
+          if (toasted) {
+            M.Toast.dismissAll();
+            toasted = false;
+          }
+        },
+        error: function () {
+          if (!toasted) {
+            toasted = true;
+            M.toast({
+              html: 'Lost connection to add-on, will keep trying to connect...',
+              displayLength: 9999999,
+            });
+          }
+        },
+        complete: function () {
+          running = false;
+        },
+        timeout: 1000,
+      });
+    }
+    
+    $(document).ready(function () {
+      $('#hello_card').data('closed', false);
+    
+      $.get('log?format=colored', function (data) {
+        console.log('Loading logs');
+        $('#logwindow').html(data);
+        $('#log_container').animate(
+          { scrollTop: $('#log_container').prop('scrollHeight') },
+          250
+        );
+      }).fail(function (e) {
+        errorToast(e);
+      });
+      window.setInterval(refreshLogs, 2000);
+    });
+    
+    function errorToast(error) {
+      message = '';
+      details = '';
+      var isError = false;
+      if (
+        error.hasOwnProperty('message') &&
+        error.hasOwnProperty('error_details')
+      ) {
+        // Its an error messag form the server
+        message = error.message;
+        details = error.error_details;
+        isError = true;
+      } else if (
+        error.hasOwnProperty('status') &&
+        error.hasOwnProperty('statusText') &&
+        error.hasOwnProperty('responseText')
+      ) {
+        // Its an HTTP error, so format appropriately
+        message =
+          'Got unexpected HTTP error ' + error.status + ': ' + error.statusText;
+        details = error.responseText;
+        isError = true;
+      } else if (error.hasOwnProperty('error')) {
+        message = error.error;
+        details = JSON.stringify(error, undefined, 2);
+        isError = true;
+      } else if (error.hasOwnProperty('message')) {
+        message = error.message;
+        isError = false;
+      } else {
+        message = 'Got an unexpected error';
+        details = JSON.stringify(error, undefined, 2);
+        isError = true;
+      }
+    
+      button_text = '';
+      if (details.length > 0) {
+        button_text =
+          "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>";
+        $('#error_details_paragraph').text(details);
+      }
+    
+      console.log(error);
+      toast(message + button_text);
+      return isError;
+    }
+  </script>
+{% endblock %}
+
+{% block content %}
+    <div class="wrapper black" style="height: 100%; display: flex; flex-direction: column">
+        <div>
+            <div class="row">
+                <div class="col s12" style="max-width: 800px">
+                    <div id="hello_card" class="card blue-grey darken-3 white-text">
+                    <div class="card-content">
+                        <span class="card-title">A Message from the Developer</span>
+                        <p>Thanks for taking a look at the logs! I did my best to make this work well, but if you're
+                            here then maybe you've run into a problem. I'm only human after all. You can file an
+                            issue on the project <a
+                                href="https://github.com/sabeechen/hassio-google-drive-backup/issues" target="_blank" rel="noreferrer" class="light-blue-text">GitHub issue
+                                tracker</a>. I take bugs pretty seriously and I want this add-on to work well for
+                            you. You can download a copy of these logs to attach to an issue by clicking <a class="light-blue-text"
+                                href="log?format=download">here</a>.</p>
+                        <br>
+                        <p style="margin-left: 20px;">— Stephen &lt;3</p>
+                    </div>
+                    <div class="card-action">
+                        <a href="#" class="light-blue-text waves-effect btn-flat" onclick="closeHello();">Dismiss</a>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12" style="display: flex; align-items: center;">
+                    <a class="waves-effect waves-light btn" href="log?format=download"><i class="material-icons left">file_download</i>Download logs</a>
+                    <label class="white-text" style="margin-top: 5px; margin-left: 20px;">
+                        <input type="checkbox" name="pause" id="pause" class="filled-in" />
+                        <span>Pause output</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div id="log_container" class="black white-text" style="overflow:scroll; width: 100%;">
+            <pre id="logwindow" style="margin: 10px; line-height: 1;">
+                Loading logs...
+            </pre>
+        </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+{# No footer #}
+{% endblock %}

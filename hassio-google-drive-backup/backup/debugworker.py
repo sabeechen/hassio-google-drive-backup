@@ -110,11 +110,11 @@ class DebugWorker(Worker):
         report['client'] = self.config.clientIdentifier()
 
         if self.ha_source.isInitialized():
-            report["super_version"] = self.ha_source.super_info.get('supervisor', "None")
-            report["hassos_version"] = self.ha_source.super_info.get('hassos', "None")
-            report["docker_version"] = self.ha_source.super_info.get('docker', "None")
-            report["machine"] = self.ha_source.super_info.get('machine', "None")
-            report["supervisor_channel"] = self.ha_source.super_info.get('channel', "None")
+            report["super_version"] = self.ha_source.host_info.get('supervisor', "None")
+            report["hassos_version"] = self.ha_source.host_info.get('hassos', "None")
+            report["docker_version"] = self.ha_source.host_info.get('docker', "None")
+            report["machine"] = self.ha_source.host_info.get('machine', "None")
+            report["supervisor_channel"] = self.ha_source.host_info.get('channel', "None")
             report["arch"] = self.ha_source.super_info.get('arch', "None")
             report["timezone"] = self.ha_source.super_info.get('timezone', "None")
             report["ha_version"] = self.ha_source.ha_info.get('version', "None")

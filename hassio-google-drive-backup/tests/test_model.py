@@ -133,7 +133,8 @@ def test_next_time_of_day(estimator):
     assert model._nextSnapshot(
         now=now, last_snapshot=None) == now - timedelta(minutes=1)
     assert model._nextSnapshot(
-        now=now, last_snapshot=now - timedelta(days=1)) == now
+        now=now, last_snapshot=now - timedelta(days=1)) == datetime(
+        1985, 12, 5, 8, 0, tzinfo=test_tz)
     assert model._nextSnapshot(now=now, last_snapshot=now) == datetime(
         1985, 12, 6, 8, 0, tzinfo=test_tz)
     assert model._nextSnapshot(now=now, last_snapshot=datetime(
@@ -155,7 +156,7 @@ def test_next_time_of_day_drift(estimator):
     assert model._nextSnapshot(
         now=now, last_snapshot=None) == now - timedelta(minutes=1)
     assert model._nextSnapshot(
-        now=now, last_snapshot=now - timedelta(days=1) + timedelta(minutes=1)) == now
+        now=now, last_snapshot=now - timedelta(days=1) + timedelta(minutes=1)) == datetime(1985, 12, 5, 8, 0, tzinfo=test_tz)
 
 
 def test_next_time_of_day_dest_disabled(model, time, source, dest):
@@ -495,6 +496,29 @@ async def test_generational_delete(time, model, dest, source, simple_config):
     assert source.deleted == [wed]
     assert len(model.snapshots) == 3
     dest.assertThat(current=3, saved=3)
+
+
+@pytest.mark.asyncio
+async def test_delete_when_drive_disabled(time, model, dest: HelperTestSource, source: HelperTestSource, simple_config):
+    time.setNow(time.local(2019, 5, 10))
+    now = time.now()
+    dest.setEnabled(False)
+    dest.setNeedsConfiguration(False)
+
+    # Create 4 snapshots, configured to keep 3
+    source.setMax(3)
+    source.insert("Fri", time.local(2019, 5, 10, 1))
+    source.insert("Thu", time.local(2019, 5, 9, 1))
+    source.insert("Wed", time.local(2019, 5, 8, 1))
+    mon = source.insert("Mon", time.local(2019, 5, 7, 1))
+
+    await model.sync(now)
+
+    # Shoud only delete mon, the oldest one
+    source.assertThat(current=3, deleted=1)
+    assert source.deleted == [mon]
+    assert len(model.snapshots) == 3
+    dest.assertThat(current=0)
 
 
 def assertSnapshot(model, sources):

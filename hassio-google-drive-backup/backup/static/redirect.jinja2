@@ -1,0 +1,49 @@
+{% extends "layouts/base.jinja2" %}
+
+{% block head %}
+  {{ super() }}
+  <script type="text/javascript">
+    function redirect() {
+        let searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.has('to')) {
+            window.location.assign(searchParams.get('to'));
+        }
+        else {
+            window.location.assign("{{ url }}");
+        }
+    }
+
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+
+    $(document).ready(function () {
+        sleep(3000).then(() => {
+            redirect();
+        });
+    });
+  </script>
+{% endblock %}
+
+{% block navbar %}
+  <!-- Remove navbar -->
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="row" id="hello_card">
+            <div class="col s12 m9">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">Redirecting...</span>
+                        <p>You should be redirected to <a href="{{ url }}">{{ url }}</a> in a moment. Click below to be redirected now.
+                        </p>
+                        <div class="card-action white-text">
+                            <a target="_blank" class="waves-effect waves-light btn" onclick="redirect(); return false;">go now</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

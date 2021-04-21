@@ -6,14 +6,16 @@ from aiohttp.client_exceptions import ClientResponseError
 from backup.config import Config, Setting, CreateOptions
 from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
-                               SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError)
+                               SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError)
 from backup.util import GlobalInfo
-from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password
+from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password, AddonStopper
 from backup.model import DummySnapshot
 from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
 from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
-
+from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD
+from dev.request_interceptor import RequestInterceptor
+from backup.model import Model
 
 @pytest.mark.asyncio
 async def test_sync_empty(ha) -> None:
@@ -21,8 +23,7 @@ async def test_sync_empty(ha) -> None:
 
 
 @pytest.mark.asyncio
-async def test_CRUD(ha: HaSource, time, server) -> None:
-    server._options.update({"new_snapshot_timeout_seconds": 100})
+async def test_CRUD(ha: HaSource, time, interceptor: RequestInterceptor) -> None:
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
 
     assert snapshot.name() == "Test Name"
@@ -76,9 +77,9 @@ async def test_CRUD(ha: HaSource, time, server) -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(10)
-async def test_pending_snapshot_nowait(ha: HaSource, time, server):
-    server.update({"snapshot_wait_time": 5})
-    server._options.update({"new_snapshot_timeout_seconds": 0.000001})
+async def test_pending_snapshot_nowait(ha: HaSource, time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config):
+    interceptor.setSleep(URL_MATCH_SNAPSHOT_FULL, sleep=5)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.1)
     snapshot_immediate: PendingSnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     snapshot_pending: HASnapshot = (await ha.get())['pending']
@@ -103,12 +104,12 @@ async def test_pending_snapshot_nowait(ha: HaSource, time, server):
 
     return
     # ignroe events for now
-    assert server.getEvents() == [
+    assert supervisor.getEvents() == [
         (EVENT_SNAPSHOT_START, {
             'snapshot_name': snapshot_immediate.name(),
             'snapshot_time': str(snapshot_immediate.date())})]
     ha.snapshot_thread.join()
-    assert server.getEvents() == [
+    assert supervisor.getEvents() == [
         (EVENT_SNAPSHOT_START, {
             'snapshot_name': snapshot_immediate.name(),
             'snapshot_time': str(snapshot_immediate.date())}),
@@ -119,12 +120,12 @@ async def test_pending_snapshot_nowait(ha: HaSource, time, server):
 
 
 @pytest.mark.asyncio
-async def test_pending_snapshot_already_in_progress(ha, time, server: SimulationServer):
+async def test_pending_snapshot_already_in_progress(ha, time, config: Config, supervisor: SimulatedSupervisor):
     await ha.create(CreateOptions(time.now(), "Test Name"))
     assert len(await ha.get()) == 1
 
-    server._options.update({"new_snapshot_timeout_seconds": 100})
-    server.blockSnapshots()
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
+    await supervisor.toggleBlockSnapshot()
     with pytest.raises(SnapshotInProgress):
         await ha.create(CreateOptions(time.now(), "Test Name"))
     snapshots = list((await ha.get()).values())
@@ -146,9 +147,9 @@ async def test_pending_snapshot_already_in_progress(ha, time, server: Simulation
 
 @pytest.mark.asyncio
 async def test_partial_snapshot(ha, time, server, config: Config):
-    server._options.update({"new_snapshot_timeout_seconds": 100})
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
     for folder in all_folders:
-        server._options.update({'exclude_folders': folder})
+        config.override(Setting.EXCLUDE_FOLDERS, folder)
         snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
 
         assert snapshot.snapshotType() == "partial"
@@ -159,7 +160,7 @@ async def test_partial_snapshot(ha, time, server, config: Config):
                 assert search in snapshot.details()['folders']
 
     for addon in all_addons:
-        server._options.update({'exclude_addons': addon['slug']})
+        config.override(Setting.EXCLUDE_ADDONS, addon['slug'])
         snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
         assert snapshot.snapshotType() == "partial"
         list_of_addons = []
@@ -172,44 +173,36 @@ async def test_partial_snapshot(ha, time, server, config: Config):
                 assert search in list_of_addons
 
     # excluding addon/folders that don't exist should actually make a full snapshot
-    server._options.update(
-        {'exclude_addons': "none,of.these,are.addons", 'exclude_folders': "not,folders,either"})
+    config.override(Setting.EXCLUDE_ADDONS, "none,of.these,are.addons")
+    config.override(Setting.EXCLUDE_FOLDERS, "not,folders,either")
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert snapshot.snapshotType() == "full"
 
 
 @pytest.mark.asyncio
-async def test_snapshot_password(ha: HaSource, config, time, server):
-    server._options.update({"new_snapshot_timeout_seconds": 100})
+async def test_snapshot_password(ha: HaSource, config: Config, time):
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert not snapshot.protected()
 
-    server._options.update({'snapshot_password': 'test'})
+    config.override(Setting.SNAPSHOT_PASSWORD, 'test')
     snapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert snapshot.protected()
 
-    ha.config.override(Setting.SNAPSHOT_PASSWORD, 'test')
+    config.override(Setting.SNAPSHOT_PASSWORD, 'test')
     assert Password(ha.config).resolve() == 'test'
 
-    ha.config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
+    config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
     assert Password(ha.config).resolve() == 'password value'
 
-    ha.config.override(Setting.SNAPSHOT_PASSWORD, '!secret bad_key')
-    try:
-        Password(ha.config).resolve()
-        assert False
-    except SnapshotPasswordKeyInvalid:
-        # expected
-        pass
+    config.override(Setting.SNAPSHOT_PASSWORD, '!secret bad_key')
+    with pytest.raises(SnapshotPasswordKeyInvalid):
+        Password(config).resolve()
 
-    ha.config.override(Setting.SECRETS_FILE_PATH, "/bad/file/path")
-    ha.config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
-    try:
+    config.override(Setting.SECRETS_FILE_PATH, "/bad/file/path")
+    config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
+    with pytest.raises(SnapshotPasswordKeyInvalid):
         Password(ha.config).resolve()
-        assert False
-    except SnapshotPasswordKeyInvalid:
-        # expected
-        pass
 
 
 @pytest.mark.asyncio
@@ -230,9 +223,9 @@ async def test_snapshot_name(time: FakeTime, ha):
     await assertName(ha, time.now(), "{min}", "08")
     await assertName(ha, time.now(), "{sec}", "09")
     await assertName(ha, time.now(), "{ampm}", "PM")
-    await assertName(ha, time.now(), "{version_ha}", "0.93.1")
-    await assertName(ha, time.now(), "{version_hassos}", "0.69.69")
-    await assertName(ha, time.now(), "{version_super}", "2.2.2")
+    await assertName(ha, time.now(), "{version_ha}", "ha version")
+    await assertName(ha, time.now(), "{version_hassos}", "hassos version")
+    await assertName(ha, time.now(), "{version_super}", "super version")
     await assertName(ha, time.now(), "{date}", "12/06/85")
     await assertName(ha, time.now(), "{time}", "15:08:09")
     await assertName(ha, time.now(), "{datetime}", "Fri Dec  6 15:08:09 1985")
@@ -251,12 +244,12 @@ async def test_default_name(time: FakeTime, ha, server):
 
 
 @pytest.mark.asyncio
-async def test_pending_snapshot_timeout(time: FakeTime, ha, server, config: Config):
-    server.update({"snapshot_wait_time": 5})
+async def test_pending_snapshot_timeout(time: FakeTime, ha: HaSource, config: Config, interceptor: RequestInterceptor):
+    interceptor.setSleep(URL_MATCH_SNAPSHOT_FULL, sleep=5)
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 1)
     config.override(Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS, 1)
     config.override(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS, 1)
-    server.getEvents()
+
     snapshot_immediate: PendingSnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Test Name"
@@ -277,14 +270,14 @@ async def test_pending_snapshot_timeout(time: FakeTime, ha, server, config: Conf
 
 
 @pytest.mark.asyncio
-async def test_pending_snapshot_timeout_external(time, config, ha: HaSource, server):
+async def test_pending_snapshot_timeout_external(time, config, ha: HaSource, supervisor: SimulatedSupervisor):
     # now configure a snapshto to start outside of the addon
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
-    server.blockSnapshots()
+    await supervisor.toggleBlockSnapshot()
     with pytest.raises(SnapshotInProgress):
         await ha.create(CreateOptions(time.now(), "Ignored"))
     snapshot_immediate = (await ha.get())['pending']
-    server.unBlockSnapshots()
+    await supervisor.toggleBlockSnapshot()
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Pending Snapshot"
     assert ha.check()
@@ -298,14 +291,14 @@ async def test_pending_snapshot_timeout_external(time, config, ha: HaSource, ser
 
 
 @pytest.mark.asyncio
-async def test_pending_snapshot_replaces_original(time, ha: HaSource, server):
+async def test_pending_snapshot_replaces_original(time, ha: HaSource, config: Config, supervisor: SimulatedSupervisor):
     # now configure a snapshto to start outside of the addon
-    server._options.update({"new_snapshot_timeout_seconds": 100})
-    server.blockSnapshots()
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
+    await supervisor.toggleBlockSnapshot()
     with pytest.raises(SnapshotInProgress):
         await ha.create(CreateOptions(time.now(), "Ignored"))
     snapshot_immediate = (await ha.get())['pending']
-    server.unBlockSnapshots()
+    await supervisor.toggleBlockSnapshot()
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Pending Snapshot"
     assert ha.check()
@@ -327,11 +320,10 @@ def test_retryable_errors():
 
 
 @pytest.mark.asyncio
-async def test_retained_on_finish(ha: HaSource, server, time, config: Config):
-    async with server._snapshot_lock:
-        server.update({'always_hard_lock': True})
+async def test_retained_on_finish(ha: HaSource, server, time, config: Config, supervisor: SimulatedSupervisor):
+    async with supervisor._snapshot_inner_lock:
         retention = {ha.name(): True}
-        server._options.update({"new_snapshot_timeout_seconds": 0.0001})
+        config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.0001)
         pending = await ha.create(CreateOptions(time.now(), "Test Name", retention))
         results = await ha.get()
         assert pending.name() == "Test Name"
@@ -381,17 +373,17 @@ async def test_upload_wrong_slug(time, ha, server, uploader):
 
 
 @pytest.mark.asyncio
-async def test_failed_snapshot(time, ha: HaSource, server):
+async def test_failed_snapshot(time, ha: HaSource, supervisor: SimulatedSupervisor, config: Config, interceptor: RequestInterceptor):
     # create a blocking snapshot
-    server.update({"hassio_snapshot_error": 524, 'always_hard_lock': True})
-    server._options.update({"new_snapshot_timeout_seconds": 0})
-    server.blockSnapshots()
+    interceptor.setError(URL_MATCH_SNAPSHOT_FULL, 524)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0)
+    await supervisor.toggleBlockSnapshot()
     snapshot_immediate = await ha.create(CreateOptions(time.now(), "Some Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Some Name"
     assert not ha.check()
     assert not snapshot_immediate.isFailed()
-    server.unBlockSnapshots()
+    await supervisor.toggleBlockSnapshot()
 
     # let the snapshot attempt to complete
     await asyncio.wait({ha._pending_snapshot_task})
@@ -405,23 +397,23 @@ async def test_failed_snapshot(time, ha: HaSource, server):
     assert snapshots[0] is snapshot_immediate
 
     # verify we can create a new snapshot immediately
-    server.update({"hassio_snapshot_error": None})
+    interceptor.clear()
     await ha.create(CreateOptions(time.now(), "Some Name"))
     assert len(await ha.get()) == 1
 
 
 @pytest.mark.asyncio
-async def test_failed_snapshot_retry(ha: HaSource, server, time: FakeTime, config: Config):
+async def test_failed_snapshot_retry(ha: HaSource, time: FakeTime, config: Config, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
     # create a blocking snapshot
-    server.update({"hassio_snapshot_error": 524, 'always_hard_lock': True})
-    server._options.update({"new_snapshot_timeout_seconds": 0})
-    server.blockSnapshots()
+    interceptor.setError(URL_MATCH_SNAPSHOT_FULL, 524)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0)
+    await supervisor.toggleBlockSnapshot()
     snapshot_immediate = await ha.create(CreateOptions(time.now(), "Some Name"))
     assert isinstance(snapshot_immediate, PendingSnapshot)
     assert snapshot_immediate.name() == "Some Name"
     assert not ha.check()
     assert not snapshot_immediate.isFailed()
-    server.unBlockSnapshots()
+    await supervisor.toggleBlockSnapshot()
 
     # let the snapshot attempt to complete
     await asyncio.wait({ha._pending_snapshot_task})
@@ -441,8 +433,8 @@ async def test_failed_snapshot_retry(ha: HaSource, server, time: FakeTime, confi
 
 
 @pytest.mark.asyncio
-async def test_immediate_snapshot_failure(time: FakeTime, ha: HaSource, server, config: Config):
-    server.update({"hassio_snapshot_error": 524})
+async def test_immediate_snapshot_failure(time: FakeTime, ha: HaSource, config: Config, interceptor: RequestInterceptor):
+    interceptor.setError(URL_MATCH_SNAPSHOT_FULL, 524)
     with pytest.raises(ClientResponseError) as thrown:
         await ha.create(CreateOptions(time.now(), "Some Name"))
     assert thrown.value.status == 524
@@ -464,16 +456,16 @@ async def test_immediate_snapshot_failure(time: FakeTime, ha: HaSource, server, 
 
 
 @pytest.mark.asyncio
-async def test_delete_error(time, ha: HaSource, server):
+async def test_delete_error(time, ha: HaSource, interceptor: RequestInterceptor):
     snapshot = await ha.create(CreateOptions(time.now(), "Some Name"))
     full = DummySnapshot(snapshot.name(), snapshot.date(),
                          snapshot.size(), snapshot.slug(), "dummy")
     full.addSource(snapshot)
-    server.update({"hassio_error": 400})
+    interceptor.setError(URL_MATCH_SNAPSHOT_DELETE, 400)
     with pytest.raises(HomeAssistantDeleteError):
         await ha.delete(full)
 
-    server.update({"hassio_error": None})
+    interceptor.clear()
     await ha.delete(full)
 
 
@@ -490,31 +482,153 @@ async def test_supervisor_error(time, ha: HaSource, server: SimulationServer, gl
         await ha.init()
 
 
-
 @pytest.mark.asyncio
-async def test_supervisor_permission_error(time, ha: HaSource, server: SimulationServer, global_info: GlobalInfo):
-    server.supervisor_error = 403
+async def test_supervisor_permission_error(time, ha: HaSource, interceptor: RequestInterceptor, global_info: GlobalInfo):
+    interceptor.setError(URL_MATCH_MISC_INFO, 403)
     with pytest.raises(SupervisorPermissionError):
         await ha.init()
 
-    server.supervisor_error = 404
+    interceptor.clear()
+    interceptor.setError(URL_MATCH_MISC_INFO, 404)
     with pytest.raises(ClientResponseError):
         await ha.init()
 
 
 @pytest.mark.asyncio
-async def test_download_timeout(ha: HaSource, time, server: SimulationServer, config: Config) -> None:
-    server._options.update({"new_snapshot_timeout_seconds": 100})
+async def test_download_timeout(ha: HaSource, time, interceptor: RequestInterceptor, config: Config) -> None:
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     from_ha = await ha.harequests.snapshot(snapshot.slug())
     full = DummySnapshot(from_ha.name(), from_ha.date(),
                          from_ha.size(), from_ha.slug(), "dummy")
     full.addSource(snapshot)
 
-    server.supervisor_sleep = 10
+    interceptor.setSleep(URL_MATCH_SNAPSHOT_DOWNLOAD, sleep=100)
     config.override(Setting.DOWNLOAD_TIMEOUT_SECONDS, 1)
     direct_download = await ha.harequests.download(snapshot.slug())
 
     with pytest.raises(SupervisorTimeoutError):
         await direct_download.setup()
         await direct_download.read(1)
+
+
+@pytest.mark.asyncio
+async def test_start_and_stop_addon(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
+    slug = "test_slug"
+    supervisor.installAddon(slug, "Test decription")
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "stopped"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "started"
+
+
+@pytest.mark.asyncio
+async def test_start_and_stop_two_addons(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
+    slug1 = "test_slug_1"
+    supervisor.installAddon(slug1, "Test decription")
+
+    slug2 = "test_slug_2"
+    supervisor.installAddon(slug2, "Test decription")
+    config.override(Setting.STOP_ADDONS, ",".join([slug1, slug2]))
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+
+    assert supervisor.addon(slug1)["state"] == "started"
+    assert supervisor.addon(slug2)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug1)["state"] == "stopped"
+        assert supervisor.addon(slug2)["state"] == "stopped"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug1)["state"] == "started"
+    assert supervisor.addon(slug2)["state"] == "started"
+
+
+@pytest.mark.asyncio
+async def test_stop_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
+    slug = "test_slug"
+    supervisor.installAddon(slug, "Test decription")
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+    interceptor.setError(URL_MATCH_STOP_ADDON, 400)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "started"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "started"
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_start_addon_failure(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
+    slug = "test_slug"
+    supervisor.installAddon(slug, "Test decription")
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+    interceptor.setError(URL_MATCH_START_ADDON, 400)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "stopped"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "stopped"
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_ingore_self_when_stopping(ha: HaSource, time, interceptor: RequestInterceptor, config: Config, supervisor: SimulatedSupervisor, addon_stopper: AddonStopper) -> None:
+    addon_stopper.allowRun()
+    slug = supervisor._addon_slug
+    config.override(Setting.STOP_ADDONS, slug)
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.001)
+    interceptor.setError(URL_MATCH_START_ADDON, 400)
+
+    assert supervisor.addon(slug)["state"] == "started"
+    async with supervisor._snapshot_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert supervisor.addon(slug)["state"] == "started"
+    await ha._pending_snapshot_task
+    assert supervisor.addon(slug)["state"] == "started"
+    assert not interceptor.urlWasCalled(URL_MATCH_START_ADDON)
+    assert not interceptor.urlWasCalled(URL_MATCH_STOP_ADDON)
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_dont_purge_pending_snapshot(ha: HaSource, time, config: Config, supervisor: SimulatedSupervisor, model: Model, interceptor):
+    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 4)
+    await ha.create(CreateOptions(time.now(), "Test Name 1"))
+    await ha.create(CreateOptions(time.now(), "Test Name 2"))
+    await ha.create(CreateOptions(time.now(), "Test Name 3"))
+    await ha.create(CreateOptions(time.now(), "Test Name 4"))
+    await model.sync(time.now())
+
+    config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.1)
+    interceptor.setSleep(URL_MATCH_SNAPSHOT_FULL, sleep=2)
+    await ha.create(CreateOptions(time.now(), "Test Name"))
+    snapshots = list((await ha.get()).values())
+    assert len(snapshots) == 5
+    snapshot = snapshots[4]
+    assert isinstance(snapshot, PendingSnapshot)
+
+    # no snapshot should get purged yet because the ending snapshot isn't considered for purging.
+    await model.sync(time.now())
+    snapshots = list((await ha.get()).values())
+    assert len(snapshots) == 5
+
+    # Wait for the snapshot to finish, then verify one gets purged.
+    await ha._pending_snapshot_task
+    await model.sync(time.now())
+    snapshots = list((await ha.get()).values())
+    assert len(snapshots) == 4

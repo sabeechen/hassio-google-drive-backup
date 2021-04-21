@@ -41,6 +41,9 @@ class Setting(Enum):
     EXCLUDE_FOLDERS = "exclude_folders"
     EXCLUDE_ADDONS = "exclude_addons"
 
+    STOP_ADDONS = "stop_addons"
+    DISABLE_WATCHDOG_WHEN_STOPPING = "disable_watchdog_when_stopping"
+
     # UI Server Options
     USE_SSL = "use_ssl"
     CERTFILE = "certfile"
@@ -97,6 +100,8 @@ class Setting(Enum):
     DRIVE_REFRESH_URL = "drive_refresh_url"
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
     DRIVE_TOKEN_URL = "drive_token_url"
+    SAVE_DRIVE_CREDS_PATH = "save_drive_creds_path"
+    STOP_ADDON_STATE_PATH = "stop_addon_state_path"
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
@@ -147,6 +152,9 @@ _DEFAULTS = {
     Setting.EXCLUDE_FOLDERS: "",
     Setting.EXCLUDE_ADDONS: "",
 
+    Setting.STOP_ADDONS: "",
+    Setting.DISABLE_WATCHDOG_WHEN_STOPPING: False,
+
     # UI Server settings
     Setting.USE_SSL: False,
     Setting.REQUIRE_LOGIN: False,
@@ -180,7 +188,7 @@ _DEFAULTS = {
     # Remote endpoints
     Setting.HASSIO_URL: "http://hassio/",
     Setting.HASSIO_TOKEN: "",
-    Setting.HOME_ASSISTANT_URL: "http://hassio/homeassistant/api/",
+    Setting.HOME_ASSISTANT_URL: "http://hassio/core/api/",
     Setting.DRIVE_URL: "https://www.googleapis.com",
     Setting.REFRESH_URL: "https://habackup.io/drive/refresh",
     Setting.AUTHENTICATE_URL: "https://habackup.io/drive/authorize",
@@ -190,6 +198,7 @@ _DEFAULTS = {
     Setting.CHOOSE_FOLDER_URL: "https://habackup.io/drive/picker",
     Setting.ERROR_REPORT_URL: "https://habackup.io/logerror",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
+    Setting.SAVE_DRIVE_CREDS_PATH: "token",
 
     # File locations used to store things
     Setting.FOLDER_FILE_PATH: "/data/folder.dat",
@@ -200,6 +209,7 @@ _DEFAULTS = {
     Setting.INGRESS_TOKEN_FILE_PATH: "/data/ingress.dat",
     Setting.CONFIG_FILE_PATH: "/data/options.json",
     Setting.ID_FILE_PATH: "/data/id.json",
+    Setting.STOP_ADDON_STATE_PATH: '/data/stop_addon_state.json',
 
     # Various timeouts and intervals
     Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,

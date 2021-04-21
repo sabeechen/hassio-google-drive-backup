@@ -8,6 +8,7 @@ from urllib.parse import quote
 import aiohttp
 import pytest
 import asyncio
+import base64
 from aiohttp import BasicAuth
 from aiohttp.client import ClientSession
 
@@ -16,16 +17,19 @@ from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
-                          SOURCE_GOOGLE_DRIVE, SOURCE_HA, ERROR_BACKUP_FOLDER_MISSING)
+                          SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
 from backup.drive import DriveSource, FolderFinder
-from backup.drive.drivesource import FOLDER_MIME_TYPE
-from dev.simulationserver import SimulationServer
+from backup.drive.drivesource import FOLDER_MIME_TYPE, DriveRequests
 from backup.ha import HaSource
+from backup.config import VERSION
 from .faketime import FakeTime
 from .helpers import compareStreams
 from yarl import URL
+from dev.ports import Ports
+from dev.simulated_supervisor import SimulatedSupervisor
+from bs4 import BeautifulSoup
 
 
 class ReaderHelper:
@@ -63,9 +67,9 @@ class ReaderHelper:
             assert resp.status == status
             return await resp.json()
 
-    async def assertError(self, path, error_type="generic_error", status=500, ingress=True):
+    async def assertError(self, path, error_type="generic_error", status=500, ingress=True, json=None):
         logging.getLogger().info("Requesting " + path)
-        data = await self.getjson(path, status=status, ingress=ingress)
+        data = await self.getjson(path, status=status, ingress=ingress, json=json)
         assert data['error_type'] == error_type
 
 
@@ -112,7 +116,7 @@ async def test_uiserver_start(ui_server: UiServer):
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(10)
-async def test_uiserver_static_files(reader):
+async def test_uiserver_static_files(reader: ReaderHelper):
     await reader.get("")
     await reader.get("reauthenticate")
     await reader.get("pp")
@@ -120,23 +124,17 @@ async def test_uiserver_static_files(reader):
 
 
 @pytest.mark.asyncio
-async def test_getstatus(reader, config: Config, ha, server):
+async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
     File.touch(config.get(Setting.INGRESS_TOKEN_FILE_PATH))
     await ha.init()
     data = await reader.getjson("getstatus")
     assert data['ask_error_reports'] is True
     assert data['cred_version'] == 0
-    assert data['drive_enabled'] is True
     assert data['firstSync'] is True
     assert data['folder_id'] is None
     assert data['last_error'] is None
     assert data['last_snapshot_text'] == "Never"
-    assert data['maxSnapshotsInDrive'] == config.get(
-        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
-    assert data['maxSnapshotsInHasssio'] == config.get(
-        Setting.MAX_SNAPSHOTS_IN_HASSIO)
     assert data['next_snapshot_text'] == "right now"
-    assert data['restore_link'] == "http://{host}:1337/hassio/snapshots"
     assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
     assert data['warn_ingress_upgrade'] is False
     assert len(data['snapshots']) == 0
@@ -146,7 +144,10 @@ async def test_getstatus(reader, config: Config, ha, server):
         'retained': 0,
         'snapshots': 0,
         'latest': None,
-        'size': '0.0 B'
+        'size': '0.0 B',
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -154,7 +155,11 @@ async def test_getstatus(reader, config: Config, ha, server):
         'retained': 0,
         'snapshots': 0,
         'latest': None,
-        'size': '0.0 B'
+        'size': '0.0 B',
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
     assert len(data['sources']) == 2
 
@@ -175,7 +180,10 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(time.now()),
-        'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -183,16 +191,19 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(time.now()),
-        'size': data['sources'][SOURCE_HA]['size']
+        'size': data['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
     assert len(data['sources']) == 2
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
+async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
     slug = snapshot.slug()
-    assert await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug)) == {
+    assert await reader.getjson("retain", json={'slug': slug, 'sources': ["GoogleDrive", "HomeAssistant"]}) == {
         'message': "Updated the snapshot's settings"
     }
     status = await reader.getjson("getstatus")
@@ -202,7 +213,10 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 1,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -210,10 +224,14 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 1,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_HA]['size']
+        'size': status['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
 
-    await reader.getjson("retain?slug={0}&drive=false&ha=false".format(slug))
+    await reader.getjson("retain", json={'slug': slug, 'sources': []})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
@@ -221,7 +239,10 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -229,10 +250,18 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 0,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_HA]['size']
+        'size': status['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
-    await reader.getjson("deleteSnapshot?slug={0}&drive=true&ha=false".format(slug))
-    await reader.getjson("retain?slug={0}&drive=true&ha=true".format(slug))
+    delete_req = {
+        "slug": slug,
+        "sources": ["GoogleDrive"]
+    }
+    await reader.getjson("deleteSnapshot", json=delete_req)
+    await reader.getjson("retain", json={'slug': slug, 'sources': ["HomeAssistant"]})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 0,
@@ -240,7 +269,10 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 0,
         'snapshots': 0,
         'latest': None,
-        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size']
+        'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'title': "Google Drive"
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -248,21 +280,22 @@ async def test_retain(reader, config: Config, snapshot: Snapshot, coord: Coordin
         'retained': 1,
         'snapshots': 1,
         'latest': time.asRfc3339String(snapshot.date()),
-        'size': status['sources'][SOURCE_HA]['size']
+        'size': status['sources'][SOURCE_HA]['size'],
+        'enabled': True,
+        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'title': "Home Assistant",
+        'free_space': "0.0 B"
     }
 
     # sync again, which should upoload the snapshot to Drive
     await coord.sync()
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
-    assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 1
-
-    # it shoudl be retained, since we indicated it should be retained in the last call with drive=true
-    assert status['snapshots'][0]['driveRetain']
+    assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 0
+    assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, session):
     assert len(coord.snapshots()) == 0
     status = await reader.getjson("sync")
@@ -273,20 +306,25 @@ async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, sessi
 
 
 @pytest.mark.asyncio
-async def test_delete(reader, ui_server, snapshot):
+async def test_delete(reader: ReaderHelper, ui_server, snapshot):
     slug = snapshot.slug()
-    await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format("bad_slug"), error_type=ERROR_NO_SNAPSHOT)
+
+    data = {"slug": "bad_slug", "sources": ["GoogleDrive"]}
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
-    assert await reader.getjson("deleteSnapshot?slug={}&drive=true&ha=false".format(slug)) == {"message": "Deleted from Google Drive"}
-    await reader.assertError("deleteSnapshot?slug={}&drive=true&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
+    data["slug"] = slug
+    assert await reader.getjson("deleteSnapshot", json=data) == {"message": "Deleted from 1 place(s)"}
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 0
-    assert await reader.getjson("deleteSnapshot?slug={}&drive=false&ha=true".format(slug)) == {"message": "Deleted from Home Assistant"}
+    data["sources"] = ["HomeAssistant"]
+    assert await reader.getjson("deleteSnapshot", json=data) == {"message": "Deleted from 1 place(s)"}
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 0
-    await reader.assertError("deleteSnapshot?slug={}&drive=false&ha=false".format(slug), error_type=ERROR_NO_SNAPSHOT)
+    data["sources"] = []
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
 
 
 @pytest.mark.asyncio
@@ -302,8 +340,8 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     assert len(status["snapshots"]) == 2
     assert status["snapshots"][1]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][1]["name"] == "TestName"
-    assert not status["snapshots"][1]["driveRetain"]
-    assert not status["snapshots"][1]["haRetain"]
+    assert status["snapshots"][1]['sources'][0]['retained'] is False
+    assert len(status["snapshots"][1]['sources']) == 1
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName2&retain_drive=True&retain_ha=False") == {
@@ -312,11 +350,10 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     await coord.sync()
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 3
-    assert not status["snapshots"][1]["driveRetain"]
     assert status["snapshots"][2]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][2]["name"] == "TestName2"
-    assert not status["snapshots"][2]["haRetain"]
-    assert status["snapshots"][2]["driveRetain"]
+    assert status["snapshots"][2]['sources'][0]['retained'] is False
+    assert status["snapshots"][2]['sources'][1]['retained'] is True
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
@@ -325,15 +362,14 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
     await coord.sync()
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 4
-    assert not status["snapshots"][1]["driveRetain"]
+    assert status["snapshots"][3]['sources'][0]['retained'] is True
+    assert status["snapshots"][3]['sources'][1]['retained'] is False
     assert status["snapshots"][3]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["snapshots"][3]["name"] == "TestName3"
-    assert status["snapshots"][3]["haRetain"]
-    assert not status["snapshots"][3]["driveRetain"]
 
 
 @pytest.mark.asyncio
-async def test_config(reader, ui_server, config: Config, server):
+async def test_config(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     update = {
         "config": {
             "days_between_snapshots": 20,
@@ -342,23 +378,23 @@ async def test_config(reader, ui_server, config: Config, server):
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) == 20
-    assert server._options["days_between_snapshots"] == 20
+    assert supervisor._options["days_between_snapshots"] == 20
     assert ui_server._starts == 1
 
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_auth_and_restart(reader, ui_server, config: Config, server, restarter, coord: Coordinator):
+async def test_auth_and_restart(reader, ui_server, config: Config, restarter, coord: Coordinator, supervisor: SimulatedSupervisor):
     update = {"config": {"require_login": True,
                          "expose_extra_server": True}, "snapshot_folder": "unused"}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert config.get(Setting.REQUIRE_LOGIN)
-    assert server._options['require_login']
+    assert supervisor._options['require_login']
     assert ui_server._starts == 2
 
     await reader.get("getstatus", status=401, ingress=False)
@@ -395,39 +431,55 @@ async def test_expose_extra_server_option(reader, ui_server: UiServer, config: C
 
 
 @pytest.mark.asyncio
-async def test_update_error_reports_true(reader, ui_server, config: Config, server):
+async def test_update_error_reports_true(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
     assert await reader.getjson("errorreports?send=true") == {'message': 'Configuration updated'}
     assert config.get(Setting.SEND_ERROR_REPORTS) is True
     assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert server._options["send_error_reports"] is True
+    assert supervisor._options["send_error_reports"] is True
 
 
 @pytest.mark.asyncio
-async def test_update_error_reports_false(reader, ui_server, config: Config, server):
+async def test_update_error_reports_false(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert not config.isExplicit(Setting.SEND_ERROR_REPORTS)
     assert await reader.getjson("errorreports?send=false") == {'message': 'Configuration updated'}
     assert config.get(Setting.SEND_ERROR_REPORTS) is False
     assert config.isExplicit(Setting.SEND_ERROR_REPORTS)
-    assert server._options["send_error_reports"] is False
+    assert supervisor._options["send_error_reports"] is False
 
 
 @pytest.mark.asyncio
-async def test_drive_cred_generation(reader, ui_server, snapshot, server, config: Config, global_info: GlobalInfo, session: ClientSession):
+async def test_drive_cred_generation(reader: ReaderHelper, ui_server: UiServer, snapshot, config: Config, global_info: GlobalInfo, session: ClientSession, google):
     status = await reader.getjson("getstatus")
     assert len(status["snapshots"]) == 1
     assert global_info.credVersion == 0
     # Invalidate the drive creds, sync, then verify we see an error
-    server.expireCreds()
+    google.expireCreds()
     status = await reader.getjson("sync")
     assert status["last_error"]["error_type"] == ERROR_CREDS_EXPIRED
 
     # simulate the user going through the Drive authentication workflow
-    async with session.get(config.get(Setting.AUTHENTICATE_URL) + "?redirectbacktoken=" + quote(reader.getUrl(True) + "token")) as resp:
+    auth_url = URL(config.get(Setting.AUTHENTICATE_URL)).with_query({
+        "redirectbacktoken": reader.getUrl(True) + "token",
+        "version": VERSION,
+        "return": reader.getUrl(True)
+    })
+    async with session.get(auth_url) as resp:
         resp.raise_for_status()
-    status = (await reader.getjson("sync"))["last_error"] is ERROR_CREDS_EXPIRED
+        html = await resp.text()
+        page = BeautifulSoup(html, 'html.parser')
+        area = page.find("textarea")
+        creds = str(area.getText()).strip()
+
+    cred_url = URL(reader.getUrl(True) + "token").with_query({"creds": creds, "host": reader.getUrl(True)})
+    async with session.get(cred_url) as resp:
+        resp.raise_for_status()
+        # verify we got redirected to the addon main page.
+        assert resp.url == URL(reader.getUrl(True))
+    await ui_server.sync(None)
+    assert global_info._last_error is None
     assert global_info.credVersion == 1
 
 
@@ -435,10 +487,8 @@ async def test_drive_cred_generation(reader, ui_server, snapshot, server, config
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
-    server._options.update(
-        {"max_snapshots_in_hassio": 1, "max_snapshots_in_google_drive": 1})
-    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
     config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
+    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
 
     # create three snapshots
     await ha.create(CreateOptions(time.now(), "Name1"))
@@ -537,7 +587,7 @@ async def test_ssl_server(reader: ReaderHelper, ui_server: UiServer, config, ser
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert ui_server._starts == 2
 
@@ -554,7 +604,7 @@ async def test_bad_ssl_config_missing_files(reader: ReaderHelper, ui_server: UiS
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert ui_server._starts == 2
 
@@ -579,7 +629,7 @@ async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: UiSer
         "snapshot_folder": "unused"
     }
     assert ui_server._starts == 1
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     assert ui_server._starts == 2
 
@@ -631,7 +681,8 @@ async def test_token(reader: ReaderHelper, coord: Coordinator, ha, drive: DriveS
         "refresh_token": "new_refresh_token",
         "token_expiry": "2022-01-01T00:00:00"
     }
-    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("token?creds=" + quote(json.dumps(creds)))
+    serialized = str(base64.b64encode(json.dumps(creds).encode("utf-8")), "utf-8")
+    await reader.get("token?creds={0}&host={1}".format(quote(serialized), quote(reader.getUrl(True))))
     assert drive.drivebackend.creds.access_token == 'new_access_token'
     assert drive.drivebackend.creds.refresh_token == 'new_refresh_token'
     assert drive.drivebackend.creds.secret is None
@@ -646,7 +697,8 @@ async def test_token_with_secret(reader: ReaderHelper, coord: Coordinator, ha, d
         "refresh_token": "new_refresh_token",
         "token_expiry": "2022-01-01T00:00:00"
     }
-    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("token?creds=" + quote(json.dumps(creds)))
+    serialized = str(base64.b64encode(json.dumps(creds).encode("utf-8")), "utf-8")
+    await reader.get("token?creds={0}&host={1}".format(quote(serialized), quote(reader.getUrl(True))))
     assert drive.drivebackend.creds.access_token == 'new_access_token'
     assert drive.drivebackend.creds.refresh_token == 'new_refresh_token'
     assert drive.drivebackend.creds.secret == 'new_client_secret'
@@ -660,16 +712,17 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
     creds = Creds(time, "id", time.now(), "token", "refresh")
-    resp = await reader.get("token?creds=" + quote(json.dumps(creds.serialize())), ingress=False)
-    assert "window.location.assign(\"/\")" in resp
+    serialized = str(base64.b64encode(json.dumps(creds.serialize()).encode("utf-8")), "utf-8")
+    await reader.get("token?creds={0}&host={1}".format(quote(serialized), quote(reader.getUrl(False))), ingress=False)
+    assert drive.drivebackend.creds.access_token == 'token'
 
 
 @pytest.mark.asyncio
 async def test_changefolder(reader: ReaderHelper, coord: Coordinator, ha, ui_server, folder_finder: FolderFinder):
-    assert "window.location.assign(\"" + ha.getAddonUrl() + "\")" in await reader.get("changefolder?id=12345")
+    assert await reader.get("changefolder?id=12345") == '{}'
     assert await folder_finder.get() == "12345"
 
 
@@ -681,7 +734,7 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
 
     # create a folder
@@ -696,13 +749,12 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
     # create two folders at different times
     id = (await drive.drivebackend.createFolder(folder_metadata))['id']
 
-    resp = await reader.get("changefolder?id=" + str(id), ingress=False)
-    assert "window.location.assign(\"/\")" in resp
+    await reader.get("changefolder?id=" + str(id), ingress=False)
     assert await folder_finder.get() == id
 
 
 @pytest.mark.asyncio
-async def test_update_sync_interval(reader, ui_server, config: Config, server):
+async def test_update_sync_interval(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     # Make sure the default saves nothing
     update = {
         "config": {
@@ -710,9 +762,9 @@ async def test_update_sync_interval(reader, ui_server, config: Config, server):
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60
-    assert "max_sync_interval_seconds" not in server._options
+    assert "max_sync_interval_seconds" not in supervisor._options
 
     # Update custom
     update = {
@@ -721,9 +773,9 @@ async def test_update_sync_interval(reader, ui_server, config: Config, server):
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60 * 2
-    assert server._options["max_sync_interval_seconds"] == 60 * 60 * 2
+    assert supervisor._options["max_sync_interval_seconds"] == 60 * 60 * 2
 
 
 @pytest.mark.asyncio
@@ -736,14 +788,14 @@ async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: C
 
     # request the auth code from "google"
     async with session.get(data["auth_url"], allow_redirects=False) as resp:
-        code = URL(resp.headers["location"]).query["code"]
+        code = (await resp.json())["code"]
 
     drive.saveCreds(None)
     assert not drive.enabled()
     # Pass the auth code to generate creds
     req_path = "manualauth?code={}".format(code)
     assert await reader.getjson(req_path) == {
-        'auth_url': "index.html?fresh=true"
+        'auth_url': "index?fresh=true"
     }
 
     # verify creds are saved and drive is enabled
@@ -773,7 +825,7 @@ async def test_setting_cancels_and_resyncs(reader: ReaderHelper, ui_server: UiSe
         },
         "snapshot_folder": "unused"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
     # verify the previous sync is done and another one is running
     assert sync.done()
@@ -785,6 +837,7 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
     await coord.sync()
     assert folder_finder.getCachedFolder() is not None
 
+    old_folder = folder_finder.getCachedFolder()
     # Change some config
     update = {
         "config": {
@@ -792,26 +845,26 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
         },
         "snapshot_folder": ""
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
     # verify the snapshot folder was reset, which triggers the error dialog to find a new folder
-    assert folder_finder.getCachedFolder() is None
+    assert folder_finder.getCachedFolder() == old_folder
 
     await coord.waitForSyncToFinish()
     result = await reader.postjson("getstatus")
-    assert result["last_error"]["error_type"] == ERROR_BACKUP_FOLDER_MISSING
+    assert result["last_error"] is None
 
 
 @pytest.mark.asyncio
-async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, server: SimulationServer, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
-    server.resetDriveAuth()
+async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, google, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
+    google.resetDriveAuth()
     # Generate manual credentials
     req_path = "manualauth?client_id={}&client_secret={}".format(
-        server.custom_drive_client_id, server.custom_drive_client_secret)
+        google._custom_drive_client_id, google._custom_drive_client_secret)
     data = await reader.getjson(req_path)
     assert "auth_url" in data
     async with session.get(data["auth_url"], allow_redirects=False) as resp:
-        code = URL(resp.headers["location"]).query["code"]
+        code = (await resp.json())["code"]
     drive.saveCreds(None)
     assert not drive.enabled()
     req_path = "manualauth?code={}".format(code)
@@ -828,7 +881,7 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
         },
         "snapshot_folder": "12345"
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert folder_finder.getCachedFolder() == "12345"
 
     # Un change the folder, which should keep the existing folder
@@ -838,5 +891,54 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
         },
         "snapshot_folder": ""
     }
-    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved'}
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert folder_finder.getCachedFolder() == "12345"
+
+
+@pytest.mark.asyncio
+async def test_update_non_ui_setting(reader: ReaderHelper, server, session, coord: Coordinator, folder_finder: FolderFinder, config: Config):
+    await coord.sync()
+    # Change some config
+    update = {
+        "config": {
+            "new_snapshot_timeout_seconds": 10
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
+
+    assert config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS) == 10
+
+    update = {
+        "config": {
+            "max_snapshots_in_hassio": 1
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
+    assert config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS) == 10
+
+
+@pytest.mark.asyncio
+async def test_update_disable_drive(reader: ReaderHelper, server, coord: Coordinator, config: Config, drive_requests: DriveRequests):
+    # Disable drive
+    drive_requests.creds = None
+    os.remove(config.get(Setting.CREDENTIALS_FILE_PATH))
+    assert not coord.enabled()
+    await coord.sync()
+    assert len(coord.snapshots()) == 0
+
+    # Disable Drive Upload
+    update = {
+        "config": {
+            Setting.ENABLE_DRIVE_UPLOAD.value: False
+        },
+        "snapshot_folder": ""
+    }
+    assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": True}
+    assert config.get(Setting.ENABLE_DRIVE_UPLOAD) is False
+
+    # Verify the app is working fine.
+    assert coord.enabled()
+    await coord.waitForSyncToFinish()
+    assert len(coord.snapshots()) == 1

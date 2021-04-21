@@ -1,10 +1,63 @@
+## [0.103.1 2020-1-23]
+### Fixes
+- Thanks to intestigation by [@jhampson-dbre](https://github.com/jhampson-dbre), fixes a long standing issue that caused the "Snapshot time of day" to be ignored ([#166](https://github.com/sabeechen/hassio-google-drive-backup/issues/166)).
+- A confguration error caused old docker images from the addon to stick around after an upgrade ([#328](https://github.com/sabeechen/hassio-google-drive-backup/issues/328)).
+
+### Technical/Cleanup
+- Significantly reduced the size of the addon image. 
+
+## [0.103.0 2020-12-31]
+### Added
+ - Logging in to Drive is no longer required if you have disabled upload to Google Drive
+ - A help dialog now comes up if the addon has trouble writing to the filesystem (this is sometimes an issue after supervisor upgrades)
+
+### Fixes
+ - Long snapshot names could cause problems uploading to Google Drive.
+ - Specifying the snapshot folder manually failed sometimes if you didn't use the "Choose Folder" link.
+ - The oldest snapshot could be prematurely deleted from Home Assistant before a one new is finished.
+
+## [0.102.0 2020-10-29]
+### Added
+ - Updated the addon's logos, thanks to [@pizzakid25](https://github.com/pizzakid25)
+ - Added support for the new /media folder.
+
+### Fixes
+ - Addons that take a long time to stop are more reliably restarted if they're stopped to take a snapshot.
+ - Addons with a watchdog have the watchdog temporarily disabled when they are stopped for a snapshot. 
+ - An issue preventing Home Assistant username/password auth from functioning.
+ - An issue preventing snapshot from being uploaded from Google Drive.
+ - An issue preventing addon version numbers from showing up in the settings dialog.
+ - Snapshot name template preview now updates to "Full" or "Partial" depending on your settings.
+ - An issue that redirected users to the wrong address to restore snapshots.
+
+## [0.101.3 2020-09-16]
+Note: A breaking change was made in a previous version, the binary_sensor.snapshots_stale sensor now reports its state as "on/off" instead of "true/false".  If you have automations that depend on this state, please update them.  I'll be including this notice with every changelog entry for a while.
+
+### Added
+- You can select addons to stop while a snapshot is being taken, since some addons dump corrupt data into snapshots if they aren't stopped (eg MariaDB).
+
+### Fixes
+- Added a workaround to the "401: Unauthorized" error some users are seeing on some browsers.  You can now copy Google Drive credentials from the authorization page instead of depending on a redirect.  Same goes for choosing a folder.
+- Fixed an issue causing some textbox labels to overlap with the textbox contents.
+- Fixed an issue causing some users to get redirected to the wrong endpoint during authorization.
+- Fixed a transient bug that displayed a string conversion error whent the backup folder became unavailable.
+- Fixed numerous spelling errors, all over the place.
+- Fixed an issue when using a custom sync interval that landed on day, hour, or minute boundaries.
+- Fixed some version numbers not showing up in error reports.
+
+### Technical/Cleanup
+- Thanks to [@ericmatte](https://github.com/ericmatte/) for a massive cleanup of the project's HTML templates, namely:
+  - Remove tons of duplicated HTML
+  - Unformly templating all pages
+  - Generating the style sheet on the fly.
+
 ## [0.101.2 2020-08-24]
 Note: A breaking change was made in a previous version, the binary_sensor.snapshots_stale sensor now reports its state as "on/off" instead of "true/false".  If you have automations that depend on this state, please update them.  I'll be including this notice with every changelog entry for a while.
 
 ### Added
-- Error reports now cotnain the hassos, docker, and machine version.
+- Error reports now contain the hassos, docker, and machine version.
 - Log level for the addon can be controlled with the 'log_level' and 'console_log_level' config options.
-- Added 'TRACE' level loggin for all requests, which may help with debugging some current bugs.
+- Added 'TRACE' level logging for all requests, which may help with debugging some current bugs.
 
 
 ### Fixes

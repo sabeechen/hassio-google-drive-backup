@@ -4,7 +4,7 @@ from typing import Dict, Generic, List, Optional, Tuple, TypeVar
 
 from injector import inject, singleton
 
-from .backupscheme import GenerationalScheme, OldestScheme
+from .backupscheme import GenerationalScheme, OldestScheme, DeleteAfterUploadScheme
 from ..config import Config, Setting, CreateOptions
 from ..exceptions import DeleteMutlipleSnapshotsError, SimulatedError
 from ..util import GlobalInfo, Estimator
@@ -27,11 +27,20 @@ class SnapshotSource(Trigger, Generic[T]):
     def name(self) -> str:
         return "Unnamed"
 
+    def title(self) -> str:
+        return "Default"
+
     def enabled(self) -> bool:
         return True
 
+    def needsConfiguration(self) -> bool:
+        return not self.enabled()
+
     def upload(self) -> bool:
         return True
+
+    def freeSpace(self):
+        return None
 
     async def create(self, options: CreateOptions) -> T:
         pass
@@ -53,6 +62,9 @@ class SnapshotSource(Trigger, Generic[T]):
 
     def maxCount(self) -> None:
         return 0
+
+    def postSync(self) -> None:
+        return
 
     # Gets called after reading state but before any changes are made
     # to check for additional errors.
@@ -80,6 +92,13 @@ class Model():
         self.simulate_error = None
         self.estimator = estimator
 
+    def enabled(self):
+        if self.source.needsConfiguration():
+            return False
+        if self.dest.needsConfiguration():
+            return False
+        return True
+
     def reinitialize(self):
         self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
 
@@ -93,7 +112,7 @@ class Model():
         if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
             return None
 
-        if not self.dest.enabled():
+        if self.dest.needsConfiguration():
             return None
         if not last_snapshot:
             return now - timedelta(minutes=1)
@@ -112,10 +131,7 @@ class Model():
             # return the next snapshot after the delta
             next = self.time.toUtc(
                 time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
-        if next < now:
-            return now
-        else:
-            return next
+        return next
 
     def nextSnapshot(self, now: datetime):
         latest = max(self.snapshots.values(),
@@ -135,12 +151,14 @@ class Model():
         self.source.checkBeforeChanges()
         self.dest.checkBeforeChanges()
 
-        if self.dest.enabled():
-            await self._purge(self.source)
-            await self._purge(self.dest)
+        if not self.dest.needsConfiguration():
+            if self.source.enabled():
+                await self._purge(self.source)
+            if self.dest.enabled():
+                await self._purge(self.dest)
 
         next_snapshot = self.nextSnapshot(now)
-        if next_snapshot and now >= next_snapshot and self.source.enabled() and self.dest.enabled():
+        if next_snapshot and now >= next_snapshot and self.source.enabled() and not self.dest.needsConfiguration():
             await self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
             await self._purge(self.source)
 
@@ -163,6 +181,8 @@ class Model():
                     await self._purge(self.dest)
                 else:
                     break
+        self.source.postSync()
+        self.dest.postSync()
 
     def isWorkingThroughUpload(self):
         return self.dest.isWorking()
@@ -238,7 +258,10 @@ class Model():
             count -= 1
         if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
             return None
-        if self.generational_config:
+
+        if source.maxCount() == -1:
+            scheme = DeleteAfterUploadScheme(source.name(), [self.dest.name()])
+        elif self.generational_config:
             scheme = GenerationalScheme(
                 self.time, self.generational_config, count=count)
         else:
@@ -246,7 +269,7 @@ class Model():
         consider_purging = []
         for snapshot in snapshots:
             source_snapshot = snapshot.getSource(source.name())
-            if source_snapshot is not None and not source_snapshot.retained():
+            if source_snapshot is not None and source_snapshot.considerForPurge():
                 consider_purging.append(snapshot)
         if len(consider_purging) == 0:
             return None

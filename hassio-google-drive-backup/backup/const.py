@@ -23,6 +23,7 @@ ERROR_HA_DELETE_ERROR = "delete_error"
 ERROR_MULTIPLE_DELETES = "multiple_deletes"
 ERROR_SUPERVISOR_UNEXPECTED = "supervisor_unexpected"
 ERROR_SUPERVISOR_TIMEOUT = "supervisor_timeout"
+ERROR_SUPERVISOR_FILE_SYSTEM = "supervisor_fs_error"
 
 ERROR_EXISTING_FOLDER = "existing_backup_folder"
 ERROR_BACKUP_FOLDER_MISSING = "backup_folder_missing"
@@ -77,3 +78,36 @@ If you have anything else that could help explain what happened, click "Markdown
  {core_logs}
  ```
  """
+
+FOLDERS = [
+    {
+        'slug': "homeassistant",
+        'id': "folder_homeassistant",
+        'name': "Home Assistant Configuration",
+        'description': 'Backup the files and folders from your Home Assistant config directory, eg configuration.yaml'
+    },
+    {
+        'slug': "media",
+        'id': "folder_media",
+        'name': "Media",
+        'description': 'Backup your "/media" directory.'
+    },
+    {
+        'slug': "ssl",
+        'id': "folder_ssl",
+        'name': "SSL",
+        'description': 'Backup your "/ssl" directory, where your certfile and keyfile are typically stored.'
+    },
+    {
+        'slug': "share",
+        'id': "folder_share",
+        'name': "Share",
+        'description': 'Backup your "/share" directory.'
+    },
+    {
+        'slug': "addons/local",
+        'id': "folder_addons",
+        'name': "Local Addons",
+        'description': 'Backup your local addons directory. This directory will be empty unless you use it for add-on development.'
+    }
+]

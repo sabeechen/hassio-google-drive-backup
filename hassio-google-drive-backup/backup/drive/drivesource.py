@@ -59,6 +59,9 @@ class DriveSource(SnapshotDestination):
     def name(self) -> str:
         return SOURCE_GOOGLE_DRIVE
 
+    def title(self) -> str:
+        return "Google Drive"
+
     def maxCount(self) -> None:
         return self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
 
@@ -67,6 +70,11 @@ class DriveSource(SnapshotDestination):
 
     def enabled(self) -> bool:
         return self.drivebackend.enabled()
+
+    def needsConfiguration(self) -> bool:
+        if not self.config.get(Setting.ENABLE_DRIVE_UPLOAD):
+            return False
+        return super().needsConfiguration()
 
     async def create(self, options: CreateOptions) -> DriveSnapshot:
         raise LogicError("Snapshots can't be created in Drive")
@@ -80,28 +88,30 @@ class DriveSource(SnapshotDestination):
     def isWorking(self):
         return self._uploadedAtLeastOneChunk
 
-    async def get(self) -> Dict[str, DriveSnapshot]:
+    async def get(self, allow_retry=True) -> Dict[str, DriveSnapshot]:
         parent = await self.getFolderId()
         snapshots: Dict[str, DriveSnapshot] = {}
         try:
             async for child in self.drivebackend.query("'{}' in parents".format(parent)):
                 properties = child.get('appProperties')
-                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and PROP_KEY_NAME in properties and not child['trashed']:
+                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and not child['trashed']:
                     snapshot = DriveSnapshot(child)
                     snapshots[snapshot.slug()] = snapshot
         except ClientResponseError as e:
             if e.status == 404:
                 # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
-                if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+                if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and allow_retry:
                     self.folder_finder.deCache()
-                    return await self.folder_finder.create()
+                    await self.folder_finder.create()
+                    return await self.get(False)
                 raise BackupFolderInaccessible(parent)
             raise e
         except GoogleDrivePermissionDenied:
             # This should always mean we lost permission on the backup folder, but at least it still exists.
-            if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+            if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and allow_retry:
                 self.folder_finder.deCache()
-                return await self.folder_finder.create()
+                await self.folder_finder.create()
+                return await self.get(False)
             raise BackupFolderInaccessible(parent)
         return snapshots
 
@@ -121,7 +131,6 @@ class DriveSource(SnapshotDestination):
             'appProperties': {
                 PROP_KEY_SLUG: snapshot.slug(),
                 PROP_KEY_DATE: str(snapshot.date()),
-                PROP_KEY_NAME: str(snapshot.name()),
                 PROP_TYPE: str(snapshot.snapshotType()),
                 PROP_VERSION: str(snapshot.version()),
                 PROP_PROTECTED: str(snapshot.protected()),
@@ -137,6 +146,9 @@ class DriveSource(SnapshotDestination):
             'createdTime': self._timeToRfc3339String(snapshot.date()),
             'modifiedTime': self._timeToRfc3339String(snapshot.date())
         }
+
+        if len(snapshot.name().encode()) < 100:
+            file_metadata['appProperties'][PROP_KEY_NAME] = str(snapshot.name())
 
         async with source:
             try:

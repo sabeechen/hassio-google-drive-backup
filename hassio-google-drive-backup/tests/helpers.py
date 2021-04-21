@@ -23,21 +23,24 @@ all_addons = [
         "slug": "sexy_robots",
         "description": "The robots you already know, but sexier. See what they don't want you to see.",
         "version": "0.69",
-        "size": 0.0
+        "size": 0.0,
+        "state": "started"
     },
     {
         "name": "Particle Accelerator",
         "slug": "particla_accel",
         "description": "What CAN'T you do with Home Assistant?",
         "version": "0.5",
-        "size": 0.0
+        "size": 0.0,
+        "state": "started"
     },
     {
         "name": "Empty Addon",
         "slug": "addon_empty",
         "description": "Explore the meaning of the universe by contemplating whats missing.",
         "version": "0.-1",
-        "size": 0.0
+        "size": 0.0,
+        "state": "started"
     }
 ]
 

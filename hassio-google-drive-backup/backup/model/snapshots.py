@@ -82,6 +82,9 @@ class AbstractSnapshot():
     def uploadable(self) -> bool:
         return self._uploadable
 
+    def considerForPurge(self) -> bool:
+        return not self.retained()
+
     def setUploadable(self, uploadable):
         self._uploadable = uploadable
 

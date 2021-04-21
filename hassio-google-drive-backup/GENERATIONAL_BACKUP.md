@@ -9,7 +9,7 @@ Generational backup will be used when any one of `generational_days`,  `generati
 * `generational_years`  (int): The number of years to keep
 * `generational_day_of_week`  (str): The day of the week when weekly snapshots will be kept.  It can be one of 'mon', 'tue', 'wed', 'thu', 'fri', 'sat' or 'sun'.  The default is 'mon'.
 * `generational_day_of_month` (int): The day of the month when monthly snapshots will be kept, from 1 to 31.  If a month has less than the configured number of days, the latest daya of that month is used.
-* `generaitonal_day_of_year` (int): The day of the year that yearly snapshots are kept, from 1 to 365.
+* `generational_day_of_year` (int): The day of the year that yearly snapshots are kept, from 1 to 365.
 
 ## Some Details to Consider
 * Generational backup assumes that a snapshot is available for every day to work properly, so its recommended that you set `days_between_snapshots`=1 if you're using the feature.  Otherwise a snapshot may not be available to be saved for a given day.

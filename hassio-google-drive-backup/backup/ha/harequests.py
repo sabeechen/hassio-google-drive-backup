@@ -29,7 +29,7 @@ def supervisor_call(func):
         except TimeoutError:
             raise SupervisorConnectionError()
         except ClientResponseError as e:
-            if e.code == 403:
+            if e.status == 403:
                 raise SupervisorPermissionError()
             raise
     return wrap_and_call
@@ -63,8 +63,7 @@ class HaRequests():
     async def upload(self, stream):
         url: str = "{0}snapshots/new/upload".format(
             self.config.get(Setting.HASSIO_URL))
-        async with stream:
-            return await self._postHassioData(url, data=stream.generator(self.config.get(Setting.DEFAULT_CHUNK_SIZE)))
+        return await self._postHassioData(url, data=stream)
 
     @supervisor_call
     async def delete(self, slug) -> None:
@@ -78,6 +77,16 @@ class HaRequests():
             if e.status == 400:
                 raise HomeAssistantDeleteError()
             raise e
+
+    @supervisor_call
+    async def startAddon(self, slug) -> None:
+        url: str = "{0}addons/{1}/start".format(self.config.get(Setting.HASSIO_URL), slug)
+        await self._postHassioData(url, {})
+
+    @supervisor_call
+    async def stopAddon(self, slug) -> None:
+        url: str = "{0}addons/{1}/stop".format(self.config.get(Setting.HASSIO_URL), slug)
+        await self._postHassioData(url, {})
 
     @supervisor_call
     async def snapshot(self, slug):
@@ -94,13 +103,17 @@ class HaRequests():
 
     @supervisor_call
     async def haInfo(self):
-        url = "{0}homeassistant/info".format(
+        url = "{0}core/info".format(
             self.config.get(Setting.HASSIO_URL))
         return await self._getHassioData(url)
 
     @supervisor_call
     async def selfInfo(self) -> Dict[str, Any]:
-        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/self/info")
+        return await self.getAddonInfo("self")
+
+    @supervisor_call
+    async def getAddonInfo(self, addon_slug) -> Dict[str, Any]:
+        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/{0}/info".format(addon_slug))
 
     @supervisor_call
     async def hassosInfo(self) -> Dict[str, Any]:
@@ -180,7 +193,7 @@ class HaRequests():
 
     def _getHassioHeaders(self):
         return {
-            'Authorization': 'Bearer ' + self._getToken()
+            'X-Supervisor-Token': self._getToken()
         }
 
     def _getHaHeaders(self):
@@ -245,6 +258,10 @@ class HaRequests():
     @supervisor_call
     async def updateConfig(self, config) -> None:
         return await self._postHassioData("{0}addons/self/options".format(self.config.get(Setting.HASSIO_URL)), {'options': config})
+
+    @supervisor_call
+    async def updateAddonOptions(self, slug, options):
+        return await self._postHassioData("{0}addons/{1}/options".format(self.config.get(Setting.HASSIO_URL), slug), options)
 
     async def updateEntity(self, entity, data):
         await self._postHaData("states/" + entity, data)

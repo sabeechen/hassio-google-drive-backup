@@ -12,3 +12,5 @@ dev/error.py
 dev/data/retained.json
 *.egg-info
 hassio-google-drive-backup/dev/data/id.json
+hassio-google-drive-backup/dev/data/stop_addon_state.json
+hassio-google-drive-backup/dev/data/retained.json

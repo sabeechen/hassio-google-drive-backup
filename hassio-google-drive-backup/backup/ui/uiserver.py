@@ -1,22 +1,24 @@
 import asyncio
 import ssl
 import json
-import logging
+from aiohttp.web_routedef import get
+import aiohttp_jinja2
+import jinja2
+import base64
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
 from urllib.parse import quote
 
-import aiofiles
 from aiohttp import BasicAuth, hdrs, web, ClientSession
-from aiohttp.web import HTTPBadRequest, HTTPException, Request
+from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther
 from injector import ClassAssistedBuilder, inject, singleton
 
-from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable
+from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
-from backup.model import Coordinator, Snapshot
+from backup.model import Coordinator, Snapshot, AbstractSnapshot
 from backup.exceptions import KnownError, ensureKey
-from backup.util import GlobalInfo, Estimator, Color, File
+from backup.util import GlobalInfo, Estimator, File
 from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
 from backup.ha import Password
 from backup.time import Time
@@ -25,13 +27,17 @@ from backup.logger import getLogger, getHistory, TraceLogger
 from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
 from backup.debugworker import DebugWorker
 from backup.drive import FolderFinder
-
+from backup.const import FOLDERS
+from yarl import URL
 from .debug import Debug
 
 logger = getLogger(__name__)
 
 # Used to Google's oauth verification
 SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
+
+MIME_TEXT_HTML = "text/html"
+MIME_JSON = "application/json"
 
 
 @singleton
@@ -66,40 +72,57 @@ class UiServer(Trigger, Startable):
     def name(self):
         return "UI Server"
 
+    def base_context(self):
+        return {
+            'version': VERSION,
+            'backgroundColor': self.config.get(Setting.BACKGROUND_COLOR),
+            'accentColor': self.config.get(Setting.ACCENT_COLOR),
+            'coordEnabled': self._coord.enabled(),
+            'save_drive_creds_path': self.config.get(Setting.SAVE_DRIVE_CREDS_PATH),
+            'bmc_logo_path': "static/images/bmc.svg"
+        }
+
     async def getstatus(self, request) -> Dict[Any, Any]:
+        return web.json_response(await self.buildStatusInfo())
+
+    async def buildStatusInfo(self):
         status: Dict[Any, Any] = {}
         status['folder_id'] = self.folder_finder.getCachedFolder()
         status['snapshots'] = []
         snapshots = self._coord.snapshots()
         for snapshot in snapshots:
             status['snapshots'].append(self.getSnapshotDetails(snapshot))
-        status['restore_link'] = self._ha_source.getFullRestoreLink()
-        status['drive_enabled'] = self._coord.enabled()
+        status['ha_url_base'] = self._ha_source.getHomeAssistantUrl()
+        status['restore_snapshot_path'] = "hassio/snapshots"
         status['ask_error_reports'] = not self.config.isExplicit(
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = False
         status['cred_version'] = self._global_info.credVersion
-        status['free_space'] = Estimator.asSizeString(
-            self._estimator.getBytesFree())
         next = self._coord.nextSnapshotTime()
         if next is None:
             status['next_snapshot_text'] = "Disabled"
             status['next_snapshot_machine'] = ""
             status['next_snapshot_detail'] = "Disabled"
         elif (next < self._time.now()):
-            status['next_snapshot_text'] = self._time.formatDelta(self._time.now())
-            status['next_snapshot_machine'] = self._time.asRfc3339String(self._time.now())
-            status['next_snapshot_detail'] = self._time.toLocal(self._time.now()).strftime("%c")
+            status['next_snapshot_text'] = self._time.formatDelta(
+                self._time.now())
+            status['next_snapshot_machine'] = self._time.asRfc3339String(
+                self._time.now())
+            status['next_snapshot_detail'] = self._time.toLocal(
+                self._time.now()).strftime("%c")
         else:
             status['next_snapshot_text'] = self._time.formatDelta(next)
             status['next_snapshot_machine'] = self._time.asRfc3339String(next)
-            status['next_snapshot_detail'] = self._time.toLocal(next).strftime("%c")
+            status['next_snapshot_detail'] = self._time.toLocal(
+                next).strftime("%c")
 
         if len(snapshots) > 0:
             latest = snapshots[len(snapshots) - 1].date()
             status['last_snapshot_text'] = self._time.formatDelta(latest)
-            status['last_snapshot_machine'] = self._time.asRfc3339String(latest)
-            status['last_snapshot_detail'] = self._time.toLocal(latest).strftime("%c")
+            status['last_snapshot_machine'] = self._time.asRfc3339String(
+                latest)
+            status['last_snapshot_detail'] = self._time.toLocal(
+                latest).strftime("%c")
         else:
             status['last_snapshot_text'] = "Never"
             status['last_snapshot_machine'] = ""
@@ -114,43 +137,53 @@ class UiServer(Trigger, Startable):
         status["syncing"] = self._coord.isSyncing()
         status["ignore_sync_error"] = self._coord.isWorkingThroughUpload()
         status["firstSync"] = self._global_info._first_sync
-        status["maxSnapshotsInHasssio"] = self.config.get(
-            Setting.MAX_SNAPSHOTS_IN_HASSIO)
-        status["maxSnapshotsInDrive"] = self.config.get(
-            Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
         status["snapshot_name_template"] = self.config.get(
             Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
         status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
-        status['choose_folder_url'] = self.config.get(Setting.CHOOSE_FOLDER_URL) + "?bg={0}&ac={1}".format(
-            quote(self.config.get(Setting.BACKGROUND_COLOR)), quote(self.config.get(Setting.ACCENT_COLOR)))
+        choose_url = URL(self.config.get(Setting.CHOOSE_FOLDER_URL)).with_query({
+            "bg": self.config.get(Setting.BACKGROUND_COLOR),
+            "ac": self.config.get(Setting.ACCENT_COLOR),
+            "version": VERSION
+        })
+        status['choose_folder_url'] = str(choose_url)
         status['dns_info'] = self._global_info.getDnsInfo()
         status['enable_drive_upload'] = self.config.get(
             Setting.ENABLE_DRIVE_UPLOAD)
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['is_specify_folder'] = self.config.get(
             Setting.SPECIFY_SNAPSHOT_FOLDER)
-        return web.json_response(status)
+        return status
+
+    async def bootstrap(self, request) -> Dict[Any, Any]:
+        return web.Response(body="bootstrap_update_data = {0};".format(json.dumps(await self.buildStatusInfo(), indent=4)), content_type="text/javascript")
 
     def getSnapshotDetails(self, snapshot: Snapshot):
-        drive = snapshot.getSource(SOURCE_GOOGLE_DRIVE)
         ha = snapshot.getSource(SOURCE_HA)
+        sources = []
+        for source_key in snapshot.sources:
+            source: AbstractSnapshot = snapshot.sources[source_key]
+            sources.append({
+                'name': source.name(),
+                'key': source_key,
+                'size': source.size(),
+                'retained': source.retained(),
+                'delete_next': snapshot.getPurges().get(source_key) or False
+            })
+
         return {
             'name': snapshot.name(),
             'slug': snapshot.slug(),
             'size': snapshot.sizeString(),
             'status': snapshot.status(),
             'date': self._time.toLocal(snapshot.date()).strftime("%c"),
-            'inDrive': drive is not None,
-            'inHA': ha is not None,
             'isPending': ha is not None and type(ha) is PendingSnapshot,
             'protected': snapshot.protected(),
             'type': snapshot.snapshotType(),
             'details': snapshot.details(),
-            'deleteNextDrive': snapshot.getPurges().get(SOURCE_GOOGLE_DRIVE) or False,
-            'deleteNextHa': snapshot.getPurges().get(SOURCE_HA) or False,
-            'driveRetain': drive.retained() if drive else False,
-            'haRetain': ha.retained() if ha else False
+            'sources': sources,
+            'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
+            'restorable': snapshot.getSource(SOURCE_HA) is not None,
         }
 
     async def manualauth(self, request: Request) -> None:
@@ -175,7 +208,7 @@ class UiServer(Trigger, Startable):
             try:
                 self._coord.saveCreds(await self.manual_exchanger.exchange(code))
                 self._global_info.setIngoreErrorsForNow(True)
-                return web.json_response({'auth_url': "index.html?fresh=true"})
+                return web.json_response({'auth_url': "index?fresh=true"})
             except KnownError as e:
                 return web.json_response({'error': e.message()})
             except Exception as e:
@@ -196,40 +229,28 @@ class UiServer(Trigger, Startable):
         return web.json_response({"message": "Requested snapshot '{0}'".format(snapshot.name())})
 
     async def deleteSnapshot(self, request: Request):
-        drive = BoolValidator.strToBool(request.query.get("drive", False))
-        ha = BoolValidator.strToBool(request.query.get("ha", False))
-        slug = request.query.get("slug", "")
-        self._coord.getSnapshot(slug)
-        sources = []
-        messages = []
-        if drive:
-            messages.append("Google Drive")
-            sources.append(SOURCE_GOOGLE_DRIVE)
-        if ha:
-            messages.append("Home Assistant")
-            sources.append(SOURCE_HA)
-        await self._coord.delete(sources, slug)
-        return web.json_response({"message": "Deleted from " + " and ".join(messages)})
+        data = await request.json()
+        # Check to make sure the slug is valid.
+        self._coord.getSnapshot(data['slug'])
+        await self._coord.delete(data['sources'], data['slug'])
+        return web.json_response({"message": "Deleted from {0} place(s)".format(len(data['sources']))})
 
     async def retain(self, request: Request):
-        drive = BoolValidator.strToBool(request.query.get("drive", False))
-        ha = BoolValidator.strToBool(request.query.get("ha", False))
-        slug = request.query.get("slug", "")
+        data = await request.json()
+        slug = data['slug']
 
         snapshot: Snapshot = self._coord.getSnapshot(slug)
+        retention = {}
+        for source in data['sources']:
+            retention[source] = True
+        for source in snapshot.sources.values():
+            if source.source() not in retention:
+                retention[source.source()] = False
 
         # override create options for future uploads
-        options = CreateOptions(self._time.now(), self.config.get(Setting.SNAPSHOT_NAME), {
-            SOURCE_GOOGLE_DRIVE: BoolValidator.strToBool(drive),
-            SOURCE_HA: BoolValidator.strToBool(ha)
-        })
+        options = CreateOptions(self._time.now(), self.config.get(Setting.SNAPSHOT_NAME), retention)
         snapshot.setOptions(options)
 
-        retention = {}
-        if snapshot.getSource(SOURCE_GOOGLE_DRIVE) is not None:
-            retention[SOURCE_GOOGLE_DRIVE] = BoolValidator.strToBool(drive)
-        if snapshot.getSource(SOURCE_HA) is not None:
-            retention[SOURCE_HA] = BoolValidator.strToBool(ha)
         await self._coord.retain(retention, slug)
         return web.json_response({'message': "Updated the snapshot's settings"})
 
@@ -266,12 +287,13 @@ class UiServer(Trigger, Startable):
         format = request.query.get("format", "download")
         catchup = BoolValidator.strToBool(
             request.query.get("catchup", "False"))
-
         if not catchup:
             self.last_log_index = 0
         if format == "view":
-            return web.FileResponse(self.filePath("logs.html"))
-
+            context = self.base_context()
+            return aiohttp_jinja2.render_template("logs.jinja2",
+                                                  request,
+                                                  context)
         resp = web.StreamResponse()
         if format == "html":
             resp.content_type = 'text/html'
@@ -297,17 +319,20 @@ class UiServer(Trigger, Startable):
         await resp.write_eof()
 
     async def token(self, request: Request) -> None:
-        if 'creds' in request.query:
-            self._global_info.setIngoreErrorsForNow(True)
-            self._coord.saveCreds(Creds.load(
-                self._time, json.loads(request.query['creds'])))
-        try:
-            if request.url.port != self.config.get(Setting.PORT):
-                return await self.redirect(self._ha_source.getAddonUrl())
-        except:  # noqa: E722
-            # eat the error
-            pass
-        return await self.redirect("/")
+        self._global_info.setIngoreErrorsForNow(True)
+        creds_deserialized = json.loads(str(base64.b64decode(request.query.get('creds').encode("utf-8")), 'utf-8'))
+        creds = Creds.load(self._time, creds_deserialized)
+        self._coord.saveCreds(creds)
+
+        # Build the redirect url
+        if 'host' in request.query:
+            redirect = request.query.get('host')
+        else:
+            redirect = self._ha_source.getAddonUrl()
+        if MIME_JSON in request.headers[hdrs.ACCEPT]:
+            return web.json_response({'redirect': str(redirect)})
+        else:
+            raise HTTPSeeOther(redirect)
 
     async def changefolder(self, request: Request) -> None:
         # update config to specify snapshot folder
@@ -317,13 +342,7 @@ class UiServer(Trigger, Startable):
         await self.folder_finder.save(id)
         self._global_info.setIngoreErrorsForNow(True)
         self.trigger()
-        try:
-            if request.url.port != self.config.get(Setting.PORT):
-                return await self.redirect(self._ha_source.getAddonUrl())
-        except:  # noqa: E722
-            # eat the error
-            pass
-        return await self.redirect("/")
+        return web.json_response({})
 
     async def sync(self, request: Request = None) -> Any:
         await self._coord.sync()
@@ -353,6 +372,7 @@ class UiServer(Trigger, Startable):
         return web.json_response({
             'config': current_config,
             'addons': self._global_info.addons,
+            'folders': FOLDERS,
             'name_keys': name_keys,
             'defaults': default_config,
             'snapshot_folder': self.folder_finder.getCachedFolder(),
@@ -408,7 +428,8 @@ class UiServer(Trigger, Startable):
         body = GITHUB_BUG_TEMPLATE
         for key in data:
             if isinstance(data[key], dict):
-                body = body.replace("{" + key + "}", json.dumps(data[key], indent=4))
+                body = body.replace(
+                    "{" + key + "}", json.dumps(data[key], indent=4))
             else:
                 body = body.replace("{" + key + "}", str(data[key]))
         return web.json_response({'markdown': body})
@@ -421,35 +442,32 @@ class UiServer(Trigger, Startable):
         Password(self.config.getConfigFor(update)).resolve()
 
         validated = self.config.validate(update)
-        await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the configuration update request"), trigger=False)
+        message = await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the configuration update request"), trigger=False)
         try:
             await self.cancelSync(request)
             await self.startSync(request)
         except:  # noqa: E722
             # eat the error, just cancel optimistically
             pass
-        return web.json_response({'message': 'Settings saved'})
+        return web.json_response(message)
 
     async def _updateConfiguration(self, new_config, snapshot_folder_id=None, trigger=True):
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
+        old_drive_option = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
         await self._harequests.updateConfig(update)
 
-        was_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
         self.config.update(new_config)
 
-        is_specify = self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER)
-
-        if not was_specify and is_specify and not self._coord._model.dest.isCustomCreds():
-            # Delete the reset the saved backup folder, since the preference
-            # for specifying the folder changed from false->true
-            self.folder_finder.reset()
-        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and self._coord._model.dest.isCustomCreds() and snapshot_folder_id is not None and len(snapshot_folder_id):
+        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and snapshot_folder_id is not None and len(snapshot_folder_id):
             await self.folder_finder.save(snapshot_folder_id)
         if trigger:
             self.trigger()
-        return {'message': 'Settings saved'}
+        return {
+            'message': 'Settings saved',
+            'reload_page': self.config.get(Setting.ENABLE_DRIVE_UPLOAD) != old_drive_option
+        }
 
     def _getServerOptions(self):
         return {
@@ -465,10 +483,14 @@ class UiServer(Trigger, Startable):
         await self._coord.uploadSnapshot(slug)
         return web.json_response({'message': "Snapshot uploaded to Home Assistant"})
 
-    async def redirect(self, url):
-        with open(self.filePath("redirect.html"), mode='r') as f:
-            contents = f.read(1024 * 1024 * 2).replace("{url}", url)
-        return web.Response(body=contents, content_type="text/html")
+    async def redirect(self, request, url):
+        context = {
+            **self.base_context(),
+            'url': url
+        }
+        return aiohttp_jinja2.render_template("redirect.jinja2",
+                                              request,
+                                              context)
 
     async def download(self, request: Request):
         slug = request.query.get("slug", "")
@@ -495,6 +517,7 @@ class UiServer(Trigger, Startable):
 
         # Create the ingress server
         app = web.Application(middlewares=[self.error_middleware])
+        aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(self.filePath()))
         self._addRoutes(app)
 
         # The ingress port is considered secured by Home Assistant, so it doesn't get SSL or basic HTTP auth
@@ -516,6 +539,7 @@ class UiServer(Trigger, Startable):
                         self._time, self._harequests))
 
                 extra_app = web.Application(middlewares=middleware)
+                aiohttp_jinja2.setup(extra_app, loader=jinja2.FileSystemLoader(self.filePath()))
                 self._addRoutes(extra_app)
                 logger.info("Starting server on port {}".format(
                     self.config.get(Setting.PORT)))
@@ -533,10 +557,11 @@ class UiServer(Trigger, Startable):
             [web.static('/static', abspath(join(__file__, "..", "..", "static")), append_version=True)])
         app.add_routes([web.get('/', self.index)])
         app.add_routes([web.get('/index.html', self.index)])
+        app.add_routes([web.get('/index', self.index)])
         self._addRoute(app, self.reauthenticate)
+        self._addRoute(app, self.bootstrap)
         self._addRoute(app, self.tos)
         self._addRoute(app, self.pp)
-        self._addRoute(app, self.theme)
 
         self._addRoute(app, self.getstatus)
         self._addRoute(app, self.snapshot)
@@ -578,7 +603,8 @@ class UiServer(Trigger, Startable):
 
     async def _start_site(self, app, port, ssl_context=None):
         aiohttp_logger = TraceLogger("aiohttp.access")
-        runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger, access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
+        runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger,
+                               access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
         self.runners.append(runner)
         await runner.setup()
         # maybe host should be 0.0.0.0
@@ -606,7 +632,8 @@ class UiServer(Trigger, Startable):
     @web.middleware
     async def error_middleware(self, request: Request, handler):
         try:
-            logger.trace("Serving %s %s to %s", request.method, request.url, request.remote)
+            logger.trace("Serving %s %s to %s", request.method,
+                         request.url, request.remote)
             handled = await handler(request)
             logger.trace("Completed %s %s", request.method, request.url)
             return handled
@@ -636,8 +663,11 @@ class UiServer(Trigger, Startable):
                 'details': logger.formatException(e)
             }
 
-    def filePath(self, name):
-        return abspath(join(__file__, "..", "..", "static", name))
+    def filePath(self, name=None):
+        if name is None:
+            return abspath(join(__file__, "..", "..", "static"))
+        else:
+            return abspath(join(__file__, "..", "..", "static", name))
 
     def cssElement(self, selector, keys):
         ret = selector
@@ -647,273 +677,40 @@ class UiServer(Trigger, Startable):
         ret += "}\n\n"
         return ret
 
-    async def theme(self, request: Request):
-        background = Color.parse(self.config.get(Setting.BACKGROUND_COLOR))
-        accent = Color.parse(self.config.get(Setting.ACCENT_COLOR))
-
-        text = background.textColor()
-        accent_text = accent.textColor()
-        link_accent = accent
-        contrast_threshold = 4.5
-
-        contrast = background.contrast(accent)
-        if (contrast < contrast_threshold):
-            # do some adjustment to make the UI more readable if the contrast is really bad
-            scale = 1 - (contrast - 1) / (contrast_threshold - 1)
-            link_accent = link_accent.tint(text, scale * 0.5)
-
-        focus = accent.saturate(1.2)
-        help = text.tint(background, 0.25)
-
-        shadow1 = text.withAlpha(0.14)
-        shadow2 = text.withAlpha(0.12)
-        shadow3 = text.withAlpha(0.2)
-        shadowbmc = background.withAlpha(0.2)
-        bgshadow = "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + \
-            shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
-
-        bg_modal = background.tint(text, 0.02)
-        shadow_modal = "box-shadow: 0 24px 38px 3px " + shadow1.toCss() + ", 0 9px 46px 8px " + \
-            shadow2.toCss() + ", 0 11px 15px -7px " + shadow3.toCss()
-
-        ret = ""
-        ret += self.cssElement("html", {
-            'background-color': background.toCss(),
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement("label", {
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement("a", {
-            'color': link_accent.toCss()
-        })
-
-        ret += self.cssElement("input", {
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement(".helper-text", {
-            'color': help.toCss()
-        })
-
-        ret += self.cssElement(".ha-blue", {
-            'background-color': accent.toCss(),
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement("nav .brand-logo", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement("nav ul a", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".accent-title", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement("footer a:link", {
-            'text-decoration': 'underline',
-            'color': accent_text.textColor().tint(accent_text, 0.95).toCss()
-        })
-
-        ret += self.cssElement(".accent-text", {
-            'color': accent_text.textColor().tint(accent_text, 0.95).toCss()
-        })
-
-        ret += self.cssElement(".btn", {
-            'background-color': accent.toCss()
-        })
-
-        ret += self.cssElement(".btn:hover, .btn-large:hover, .btn-small:hover", {
-            'background-color': accent.toCss(),
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".btn:focus, .btn-large:focus, .btn-small:focus, .btn-floating:focus", {
-            'background-color': focus.toCss(),
-        })
-
-        ret += self.cssElement(".modal .modal-footer .btn, .modal .modal-footer .btn-large, .modal .modal-footer .btn-small, .modal .modal-footer .btn-flat", {
-            'margin': '6px 0',
-            'background-color': accent.toCss(),
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".dropdown-content", {
-            'background-color': background.toCss(),
-            'box-shadow': bgshadow,
-            'webkit-box-shadow': bgshadow,
-        })
-
-        ret += self.cssElement(".highlight-border", {
-            'border-color': accent.toCss(),
-            'border-width': '1px',
-            'border-style': 'solid',
-        })
-
-        ret += self.cssElement(".dropdown-content li > a", {
-            'color': text.tint(background, 0.5).toCss()
-        })
-
-        ret += self.cssElement(".modal", {
-            'background-color': bg_modal.toCss(),
-            'box-shadow': shadow_modal
-        })
-
-        ret += self.cssElement(".modal .modal-footer", {
-            'background-color': bg_modal.toCss()
-        })
-
-        ret += self.cssElement(".modal.modal-fixed-footer .modal-footer", {
-            'border-top': '1px solid ' + text.withAlpha(0.1).toCss()
-        })
-
-        ret += self.cssElement(".modal-overlay", {
-            'background': text.toCss()
-        })
-
-        ret += self.cssElement("[type=\"checkbox\"].filled-in:checked + span:not(.lever)::before", {
-            'border-right': '2px solid ' + text.toCss(),
-            'border-bottom': '2px solid ' + text.toCss()
-        })
-
-        ret += self.cssElement("[type=\"checkbox\"].filled-in:checked + span:not(.lever)::after", {
-            'border': '2px solid ' + text.toCss(),
-            'background-color': accent.darken(0.2).saturate(1.2).toCss()
-        })
-
-        ret += self.cssElement(".input-field .prefix.active", {
-            'color': accent.toCss()
-        })
-
-        ret += self.cssElement(".input-field > label", {
-            'color': help.toCss()
-        })
-
-        ret += self.cssElement(".input-field .helper-text", {
-            'color': help.toCss()
-        })
-
-        ret += self.cssElement("input:not([type]):focus:not([readonly]) + label, input[type=\"text\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"password\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"email\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"url\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"time\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"date\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"datetime\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"datetime-local\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"tel\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"number\"]:not(.browser-default):focus:not([readonly]) + label, input[type=\"search\"]:not(.browser-default):focus:not([readonly]) + label, textarea.materialize-textarea:focus:not([readonly]) + label", {
-            'color': text.toCss()
-        })
-
-        ret += self.cssElement("input.valid:not([type]), input.valid:not([type]):focus, input[type=\"text\"].valid:not(.browser-default), input[type=\"text\"].valid:not(.browser-default):focus, input[type=\"password\"].valid:not(.browser-default), input[type=\"password\"].valid:not(.browser-default):focus, input[type=\"email\"].valid:not(.browser-default), input[type=\"email\"].valid:not(.browser-default):focus, input[type=\"url\"].valid:not(.browser-default), input[type=\"url\"].valid:not(.browser-default):focus, input[type=\"time\"].valid:not(.browser-default), input[type=\"time\"].valid:not(.browser-default):focus, input[type=\"date\"].valid:not(.browser-default), input[type=\"date\"].valid:not(.browser-default):focus, input[type=\"datetime\"].valid:not(.browser-default), input[type=\"datetime\"].valid:not(.browser-default):focus, input[type=\"datetime-local\"].valid:not(.browser-default), input[type=\"datetime-local\"].valid:not(.browser-default):focus, input[type=\"tel\"].valid:not(.browser-default), input[type=\"tel\"].valid:not(.browser-default):focus, input[type=\"number\"].valid:not(.browser-default), input[type=\"number\"].valid:not(.browser-default):focus, input[type=\"search\"].valid:not(.browser-default), input[type=\"search\"].valid:not(.browser-default):focus, textarea.materialize-textarea.valid, textarea.materialize-textarea.valid:focus, .select-wrapper.valid > input.select-dropdown", {
-            'border-bottom': '1px solid ' + accent.toCss(),
-            ' -webkit-box-shadow': ' 0 1px 0 0 ' + accent.toCss(),
-            'box-shadow': '0 1px 0 0 ' + accent.toCss()
-        })
-
-        ret += self.cssElement("input:not([type]):focus:not([readonly]), input[type=\"text\"]:not(.browser-default):focus:not([readonly]), input[type=\"password\"]:not(.browser-default):focus:not([readonly]), input[type=\"email\"]:not(.browser-default):focus:not([readonly]), input[type=\"url\"]:not(.browser-default):focus:not([readonly]), input[type=\"time\"]:not(.browser-default):focus:not([readonly]), input[type=\"date\"]:not(.browser-default):focus:not([readonly]), input[type=\"datetime\"]:not(.browser-default):focus:not([readonly]), input[type=\"datetime-local\"]:not(.browser-default):focus:not([readonly]), input[type=\"tel\"]:not(.browser-default):focus:not([readonly]), input[type=\"number\"]:not(.browser-default):focus:not([readonly]), input[type=\"search\"]:not(.browser-default):focus:not([readonly]), textarea.materialize-textarea:focus:not([readonly])", {
-            'border-bottom': '1px solid ' + accent.toCss(),
-            '-webkit-box-shadow': '0 1px 0 0 ' + accent.toCss(),
-            'box-shadow': '0 1px 0 0 ' + accent.toCss()
-        })
-
-        ret += self.cssElement(".card", {
-            'background-color': background.toCss(),
-            'box-shadow': "0 2px 2px 0 " + shadow1.toCss() + ", 0 3px 1px -2px " + shadow2.toCss() + ", 0 1px 5px 0 " + shadow3.toCss()
-        })
-
-        ret += self.cssElement("nav a", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".btn, .btn-large, .btn-small", {
-            'color': accent_text.toCss()
-        })
-
-        ret += self.cssElement(".bmc-button img", {
-            'width': '15px',
-            'margin-bottom': '1px',
-            'box-shadow': 'none',
-            'border': 'none',
-            'vertical-align': 'middle'
-        })
-
-        ret += self.cssElement(".bmc-button", {
-            'line-height': '15px',
-            'height': '25px',
-            'text-decoration': 'none',
-            'display': 'inline-flex',
-            'background-color': background.toCss(),
-            'border-radius': '3px',
-            'border': '1px solid transparent',
-            'padding': '3px 2px 3px 2px',
-            'letter-spacing': '0.6px',
-            'box-shadow': '0px 1px 2px ' + shadowbmc.toCss(),
-            '-webkit-box-shadow': '0px 1px 2px 2px ' + shadowbmc.toCss(),
-            'margin': '0 auto',
-            'font-family': "'Cookie', cursive",
-            '-webkit-box-sizing': 'border-box',
-            'box-sizing': 'border-box',
-            '-o-transition': '0.3s all linear',
-            '-webkit-transition': '0.3s all linear',
-            '-moz-transition': '0.3s all linear',
-            '-ms-transition': '0.3s all linear',
-            'transition': '0.3s all linear',
-            'font-size': '17px'
-        })
-
-        ret += self.cssElement(".bmc-button span", {'color': text.toCss()})
-
-        ret += self.cssElement(".tabs .tab a", {
-            'color': link_accent.tint(background, 0.35).toCss(),
-            'display': 'block',
-            'width': '100%',
-            'height': '100%',
-            'padding': '0 24px',
-            'font-size': '14px',
-            'text-overflow': 'ellipsis',
-            'overflow': 'hidden',
-            '-webkit-transition': 'color .28s ease, background-color .28s ease',
-            'transition': 'color .28s ease, background-color .28s ease',
-        })
-
-        ret += self.cssElement(".tabs .tab a:hover, .tabs .tab a.active", {
-            'background-color': 'transparent',
-            'color': link_accent.toCss()
-        })
-
-        ret += self.cssElement(".tabs .indicator", {
-            'position': 'absolute',
-            'bottom': '0',
-            'height': '2px',
-            'background-color': link_accent.toCss(),
-            'will-change': 'left, right'
-        })
-
-        ret += self.cssElement(".tabs", {
-            'position': 'relative',
-            'overflow-x': 'auto',
-            'overflow-y': 'hidden',
-            'height': '48px',
-            'width': '100%',
-            'background-color': 'transparent',
-            'margin': '0 auto',
-            'white-space': 'nowrap',
-        })
-
-        return web.Response(text=ret, content_type='text/css')
-
     async def index(self, request: Request):
         if not self._coord.enabled():
-            return web.FileResponse(self.filePath("index.html"), headers={'cache-control': 'no-store'})
+            template = "index.jinja2"
+            context = {
+                **self.base_context(),
+                'showOpenDriveLink': True
+            }
         else:
-            return web.FileResponse(self.filePath("working.html"), headers={'cache-control': 'no-store'})
+            template = "working.jinja2"
+            context = {
+                **self.base_context(),
+                'showOpenDriveLink': True,
+                'navBarTitle': 'Snapshots'
+            }
+        response = aiohttp_jinja2.render_template(template,
+                                                  request,
+                                                  context)
+        response.headers['cache-control'] = 'no-store'
+        return response
 
+    @aiohttp_jinja2.template('privacy_policy.jinja2')
     async def pp(self, request: Request):
-        return web.FileResponse(self.filePath("privacy_policy.html"))
+        return self.base_context()
 
+    @aiohttp_jinja2.template('terms_of_service.jinja2')
     async def tos(self, request: Request):
-        return web.FileResponse(self.filePath("terms_of_service.html"))
+        return self.base_context()
 
+    @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:
-        return web.FileResponse(self.filePath("index.html"))
+        return {
+            **self.base_context(),
+            'showOpenDriveLink': True
+        }
 
 
 @web.middleware

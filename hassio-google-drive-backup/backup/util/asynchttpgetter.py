@@ -14,6 +14,12 @@ CONTENT_LENGTH_HEADER = "content-length"
 CONTENT_LENGTH_ERROR = "Content size must be provided if the webserver doesn't provide it"
 SERVER_CONTENT_LENGTH_ERROR = "Server returned a content length that didn't match the requested size"
 POSITION_ERROR_MESSAGE = "AsyncHttpGetter must also be set up at position 0"
+DEFAULT_CHUNK_SIZE = 1024 * 1024
+
+
+class Stupid(io.BytesIO):
+    def __len__(self):
+        return len(self.getvalue())
 
 
 class AsyncHttpGetter:
@@ -61,6 +67,9 @@ class AsyncHttpGetter:
     def size(self) -> int:
         self._ensureSetup()
         return self._size
+
+    def __len__(self):
+        return self.size()
 
     def position(self, pos=None):
         if pos is not None:
@@ -114,9 +123,9 @@ class AsyncHttpGetter:
         self._response = resp
         self._responseStart = where
 
-    async def read(self, count):
+    async def read(self, count=DEFAULT_CHUNK_SIZE):
         self._ensureSetup()
-        ret = io.BytesIO()
+        ret = Stupid()
         if self._size is not None and self._position >= self._size:
             return ret
 
@@ -157,3 +166,15 @@ class AsyncHttpGetter:
     async def __aexit__(self, type, value, traceback):
         if self._response is not None:
             await self._response.release()
+
+    async def close(self):
+        await self.__aexit__()
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        val = await self.read()
+        if len(val) == 0:
+            raise StopAsyncIteration
+        return val.getbuffer()

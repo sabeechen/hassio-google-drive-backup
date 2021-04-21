@@ -7,7 +7,7 @@ from typing import List
 
 from backup.config import Config, Startable
 from backup.drive import DriveSource
-from backup.ha import HaSource, HaUpdater
+from backup.ha import HaSource, HaUpdater, AddonStopper
 from backup.model import SnapshotDestination, SnapshotSource, Scyncer
 from backup.util import Resolver
 from backup.model import Coordinator
@@ -17,7 +17,6 @@ from backup.logger import getLogger
 from .time import AcceleratedTime, Time
 from .debugworker import DebugWorker
 from .tracing_session import TracingSession
-
 logger = getLogger(__name__)
 
 
@@ -52,9 +51,9 @@ class BaseModule(Module):
     @multiprovider
     @singleton
     def getStartables(self, ha_updater: HaUpdater, debugger: DebugWorker, ha_source: HaSource,
-                      server: UiServer, restarter: Restarter, syncer: Scyncer, watcher: Watcher) -> List[Startable]:
+                      server: UiServer, restarter: Restarter, syncer: Scyncer, watcher: Watcher, stopper: AddonStopper) -> List[Startable]:
         # Order here matters, since its the order in which components of the addon are initialized.
-        return [ha_updater, debugger, ha_source, server, restarter, syncer, watcher]
+        return [ha_updater, debugger, ha_source, server, restarter, syncer, watcher, stopper]
 
     @provider
     @singleton

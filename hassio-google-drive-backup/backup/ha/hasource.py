@@ -1,4 +1,5 @@
 import asyncio
+import aiohttp
 from datetime import timedelta
 from io import IOBase
 from threading import Lock, Thread
@@ -7,17 +8,19 @@ from typing import Dict, List, Optional
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
-from ..util import AsyncHttpGetter, GlobalInfo
+from ..util import AsyncHttpGetter, GlobalInfo, Estimator
 from ..config import Config, Setting, CreateOptions
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
 from ..exceptions import (LogicError, SnapshotInProgress,
-                          SupervisorConnectionError, UploadFailed, ensureKey)
+                          UploadFailed, ensureKey)
 from .harequests import HaRequests
 from .password import Password
 from .snapshotname import SnapshotName
 from ..time import Time
 from ..logger import getLogger
+from backup.const import FOLDERS
+from .addon_stopper import AddonStopper
 
 logger = getLogger(__name__)
 
@@ -47,6 +50,9 @@ class PendingSnapshot(AbstractSnapshot):
         self._time = time
         self._pending_subverted = False
         self._start_time = time.now()
+
+    def considerForPurge(self) -> bool:
+        return False
 
     def startTime(self):
         return self._start_time
@@ -111,7 +117,7 @@ class HaSource(SnapshotSource[HASnapshot]):
     Stores logic for interacting with the supervisor add-on API
     """
     @inject
-    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo):
+    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo, stopper: AddonStopper, estimator: Estimator):
         super().__init__()
         self.config: Config = config
         self.snapshot_thread: Thread = None
@@ -129,6 +135,8 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.cached_retention = {}
         self._info = info
         self.pending_options = {}
+        self.stopper = stopper
+        self.estimator = estimator
 
         # This lock should be used for _ANYTHING_ that interacts with self._pending_snapshot
         self._pending_snapshot_lock = asyncio.Lock()
@@ -148,11 +156,17 @@ class HaSource(SnapshotSource[HASnapshot]):
     def name(self) -> str:
         return SOURCE_HA
 
+    def title(self) -> str:
+        return "Home Assistant"
+
     def maxCount(self) -> None:
         return self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
 
     def enabled(self) -> bool:
         return True
+
+    def freeSpace(self):
+        return self.estimator.getBytesFree()
 
     async def create(self, options: CreateOptions) -> HASnapshot:
         # Make sure instance info is up-to-date, for the snapshot name
@@ -172,6 +186,9 @@ class HaSource(SnapshotSource[HASnapshot]):
                 if not self.pending_snapshot.isFailed() and not self.pending_snapshot.isComplete():
                     logger.info("A snapshot was already in progress")
                     raise SnapshotInProgress()
+
+            # try to stop addons
+            await self.stopper.stopAddons(self.self_info['slug'])
 
             # Create the snapshot palceholder object
             self.pending_snapshot = PendingSnapshot(
@@ -248,7 +265,10 @@ class HaSource(SnapshotSource[HASnapshot]):
         resp = None
         try:
             snapshot.overrideStatus("Downloading {0}%", source)
-            resp = await self.harequests.upload(source)
+            async with source:
+                with aiohttp.MultipartWriter('mixed') as mpwriter:
+                    mpwriter.append(source, {'CONTENT-TYPE': 'application/tar'})
+                    resp = await self.harequests.upload(mpwriter)
             snapshot.clearStatus()
         except Exception as e:
             logger.printException(e)
@@ -321,10 +341,10 @@ class HaSource(SnapshotSource[HASnapshot]):
             return ""
         return self._haUrl() + "hassio/ingress/" + str(self._info.slug)
 
-    def getFullRestoreLink(self):
+    def getHomeAssistantUrl(self):
         if not self.isInitialized():
             return ""
-        return self._haUrl() + "hassio/snapshots"
+        return self._haUrl()
 
     def _haUrl(self):
         if self._info.ha_ssl:
@@ -345,7 +365,11 @@ class HaSource(SnapshotSource[HASnapshot]):
         if self._pending_snapshot_task and not self._pending_snapshot_task.done():
             self._pending_snapshot_task.cancel()
 
-    async def _requestAsync(self, pending: PendingSnapshot) -> None:
+    def postSync(self):
+        self.stopper.allowRun()
+        self.stopper.isSnapshotting(self.pending_snapshot is not None)
+
+    async def _requestAsync(self, pending: PendingSnapshot, start=[]) -> None:
         try:
             result = await asyncio.wait_for(self.harequests.createSnapshot(pending._request_info), timeout=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS))
             slug = ensureKey(
@@ -362,7 +386,9 @@ class HaSource(SnapshotSource[HASnapshot]):
                 logger.error("Snapshot failed:")
                 logger.printException(e)
                 pending.failed(e, self.time.now())
-        self.trigger()
+        finally:
+            await self.stopper.startAddons()
+            self.trigger()
 
     def _buildSnapshotInfo(self, options: CreateOptions):
         addons: List[str] = []
@@ -372,7 +398,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             'addons': [],
             'folders': []
         }
-        folders = ["ssl", "share", "homeassistant", "addons/local"]
+        folders = list(map(lambda f: f['slug'], FOLDERS))
         type_name = "Full"
         for folder in folders:
             if folder not in self.config.get(Setting.EXCLUDE_FOLDERS):

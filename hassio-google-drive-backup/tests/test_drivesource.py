@@ -7,6 +7,8 @@ import asyncio
 from aiohttp.client_exceptions import ClientResponseError
 from backup.config import Config, Setting
 from dev.simulationserver import SimulationServer
+from dev.simulated_google import SimulatedGoogle, URL_MATCH_UPLOAD_PROGRESS, URL_MATCH_FILE
+from dev.request_interceptor import RequestInterceptor
 from backup.drive import DriveSource, FolderFinder
 from backup.drive.driverequests import (BASE_CHUNK_SIZE,
                                         CHUNK_UPLOAD_TARGET_SECONDS, MAX_CHUNK_SIZE,
@@ -15,8 +17,8 @@ from backup.drive.drivesource import FOLDER_MIME_TYPE
 from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
                                DriveQuotaExceeded, ExistingBackupFolderError,
                                GoogleCantConnect, GoogleCredentialsExpired,
-                               GoogleDnsFailure, GoogleInternalError,
-                               GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError, GoogleUnexpectedError)
+                               GoogleInternalError,
+                               GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError)
 from backup.creds import Creds
 from backup.model import DriveSnapshot, DummySnapshot
 from .faketime import FakeTime
@@ -157,8 +159,8 @@ async def test_bad_auth_creds(drive: DriveSource, time):
 
 
 @pytest.mark.asyncio
-async def test_out_of_space(snapshot_helper, drive: DriveSource, server: SimulationServer):
-    server.simulate_out_of_drive_space = True
+async def test_out_of_space(snapshot_helper, drive: DriveSource, google: SimulatedGoogle):
+    google.setDriveSpaceAvailable(100)
     from_snapshot, data = await snapshot_helper.createFile()
     with pytest.raises(DriveQuotaExceeded):
         await drive.save(from_snapshot, data)
@@ -182,33 +184,32 @@ async def test_drive_connect_error(drive: DriveSource, config: Config, time):
 
 
 @pytest.mark.asyncio
-async def test_upload_session_expired(drive, time, server, snapshot_helper):
+async def test_upload_session_expired(drive, time, snapshot_helper, interceptor: RequestInterceptor):
     from_snapshot, data = await snapshot_helper.createFile()
-    server.update({"drive_upload_error": 404})
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, status=404)
     with pytest.raises(GoogleSessionError):
         await drive.save(from_snapshot, data)
     assert time.sleeps == []
 
 
 @pytest.mark.asyncio
-async def test_upload_resume(drive: DriveSource, time, server, snapshot_helper):
+async def test_upload_resume(drive: DriveSource, time, snapshot_helper: SnapshotHelper, google: SimulatedGoogle, interceptor: RequestInterceptor):
     from_snapshot, data = await snapshot_helper.createFile()
-    server.update({"drive_upload_error": 500,
-                   "drive_upload_error_attempts": 1})
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, attempts=1, status=500)
 
     # Upload, which will fail
     with pytest.raises(GoogleInternalError):
         await drive.save(from_snapshot, data)
 
     # Verify we uploaded one chunk
-    assert server.chunks == [BASE_CHUNK_SIZE]
+    assert google.chunks == [BASE_CHUNK_SIZE]
 
     # Retry the upload, which shoudl now pass
-    server.update({"drive_upload_error": None})
+    interceptor.clear()
     data.position(0)
     drive_snapshot = await drive.save(from_snapshot, data)
     from_snapshot.addSource(drive_snapshot)
-    assert server.chunks == [BASE_CHUNK_SIZE,
+    assert google.chunks == [BASE_CHUNK_SIZE,
                              BASE_CHUNK_SIZE, (data.size()) - BASE_CHUNK_SIZE * 2]
 
     # Verify the data is correct
@@ -232,20 +233,18 @@ def test_chunk_size(drive: DriveSource):
 
 
 @pytest.mark.asyncio
-async def test_working_through_upload(drive: DriveSource, server: SimulationServer, snapshot_helper: SnapshotHelper):
+async def test_working_through_upload(drive: DriveSource, server: SimulationServer, snapshot_helper: SnapshotHelper, interceptor: RequestInterceptor):
     assert not drive.isWorking()
 
     # Let a single chunk upload, then wait
-    server._upload_chunk_wait.clear()
-    server._upload_chunk_trigger.clear()
-    server.waitOnChunk = 2
+    matcher = interceptor.setWaiter(URL_MATCH_UPLOAD_PROGRESS, attempts=1)
     from_snapshot, data = await snapshot_helper.createFile(size=1024 * 1024 * 10)
     save_task = asyncio.create_task(drive.save(from_snapshot, data))
-    await server._upload_chunk_trigger.wait()
+    await matcher.waitForCall()
     assert drive.isWorking()
 
     # let it complete
-    server._upload_chunk_wait.set()
+    matcher.clear()
     await save_task
     assert not drive.isWorking()
 
@@ -263,14 +262,13 @@ async def test_drive_timeout(drive, config, time: FakeTime):
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time, snapshot_helper):
+async def test_resume_upload_attempts_exhausted(drive: DriveSource, time, snapshot_helper, interceptor: RequestInterceptor, google: SimulatedGoogle):
     # Allow an upload to update one chunk and then fail.
     from_snapshot, data = await snapshot_helper.createFile()
-    server.update({"drive_upload_error": 500,
-                   "drive_upload_error_attempts": 1})
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, attempts=1, status=500)
     with pytest.raises(GoogleInternalError):
         await drive.save(from_snapshot, data)
-    assert server.chunks == [BASE_CHUNK_SIZE]
+    assert google.chunks == [BASE_CHUNK_SIZE]
 
     # Verify we have a cached location
     assert drive.drivebackend.last_attempt_location is not None
@@ -295,7 +293,7 @@ async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time
     assert drive.drivebackend.last_attempt_location != last_location
 
     # Now let it succeed
-    server.update({"drive_upload_error": None})
+    interceptor.clear()
     data.position(0)
     drive_snapshot = await drive.save(from_snapshot, data)
     from_snapshot.addSource(drive_snapshot)
@@ -306,14 +304,15 @@ async def test_resume_upload_attempts_exhausted(drive: DriveSource, server, time
 
 
 @pytest.mark.asyncio
-async def test_google_internal_error(drive, server, time: FakeTime):
-    server.update({"drive_all_error": 500})
+async def test_google_internal_error(drive, server, time: FakeTime, interceptor: RequestInterceptor):
+    interceptor.setError(URL_MATCH_FILE, 500)
     with pytest.raises(GoogleInternalError):
         await drive.get()
     assert time.sleeps == RETRY_EXHAUSTION_SLEEPS
     time.clearSleeps()
 
-    server.update({"drive_all_error": 503})
+    interceptor.clear()
+    interceptor.setError(URL_MATCH_FILE, 500)
     with pytest.raises(GoogleInternalError):
         await drive.get()
     assert time.sleeps == RETRY_EXHAUSTION_SLEEPS
@@ -334,11 +333,11 @@ async def test_disable_upload(drive: DriveSource, config: Config):
 
 
 @pytest.mark.asyncio
-async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, config: Config, server, snapshot_helper):
+async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, config: Config, server, snapshot_helper, interceptor: RequestInterceptor):
     from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
-    server.setError(".*upload/drive/v3/files/progress.*", 1, 402)
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 402, 1)
     with pytest.raises(ClientResponseError):
         await drive.save(from_snapshot, data)
 
@@ -351,7 +350,7 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
 
     # upload again, which should retry
     server.urls.clear()
-    server.match_errors.clear()
+    interceptor.clear()
     data.position(0)
     snapshot = await drive.save(from_snapshot, data)
     assert server.wasUrlRequested(
@@ -366,18 +365,17 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_resume_session_reused_on_http5XX(time, drive: DriveSource, config: Config, server, snapshot_helper):
-    await verify_upload_resumed(time, drive, config, server, 550, snapshot_helper)
+async def test_resume_session_reused_on_http5XX(time, drive: DriveSource, config: Config, server, snapshot_helper, interceptor: RequestInterceptor):
+    await verify_upload_resumed(time, drive, config, server, interceptor, 550, snapshot_helper)
 
 
 @pytest.mark.asyncio
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, server, snapshot_helper):
+async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, server, snapshot_helper, interceptor: RequestInterceptor):
     from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
-    server.match_errors.clear()
-    server.setError(".*upload/drive/v3/files/progress.*", 1, 501)
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 501, 1)
     with pytest.raises(ClientResponseError):
         await drive.save(from_snapshot, data)
 
@@ -391,8 +389,8 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
 
     for x in range(1, RETRY_SESSION_ATTEMPTS + 1):
         server.urls.clear()
-        server.match_errors.clear()
-        server.setError(".*upload/drive/v3/files/progress.*", 0, 501)
+        interceptor.clear()
+        interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 501)
         data.position(0)
         with pytest.raises(ClientResponseError):
             await drive.save(from_snapshot, data)
@@ -405,8 +403,8 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
 
     # Next attempt should give up and restart the upload
     server.urls.clear()
-    server.match_errors.clear()
-    server.setError(".*upload/drive/v3/files/progress.*", 1, 501)
+    interceptor.clear()
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 501, 1)
     data.position(0)
     with pytest.raises(ClientResponseError):
         await drive.save(from_snapshot, data)
@@ -417,7 +415,7 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
 
     # upload again, which should retry
     server.urls.clear()
-    server.match_errors.clear()
+    interceptor.clear()
     data.position(0)
     snapshot = await drive.save(from_snapshot, data)
     assert not server.wasUrlRequested(
@@ -430,11 +428,11 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
     await compareStreams(data, download)
 
 
-async def verify_upload_resumed(time, drive: DriveSource, config: Config, server, status, snapshot_helper, expected=ClientResponseError):
+async def verify_upload_resumed(time, drive: DriveSource, config: Config, server: SimulationServer, interceptor: RequestInterceptor, status, snapshot_helper, expected=ClientResponseError):
     from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
-    server.setError(".*upload/drive/v3/files/progress.*", 1, status)
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, status, 1)
     with pytest.raises(expected):
         await drive.save(from_snapshot, data)
 
@@ -447,7 +445,7 @@ async def verify_upload_resumed(time, drive: DriveSource, config: Config, server
 
     # Retry the upload and let is succeed
     server.urls.clear()
-    server.match_errors.clear()
+    interceptor.clear()
     data.position(0)
     snapshot = await drive.save(from_snapshot, data)
 
@@ -475,16 +473,16 @@ async def test_recreate_folder_when_deleted(time, drive: DriveSource, config: Co
     await drive.get()
     id = await drive.getFolderId()
     await drive.drivebackend.delete(id)
-    await drive.get()
+    assert len(await drive.get()) == 0
     assert id != await drive.getFolderId()
 
 
 @pytest.mark.asyncio
-async def test_recreate_folder_when_losing_permissions(time, drive: DriveSource, config: Config, snapshot_helper, server: SimulationServer):
+async def test_recreate_folder_when_losing_permissions(time, drive: DriveSource, config: Config, snapshot_helper, google: SimulatedGoogle):
     await drive.get()
     id = await drive.getFolderId()
-    server.lostPermission.append(id)
-    await drive.get()
+    google.lostPermission.append(id)
+    assert len(await drive.get()) == 0
     assert id != await drive.getFolderId()
 
 
@@ -508,7 +506,7 @@ async def test_folder_missing_on_upload(time, drive: DriveSource, config: Config
 
 
 @pytest.mark.asyncio
-async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper, session):
+async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, config: Config, google: SimulatedGoogle, snapshot_helper, session):
     # Make the folder
     await drive.get()
 
@@ -516,7 +514,7 @@ async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, 
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
 
     # Make the folder inaccessible
-    server.lostPermission.append(await drive.getFolderId())
+    google.lostPermission.append(await drive.getFolderId())
     time.advanceDay()
 
     # Fail to upload
@@ -525,18 +523,18 @@ async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, 
 
 
 @pytest.mark.asyncio
-async def test_folder_error_on_upload_lost_permission_custom_client(time, drive: DriveSource, config: Config, server, snapshot_helper, session):
+async def test_folder_error_on_upload_lost_permission_custom_client(time, drive: DriveSource, config: Config, google: SimulatedGoogle, snapshot_helper, session):
     # Make the folder
     await drive.get()
 
     # Require a specified folder so we don't query
     config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
 
-    server.client_id_hack = config.get(Setting.DEFAULT_DRIVE_CLIENT_ID)
+    google._client_id_hack = config.get(Setting.DEFAULT_DRIVE_CLIENT_ID)
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something-else")
 
     # Make the folder inaccessible
-    server.lostPermission.append(await drive.getFolderId())
+    google.lostPermission.append(await drive.getFolderId())
     time.advanceDay()
 
     # Fail to upload
@@ -545,7 +543,7 @@ async def test_folder_error_on_upload_lost_permission_custom_client(time, drive:
 
 
 @pytest.mark.asyncio
-async def test_folder_error_on_query_lost_permission(time, drive: DriveSource, config: Config, server: SimulationServer):
+async def test_folder_error_on_query_lost_permission(time, drive: DriveSource, config: Config, google: SimulatedGoogle):
     # Make the folder
     await drive.get()
 
@@ -554,7 +552,7 @@ async def test_folder_error_on_query_lost_permission(time, drive: DriveSource, c
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Make the folder inaccessible
-    server.lostPermission.append(await drive.getFolderId())
+    google.lostPermission.append(await drive.getFolderId())
 
     # It shoudl fail!
     with pytest.raises(BackupFolderInaccessible):
@@ -667,10 +665,10 @@ async def test_existing_resolved_create_new(time, drive: DriveSource, config: Co
 
 
 @pytest.mark.asyncio
-async def test_cred_refresh_with_secret(drive: DriveSource, server: SimulationServer, time: FakeTime, config: Config):
-    server.resetDriveAuth()
+async def test_cred_refresh_with_secret(drive: DriveSource, google: SimulatedGoogle, time: FakeTime, config: Config):
+    google.resetDriveAuth()
     with open(config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
-        creds = server.getCurrentCreds()
+        creds = google.creds()
         creds._secret = config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET)
         json.dump(creds.serialize(), f)
     drive.drivebackend.tryLoadCredentials()
@@ -692,8 +690,8 @@ async def test_cred_refresh_with_secret(drive: DriveSource, server: SimulationSe
 
 
 @pytest.mark.asyncio
-async def test_cred_refresh_no_secret(drive: DriveSource, server: SimulationServer, time: FakeTime, config: Config):
-    drive.saveCreds(server.getCurrentCreds())
+async def test_cred_refresh_no_secret(drive: DriveSource, google: SimulatedGoogle, time: FakeTime, config: Config):
+    drive.saveCreds(google.creds())
     await drive.get()
     old_creds = drive.drivebackend.creds
     await drive.get()
@@ -744,9 +742,9 @@ async def test_cant_reach_refresh_server(drive: DriveSource, server: SimulationS
 
 
 @pytest.mark.asyncio
-async def test_refresh_problem_with_google(drive: DriveSource, server: SimulationServer, config: Config, time):
+async def test_refresh_problem_with_google(drive: DriveSource, interceptor: RequestInterceptor, config: Config, time):
     time.advanceDay()
-    server.setError(".*/oauth2/v4/token.*", status=510)
+    interceptor.setError(".*/oauth2/v4/token.*", status=510)
     drive.drivebackend.creds._secret = None
     with pytest.raises(CredRefreshGoogleError) as error:
         await drive.get()
@@ -765,27 +763,27 @@ async def test_ignore_trashed_snapshots(time, drive: DriveSource, config: Config
 
 
 @pytest.mark.asyncio
-async def test_download_timeout(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper):
-    config.override(Setting.DOWNLOAD_TIMEOUT_SECONDS, 1)
+async def test_download_timeout(time, drive: DriveSource, config: Config, interceptor: RequestInterceptor, snapshot_helper):
+    config.override(Setting.DOWNLOAD_TIMEOUT_SECONDS, 0.1)
     from_snapshot, data = await snapshot_helper.createFile()
     snapshot = await drive.save(from_snapshot, data)
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
-    server.drive_sleep = 100
+    interceptor.setSleep(URL_MATCH_FILE, sleep=100)
     download = await drive.read(from_snapshot)
     data.position(0)
-    
+
     with pytest.raises(GoogleTimeoutError):
         await compareStreams(data, download)
 
 
 @pytest.mark.asyncio
-async def test_resume_session_reused_on_http410(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper: SnapshotHelper):
+async def test_resume_session_reused_on_http410(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper: SnapshotHelper, interceptor: RequestInterceptor):
     from_snapshot, data = await snapshot_helper.createFile()
 
-    # Configure the upload to fail after the first upload chunk
-    server.setError(".*upload/drive/v3/files/progress.*", 1, 500)
+    # Configure the upload to fail
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 500)
     with pytest.raises(GoogleInternalError):
         await drive.save(from_snapshot, data)
 
@@ -795,8 +793,8 @@ async def test_resume_session_reused_on_http410(time, drive: DriveSource, config
     assert drive.drivebackend.last_attempt_location is not None
 
     server.urls.clear()
-    server.match_errors.clear()
+    interceptor.clear()
     data.position(0)
 
-    server.setError(drive.drivebackend.last_attempt_location, 0, 410)
+    interceptor.setError(drive.drivebackend.last_attempt_location, 0, 410)
     await drive.save(from_snapshot, data)

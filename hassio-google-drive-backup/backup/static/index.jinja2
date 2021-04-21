@@ -1,0 +1,327 @@
+{% extends "layouts/base.jinja2" %}
+
+{% block head %}
+  {{ super() }}
+{% endblock %}
+
+{% block content %}
+  <main>
+    <div class="section no-pad-bot" id="index-banner">
+      <div class="container">
+        <br><br>
+        <h1 class="header center">Get Started</h1>
+        <div class="row center">
+          <h5 class="header col s12 light">To begin, this add-on will need access to your Google Drive&trade;.
+            <span id="flavor_auto_folder">On your first backup it will create a new folder at the root of your <a
+                href="https://drive.google.com/drive/my-drive" target="_blank" rel="noreferrer">My Drive</a> where future backups will be stored. Once
+              its created, you can move the folder wherever you want.</span>
+            <span id="flavor_specific_folder">After connecting with Google Drive, you'll be prompted to select your
+              backup folder.</span>
+          </h5>
+        </div>
+        <div>
+
+        </div>
+        <div class="row center">
+          <div class="col m12 l6 offset-l3">
+            <h6 id="what_do_next_now_please" style="display: none;" class="header light">
+              <span id="what_do_next_now_please_text"></span>
+              Change your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+                  style="display: inline; margin-right: 2px; vertical-align: middle; font-size: 15px">settings</i>settings</a>
+              to alter the add-on's behavior if that isn't what you want.
+            </h6>
+          </div>
+        </div>
+        <div class="row center">
+          <div id="option1" class="col m12 l6 offset-l3 center center-align">
+            <a target="_blank" id="authenticate-button" style="margin: 10px"
+              class="btn-large waves-effect waves-light btn ha-blue">Authenticate
+              with Google Drive</a>
+            <div class="row center">
+              <div class="col s12">
+                <ul>
+                  <li>
+                    <h6 class="header col s12 light">
+                      Clicking this link authenticates you with an external domain (<a
+                        href="https://habackup.io">habackup.io</a>). To learn why
+                      this is necessary, check out the details <a
+                        href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md" target="_blank" rel="noreferrer">here</a>.
+                      By doing this, you agree to our <a href="pp">Privacy Policy</a> and <a href="tos">Terms of
+                        Service</a></h6>
+                  </li>
+                  <li>
+                    <h6 class="header col s12 light">*Note: this will <i>only</i> have access to the files and folders
+                      it
+                      creates.
+                      The Add-on can't see any of the other files you've added to Google Drive.</h6>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="row center">
+              <div class="col s12">
+                
+                You might be asked to copy an authorization code from the link above.  If you do, paste it here:
+                <textarea id="google_credentials_box"></textarea>
+                <br>
+                <div class="left" style="display: none;" id="save_cred_message">
+                  <div class="cls-spinner left" id="save_cred_working">
+                    <div class="cls-signal"></div>
+                  </div>
+                  <div class="left center" style="display: flex;align-items: center;height: 52px;" id="save_cred_message"></div>
+                </div>
+                
+                <a target="_blank" class="right btn-large waves-effect waves-light ha-blue btn disabled"
+                      id="send_creds_button" onclick="send_creds($('#google_credentials_box').val())">Save</a>
+              </div>
+            </div>
+            <br />
+            Having trouble with this or looking to generate your own credentials without going through an external
+            domain?
+            <a href="#" onclick="$('#option2').show();$('#option1').hide();">Click here.</a>
+
+          </div>
+          <div id="option2" class="col s12 m6 offset-m3 default-hidden">
+            Follow the <a target="_blank" rel="noreferrer"
+              href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md">instructions
+              here</a> to get your own client ID and client secret from Google. This is a much more complicated and time
+            consuming approach, but doesn't require you to authenticate yourself with an external domain.
+            <br />
+            <a href="#" onclick="$('#option2').hide();$('#option1').show();">&lt; Go back to the easier way</a>
+            <div class="row">
+              <form class="col s10" action="manualauth" method="get">
+                <div class="row">
+                  <div class="input-field col s12">
+                    <i class="material-icons prefix">vpn_key</i>
+                    <input id="client_id" name="client_id" type="text" class="validate" />
+                    <label for="client_id">Client ID</label>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="input-field col s12">
+                    <i class="material-icons prefix">vpn_key</i>
+                    <input id="client_secret" name="client_secret" type="text" class="validate" />
+                    <label for="client_secret">Client Secret</label>
+                  </div>
+                </div>
+                <div class=row>
+                  <div class="input-field col s12">
+                    <a target="_blank" class="right btn-large waves-effect waves-light ha-blue btn disabled"
+                      id="secret_button" onclick="getAuthUrl()">Connect</a>
+                  </div>
+                </div>
+              </form>
+              <div class=row>
+                <div class="col s12" id="help_text" style="display: none">
+                  <p>
+                    Click "Connect" once you have a client ID and client secret. This will redirect you to Google's
+                    authentications servers where you you will be given an authentication code that you can enter below
+                    to finish authorization.
+                  </p>
+                </div>
+              </div>
+              <div class="row" style="display: none" id="code_form">
+                <div class="col s12">
+                  <form class="col s10" action="manualauth" method="get">
+                    <div class="row">
+                      <div class="input-field col s12">
+                        <i class="material-icons prefix">vpn_key</i>
+                        <input id="code" name="code" type="text" class="validate disabled">
+                        <label for="code">Code from Google</label>
+                      </div>
+                    </div>
+                    <div class=row>
+                      <div class="col s12">
+                        <a target="_blank" class="right btn-large waves-effect waves-light btn ha-blue disabled"
+                          id="manualauthbutton" onClick="submitCode()">Authorize</a>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <br><br>
+      </div>
+    </div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script type="text/javascript">
+    function submitCode() {
+      var code = $("#code").val();
+      if (!code || code.length == 0) {
+        M.toast({ html: "Please enter the code you got form Google by clicking \"connect\" above" })
+      }
+      var url = "manualauth?code=" + code;
+      $.get(url,
+        function (data) {
+          M.toast({ html: "Submitting authorization code..." })
+          if (data.hasOwnProperty("auth_url")) {
+            console.log("Redirecting to " + data.auth_url)
+            window.location = data.auth_url
+          } else if (data.hasOwnProperty("error")) {
+            M.toast({ html: data.error })
+          }
+        }, "json")
+    }
+
+    function updateHref() {
+      var client_id = $("#client_id").val();
+      var client_secret = $("#client_secret").val();
+      if (client_id && client_id.length > 0 && client_secret && client_secret.length > 0) {
+        $("#secret_button").removeClass('disabled');
+        $("#help_text").fadeIn(400)
+        $("#code_form").fadeIn(400)
+      } else {
+        $("#secret_button").addClass('disabled');
+      }
+    }
+
+    function updateCredsButton() {
+      var text = $('#google_credentials_box').val()
+      if (text.length > 0){
+        $("#send_creds_button").removeClass('disabled');
+      } else {
+        $("#send_creds_button").addClass('disabled');
+      }
+    }
+
+    function send_creds(value) {
+      path = URI("{{save_drive_creds_path}}").query({
+        'creds': value,
+        'host': getOutterHomeUri()
+      });
+      postJson(path.toString(), {}, function(data){
+        window.location.assign(getInnerHomeUri());
+      }, 
+      function(data){
+        M.toast({ html: "Couldn't save these credentials, did you copy the whole string?" })
+      }, "Saving credentials")
+    }
+
+    last_cred_version = -1;
+    function reloadForNewCreds() {
+      var jqxhr = $.get("getstatus", function (data) {
+        last_data = data;
+        if (data.is_custom_creds) {
+          $(".hide-for-custom-creds").hide();
+          $(".hide-for-default-creds").show();
+        } else {
+          $(".hide-for-custom-creds").show();
+          $(".hide-for-default-creds").hide();
+        }
+
+        if (data.is_specify_folder) {
+          $("#flavor_auto_folder").hide();
+          $("#flavor_specific_folder").show();
+        } else {
+          $("#flavor_auto_folder").show();
+          $("#flavor_specific_folder").hide();
+        }
+
+        if (data.hasOwnProperty("cred_version")) {
+          if (last_cred_version == -1) {
+            last_cred_version = data.cred_version;
+          } else if (last_cred_version != data.cred_version) {
+            //reload
+            window.location.assign(getInnerHomeUri())
+          } else {
+            last_cred_version = data.cred_version;
+          }
+        }
+        token_url = URI(getInnerHomeUri() + "{{ save_drive_creds_path }}");
+        return_url = getOutterHomeUri()
+        auth_url = URI(data.authenticate_url).query({
+          'redirectbacktoken': encodeURIComponent(token_url.toString()),
+          'version': encodeURIComponent("{{ version }}"),
+          'return': encodeURIComponent(return_url)
+        });
+        document.getElementById("authenticate-button").href = auth_url.toString();
+
+        if (!data.firstSync) {
+          snapshots = data.sources.HomeAssistant.snapshots;
+          hasSnapshots = snapshots > 0;
+          maxConfigured = data.sources.HomeAssistant.max;
+          toDelete = Math.max(0, hasSnapshots - data.sources.HomeAssistant.max);
+          if (data.sources.HomeAssistant.max == 0) {
+            toDelete = 0;
+          }
+          willSnapshot = data.next_snapshot != "Disabled";
+          willUpload = data.sources.GoogleDrive.max > 0;
+          toUpload = Math.min(data.sources.GoogleDrive.max, snapshots - toDelete);
+          text = "";
+          if (!hasSnapshots && !willSnapshot) {
+            text = "You have no snapshots in Home Assistant and you've configured this add-on not to create any."
+          } else if (hasSnapshots && toDelete > 0) {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toDelete + " oldest snapshots(s) will be deleted</b>";
+            if (toUpload > 0) {
+              text += " and the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
+            } else {
+              text += "."
+            }
+          } else if (hasSnapshots && toUpload > 0) {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
+          } else if (!hasSnapshots) {
+            text = "You have <b>no snapshots in Home Assistant</b>";
+            if (willUpload) {
+              text += ", authenticate with Google Drive to start automatically creating and backing them up."
+            } else {
+              text += ", authenticate with Google Drive to start automatically creating them."
+            }
+          } else if (willSnapshot) {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already, Authenticate with Google Drive to start creating new ones on a schedule."
+          } else {
+            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already but you haven't configured this add-on to do anything with them or create new ones."
+          }
+          $("#what_do_next_now_please_text").html(text);
+          $("#what_do_next_now_please").show();
+        }
+      })
+    }
+
+    $(document).ready(function () {
+      // Needed to make modal dialogs work.
+      $('.modal').modal();
+      $("#client_id").change(updateHref);
+      $("#client_secret").change(updateHref);
+      $("#client_secret").keyup(updateHref);
+      $("#client_id").keyup(updateHref);
+      $("#client_secret").mouseup(updateHref);
+      $("#client_id").mouseup(updateHref);
+      $("#google_credentials_box").change(updateCredsButton)
+      $("#google_credentials_box").keyup(updateCredsButton);
+
+      window.setInterval(reloadForNewCreds, 5000);
+      reloadForNewCreds();
+    });
+
+    function getAuthUrl() {
+      var client_id = $("#client_id").val();
+      var client_secret = $("#client_secret").val();
+      if (!(client_id && client_id.length > 0 && client_secret && client_secret.length > 0)) {
+        M.toast({ html: "Please enter a Client Id and Client Secret first" })
+      }
+      var url = "manualauth?client_id=" + client_id + "&client_secret=" + client_secret;
+      console.log("Requesting auth url from " + url);
+      $.get(url,
+        function (data) {
+          M.toast({ html: "Requesting authorization URL..." })
+          if (data.hasOwnProperty("auth_url")) {
+            console.log("Opening window to " + data.auth_url)
+            window.open(data.auth_url);
+            $("#code").removeClass("disabled")
+            $("#manualauthbutton").removeClass("disabled")
+          } else if (data.hasOwnProperty("error")) {
+            M.toast({ html: data.error })
+
+            $("#code").addClass("disabled")
+            $("#manualauthbutton").addClass("disabled")
+          }
+        }, "json")
+    }
+
+  </script>
+{% endblock %}

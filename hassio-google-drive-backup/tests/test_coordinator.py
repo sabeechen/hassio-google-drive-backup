@@ -407,3 +407,57 @@ async def test_disabled_at_install(coord: Coordinator, dest, time):
     assert coord.check()
     await coord.sync()
     assert not coord.check()
+
+
+@pytest.mark.asyncio
+async def test_only_source_configured(coord: Coordinator, dest: HelperTestSource, time, source: HelperTestSource):
+    source.setEnabled(True)
+    dest.setEnabled(False)
+    dest.setNeedsConfiguration(False)
+    await coord.sync()
+    assert len(coord.snapshots()) == 1
+
+
+@pytest.mark.asyncio
+async def test_schedule_snapshot_next_sync_attempt(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, snapshot, time: FakeTime, simple_config: Config):
+    """
+    Next snapshot is before max sync interval is reached
+    """
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+
+    time.setTimeZone("Europe/Stockholm")
+    simple_config.override(Setting.SNAPSHOT_TIME_OF_DAY, "03:23")
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+
+    source.setMax(10)
+    source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 3, 33)))
+
+    time.setNow(time.local(2020, 3, 17, 2, 29))
+    model.reinitialize()
+    coord.reset()
+    await coord.sync()
+    assert coord.nextSnapshotTime() == time.local(2020, 3, 17, 3, 23)
+    assert coord.nextSnapshotTime() == coord.nextSyncAttempt()
+
+
+@pytest.mark.asyncio
+async def test_max_sync_interval_next_sync_attempt(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, snapshot, time: FakeTime, simple_config: Config):
+    """
+    Next snapshot is after max sync interval is reached
+    """
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+
+    time.setTimeZone("Europe/Stockholm")
+    simple_config.override(Setting.SNAPSHOT_TIME_OF_DAY, "03:23")
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+
+    source.setMax(10)
+    source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 3, 33)))
+    time.setNow(time.local(2020, 3, 17, 1, 29))
+    model.reinitialize()
+    coord.reset()
+    await coord.sync()
+    assert coord.nextSyncAttempt() == time.local(2020, 3, 17, 2, 29)
+    assert coord.nextSnapshotTime() > coord.nextSyncAttempt()

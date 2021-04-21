@@ -19,7 +19,7 @@ class ErrorStore():
             self.db = firestore.client()
         except Exception as e:
             logger.log_struct({
-                "error": "unable to initialize firestore, errors will not be logged to firestore.  If you are running this on adeveloper machine, this error is normal.",
+                "error": "unable to initialize firestore, errors will not be logged to firestore.  If you are running this on a developer machine, this error is normal.",
                 "exception": str(e)
             })
             self.db = None

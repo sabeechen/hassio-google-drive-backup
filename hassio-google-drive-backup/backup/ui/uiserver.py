@@ -198,7 +198,7 @@ class UiServer(Trigger, Startable):
             'protected': snapshot.protected(),
             'type': snapshot.snapshotType(),
             'folders': snapshot.details().get("folders", []),
-            'addons': snapshot.details().get("addons", []),
+            'addons': self.formatAddons(snapshot.details()),
             'sources': sources,
             'haVersion': snapshot.version(),
             'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
@@ -208,6 +208,17 @@ class UiServer(Trigger, Startable):
             'ignored': snapshot.ignore(),
             'timestamp': snapshot.date().timestamp(),
         }
+
+    def formatAddons(self, snapshot_data):
+        addons = []
+        for addon in snapshot_data.get("addons", []):
+            addons.append({
+                'name' : addon.get('name', "Unknown"),
+                'slug': addon.get("slug", "unknown"),
+                'version': addon.get("version", ""),
+                'size': self._estimator.asSizeString(addon.get("size", 0)),
+            })
+        return addons
 
     async def manualauth(self, request: Request) -> None:
         client_id = request.query.get("client_id", "")

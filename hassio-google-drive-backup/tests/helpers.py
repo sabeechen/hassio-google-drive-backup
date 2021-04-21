@@ -24,7 +24,7 @@ all_addons = [
         "slug": "sexy_robots",
         "description": "The robots you already know, but sexier. See what they don't want you to see.",
         "version": "0.69",
-        "size": 0.0,
+        "size": 1024,
         "logo": True,
         "state": "started"
     },
@@ -33,7 +33,7 @@ all_addons = [
         "slug": "particla_accel",
         "description": "What CAN'T you do with Home Assistant?",
         "version": "0.5",
-        "size": 0.0,
+        "size": 500000000,
         "logo": True,
         "state": "started"
     },
@@ -42,7 +42,7 @@ all_addons = [
         "slug": "addon_empty",
         "description": "Explore the meaning of the universe by contemplating whats missing.",
         "version": "0.-1",
-        "size": 0.0,
+        "size": 234568783,
         "logo": False,
         "state": "started"
     }

@@ -116,9 +116,9 @@ class UiServer(Trigger, Startable):
             status['next_snapshot_machine'] = self._time.asRfc3339String(next)
             status['next_snapshot_detail'] = self._time.toLocal(
                 next).strftime("%c")
-
-        if len(snapshots) > 0:
-            latest = snapshots[len(snapshots) - 1].date()
+        not_ignored = list(filter(lambda s: not s.ignore(), self._coord.snapshots()))
+        if len(not_ignored) > 0:
+            latest = not_ignored[len(not_ignored) - 1].date()
             status['last_snapshot_text'] = self._time.formatDelta(latest)
             status['last_snapshot_machine'] = self._time.asRfc3339String(
                 latest)

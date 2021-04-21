@@ -1,4 +1,4 @@
-name: push_to_staging
+name: push_to_prod
 on: 
   workflow_dispatch:
 

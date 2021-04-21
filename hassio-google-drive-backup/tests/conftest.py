@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from os.path import join
 import tempfile
 import asyncio
 import platform
@@ -17,7 +16,7 @@ from backup.config import Config, Setting
 from backup.model import Coordinator
 from dev.simulationserver import SimulationServer
 from backup.drive import DriveRequests, DriveSource, FolderFinder
-from backup.util import GlobalInfo, Estimator, Resolver, LocalCache
+from backup.util import GlobalInfo, Estimator, Resolver, DataCache
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
 from backup.model import Model
@@ -190,7 +189,7 @@ async def ui_server(injector, server):
 
 
 @pytest.fixture
-def reader(ui_server, session, ui_port, ingress_port):
+def reader(server, ui_server, session, ui_port, ingress_port):
     return ReaderHelper(session, ui_port, ingress_port)
 
 
@@ -231,8 +230,8 @@ async def server(injector, port, drive_creds: Creds, session):
 
 
 @pytest.fixture
-async def local_cache(injector):
-    return injector.get(LocalCache)
+async def data_cache(injector):
+    return injector.get(DataCache)
 
 
 @pytest.fixture

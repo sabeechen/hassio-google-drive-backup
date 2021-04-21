@@ -10,6 +10,9 @@ from backup.logger import getLast
 from backup.util import Estimator
 from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_CORE_API
 from dev.request_interceptor import RequestInterceptor
+from backup.model import Coordinator
+from backup.config import Config, Setting
+from backup.time import Time
 
 STALE_ATTRIBUTES = {
     "friendly_name": "Snapshots Stale",
@@ -269,6 +272,18 @@ async def test_publish_retries(updater: HaUpdater, server: SimulationServer, tim
     await drive.delete(snapshot)
     await updater.update()
     assert supervisor.getEntity("sensor.snapshot_backup") is not None
+
+
+@pytest.mark.asyncio
+async def test_ignored_snapshots(updater: HaUpdater, time: Time, server: SimulationServer, snapshot, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
+    config.override(Setting.IGNORE_OTHER_SNAPSHOTS, True)
+    await supervisor.createSnapshot({'name': "test_snapshot"}, date=time.now())
+    await coord.sync()
+    await updater.update()
+    state = supervisor.getAttributes("sensor.snapshot_backup")
+    assert state["snapshots_in_google_drive"] == 1
+    assert state["snapshots_in_home_assistant"] == 1
+    assert len(state["snapshots"]) == 2
 
 
 def verifyEntity(backend: SimulatedSupervisor, name, state, attributes):

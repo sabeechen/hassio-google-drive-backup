@@ -56,12 +56,12 @@ def skipForWindows():
 
 def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:
     snapshot_type = "full"
-    if included_folders:
+    if included_folders is not None:
         folders = included_folders.copy()
     else:
         folders = all_folders.copy()
 
-    if included_addons:
+    if included_addons is not None:
         snapshot_type = "partial"
         addons = []
         for addon in all_addons:

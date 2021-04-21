@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 import json
 from os.path import abspath, join
@@ -94,6 +95,8 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -107,6 +110,8 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'title': "Home Assistant",
         'free_space': "0.0 B",
         'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert len(data['sources']) == 2
 
@@ -132,6 +137,8 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -145,6 +152,8 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'title': "Home Assistant",
         'free_space': data['sources'][SOURCE_HA]['free_space'],
         'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert len(data['sources']) == 2
 
@@ -168,6 +177,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -181,6 +192,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
         'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
 
     await reader.getjson("retain", json={'slug': slug, 'sources': {"GoogleDrive": False, "HomeAssistant": False}})
@@ -197,6 +210,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -210,6 +225,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
         'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     delete_req = {
         "slug": slug,
@@ -230,6 +247,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -243,6 +262,8 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
         'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
 
     # sync again, which should upoload the snapshot to Drive
@@ -894,3 +915,69 @@ async def test_update_disable_drive(reader: ReaderHelper, server, coord: Coordin
     assert coord.enabled()
     await coord.waitForSyncToFinish()
     assert len(coord.snapshots()) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_ignore(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource):
+    config.override(Setting.IGNORE_UPGRADE_SNAPSHOTS, True)
+    config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
+
+    # make an ignored_snapshot
+    slug = await supervisor.createSnapshot({'name': "Ignore_me", 'folders': ['homeassistant'], 'addons': []}, date=time.now())
+
+    await coord.sync()
+    assert len(await drive.get()) == 0
+    assert len(await ha.get()) == 1
+    assert len(coord.snapshots()) == 1
+
+    # Disable Drive Upload
+    update = {
+        "ignore": False,
+        "slug": slug,
+    }
+    await reader.postjson("ignore", json=update)
+    await coord.waitForSyncToFinish()
+    assert len(coord.snapshots()) == 1
+    assert len(await drive.get()) == 1
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_check_ignored_snapshot_notification(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource):
+    # Create an "ignored" snapshot after upgrade to the current version.
+    time.advance(days=1)
+    await supervisor.createSnapshot({'name': "test_name"}, date=time.now())
+
+    # cerate one that isn't ignored.
+    time.advance(days=1)
+    await ha.create(CreateOptions(time.now(), name_template=None))
+
+    update = {
+        "config": {
+            Setting.IGNORE_OTHER_SNAPSHOTS.value: True
+        },
+        "snapshot_folder": ""
+    }
+    await reader.postjson("saveconfig", json=update)
+    await coord.waitForSyncToFinish()
+
+    status = await reader.getjson("getstatus")
+    assert status["snapshots"][0]["ignored"]
+    assert not status["snapshots"][1]["ignored"]
+    assert not status["notify_check_ignored"]
+
+    # Create an ignored snapshot from "before" the addon was upgraded to v0.104.0
+    await supervisor.createSnapshot({'name': "test_name"}, date=time.now() - timedelta(days=10))
+    await coord.sync()
+
+    # The UI should nofify about checking ignored snapshots
+    status = await reader.getjson("getstatus")
+    assert status["snapshots"][0]["ignored"]
+    assert status["snapshots"][1]["ignored"]
+    assert not status["snapshots"][2]["ignored"]
+    assert status["notify_check_ignored"]
+
+    # Acknowledge the notification
+    await reader.postjson("ackignorecheck") == {'message': "Acknowledged."}
+    status = await reader.getjson("getstatus")
+    assert not status["notify_check_ignored"]

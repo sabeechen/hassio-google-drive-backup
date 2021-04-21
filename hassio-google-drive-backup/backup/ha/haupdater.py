@@ -116,16 +116,18 @@ class HaUpdater(Worker):
                 "state": snapshot.status(),
                 "size": snapshot.sizeString()
             }
+        ha_snapshots = list(filter(lambda s: s.getSource(SOURCE_HA) is not None and not s.ignore(), snapshots))
+        drive_snapshots = list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None and not s.ignore(), snapshots))
         return {
             "state": self._state(),
             "attributes": {
                 "friendly_name": "Snapshot State",
                 "last_snapshot": last,  # type: ignore
-                "snapshots_in_google_drive": len(list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, snapshots))),
-                "snapshots_in_hassio": len(list(filter(lambda s: s.getSource(SOURCE_HA), snapshots))),
-                "snapshots_in_home_assistant": len(list(filter(lambda s: s.getSource(SOURCE_HA), snapshots))),
-                "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE), snapshots)))),
-                "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), filter(lambda s: s.getSource(SOURCE_HA), snapshots)))),
+                "snapshots_in_google_drive": len(drive_snapshots),
+                "snapshots_in_hassio": len(ha_snapshots),
+                "snapshots_in_home_assistant": len(ha_snapshots),
+                "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_snapshots))),
+                "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_snapshots))),
                 "snapshots": list(map(makeSnapshotData, snapshots))
             }
         }

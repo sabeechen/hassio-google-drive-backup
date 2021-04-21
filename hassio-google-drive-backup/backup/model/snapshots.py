@@ -35,6 +35,7 @@ class AbstractSnapshot():
         self._version = version
         self._snapshotType = snapshotType
         self._protected = protected
+        self._ignore = False
 
     def setOptions(self, options):
         self._options = options
@@ -92,6 +93,15 @@ class AbstractSnapshot():
 
     def status(self):
         return None
+
+    def madeByTheAddon(self):
+        return True
+
+    def ignore(self):
+        return self._ignore
+
+    def setIgnore(self, ignore):
+        self._ignore = ignore
 
 
 class Snapshot(object):
@@ -211,6 +221,12 @@ class Snapshot(object):
         for snapshot in self.sources.values():
             return snapshot.protected()
         return False
+
+    def ignore(self) -> bool:
+        for snapshot in self.sources.values():
+            if not snapshot.ignore():
+                return False
+        return True
 
     def date(self) -> datetime:
         for snapshot in self.sources.values():

@@ -5,7 +5,7 @@ from dateutil.tz import gettz
 
 from backup.config import Config, Setting, CreateOptions
 from backup.exceptions import DeleteMutlipleSnapshotsError
-from backup.util import GlobalInfo
+from backup.util import GlobalInfo, DataCache
 from backup.model import Model, SnapshotSource
 from .faketime import FakeTime
 from .helpers import HelperTestSource
@@ -32,88 +32,72 @@ def simple_config():
 
 
 @pytest.fixture
-def model(source, dest, time, simple_config, global_info, estimator):
-    return Model(simple_config, time, source, dest, global_info, estimator)
+def model(source, dest, time, simple_config, global_info, estimator, data_cache):
+    return Model(simple_config, time, source, dest, global_info, estimator, data_cache)
 
 
 def createConfig() -> Config:
     return Config().override(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES, 0)
 
 
-def test_timeOfDay(estimator) -> None:
-    time: FakeTime = FakeTime()
-    info = GlobalInfo(time)
-
-    config: Config = createConfig()
-    model: Model = Model(config, time, default_source,
-                         default_source, info, estimator)
+def test_timeOfDay(estimator, model: Model) -> None:
     assert model.getTimeOfDay() is None
 
-    config = createConfig().override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
+    model.reinitialize()
     assert model.getTimeOfDay() == (0, 0)
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '23:59')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '23:59')
+    model.reinitialize()
     assert model.getTimeOfDay() == (23, 59)
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:59')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:59')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:60')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:60')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '-1:60')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '-1:60')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:-1')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:-1')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, 'boop:60')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, 'boop:60')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:boop')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:boop')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:10:22')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:10:22')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    config.override(Setting.SNAPSHOT_TIME_OF_DAY, '10')
-    model = Model(config, time, default_source,
-                  default_source, info, estimator)
+    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '10')
+    model.reinitialize()
     assert model.getTimeOfDay() is None
 
 
-def test_next_time(estimator):
+def test_next_time(estimator, data_cache):
     time: FakeTime = FakeTime()
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
     time.setNow(now)
     info = GlobalInfo(time)
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
     model: Model = Model(config, time, default_source,
-                         default_source, info, estimator)
+                         default_source, info, estimator, data_cache)
     assert model._nextSnapshot(now=now, last_snapshot=None) is None
     assert model._nextSnapshot(now=now, last_snapshot=now) is None
 
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
     model: Model = Model(config, time, default_source,
-                         default_source, info, estimator)
+                         default_source, info, estimator, data_cache)
     assert model._nextSnapshot(
         now=now, last_snapshot=None) == now - timedelta(minutes=1)
     assert model._nextSnapshot(
@@ -124,7 +108,7 @@ def test_next_time(estimator):
         now=now, last_snapshot=now + timedelta(days=1)) == now + timedelta(days=2)
 
 
-def test_next_time_of_day(estimator):
+def test_next_time_of_day(estimator, data_cache):
     time: FakeTime = FakeTime()
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
     time.setNow(now)
@@ -132,7 +116,7 @@ def test_next_time_of_day(estimator):
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
         Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
-                         default_source, info, estimator)
+                         default_source, info, estimator, data_cache)
 
     assert model._nextSnapshot(
         now=now, last_snapshot=None) == now - timedelta(minutes=1)
@@ -147,7 +131,7 @@ def test_next_time_of_day(estimator):
         1985, 12, 6, 8, 0, tzinfo=test_tz)) == datetime(1985, 12, 7, 8, 0, tzinfo=test_tz)
 
 
-def test_next_time_of_day_drift(estimator):
+def test_next_time_of_day_drift(estimator, data_cache):
     time: FakeTime = FakeTime()
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
     time.setNow(now)
@@ -156,7 +140,7 @@ def test_next_time_of_day_drift(estimator):
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
         Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
-                         default_source, info, estimator)
+                         default_source, info, estimator, data_cache)
 
     assert model._nextSnapshot(
         now=now, last_snapshot=None) == now - timedelta(minutes=1)
@@ -635,3 +619,62 @@ async def test_delete_after_upload_simple_sync(time: FakeTime, model: Model, des
     await model.sync(time.now())
     source.assertThat()
     dest.assertThat(current=1)
+
+
+@pytest.mark.asyncio
+async def test_never_delete_ignored_snapshots(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource):
+    source.setMax(1)
+    dest.setMax(1)
+
+    # A sync should create a snapshot and back it up to dest.
+    await model.sync(time.now())
+    source.assertThat(created=1, current=1)
+    dest.assertThat(saved=1, current=1)
+
+    source.reset()
+    dest.reset()
+
+    # Another sync shoudl delete a snapshot, which is just a sanity check.
+    time.advance(days=5)
+    await model.sync(time.now())
+    source.assertThat(created=1, current=1, deleted=1)
+    dest.assertThat(saved=1, current=1, deleted=1)
+    assert model.nextSnapshot(time.now()) == time.now() + timedelta(days=3)
+    source.reset()
+    dest.reset()
+
+    # Make the snapshot ignored, which should cause a new snapshot to be created
+    # and synced without the ignored one getting deleted.
+    next(iter((await dest.get()).values())).setIgnore(True)
+    next(iter((await source.get()).values())).setIgnore(True)
+    assert model.nextSnapshot(time.now()) < time.now()
+    await model.sync(time.now())
+    source.assertThat(created=1, current=2)
+    dest.assertThat(saved=1, current=2)
+
+
+@pytest.mark.asyncio
+async def test_ignored_snapshots_dont_upload(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource):
+    source.setMax(2)
+    dest.setMax(2)
+
+    older = source.insert("older", time.now() - timedelta(days=1), slug="older")
+    older.setIgnore(True)
+    source.insert("newer", time.now(), slug="newer")
+    source.reset()
+
+    # A sync should backup the last snapshot and ignore the older one
+    await model.sync(time.now())
+    source.assertThat(created=0, current=2)
+    dest.assertThat(saved=1, current=1)
+
+    uploaded = await dest.get()
+    assert len(uploaded) == 1
+    assert next(iter(uploaded.values())).name() == "newer"
+
+
+@pytest.mark.asyncio
+async def test_dirty_cache_gets_saved(time: FakeTime, model: Model, data_cache: DataCache):
+    data_cache.makeDirty()
+    await model.sync(time.now())
+    assert not data_cache.dirty

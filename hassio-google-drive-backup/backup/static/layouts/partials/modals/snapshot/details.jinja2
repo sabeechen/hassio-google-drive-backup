@@ -21,6 +21,10 @@
         onclick="confirmDeleteButtonClick(this);">
         <i class="material-icons">delete_forever</i>Confirm Delete
       </a>
+      <a class="dont-ignore-button btn-flat" href="#!"
+        onclick="dontIgnoreButtonClick(this);">
+        <i class="material-icons">add</i>Don't Ignore
+      </a>
       <a class="delete-cancel btn-flat default-hidden" href="#!" onclick="deleteButtonCancel(this);">
         <i class="material-icons">close</i>Cancel
       </a>
@@ -47,6 +51,12 @@
         <span>This snapshot will be deleted from <span class="detail-source-name">Source Name</span> as soon as a new
           snapshot is made.</span>
       </div>
+      <div class="ignore-warning small sub-detail indent">
+        <i class="material-icons">warning</i>
+        <span>This snapshot is being ignored because you configured the addon to ignore some types of snapshots
+          in your addon settings.  It won't count against the snapshots stored in Home Assistant and it will never be automatically backed up or deleted.  Click "Don't Ignore" to have the addon track, upload, and eventually delete this snapshot.</span>
+      </div>
+      
     </div>
   </div>
   <script type="text/javascript">
@@ -84,8 +94,13 @@
       postJson(
         "deleteSnapshot",
         data,
-        function () { deleteSuccessful(container); },
-        function () { container.data('processing', false); configureSnapshotSource(container); },
+        function () { 
+          deleteSuccessful(container); 
+        },
+        function () { 
+          container.data('processing', false); 
+          configureSnapshotSource(container); 
+        },
         "Deleting snapshot from " + sourceToName(source.key));
     }
 
@@ -105,6 +120,31 @@
       postJson("retain", data, success, fail, "Updating snapshot... ");
     }
 
+    function dontIgnoreButtonClick(element) {
+      let container = $(element).closest('.snapshot-source-container');
+      container.data('processing', true);
+      let source = container.data('source');
+      $(".dont-ignore-button", container).addClass('disabled');
+      $(".preloader-wrapper", container).addClass("active");
+      data = {
+        'slug': source.slug,
+        'ignore': false,
+      };
+      let success = function (info) { ignoreCompleted(container, false); };
+      let fail = function (info) { ignoreCompleted(container, true); };
+      postJson("ignore", data, success, fail, "Updating snapshot... ");
+    }
+
+    function ignoreCompleted(container, ignored) {
+      let source = container.data('source');
+      container.data('processing', false);
+      source.ignored = ignored;
+      refreshstats();
+
+      // Get the updated source info
+      configureSnapshotSource(container);
+    }
+
     function allowDeleteButtonClick(element) {
       let container = $(element).closest('.snapshot-source-container');
       container.data('processing', true);
@@ -115,7 +155,6 @@
         'slug': source.slug,
         'sources': {}
       };
-      data['sources'][source.key] = false;
       let success = function (info) { neverDeleteCompleted(container, false); };
       let fail = function (info) { neverDeleteCompleted(container, true); };
       postJson("retain", data, success, fail, "Updating snapshot... ");
@@ -156,6 +195,8 @@
       $(".allow-delete", container).removeClass('disabled');
       $(".never-delete", container).removeClass('disabled');
       $(".preloader-wrapper", container).removeClass("active");
+      $(".delete-initial", container).removeClass("disabled");
+      $(".dont-ignore-button").removeClass("disabled");
       if (source.retained) {
         $(".delete-initial", container).addClass('default-hidden');
         $(".never-delete", container).addClass('default-hidden');
@@ -176,6 +217,15 @@
         $(".delete-warning", container).removeClass('default-hidden');
       } else {
         $(".delete-warning", container).addClass('default-hidden');
+      }
+
+      if (source.ignored) {
+        $(".ignore-warning", container).removeClass('default-hidden');
+        $(".dont-ignore-button", container).removeClass('default-hidden');
+        $(".never-delete", container).addClass('default-hidden');
+      } else {
+        $(".ignore-warning", container).addClass('default-hidden');
+        $(".dont-ignore-button", container).addClass('default-hidden');
       }
     }
 
@@ -416,7 +466,7 @@
         <span class="detail-name"></span>
       </div>
     </div>
-    <div>
+    <div class="snapshot_presence_window">
       This snapshot is present in:
       <div class="detail-snapshot-sources">
       </div>

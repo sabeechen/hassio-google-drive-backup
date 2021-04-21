@@ -31,8 +31,8 @@ def simple_config():
 
 
 @pytest.fixture
-def model(source, dest, time, simple_config, global_info, estimator):
-    return Model(simple_config, time, source, dest, global_info, estimator)
+def model(source, dest, time, simple_config, global_info, estimator, data_cache):
+    return Model(simple_config, time, source, dest, global_info, estimator, data_cache)
 
 
 @pytest.fixture

@@ -125,6 +125,13 @@ function exposeServer(expose) {
   }, null, "Saving setting...");
 }
 
+function ackCheckIgnoredSnapshots() {
+  postJson("ackignorecheck", {}, function (data) {
+    $('#ignore_helper_card').fadeOut(500);
+  }, null, "Acknowledging..");
+  
+}
+
 function resolvefolder(use_existing) {
   var url = "resolvefolder?use_existing=" + use_existing;
   postJson(url, {}, refreshstats, null, null);
@@ -372,6 +379,13 @@ function processSourcesUpdate(sources) {
     } else {
       $(".source_retain_label", template).hide();
     }
+    if (source.ignored > 0) {
+      $(".source_ignored_count", template).html(source.ignored);
+      $(".source_ignored_size", template).html(source.ignored_size);
+      $(".source_ignored_label", template).show();
+    } else {
+      $(".source_ignored_label", template).hide();
+    }
     $(".source_snapshot_count", template).html(source.snapshots + " (" + source.size + ")");
 
     if (source.hasOwnProperty("free_space")) {
@@ -396,27 +410,66 @@ function processSourcesUpdate(sources) {
 }
 
 function processSnapshotsUpdate(data) {
-  snapshot_div = $('#snapshots');
-  slugs = []
-  var count = 0;
   let detail_modal = document.getElementById('details_modal');
   let detail_modal_slug = $("#details_modal").data('slug');
   detail_modal = M.Modal.getInstance(detail_modal);
+
+  let regular_snapshots = [];
+  let ignored_snapshots = [];
   for (var key in data.snapshots) {
     if (data.snapshots.hasOwnProperty(key)) {
-      count++;
       snapshot = data.snapshots[key];
-      slugs.push(snapshot.slug);
+      if (snapshot.ignored) {
+        ignored_snapshots.push(snapshot);
+      } else {
+        regular_snapshots.push(snapshot);
+      }
+
+       // Update the detail modal is necessary
+       if (detail_modal_slug == snapshot.slug && detail_modal && detail_modal.isOpen) {
+        setValuesForSnapshotUpdate(snapshot);
+      }
+    }
+  }
+
+  let count_regular = populateSnapshotDiv($('#snapshots'), regular_snapshots, "archive");
+  let count_ignored = populateSnapshotDiv($('#snapshots_ignored'), ignored_snapshots, "cloud_off");
+
+  if (count_ignored == 0) {
+    $(".ignored_snapshot_slider").addClass("default-hidden");
+  } else {
+    $(".ignored_snapshot_slider").removeClass("default-hidden");
+  }
+  if (count_ignored > 1) {
+    $(".ignored_snapshot_plural").removeClass("default-hidden");
+  } else {
+    $(".ignored_snapshot_plural").addClass("default-hidden");
+  }
+
+  $(".ignored_snapshot_count").html(count_ignored);
+  return count_regular + count_ignored;
+}
+
+function populateSnapshotDiv(snapshot_div, snapshots, icon) {
+  slugs = []
+  count = 0;
+  for (var key in snapshots) {
+    if (snapshots.hasOwnProperty(key)) {
+      count++;
+      snapshot = snapshots[key];
       // try to find the item
-      var template = $(".slug" + snapshot.slug)
+      var template = $(".slug" + snapshot.slug, snapshot_div);
+      slugs.push(snapshot.slug);
       var isNew = false;
       if (template.length == 0) {
         var template = $('#snapshot-template').find(".snapshot-ui").clone();
         template.addClass("slug" + snapshot.slug);
         template.addClass("active-snapshot");
         template.data("slug", snapshot.slug);
+        template.data("timestamp", snapshot.timestamp);
         $("#snapshot_card", template).attr('id', "snapshot_card" + snapshot.slug);
         $("#loading", template).attr('id', "loading" + snapshot.slug);
+        $(".snapshot_icon", template).html(icon);
         isNew = true;
       }
 
@@ -487,7 +540,21 @@ function processSnapshotsUpdate(data) {
       $("#status-help", template).attr("data-tooltip", tip);
 
       if (isNew) {
-        snapshot_div.prepend(template);
+        before = null;
+        // Find where the snapshot should be inserted, which is almost always at the top.
+        // This is an inefficient way of sorting but prevents juggling DOM entities around
+        // and the "search" is almsot always O(1) in practice.
+        $(".active-snapshot", snapshot_div).each(function () {
+          if (template.data('timestamp') > $(this).data('timestamp')) {
+            before = $(this);
+            return false;
+          }
+        });
+        if (before != null) {
+          template.insertBefore(before);
+        } else {
+          snapshot_div.append(template);
+        }
       }
 
       if (snapshot.isPending) {
@@ -500,22 +567,10 @@ function processSnapshotsUpdate(data) {
 
       // Set up context
       $("#snapshot_card" + snapshot.slug).data('snapshot', snapshot);
-
-      // Update the detail modal is necessary
-      if (detail_modal_slug == snapshot.slug && detail_modal && detail_modal.isOpen) {
-        setValuesForSnapshotUpdate(snapshot);
-      }
     }
   }
-
-  // Close the detail modal if the snapshot is no longer present
-  if (detail_modal && detail_modal.isOpen && !slugs.includes(detail_modal_slug)) {
-    detail_modal.close();
-    toast("Snapshot Deleted");
-  }
-
   // Remove the snapshot card if the snapshot was deleted.
-  $(".active-snapshot").each(function () {
+  $(".active-snapshot", snapshot_div).each(function () {
     var snapshot = $(this)
     if (!slugs.includes(snapshot.data('slug'))) {
       snapshot.remove();
@@ -628,7 +683,9 @@ function processStatusUpdate(data) {
 
   // Only show one of the "question" cards at a TimeRanges, ir order to prevent the UI from blowing up
   let question_card = null;
-  if(data.snapshot_cooldown_active) {
+  if (data.notify_check_ignored) {
+    question_card = "ignore_helper_card";
+  } else if (data.snapshot_cooldown_active) {
     question_card = "snapshots_boot_waiting_card";
   } else if(data.warn_ingress_upgrade && !hideIngress) {
     question_card = "ingress_upgrade_card";

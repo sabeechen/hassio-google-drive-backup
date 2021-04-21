@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 
 import pytest
 from aiohttp.client_exceptions import ClientResponseError
@@ -7,7 +8,7 @@ from backup.config import Config, Setting, CreateOptions
 from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
                                SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError)
-from backup.util import GlobalInfo
+from backup.util import GlobalInfo, DataCache, KEY_CREATED, KEY_LAST_SEEN, KEY_NAME
 from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password, AddonStopper
 from backup.model import DummySnapshot
 from dev.simulationserver import SimulationServer
@@ -16,6 +17,7 @@ from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
 from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD
 from dev.request_interceptor import RequestInterceptor
 from backup.model import Model
+from backup.time import Time
 
 
 @pytest.mark.asyncio
@@ -24,7 +26,7 @@ async def test_sync_empty(ha) -> None:
 
 
 @pytest.mark.asyncio
-async def test_CRUD(ha: HaSource, time, interceptor: RequestInterceptor) -> None:
+async def test_CRUD(ha: HaSource, time, interceptor: RequestInterceptor, data_cache: DataCache) -> None:
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
 
     assert snapshot.name() == "Test Name"
@@ -34,6 +36,9 @@ async def test_CRUD(ha: HaSource, time, interceptor: RequestInterceptor) -> None
     assert not snapshot.protected()
     assert snapshot.name() == "Test Name"
     assert snapshot.source() == SOURCE_HA
+    assert not snapshot.ignore()
+    assert snapshot.madeByTheAddon()
+    assert "pending" not in data_cache.snapshots
 
     # read the item directly, its metadata should match
     from_ha = await ha.harequests.snapshot(snapshot.slug())
@@ -78,7 +83,7 @@ async def test_CRUD(ha: HaSource, time, interceptor: RequestInterceptor) -> None
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(10)
-async def test_pending_snapshot_nowait(ha: HaSource, time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config):
+async def test_pending_snapshot_nowait(ha: HaSource, time: Time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, data_cache: DataCache):
     interceptor.setSleep(URL_MATCH_SNAPSHOT_FULL, sleep=5)
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 0.1)
     snapshot_immediate: PendingSnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
@@ -95,13 +100,26 @@ async def test_pending_snapshot_nowait(ha: HaSource, time, supervisor: Simulated
     assert snapshot_immediate.source() == SOURCE_HA
     assert snapshot_immediate.date() == time.now()
     assert not snapshot_immediate.protected()
+    assert not snapshot_immediate.ignore()
+    assert snapshot_immediate.madeByTheAddon()
+    assert data_cache.snapshot("pending") == {
+        KEY_CREATED: time.now().isoformat(),
+        KEY_LAST_SEEN: time.now().isoformat(),
+        KEY_NAME: "Test Name"
+    }
 
     # Might be a little flaky but...whatever
     await asyncio.wait({ha._pending_snapshot_task})
 
     snapshots = await ha.get()
     assert 'pending' not in snapshots
-    assert isinstance(next(iter(snapshots.values())), HASnapshot)
+    assert len(snapshots) == 1
+    snapshot = next(iter(snapshots.values()))
+    assert isinstance(snapshot, HASnapshot)
+    assert not snapshot.ignore()
+    assert snapshot.madeByTheAddon()
+    assert data_cache.snapshot(snapshot.slug())[KEY_LAST_SEEN] == time.now().isoformat()
+    assert "pending" not in data_cache.snapshots
 
     return
     # ignroe events for now
@@ -633,3 +651,67 @@ async def test_dont_purge_pending_snapshot(ha: HaSource, time, config: Config, s
     await model.sync(time.now())
     snapshots = list((await ha.get()).values())
     assert len(snapshots) == 4
+
+
+@pytest.mark.asyncio
+async def test_matching_pending_snapshot(ha: HaSource, time: Time, config: Config, supervisor: SimulatedSupervisor, model: Model, interceptor, data_cache: DataCache):
+    '''
+    A pending snapshots with the same name and within a day of the snapshot time should be considered
+    made by the addon
+    '''
+    data_cache.snapshot("pending")[KEY_NAME] = "Test Snapshot"
+    data_cache.snapshot("pending")[KEY_CREATED] = time.now().isoformat()
+    data_cache.snapshot("pending")[KEY_LAST_SEEN] = time.now().isoformat()
+
+    await supervisor.createSnapshot({"name": "Test Snapshot"}, date=time.now() - timedelta(hours=12))
+
+    snapshots = await ha.get()
+    assert len(snapshots) == 1
+    snapshot = next(iter(snapshots.values()))
+    assert snapshot.madeByTheAddon()
+
+
+@pytest.mark.asyncio
+async def test_date_match_wrong_pending_snapshot(ha: HaSource, time: Time, config: Config, supervisor: SimulatedSupervisor, model: Model, interceptor, data_cache: DataCache):
+    '''
+    A pending snapshots with the same name but with the wrong date shoudl nto be considered made by the addon
+    '''
+    data_cache.snapshot("pending")[KEY_NAME] = "Test Snapshot"
+    data_cache.snapshot("pending")[KEY_CREATED] = time.now().isoformat()
+    data_cache.snapshot("pending")[KEY_LAST_SEEN] = time.now().isoformat()
+
+    await supervisor.createSnapshot({"name": "Test Snapshot"}, date=time.now() - timedelta(hours=25))
+
+    snapshots = await ha.get()
+    assert len(snapshots) == 1
+    snapshot = next(iter(snapshots.values()))
+    assert not snapshot.madeByTheAddon()
+
+
+@pytest.mark.asyncio
+async def test_name_wrong_match_pending_snapshot(ha: HaSource, time: Time, config: Config, supervisor: SimulatedSupervisor, model: Model, interceptor, data_cache: DataCache):
+    '''
+    A pending snapshots with the wrong name shoudl not be considered made by the addon
+    '''
+    data_cache.snapshot("pending")[KEY_NAME] = "Test Snapshot"
+    data_cache.snapshot("pending")[KEY_CREATED] = time.now().isoformat()
+    data_cache.snapshot("pending")[KEY_LAST_SEEN] = time.now().isoformat()
+
+    await supervisor.createSnapshot({"name": "Wrong Name"}, date=time.now() - timedelta(hours=12))
+
+    snapshots = await ha.get()
+    assert len(snapshots) == 1
+    snapshot = next(iter(snapshots.values()))
+    assert not snapshot.madeByTheAddon()
+
+
+@pytest.mark.asyncio
+async def test_bump_last_seen(ha: HaSource, time: Time, config: Config, supervisor: SimulatedSupervisor, model: Model, interceptor, data_cache: DataCache):
+    snapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
+    time.advance(days=1)
+    assert snapshot.slug() in await ha.get()
+    assert data_cache.snapshot(snapshot.slug())[KEY_LAST_SEEN] == time.now().isoformat()
+
+    time.advance(days=1)
+    assert snapshot.slug() in await ha.get()
+    assert data_cache.snapshot(snapshot.slug())[KEY_LAST_SEEN] == time.now().isoformat()

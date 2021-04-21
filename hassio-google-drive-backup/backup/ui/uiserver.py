@@ -12,11 +12,11 @@ from aiohttp import BasicAuth, hdrs, web, ClientSession, ClientResponseError
 from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther, HTTPNotFound
 from injector import ClassAssistedBuilder, inject, singleton
 
-from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, VERSION
+from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, Version, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Snapshot, AbstractSnapshot
 from backup.exceptions import KnownError, ensureKey
-from backup.util import GlobalInfo, Estimator, File
+from backup.util import GlobalInfo, Estimator, File, DataCache
 from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
 from backup.ha import Password
 from backup.time import Time
@@ -36,6 +36,7 @@ SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
 
 MIME_TEXT_HTML = "text/html"
 MIME_JSON = "application/json"
+VERSION_CREATION_TRACKING = Version(0, 104, 0)
 
 
 @singleton
@@ -43,7 +44,7 @@ class UiServer(Trigger, Startable):
     @inject
     def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests,
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
-                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker, folder_finder: FolderFinder):
+                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker, folder_finder: FolderFinder, data_cache: DataCache):
         super().__init__()
         # Currently running server tasks
         self.runners = []
@@ -66,6 +67,8 @@ class UiServer(Trigger, Startable):
         self.session = session
         self.debug_worker = debug_worker
         self.folder_finder = folder_finder
+        self.ignore_other_turned_on = False
+        self._data_cache = data_cache
 
     def name(self):
         return "UI Server"
@@ -157,6 +160,13 @@ class UiServer(Trigger, Startable):
             name_keys[key] = SNAPSHOT_NAME_KEYS[key](
                 "Full", self._time.now(), self._ha_source.getHostInfo())
         status['snapshot_name_keys'] = name_keys
+
+        # Indicate the user should be notified for a specific situation where:
+        #  - They recently turned on "IGNORE_OTHER_SNAPSHOTS"
+        #  - They have ignored snapshots created before upgrading to v0.104.0 or higher.
+        upgrade_date = self._data_cache.getUpgradeTime(VERSION_CREATION_TRACKING)
+        ignored = len(list(filter(lambda s: s.date() < upgrade_date, filter(Snapshot.ignore, self._coord.snapshots()))))
+        status["notify_check_ignored"] = ignored > 0 and self.ignore_other_turned_on
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -174,6 +184,7 @@ class UiServer(Trigger, Startable):
                 'retained': source.retained(),
                 'delete_next': snapshot.getPurges().get(source_key) or False,
                 'slug': snapshot.slug(),
+                'ignored': source.ignore(),
             })
 
         return {
@@ -193,7 +204,9 @@ class UiServer(Trigger, Startable):
             'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
             'restorable': snapshot.getSource(SOURCE_HA) is not None,
             'status_detail': snapshot.getStatusDetail(),
-            'upload_info': snapshot.getUploadInfo(self._time)
+            'upload_info': snapshot.getUploadInfo(self._time),
+            'ignored': snapshot.ignore(),
+            'timestamp': snapshot.date().timestamp(),
         }
 
     async def manualauth(self, request: Request) -> None:
@@ -244,6 +257,17 @@ class UiServer(Trigger, Startable):
         self._coord.getSnapshot(data['slug'])
         await self._coord.delete(data['sources'], data['slug'])
         return web.json_response({"message": "Deleted from {0} place(s)".format(len(data['sources']))})
+
+    async def ignore(self, request: Request):
+        data = await request.json()
+        # Check to make sure the slug is valid.
+        snapshot = self._coord.getSnapshot(data['slug'])
+        await self._coord.ignore(data['slug'], data['ignore'])
+        await self.startSync(request)
+        if data['ignore']:
+            return web.json_response({"message": "'{0}' will be ignored.".format(snapshot.name())})
+        else:
+            return web.json_response({"message": "'{0}' will be included.".format(snapshot.name())})
 
     async def retain(self, request: Request):
         data = await request.json()
@@ -434,7 +458,7 @@ class UiServer(Trigger, Startable):
 
     async def saveconfig(self, request: Request) -> Any:
         data = await request.json()
-        update = ensureKey("config", data, "the confgiuration update request")
+        update = ensureKey("config", data, "the configuration update request")
 
         # validate the snapshot password
         Password(self.config.getConfigFor(update)).resolve()
@@ -449,14 +473,22 @@ class UiServer(Trigger, Startable):
             pass
         return web.json_response(message)
 
+    async def ackignorecheck(self, request: Request):
+        self.ignore_other_turned_on = False
+        return web.json_response({'message': "Acknowledged."})
+
     async def _updateConfiguration(self, new_config, snapshot_folder_id=None, trigger=True):
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
         old_drive_option = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
+        old_ignore_others_option = self.config.get(Setting.IGNORE_OTHER_SNAPSHOTS)
         await self._harequests.updateConfig(update)
 
         self.config.update(new_config)
+
+        if not old_ignore_others_option and self.config.get(Setting.IGNORE_OTHER_SNAPSHOTS):
+            self.ignore_other_turned_on = True
 
         if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and snapshot_folder_id is not None and len(snapshot_folder_id):
             await self.folder_finder.save(snapshot_folder_id)
@@ -465,15 +497,6 @@ class UiServer(Trigger, Startable):
         return {
             'message': 'Settings saved',
             'reload_page': self.config.get(Setting.ENABLE_DRIVE_UPLOAD) != old_drive_option
-        }
-
-    def _getServerOptions(self):
-        return {
-            "ssl": self.config.get(Setting.USE_SSL),
-            "login": self.config.get(Setting.REQUIRE_LOGIN),
-            "certfile": self.config.get(Setting.CERTFILE),
-            "keyfile": self.config.get(Setting.KEYFILE),
-            "extra_server": self.config.get(Setting.EXPOSE_EXTRA_SERVER)
         }
 
     async def upload(self, request: Request):
@@ -602,6 +625,8 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self._debug.getTasks)
         self._addRoute(app, self.makeanissue)
         self._addRoute(app, self.ignorestartupcooldown)
+        self._addRoute(app, self.ignore)
+        self._addRoute(app, self.ackignorecheck)
 
     def _addRoute(self, app, method):
         app.add_routes([

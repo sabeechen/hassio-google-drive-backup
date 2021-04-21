@@ -12,6 +12,7 @@ from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError
 from ..model import HASnapshot, Snapshot
 from ..logger import getLogger
+from ..util import DataCache
 from backup.time import Time
 
 logger = getLogger(__name__)
@@ -41,11 +42,12 @@ class HaRequests():
     Stores logic for interacting with the supervisor add-on API
     """
     @inject
-    def __init__(self, config: Config, session: ClientSession, time: Time):
+    def __init__(self, config: Config, session: ClientSession, time: Time, data_cache: DataCache):
         self.config: Config = config
         self.cache = {}
         self.session = session
         self._time = time
+        self._data_cache = data_cache
 
     @supervisor_call
     async def createSnapshot(self, info):
@@ -82,12 +84,14 @@ class HaRequests():
 
     @supervisor_call
     async def startAddon(self, slug) -> None:
-        url: str = "{0}addons/{1}/start".format(self.config.get(Setting.HASSIO_URL), slug)
+        url: str = "{0}addons/{1}/start".format(
+            self.config.get(Setting.HASSIO_URL), slug)
         await self._postHassioData(url, {})
 
     @supervisor_call
     async def stopAddon(self, slug) -> None:
-        url: str = "{0}addons/{1}/stop".format(self.config.get(Setting.HASSIO_URL), slug)
+        url: str = "{0}addons/{1}/stop".format(
+            self.config.get(Setting.HASSIO_URL), slug)
         await self._postHassioData(url, {})
 
     @supervisor_call
@@ -97,7 +101,7 @@ class HaRequests():
         else:
             info = await self._getHassioData("{0}snapshots/{1}/info".format(self.config.get(Setting.HASSIO_URL), slug))
             self.cache[slug] = info
-        return HASnapshot(info, self.config.isRetained(slug))
+        return HASnapshot(info, self._data_cache, self.config, self.config.isRetained(slug))
 
     @supervisor_call
     async def snapshots(self):
@@ -189,7 +193,8 @@ class HaRequests():
             return details["data"]
 
     async def getAddonLogo(self, slug: str):
-        url = "{0}addons/{1}/icon".format(self.config.get(Setting.HASSIO_URL), slug)
+        url = "{0}addons/{1}/icon".format(
+            self.config.get(Setting.HASSIO_URL), slug)
         async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
             resp.raise_for_status()
             return (resp.headers['Content-Type'], await resp.read())

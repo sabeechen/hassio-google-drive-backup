@@ -32,6 +32,9 @@
         <span class="source_free_space_text"></span>
         <i class="source_free_space_tooltip tooltipped material-icons snapshot-help-icon">info</i>
       </li>
+      <li class="source_ignored_label">
+        <span class="source_ignored_count"></span> ignored (<span class="source_ignored_size"></span>)
+      </li>
     </ul>
   </div>
 </div>
@@ -41,7 +44,7 @@
       <div class="card-content">
         <div style="display: flex; align-items: center;">
           <div class="archive-icon">
-            <i class="large material-icons" style="font-size: 30px;">archive</i>
+            <i class="large material-icons snapshot_icon" style="font-size: 30px;"></i>
             <div id="loading" class="progress default-hidden" style="position: absolute;">
               <div class="indeterminate"></div>
             </div>
@@ -164,6 +167,21 @@
             <a target="_blank" class="btn-flat modal-close" onClick="$('#restore_help_card').fadeOut(500)"><i class="material-icons">close</i>Dismiss</a>
           </div>
         </div>
+        <div class="card default-hidden question-card" id="ignore_helper_card">
+          <div class="card-content">
+            <span class="card-title">
+              <i class="material-icons">info_outline</i>
+              <span>Double check your ignored snapshots</span>
+            </span>
+            <p>Because this addon gets a limited view of the world, it might not be able to accurately determine if all of your older snapshots were created by the addon.  
+              Its recommended that you check below to ensure that all of the snapshots the addon is ignoring now are the ones you intend to have ignored.
+              If not, you can click on an ignored snapshot to see its details and click "Don't ignore" to have the addon include them in future backup, cleanup, etc.</p>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="btn-flat" onClick="toggleLinkSlide(this, 'snapshots_ignored');"><i class="material-icons">remove_red_eye</i>Show/Hide Ignored Snapshots</a>
+            <a target="_blank" class="btn-flat" onClick="ackCheckIgnoredSnapshots();"><i class="material-icons">check</i>Acknowledged</a>
+          </div>
+        </div>
         <div class="card default-hidden question-card" id="snapshots_boot_waiting_card">
           <div class="card-content">
             <span class="card-title">
@@ -205,6 +223,10 @@
           <div class="divider"></div>
         </div>
         <div id="snapshots" class="s12 row"></div>
+        <div class="indent ignored_snapshot_slider">
+          <a class="btn-flat" href="#" onclick="toggleLinkSlide(this, 'snapshots_ignored');"><i class="material-icons">expand_more</i> and <span class="ignored_snapshot_count"></span> ignored snapshot<span class="ignored_snapshot_plural">s</span></a>
+        </div>
+        <div id="snapshots_ignored" class="s12 row" style="display: none;"></div>
       </div>
     </div>
   </div>

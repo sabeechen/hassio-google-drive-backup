@@ -5,14 +5,14 @@ from typing import Dict, Generic, List, Optional, Tuple, TypeVar
 from injector import inject, singleton
 
 from .backupscheme import GenerationalScheme, OldestScheme, DeleteAfterUploadScheme
-from ..config import Config, Setting, CreateOptions
-from ..exceptions import DeleteMutlipleSnapshotsError, SimulatedError
-from ..util import GlobalInfo, Estimator
+from backup.config import Config, Setting, CreateOptions
+from backup.exceptions import DeleteMutlipleSnapshotsError, SimulatedError
+from backup.util import GlobalInfo, Estimator, DataCache
 from .snapshots import AbstractSnapshot, Snapshot
 from .dummysnapshot import DummySnapshot
-from ..time import Time
-from ..worker import Trigger
-from ..logger import getLogger
+from backup.time import Time
+from backup.worker import Trigger
+from backup.logger import getLogger
 
 logger = getLogger(__name__)
 
@@ -54,6 +54,9 @@ class SnapshotSource(Trigger, Generic[T]):
     async def delete(self, snapshot: T):
         pass
 
+    async def ignore(self, snapshot: T, ignore: bool):
+        pass
+
     async def save(self, snapshot: AbstractSnapshot, bytes: IOBase) -> T:
         pass
 
@@ -83,7 +86,7 @@ class SnapshotDestination(SnapshotSource):
 @singleton
 class Model():
     @inject
-    def __init__(self, config: Config, time: Time, source: SnapshotSource, dest: SnapshotDestination, info: GlobalInfo, estimator: Estimator):
+    def __init__(self, config: Config, time: Time, source: SnapshotSource, dest: SnapshotDestination, info: GlobalInfo, estimator: Estimator, data_cache: DataCache):
         self.config: Config = config
         self.time = time
         self.source: SnapshotSource = source
@@ -96,6 +99,7 @@ class Model():
         self.estimator = estimator
         self.waiting_for_startup = False
         self.ignore_startup_delay = False
+        self._data_cache = data_cache
 
     def enabled(self):
         if self.source.needsConfiguration():
@@ -148,7 +152,7 @@ class Model():
             return next
 
     def nextSnapshot(self, now: datetime):
-        latest = max(self.snapshots.values(),
+        latest = max(filter(lambda s: not s.ignore(), self.snapshots.values()),
                      default=None, key=lambda s: s.date())
         if latest:
             latest = latest.date()
@@ -182,7 +186,7 @@ class Model():
             # get the snapshots we should upload
             uploads = []
             for snapshot in self.snapshots.values():
-                if snapshot.getSource(self.source.name()) is not None and snapshot.getSource(self.source.name()).uploadable() and snapshot.getSource(self.dest.name()) is None:
+                if snapshot.getSource(self.source.name()) is not None and snapshot.getSource(self.source.name()).uploadable() and snapshot.getSource(self.dest.name()) is None and not snapshot.ignore():
                     uploads.append(snapshot)
             uploads.sort(key=lambda s: s.date())
             uploads.reverse()
@@ -203,6 +207,7 @@ class Model():
         self._handleSnapshotDetails()
         self.source.postSync()
         self.dest.postSync()
+        self._data_cache.saveIfDirty()
 
     def isWorkingThroughUpload(self):
         return self.dest.isWorking()
@@ -299,7 +304,7 @@ class Model():
         consider_purging = []
         for snapshot in snapshots:
             source_snapshot = snapshot.getSource(source.name())
-            if source_snapshot is not None and source_snapshot.considerForPurge():
+            if source_snapshot is not None and source_snapshot.considerForPurge() and not snapshot.ignore():
                 consider_purging.append(snapshot)
         if len(consider_purging) == 0:
             return None

@@ -34,7 +34,36 @@
                 class="filled-in checkbox-ha" />
               <span>Delete Snapshots After Upload</span>
               <br />
-              <span class="helper-text">Delete snapshots in Home Assistant immediately after uploading them to Google Drive.  This can be useful if you machine is low on space, but your snapshots will only be stored in the cloud.  Enabling this will cause "Snapshots in Home Assistant" to be ignored.</span>
+              <span class="helper-text">Delete snapshots in Home Assistant immediately after uploading them to Google Drive.  
+                This can be useful if you machine is low on space, but your snapshots will only be stored in the cloud. 
+                 Enabling this will cause "Snapshots in Home Assistant" to be ignored.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
+              <input type="checkbox" name="ignore_other_snapshots" id="ignore_other_snapshots"
+                class="filled-in checkbox-ha" />
+              <span>Ignore Other Snapshots</span>
+              <br />
+              <span class="helper-text">The addon will ignore any snapshots it didn't create.  
+                Ignored snapshots will not count toward "Snapshots in Home Assistant", get deleted, 
+                or get backed up unless you manually tell the addon to do so.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
+              <input type="checkbox" name="ignore_upgrade_snapshots" id="ignore_upgrade_snapshots"
+                class="filled-in checkbox-ha" />
+              <span>Ignore "Upgrade" Snapshots</span>
+              <br />
+              <span class="helper-text">The addon will ignore snapshots with only one addon or folder inside them.
+                This is usefull if you'd like the addon to ignore snapshots that Homa Assistant automatically creates while updating.  
+                Ignored snapshots will not count toward "Snapshots in Home Assistant", get deleted, 
+                or get backed up unless you manually tell the addon to do so.</span>
             </label>
           </div>
         </div>

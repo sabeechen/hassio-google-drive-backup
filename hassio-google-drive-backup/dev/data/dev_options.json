@@ -4,6 +4,7 @@
     "home_assistant_url": "http://localhost:56153/core/api/",
     "hassio_header": "test_header",
     "retained_file_path": "hassio-google-drive-backup/dev/data/retained.json",
+    "data_cache_file_path": "hassio-google-drive-backup/dev/data/data_cache.json",
     "backup_directory_path": "hassio-google-drive-backup/dev/backup",
     "certfile": "hassio-google-drive-backup/dev/ssl/fullchain.pem",
     "keyfile": "hassio-google-drive-backup/dev/ssl/privkey.pem",

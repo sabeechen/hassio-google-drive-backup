@@ -20,6 +20,8 @@ class Setting(Enum):
     MAX_SNAPSHOTS_IN_HASSIO = "max_snapshots_in_hassio"
     MAX_SNAPSHOTS_IN_GOOGLE_DRIVE = "max_snapshots_in_google_drive"
     DAYS_BETWEEN_SNAPSHOTS = "days_between_snapshots"
+    IGNORE_OTHER_SNAPSHOTS = "ignore_other_snapshots"
+    IGNORE_UPGRADE_SNAPSHOTS = "ignore_upgrade_snapshots"
     SNAPSHOT_NAME = "snapshot_name"
     SNAPSHOT_TIME_OF_DAY = "snapshot_time_of_day"
     SNAPSHOT_PASSWORD = "snapshot_password"
@@ -87,6 +89,7 @@ class Setting(Enum):
     INGRESS_TOKEN_FILE_PATH = "ingress_token_file_path"
     CONFIG_FILE_PATH = "config_file_path"
     ID_FILE_PATH = "id_file_path"
+    DATA_CACHE_FILE_PATH = "data_cache_file_path"
 
     # endpoints
     HASSIO_URL = "hassio_url"
@@ -135,6 +138,8 @@ _DEFAULTS = {
     Setting.MAX_SNAPSHOTS_IN_HASSIO: 4,
     Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: 4,
     Setting.DAYS_BETWEEN_SNAPSHOTS: 3,
+    Setting.IGNORE_OTHER_SNAPSHOTS: False,
+    Setting.IGNORE_UPGRADE_SNAPSHOTS: False,
     Setting.SNAPSHOT_TIME_OF_DAY: "",
     Setting.SNAPSHOT_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
     Setting.SNAPSHOT_PASSWORD: "",
@@ -215,6 +220,7 @@ _DEFAULTS = {
     Setting.CONFIG_FILE_PATH: "/data/options.json",
     Setting.ID_FILE_PATH: "/data/id.json",
     Setting.STOP_ADDON_STATE_PATH: '/data/stop_addon_state.json',
+    Setting.DATA_CACHE_FILE_PATH: '/data/data_cache.json',
 
     # Various timeouts and intervals
     Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,
@@ -247,6 +253,8 @@ _CONFIG = {
     Setting.MAX_SNAPSHOTS_IN_HASSIO: "int(0,)",
     Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: "int(0,)",
     Setting.DAYS_BETWEEN_SNAPSHOTS: "float(0,)?",
+    Setting.IGNORE_OTHER_SNAPSHOTS: "bool?",
+    Setting.IGNORE_UPGRADE_SNAPSHOTS: "bool?",
     Setting.SNAPSHOT_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
     Setting.SNAPSHOT_NAME: "str?",
     Setting.SNAPSHOT_PASSWORD: "str?",
@@ -327,6 +335,7 @@ _CONFIG = {
     Setting.CONFIG_FILE_PATH: "str?",
     Setting.ID_FILE_PATH: "str?",
     Setting.STOP_ADDON_STATE_PATH: "str?",
+    Setting.DATA_CACHE_FILE_PATH: "str?",
 
     # Various timeouts and intervals
     Setting.SNAPSHOT_STALE_SECONDS: "float(0,)?",

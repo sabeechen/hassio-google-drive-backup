@@ -208,7 +208,7 @@ class SimulatedSupervisor(BaseServer):
             }
         )
 
-    async def _internalNewSnapshot(self, request: Request, input_json, date=None, verify_header=True):
+    async def _internalNewSnapshot(self, request: Request, input_json, date=None, verify_header=True) -> Response:
         async with self._snapshot_lock:
             async with self._snapshot_inner_lock:
                 if 'wait' in input_json:
@@ -228,13 +228,16 @@ class SimulatedSupervisor(BaseServer):
                 snapshot_info = parseSnapshotInfo(data)
                 self._snapshots[slug] = snapshot_info
                 self._snapshot_data[slug] = bytearray(data.getbuffer())
-                return self._formatDataResponse({"slug": slug})
+                return slug
+
+    async def createSnapshot(self, input_json, date=None):
+        return await self._internalNewSnapshot(None, input_json, date=date, verify_header=False)
 
     async def _newSnapshot(self, request: Request):
         if self._snapshot_lock.locked():
             raise HTTPBadRequest()
         input_json = await request.json()
-        return await self._internalNewSnapshot(request, input_json)
+        return self._formatDataResponse({"slug": await self._internalNewSnapshot(request, input_json)})
 
     async def _uploadSnapshot(self, request: Request):
         await self._verifyHeader(request)
@@ -362,4 +365,5 @@ class SimulatedSupervisor(BaseServer):
         date = self._time.now() - timedelta(days=days_back)
         name = date.strftime("Full Snapshot %Y-%m-%d %H:%M-%S")
         wait = int(request.query.get("wait", 0))
-        return await self._internalNewSnapshot(request, {'name': name, 'wait': wait}, date=date, verify_header=False)
+        slug = await self._internalNewSnapshot(request, {'name': name, 'wait': wait}, date=date, verify_header=False)
+        return self._formatDataResponse({'slug': slug})

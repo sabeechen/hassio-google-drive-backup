@@ -5,16 +5,16 @@ from typing import Dict, List
 
 from injector import inject, singleton
 
-from ..config import Config, Setting, CreateOptions
-from ..exceptions import (KnownError, LogicError, NoSnapshot, PleaseWait,
-                          UserCancelledError)
-from ..util import GlobalInfo, Backoff, Estimator
-from .snapshots import AbstractSnapshot, Snapshot
-from ..time import Time
-from ..worker import Trigger
+from backup.config import Config, Setting, CreateOptions
+from backup.exceptions import (KnownError, LogicError, NoSnapshot, PleaseWait,
+                               UserCancelledError)
+from backup.util import GlobalInfo, Backoff, Estimator
+from backup.time import Time
+from backup.worker import Trigger
+from backup.logger import getLogger
+from backup.creds.creds import Creds
 from .model import Model
-from ..logger import getLogger
-from ..creds.creds import Creds
+from .snapshots import AbstractSnapshot, Snapshot, SOURCE_HA
 
 logger = getLogger(__name__)
 
@@ -129,12 +129,19 @@ class Coordinator(Trigger):
                 'max': source_class.maxCount(),
                 'enabled': source_class.enabled(),
                 'icon': source_class.icon(),
+                'ignored': 0,
             }
             size = 0
+            ignored_size = 0
             latest = None
             for snapshot in self.snapshots():
                 data: AbstractSnapshot = snapshot.getSource(source)
                 if data is None:
+                    continue
+                if data.ignore() and snapshot.ignore():
+                    source_info['ignored'] += 1
+                if snapshot.ignore():
+                    ignored_size += snapshot.size()
                     continue
                 source_info['snapshots'] += 1
                 if data.retained():
@@ -147,7 +154,7 @@ class Coordinator(Trigger):
             if latest is not None:
                 source_info['latest'] = self._time.asRfc3339String(latest)
             source_info['size'] = Estimator.asSizeString(size)
-
+            source_info['ignored_size'] = Estimator.asSizeString(ignored_size)
             free_space = source_class.freeSpace()
             if free_space is not None:
                 source_info['free_space'] = Estimator.asSizeString(free_space)
@@ -259,6 +266,9 @@ class Coordinator(Trigger):
     async def delete(self, sources, slug):
         await self._withSoftLock(lambda: self._delete(sources, slug))
 
+    async def ignore(self, slug: str, ignore: bool):
+        await self._withSoftLock(lambda: self._ignore(slug, ignore))
+
     async def _delete(self, sources, slug):
         for source in sources:
             snapshot = self._ensureSnapshot(source, slug)
@@ -266,6 +276,10 @@ class Coordinator(Trigger):
             if snapshot.isDeleted():
                 del self._model.snapshots[slug]
         self._updateFreshness()
+
+    async def _ignore(self, slug: str, ignore: bool):
+        snapshot = self._ensureSnapshot(SOURCE_HA, slug)
+        await self._ensureSource(SOURCE_HA).ignore(snapshot, ignore)
 
     def _ensureSnapshot(self, source: str = None, slug=None) -> Snapshot:
         snapshot = self._buildModel().snapshots.get(slug)

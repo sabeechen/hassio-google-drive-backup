@@ -155,6 +155,7 @@
         'slug': source.slug,
         'sources': {}
       };
+      data['sources'][source.key] = false;
       let success = function (info) { neverDeleteCompleted(container, false); };
       let fail = function (info) { neverDeleteCompleted(container, true); };
       postJson("retain", data, success, fail, "Updating snapshot... ");

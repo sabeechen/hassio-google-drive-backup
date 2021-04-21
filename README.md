@@ -21,11 +21,10 @@ This is for you if you want to quickly set up a backup strategy without much fus
 - Comprehensive documentation.
 - _Most certainly_ doesn't mine bitcoin on your home automation server. Definitely no.
 
----
 
-Do you like this? Give me a reason to keep doing it and
-
-[![Repo Screenshot](images/bmc.png)](https://www.buymeacoffee.com/sabeechen)
+>Do you like this? The project requires financial support make the Google Drive integration work.  Donate to keep it going:
+>  
+>[<img src="images/bmc-button.svg" width="150"/>](https://www.buymeacoffee.com/sabeechen)
 
 ## Installation
 

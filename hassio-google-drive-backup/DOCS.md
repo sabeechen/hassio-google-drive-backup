@@ -10,39 +10,61 @@ _Note_: The configuration can be changed easily by starting the add-on and click
 The UI explains what each setting is and you don't need to modify anything before clicking `Start`.
 If you would still prefer to modify the settings in yaml, the options are detailed below.
 
-Add-on configuration example (do not use directly):
+Add-on configuration example. Don't use this directly, the addon has a lot of configurability that most users don't need:
 
 ```yaml
 # Keep 10 snapshots in Home Assistant
 max_snapshots_in_hassio: 10
+
 # Keep 10 snapshots in Google Drive
 max_snapshots_in_google_drive: 10
+
+# Ignore snapshots the addons doesn't create
+ignore_other_snapshots: True
+
+# Ignore snapshots that looks like they were created form an automatic upgrade
+ignore_upgrade_snapshots: True
+
 # Take a snapshot every 3 days
 days_between_snapshots: 3
-# Create snapshots at 1:30pm
+
+# Create snapshots at 1:30pm exactly
 snapshot_time_of_day: "13:30"
+
+# Delete snapshots from Home Assistant immediately after uploading them to Google Drive
+delete_after_upload: True
+
 # Specify the snapshot folder
 specify_snapshot_folder: true
+
 # Use a dark and red theme
 background_color: "#242424"
 accent_color: "#7D0034"
+
 # Use a password for snapshot archives
 snapshot_password: "super_secret"
+
 # Create snapshot names like 'Full Snapshot HA 0.92.0'
 snapshot_name: "{type} Snapshot HA {version_ha}"
+
 # Keep a snapshot once every day for 3 days and once a week for 4 weeks
 generational_days: 3
 generational_weeks: 4
+
 # Create partial snapshots with no folders and no configurator add-on
 exclude_folders: "homeassistant,ssl,share,addons/local,media"
 exclude_addons: "core_configurator"
+
 # Turn off notifications and staleness sensor
 enable_snapshot_stale_sensor: false
 notify_for_stale_snapshots: false
+
 # Enable server directly on port port 1627
 expose_extra_server: true
+
 # Allow sending error reports
 send_error_reports: true
+
 # Delete snapshots after they're uploaded to Google Drive
 delete_after_upload: true
 ```
@@ -55,6 +77,12 @@ The number of snapshots the add-on will allow Home Assistant to store locally be
 
 The number of snapshots the add-on will keep in Google Drive before old ones are deleted. Google Drive gives you 15GB of free storage (at the time of writing) so plan accordingly if you know how big your snapshots are.
 
+### Option: `ignore_other_snapshots` (default: False)
+Make the addon ignore any snapshot it didn't directly create.  Any snapshot already uploaded to Google Drive will not be ignored until you delete it from Google Drive.
+
+### Option: `ignore_upgrade_snapshots` (default: False)
+Ignores snapshots that look like they were automatically created form updating an addon or Home Assistant.  This will make the addon ignore any partial snapshot that has onyl one addon or folder in it.
+
 ### Option: `days_between_snapshots` (default: 3)
 
 How often a new snapshot should be scheduled, eg `1` for daily and `7` for weekly.
@@ -62,6 +90,11 @@ How often a new snapshot should be scheduled, eg `1` for daily and `7` for weekl
 ### Option: `snapshot_time_of_day`
 
 The time of day (local time) that new snapshots should be created in 24 hour "HH:MM" format. When not specified (the default), snapshots are created at the same time of day of the most recent snapshot.
+
+
+### Options: `delete_after_upload` (default: False)
+
+Deletes snapshot from Home Assistant immediately after uploading them to Google Drive.  This is useful if you have very limited space inside Home Assistant, since you only need to have available space for a single snapshot locally.
 
 ### Option: `specify_snapshot_folder` (default: False)
 

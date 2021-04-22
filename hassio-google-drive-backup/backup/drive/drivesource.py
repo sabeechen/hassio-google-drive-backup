@@ -77,7 +77,9 @@ class DriveSource(SnapshotDestination):
 
     def freeSpace(self):
         if self._drive_info and self._drive_info.get("storageQuota") is not None and not self.folder_finder.currentIsSharedDrive():
-            return int(self._drive_info.get("storageQuota").get("limit")) - int((self._drive_info.get("storageQuota").get("usage")))
+            info = self._drive_info.get("storageQuota")
+            if 'limit' in info and 'usage' in info:
+                return int(info.get("limit")) - int((info.get("usage")))
         return super().freeSpace()
 
     async def create(self, options: CreateOptions) -> DriveSnapshot:

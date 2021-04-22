@@ -1,4 +1,8 @@
-## [0.104.1 2021-4-22]
+## [0.104.2 2021-4-22]
+### Fixes
+- An issue parsing Google Drive's free space that prevents the web-ui from loading.
+
+## [0.104.1 2021-4-21]
 ### Overview
 This is probably the biggest update to the addon so far.  Here are the highlights:
 - The UI has been completely rewritten by [@ericmatte](https://github.com/ericmatte) to be more clean, space efficient, and visially streamlined.  Thanks a ton for the contribution!

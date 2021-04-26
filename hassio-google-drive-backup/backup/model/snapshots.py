@@ -240,6 +240,7 @@ class Snapshot(object):
         return Estimator.asSizeString(size_string)
 
     def status(self) -> str:
+        # TODO: Drive Specific
         if self._status_override is not None:
             return self._status_override.format(*self._status_override_args)
 

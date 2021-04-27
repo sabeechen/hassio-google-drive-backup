@@ -12,7 +12,6 @@
   "ingress": true,
   "panel_icon": "mdi:cloud",
   "panel_title": "Snapshots",
-  "panel_admin": true,
   "map": ["ssl", "backup:rw", "config"],
   "options": {
     "max_snapshots_in_hassio": 4,
@@ -28,7 +27,7 @@
 
     "delete_after_upload": "bool?",
     "verbose": "bool?",
-    "use_ssl": "bool",
+    "use_ssl": "bool?",
     "certfile": "str?",
     "keyfile": "str?",
     "require_login": "bool?",
@@ -44,7 +43,7 @@
     "generational_years": "int(0,)?",
     "generational_day_of_year": "int(1,365)?",
     "generational_day_of_month": "int(1,31)?",
-    "generational_day_of_week": "match(^(mon|tue|wed|thu|fri|sat|sun)$)?",
+    "generational_day_of_week": "list(mon|tue|wed|thu|fri|sat|sun)?",
     "generational_delete_early": "bool?",
 
     "notify_for_stale_snapshots": "bool?",

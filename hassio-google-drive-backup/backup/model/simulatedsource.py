@@ -1,4 +1,4 @@
-from .model import SnapshotSource, CreateOptions, SnapshotDestination
+from .model import CreateOptions, SnapshotDestination
 from .snapshots import Snapshot
 from .dummysnapshotsource import DummySnapshotSource
 from typing import Dict

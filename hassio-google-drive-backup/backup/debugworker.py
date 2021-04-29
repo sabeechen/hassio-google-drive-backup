@@ -1,5 +1,4 @@
 import asyncio
-import json
 import socket
 import subprocess
 from datetime import datetime, timedelta
@@ -46,7 +45,7 @@ class DebugWorker(Worker):
         if self.config.get(Setting.SEND_ERROR_REPORTS):
             try:
                 await self.maybeSendErrorReport()
-            except Exception as e:
+            except Exception:
                 # just eat the error
                 pass
 

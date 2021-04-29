@@ -13,7 +13,7 @@
         Click
         <a target="_blank"
           href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new?title=Please%20add%20a%20title&body=Copy%20the%20info%20from%20the%20previous%20page%20here"><i
-            style="vertical-align: middle" class="material-icons">open_in_new</i>Open Github</a>
+            style="vertical-align: middle" class="material-icons tiny">open_in_new</i> Open Github</a>
         to open a new issue on Github and paste the text you copied there. You can click "Preview" to make sure it looks
         right.
       </li>
@@ -26,31 +26,26 @@
       </li>
     </ul>
     <p>Here is a preview of the information you'll be providing:</p>
-    <div class="row">
-      <div class="col s12">
-        <ul class="tabs" id="bug_report_tabs">
-          <li class="tab col s3"><a class="active" href="#bug_preview">Preview</a></li>
-          <li class="tab col s3"><a href="#bug_markdown">Markdown</a></li>
-        </ul>
-      </div>
+    <ul class="tabs" id="bug_report_tabs">
+      <li class="tab col s3"><a class="active" href="#bug_preview">Preview</a></li>
+      <li class="tab col s3"><a href="#bug_markdown">Markdown</a></li>
+    </ul>
+    <div style="max-height: 200px;">
       <div id="bug_preview" class="col s12">
-        <div id="bug_preview_display" class="highlight-border" style="overflow-y: scroll; overflow-x: scroll"></div>
+        <div id="bug_preview_display" class="highlight-border" style="overflow-y: scroll; overflow-x: scroll; max-height: 500px;"></div>
       </div>
       <div id="bug_markdown" class="col s12">
         <div class="highlight-border">
-          <textarea id="bug_markdown_display" style="overflow-x: scroll; height: 1000px"></textarea>
+          <textarea id="bug_markdown_display" style="overflow-x: scroll; height: 500px; border: 0;"></textarea>
         </div>
       </div>
     </div>
   </div>
   <div class="modal-footer">
-    <button id="copy_button" onclick="doBugDetailCopy()" class="btn waves-effect waves-light btn-flat">
-      <i class="material-icons" style="vertical-align: middle; padding-right: 5px">content_copy</i>Copy Details
-    </button>
+    <a href="#!" onclick="doBugDetailCopy()" class="btn-flat"><i class="material-icons" >content_copy</i>Copy Details</a>
     <a target="_blank"
       href="https://github.com/sabeechen/hassio-google-drive-backup/issues/new?title=Please%20add%20a%20title&body=Copy%20the%20info%20from%20the%20previous%20page%20here"
-      class="waves-effect waves-light btn-flat"><i class="material-icons"
-        style="vertical-align: middle; padding-right: 5px">open_in_new</i>Open Github</a>
-    <a href="#!" class="modal-close waves-effect waves-light btn-flat">Close</a>
+      class="btn-flat"><i class="material-icons">open_in_new</i>Open Github</a>
+    <a href="#!" class="modal-close btn-flat"><i class="material-icons">close</i>Close</a>
   </div>
 </div>

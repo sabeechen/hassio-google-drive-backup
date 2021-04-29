@@ -28,6 +28,46 @@
           </div>
         </div>
         <div class="row">
+          <div class="col s12">
+            <label>
+              <input type="checkbox" name="delete_after_upload" id="delete_after_upload"
+                class="filled-in checkbox-ha" />
+              <span>Delete Snapshots After Upload</span>
+              <br />
+              <span class="helper-text">Delete snapshots in Home Assistant immediately after uploading them to Google Drive.  
+                This can be useful if you machine is low on space, but your snapshots will only be stored in the cloud. 
+                 Enabling this will cause "Snapshots in Home Assistant" to be ignored.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
+              <input type="checkbox" name="ignore_other_snapshots" id="ignore_other_snapshots"
+                class="filled-in checkbox-ha" />
+              <span>Ignore Other Snapshots</span>
+              <br />
+              <span class="helper-text">The addon will ignore any snapshots it didn't create.  
+                Ignored snapshots will not count toward "Snapshots in Home Assistant", get deleted, 
+                or get backed up unless you manually tell the addon to do so.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
+              <input type="checkbox" name="ignore_upgrade_snapshots" id="ignore_upgrade_snapshots"
+                class="filled-in checkbox-ha" />
+              <span>Ignore "Upgrade" Snapshots</span>
+              <br />
+              <span class="helper-text">The addon will ignore snapshots with only one addon or folder inside them.
+                This is usefull if you'd like the addon to ignore snapshots that Homa Assistant automatically creates while updating.  
+                Ignored snapshots will not count toward "Snapshots in Home Assistant", get deleted, 
+                or get backed up unless you manually tell the addon to do so.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
           <div class="input-field col m6 s12">
             <i class="material-icons prefix">date_range</i>
             <input type="number" id="days_between_snapshots" name="days_between_snapshots" min="0" class="validate" />
@@ -55,7 +95,7 @@
               password. You can specify a password from your secrets.yaml by using the syntax "!secret
               your_secret_key".</span>
           </div>
-          <div class="input-field col m6 s12" id="password_renter_block">
+          <div class="input-field col m6 s12 default-hidden" id="password_renter_block">
             <i class="material-icons prefix">vpn_key</i>
             <input type="password" autocomplete="new-password" id="snapshot_password_reenter"
               name="snapshot_password_reenter" settings_ignore="true" class="validate" onkeyup="checkForSecret()" />
@@ -107,8 +147,8 @@
                 <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
                   folder you'd like to use and paste its folder ID here.  Doing this gives the addon permission to store snapshots in that folder.</span>
                 <a href="#!" id="choose_folder_button" onclick="chooseSnapshotFolder()"
-                  class="waves-effect waves-light btn-flat ha-blue hide-for-custom-creds" id="save_settings"
-                  style="margin-left: 20px; margin-top: 10px">Choose Folder</a>
+                  class="btn-flat hide-for-custom-creds" id="xhoose_folder_button"
+                  style="margin-left: 20px; margin-top: 10px"><i class="material-icons">open_in_new</i>Choose Folder</a>
               </div>
             </div>
           </div>
@@ -414,7 +454,7 @@
             <div class="row">
               <div class="input-field col s6">
                 <i class="material-icons prefix">format_paint</i>
-                <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px"
+                <a href="#!" class="btn-flat" style="margin-left: 45px; margin-top: 10px"
                   onclick="showPallette(this)" id="background_color"></a>
                 <label style="transform: translateY(-20px) scale(0.8)">Background Color</label>
                 <span class="helper-text" style="margin-top: 10px">The background color of this interface. <a href="#"
@@ -422,7 +462,7 @@
               </div>
               <div class="input-field col s6">
                 <i class="material-icons prefix">format_paint</i>
-                <a href="#!" class="waves-effect waves-light btn-flat" style="margin-left: 45px; margin-top: 10px"
+                <a href="#!" class="btn-flat" style="margin-left: 45px; margin-top: 10px"
                   onclick="showPallette(this)" id="accent_color"></a>
                 <label style="transform: translateY(-20px) scale(0.8)">Accent Color</label>
                 <span class="helper-text" style="margin-top: 10px">The accent color of this interface (eg links,
@@ -514,12 +554,11 @@
   </div>
   <div class="modal-footer" style="min-height: 56px; height: auto">
     <div class="left valign-wrapper red darken-4 white-text default-hidden" id="settings_error_div"
-      style="margin: 6px; padding-left: 16px; padding-right: 16px; min-height: 36px; vertical-align: middle">
-      <span id="settings_error" style="vertical-align: middle"> Some configuration is invalid, check for red errors up
-        above. </span>
+      style="margin: 6px; padding-left: 16px; padding-right: 16px; min-height: 36px; display: flex">
+      <span id="settings_error">Some configuration is invalid, check for red errors up above.</span>
     </div>
 
-    <a href="#!" class="waves-effect waves-light btn-flat" id="save_settings" onClick="saveSettings()">Save</a>
-    <a href="#!" class="waves-effect waves-light btn-flat" onclick="handleCloseSettings()" id="save_cancel">Cancel</a>
+    <a href="#!" class="btn-flat" id="save_settings" onClick="saveSettings()"><i class="material-icons">save</i>Save</a>
+    <a href="#!" class="btn-flat" onclick="handleCloseSettings()" id="save_cancel"><i class="material-icons">close</i>Cancel</a>
   </div>
 </div>

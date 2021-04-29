@@ -25,3 +25,10 @@ def test_version():
 def test_parse():
     assert Version.parse("1.0") == Version(1, 0)
     assert Version.parse("1.2.3") == Version(1, 2, 3)
+
+
+def test_parse_staging():
+    assert Version.parse("1.0.staging.1") == Version(1, 0, 1)
+    assert Version.parse("1.0.staging.1").staging == True
+    assert Version.parse("1.0.staging.1") > Version(1.0)
+    assert Version.parse("1.2.3") == Version(1, 2, 3)

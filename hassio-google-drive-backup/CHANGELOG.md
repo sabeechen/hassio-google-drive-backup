@@ -1,3 +1,41 @@
+## [0.104.3 2021-4-28]
+### Fixes
+- A config error that made an optional config parameter mandatory
+
+
+## [0.104.2 2021-4-22]
+### Fixes
+- An issue parsing Google Drive's free space that prevents the web-ui from loading.
+
+## [0.104.1 2021-4-21]
+### Overview
+This is probably the biggest update to the addon so far.  Here are the highlights:
+- The UI has been completely rewritten by [@ericmatte](https://github.com/ericmatte) to be more clean, space efficient, and visially streamlined.  Thanks a ton for the contribution!
+- New options have been added to ignore snapshots the addon didn't create and snapshots created form the supervisor's new "snapshot on upgrade" feature.  If you turn it on, snapshots already backed up to Google Drive won't be "ignored" until you delete the snapshot in Google Drive but it will apply to all future snapshots it sees.
+- A bunch of unused options were removed form the addon's configuration to make it work correctly with the supervisor's new visual addon configuration editor.  Its still reommended to change addon settings from thin the addon's web-UI because this addon has a lot of configuration options! 
+- A bunch of quality-of-life improvements were made to how the andle handles flaky connections to Google Drive. 
+
+### New Stuff Details
+- Thanks to tremendous effort by [@ericmatte](https://github.com/ericmatte), the interface has been completely restyled.
+- Added the option "ignore_other_snapshots" which will make the addon ignore any snapshot it didn't create.
+- Added the option "ignore_upgrade_snapshots" which makes the addon ignore snapshots containing a single folder or addon, such as those created automatically during HA/addon upgrades.
+- Added the option "delete_after_uploaded" which deletes snapshots in Home Assistant immediately after they're uploaded.
+- Added a display for the space available in Google Drive.
+- Added visual indication of which snapshots are being stored for what when using generational backups.
+- Auth structure changes now allow the "Content Manager" role to be used on folders in Shared Drives. 
+- The addon now waits a few minutes before creating snapshots on startup to avoid resource contention issues when Home Assistant is booting up.
+- Improved the handling of upload retrys on flaky connections.
+- The web-UI now shows upload speed, progress, duration, etc when uploading to Google Drive.
+- Removed a number of debugging options from the addon configuration, now that they're visible within the new addon config editor UI in Home Assistant.
+
+## Fixes
+- Updated the custom auth guide to reflect Google's new authentication workflow.
+
+## Technical/Cleanup
+- Automated the deployment of addon's "dev" branch to a staging instances.
+- Unit tests now run automatically as GitHub actions.
+- CSS styling in the web-ui is now _mostly_ uniform.
+
 ## [0.103.1 2020-1-23]
 ### Fixes
 - Thanks to intestigation by [@jhampson-dbre](https://github.com/jhampson-dbre), fixes a long standing issue that caused the "Snapshot time of day" to be ignored ([#166](https://github.com/sabeechen/hassio-google-drive-backup/issues/166)).

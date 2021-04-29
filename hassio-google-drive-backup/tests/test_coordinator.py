@@ -26,12 +26,13 @@ def dest():
 @pytest.fixture
 def simple_config():
     config = Config()
+    config.override(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES, 0)
     return config
 
 
 @pytest.fixture
-def model(source, dest, time, simple_config, global_info, estimator):
-    return Model(simple_config, time, source, dest, global_info, estimator)
+def model(source, dest, time, simple_config, global_info, estimator, data_cache):
+    return Model(simple_config, time, source, dest, global_info, estimator, data_cache)
 
 
 @pytest.fixture
@@ -164,6 +165,9 @@ async def test_retain_errors(coord: Coordinator, source, dest, snapshot):
 
 @pytest.mark.asyncio
 async def test_freshness(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, snapshot: Snapshot, time: FakeTime):
+    source.setMax(2)
+    dest.setMax(2)
+    await coord.sync()
     assert snapshot.getPurges() == {
         source.name(): False,
         dest.name(): False
@@ -316,7 +320,7 @@ def test_save_creds(coord: Coordinator, source, dest):
 async def test_check_size_new_snapshot(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker):
     skipForWindows()
     fs.setFreeBytes(0)
-    with(raises(LowSpaceError)):
+    with raises(LowSpaceError):
         await coord.startSnapshot(CreateOptions(time.now(), "Test Name"))
 
 

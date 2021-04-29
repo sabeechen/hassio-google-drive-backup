@@ -5,6 +5,8 @@ from firebase_admin import firestore
 from pathlib import Path
 
 KNWON_ERRORS = ['existing_backup_folder', 'google_dns', 'cancelled', 'google_timeout', 'low_space', 'multiple_deletes']
+
+
 async def main():
     cred = credentials.Certificate(str(Path.home().joinpath("Documents/secrets/server-firestore-creds.json")))
     firebase_admin.initialize_app(cred)

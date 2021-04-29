@@ -213,4 +213,3 @@ class TraceLogger(StandardLogger):
 
     def warn(self, *args, **kwargs):
         super().log(logging.TRACE, *args, **kwargs)
-

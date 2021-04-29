@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 
 from dateutil.tz import gettz
@@ -25,9 +26,11 @@ class FakeTime(Time):
     def advanceDay(self, days=1):
         return self.advance(days=1)
 
-    def advance(self, days=0, hours=0, minutes=0, seconds=0):
+    def advance(self, days=0, hours=0, minutes=0, seconds=0, duration=None):
         self._now = self._now + \
             timedelta(days=days, hours=hours, seconds=seconds, minutes=minutes)
+        if duration is not None:
+            self._now = self._now + duration
         return self
 
     def now(self) -> datetime:
@@ -39,6 +42,8 @@ class FakeTime(Time):
     async def sleepAsync(self, seconds: float):
         self.sleeps.append(seconds)
         self._now = self._now + timedelta(seconds=seconds)
+        # allow the task to be interrupted if such a thing is requested.
+        await asyncio.sleep(0)
 
     def clearSleeps(self):
         self.sleeps = []

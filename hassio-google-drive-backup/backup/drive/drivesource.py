@@ -1,8 +1,6 @@
-import os
-import os.path
-from datetime import datetime, timedelta
+from datetime import datetime
 from io import IOBase
-from typing import Any, Dict
+from typing import Dict
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientResponseError
@@ -21,7 +19,7 @@ from ..time import Time
 from .driverequests import DriveRequests
 from .folderfinder import FolderFinder
 from .thumbnail import THUMBNAIL_IMAGE
-from ..model import SnapshotDestination, AbstractSnapshot, DriveSnapshot, Snapshot
+from ..model import SnapshotDestination, DriveSnapshot, Snapshot
 from ..logger import getLogger
 from ..creds.creds import Creds
 
@@ -47,6 +45,7 @@ class DriveSource(SnapshotDestination):
         self.folder_finder = folderfinder
         self._info = info
         self._uploadedAtLeastOneChunk = False
+        self._drive_info = None
 
     def saveCreds(self, creds: Creds) -> None:
         logger.info("Saving new Google Drive credentials")
@@ -76,6 +75,13 @@ class DriveSource(SnapshotDestination):
             return False
         return super().needsConfiguration()
 
+    def freeSpace(self):
+        if self._drive_info and self._drive_info.get("storageQuota") is not None and not self.folder_finder.currentIsSharedDrive():
+            info = self._drive_info.get("storageQuota")
+            if 'limit' in info and 'usage' in info:
+                return int(info.get("limit")) - int((info.get("usage")))
+        return super().freeSpace()
+
     async def create(self, options: CreateOptions) -> DriveSnapshot:
         raise LogicError("Snapshots can't be created in Drive")
 
@@ -85,11 +91,20 @@ class DriveSource(SnapshotDestination):
             raise ExistingBackupFolderError(
                 existing.get('id'), existing.get('name'))
 
+    def icon(self) -> str:
+        return "google-drive"
+
     def isWorking(self):
         return self._uploadedAtLeastOneChunk
 
     async def get(self, allow_retry=True) -> Dict[str, DriveSnapshot]:
         parent = await self.getFolderId()
+        try:
+            self._drive_info = await self.drivebackend.getAboutInfo()
+        except Exception as e:
+            # This is just used to get the remaining space in Drive, which is a
+            # nice to have.  Just log the error to debug if we can't get it
+            logger.debug("Unable to retrieve Google Drive storage info: " + str(e))
         snapshots: Dict[str, DriveSnapshot] = {}
         try:
             async for child in self.drivebackend.query("'{}' in parents".format(parent)):
@@ -117,11 +132,15 @@ class DriveSource(SnapshotDestination):
 
     async def delete(self, snapshot: Snapshot):
         item = self._validateSnapshot(snapshot)
-        logger.info("Deleting '{}' From Google Drive".format(item.name()))
-        await self.drivebackend.delete(item.id())
+        if item.canDeleteDirectly():
+            logger.info("Deleting '{}' From Google Drive".format(item.name()))
+            await self.drivebackend.delete(item.id())
+        else:
+            logger.info("Trashing '{}' in Google Drive".format(item.name()))
+            await self.drivebackend.update(item.id(), {"trashed": True})
         snapshot.removeSource(self.name())
 
-    async def save(self, snapshot: AbstractSnapshot, source: AsyncHttpGetter) -> DriveSnapshot:
+    async def save(self, snapshot: Snapshot, source: AsyncHttpGetter) -> DriveSnapshot:
         retain = snapshot.getOptions() and snapshot.getOptions().retain_sources.get(self.name(), False)
         parent_id = await self.getFolderId()
         file_metadata = {
@@ -157,6 +176,7 @@ class DriveSource(SnapshotDestination):
                 size = source.size()
                 self._info.upload(size)
                 snapshot.overrideStatus("Uploading {0}%", source)
+                snapshot.setUploadSource(self.title(), source)
                 async for progress in self.drivebackend.create(source, file_metadata, MIME_TYPE):
                     self._uploadedAtLeastOneChunk = True
                     if isinstance(progress, float):
@@ -176,6 +196,7 @@ class DriveSource(SnapshotDestination):
                 # created the snapshot item on this request.
                 raise BackupFolderInaccessible(parent_id)
             finally:
+                snapshot.clearUploadSource()
                 self._uploadedAtLeastOneChunk = False
                 snapshot.clearStatus()
 

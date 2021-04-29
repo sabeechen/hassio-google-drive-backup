@@ -1,0 +1,26 @@
+<div id="debug_modal" class="modal">
+  <script type="text/javascript">
+    $(document).ready(function () {
+      $('#debug_modal').modal();
+      document.onkeydown = function (e) {
+        // CTRL + ALT + Y
+        if (e.ctrlKey && e.altKey && e.which == 89) {
+          M.Modal.getInstance(document.getElementById('debug_modal')).open();
+        }
+      };
+    });
+
+    function debug_show_all_hidden_things() {
+      $(".error_card").show();
+      $(".error_card").removeClass('error_card');
+    }
+  </script>
+  <div class="modal-content">
+    <h4>Debug</h4>
+    <p>Ah, you've stumbled into the debug dialog.  The developer uses this for testing things.  You're welcome to play around here, but wise men know better.</p>
+    <a class="btn-flat" onclick="debug_show_all_hidden_things()">Reveal all elements</a>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat">Close</a>
+  </div>
+</div>

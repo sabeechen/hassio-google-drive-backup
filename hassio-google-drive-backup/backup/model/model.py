@@ -5,14 +5,14 @@ from typing import Dict, Generic, List, Optional, Tuple, TypeVar
 from injector import inject, singleton
 
 from .backupscheme import GenerationalScheme, OldestScheme, DeleteAfterUploadScheme
-from ..config import Config, Setting, CreateOptions
-from ..exceptions import DeleteMutlipleSnapshotsError, SimulatedError
-from ..util import GlobalInfo, Estimator
+from backup.config import Config, Setting, CreateOptions
+from backup.exceptions import DeleteMutlipleSnapshotsError, SimulatedError
+from backup.util import GlobalInfo, Estimator, DataCache
 from .snapshots import AbstractSnapshot, Snapshot
 from .dummysnapshot import DummySnapshot
-from ..time import Time
-from ..worker import Trigger
-from ..logger import getLogger
+from backup.time import Time
+from backup.worker import Trigger
+from backup.logger import getLogger
 
 logger = getLogger(__name__)
 
@@ -39,6 +39,9 @@ class SnapshotSource(Trigger, Generic[T]):
     def upload(self) -> bool:
         return True
 
+    def icon(self) -> str:
+        return "sd_card"
+
     def freeSpace(self):
         return None
 
@@ -49,6 +52,9 @@ class SnapshotSource(Trigger, Generic[T]):
         pass
 
     async def delete(self, snapshot: T):
+        pass
+
+    async def ignore(self, snapshot: T, ignore: bool):
         pass
 
     async def save(self, snapshot: AbstractSnapshot, bytes: IOBase) -> T:
@@ -80,7 +86,7 @@ class SnapshotDestination(SnapshotSource):
 @singleton
 class Model():
     @inject
-    def __init__(self, config: Config, time: Time, source: SnapshotSource, dest: SnapshotDestination, info: GlobalInfo, estimator: Estimator):
+    def __init__(self, config: Config, time: Time, source: SnapshotSource, dest: SnapshotDestination, info: GlobalInfo, estimator: Estimator, data_cache: DataCache):
         self.config: Config = config
         self.time = time
         self.source: SnapshotSource = source
@@ -91,6 +97,9 @@ class Model():
         self.info = info
         self.simulate_error = None
         self.estimator = estimator
+        self.waiting_for_startup = False
+        self.ignore_startup_delay = False
+        self._data_cache = data_cache
 
     def enabled(self):
         if self.source.needsConfiguration():
@@ -98,6 +107,9 @@ class Model():
         if self.dest.needsConfiguration():
             return False
         return True
+
+    def allSources(self):
+        return [self.source, self.dest]
 
     def reinitialize(self):
         self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
@@ -109,32 +121,38 @@ class Model():
         return self._time_of_day
 
     def _nextSnapshot(self, now: datetime, last_snapshot: Optional[datetime]) -> Optional[datetime]:
-        if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
-            return None
-
-        if self.dest.needsConfiguration():
-            return None
-        if not last_snapshot:
-            return now - timedelta(minutes=1)
-
         timeofDay = self.getTimeOfDay()
-        if not timeofDay:
-            return last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS))
-
-        newest_local: datetime = self.time.toLocal(last_snapshot)
-        time_that_day_local = datetime(newest_local.year, newest_local.month,
-                                       newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
-        if newest_local < time_that_day_local:
-            # Latest snapshot is before the snapshot time for that day
-            next = self.time.toUtc(time_that_day_local)
+        if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
+            next = None
+        elif self.dest.needsConfiguration():
+            next = None
+        elif not last_snapshot:
+            next = now - timedelta(minutes=1)
+        elif not timeofDay:
+            next = last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS))
         else:
-            # return the next snapshot after the delta
-            next = self.time.toUtc(
-                time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
-        return next
+            newest_local: datetime = self.time.toLocal(last_snapshot)
+            time_that_day_local = datetime(newest_local.year, newest_local.month,
+                                           newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
+            if newest_local < time_that_day_local:
+                # Latest snapshot is before the snapshot time for that day
+                next = self.time.toUtc(time_that_day_local)
+            else:
+                # return the next snapshot after the delta
+                next = self.time.toUtc(
+                    time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
+
+        # Don't snapshot X minutes after startup, since that can put an unreasonable amount of strain on
+        # system just booting up.
+        if next is not None and next < now and now < self.info.snapshotCooldownTime() and not self.ignore_startup_delay:
+            self.waiting_for_startup = True
+            return self.info.snapshotCooldownTime()
+        else:
+            self.waiting_for_startup = False
+            return next
 
     def nextSnapshot(self, now: datetime):
-        latest = max(self.snapshots.values(),
+        latest = max(filter(lambda s: not s.ignore(), self.snapshots.values()),
                      default=None, key=lambda s: s.date())
         if latest:
             latest = latest.date()
@@ -157,16 +175,18 @@ class Model():
             if self.dest.enabled():
                 await self._purge(self.dest)
 
+        self._handleSnapshotDetails()
         next_snapshot = self.nextSnapshot(now)
         if next_snapshot and now >= next_snapshot and self.source.enabled() and not self.dest.needsConfiguration():
             await self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
             await self._purge(self.source)
+            self._handleSnapshotDetails()
 
         if self.dest.enabled() and self.dest.upload():
             # get the snapshots we should upload
             uploads = []
             for snapshot in self.snapshots.values():
-                if snapshot.getSource(self.source.name()) is not None and snapshot.getSource(self.source.name()).uploadable() and snapshot.getSource(self.dest.name()) is None:
+                if snapshot.getSource(self.source.name()) is not None and snapshot.getSource(self.source.name()).uploadable() and snapshot.getSource(self.dest.name()) is None and not snapshot.ignore():
                     uploads.append(snapshot)
             uploads.sort(key=lambda s: s.date())
             uploads.reverse()
@@ -179,10 +199,15 @@ class Model():
                 if self._nextPurge(self.dest, proposed) != dummy:
                     upload.addSource(await self.dest.save(upload, await self.source.read(upload)))
                     await self._purge(self.dest)
+                    self._handleSnapshotDetails()
                 else:
                     break
+            if self.config.get(Setting.DELETE_AFTER_UPLOAD):
+                await self._purge(self.source)
+        self._handleSnapshotDetails()
         self.source.postSync()
         self.dest.postSync()
+        self._data_cache.saveIfDirty()
 
     def isWorkingThroughUpload(self):
         return self.dest.isWorking()
@@ -249,27 +274,37 @@ class Model():
                         del self.snapshots[slug]
         self.firstSync = False
 
+    def _buildDeleteScheme(self, source, findNext=False):
+        count = source.maxCount()
+        if findNext:
+            count -= 1
+        if source == self.source and self.config.get(Setting.DELETE_AFTER_UPLOAD):
+            return DeleteAfterUploadScheme(source.name(), [self.dest.name()])
+        elif self.generational_config:
+            return GenerationalScheme(
+                self.time, self.generational_config, count=count)
+        else:
+            return OldestScheme(count=count)
+
+    def _buildNamingScheme(self):
+        source = max(filter(SnapshotSource.enabled, self.allSources()), key=SnapshotSource.maxCount)
+        return self._buildDeleteScheme(source)
+
+    def _handleSnapshotDetails(self):
+        self._buildNamingScheme().handleNaming(self.snapshots.values())
+
     def _nextPurge(self, source: SnapshotSource, snapshots, findNext=False):
         """
         Given a list of snapshots, decides if one should be purged.
         """
-        count = source.maxCount()
-        if findNext:
-            count -= 1
         if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
             return None
 
-        if source.maxCount() == -1:
-            scheme = DeleteAfterUploadScheme(source.name(), [self.dest.name()])
-        elif self.generational_config:
-            scheme = GenerationalScheme(
-                self.time, self.generational_config, count=count)
-        else:
-            scheme = OldestScheme(count=count)
+        scheme = self._buildDeleteScheme(source, findNext=findNext)
         consider_purging = []
         for snapshot in snapshots:
             source_snapshot = snapshot.getSource(source.name())
-            if source_snapshot is not None and source_snapshot.considerForPurge():
+            if source_snapshot is not None and source_snapshot.considerForPurge() and not snapshot.ignore():
                 consider_purging.append(snapshot)
         if len(consider_purging) == 0:
             return None

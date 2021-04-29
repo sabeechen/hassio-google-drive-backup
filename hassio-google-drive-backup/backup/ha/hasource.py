@@ -8,8 +8,8 @@ from typing import Dict, List, Optional
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
-from ..util import AsyncHttpGetter, GlobalInfo, Estimator
-from ..config import Config, Setting, CreateOptions
+from backup.util import AsyncHttpGetter, GlobalInfo, Estimator, DataCache, KEY_LAST_SEEN, KEY_PENDING, KEY_NAME, KEY_CREATED, KEY_I_MADE_THIS, KEY_IGNORE
+from ..config import Config, Setting, CreateOptions, Startable
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
 from ..exceptions import (LogicError, SnapshotInProgress,
@@ -18,11 +18,11 @@ from .harequests import HaRequests
 from .password import Password
 from .snapshotname import SnapshotName
 from ..time import Time
-from ..logger import getLogger
+from ..logger import getLogger, StandardLogger
 from backup.const import FOLDERS
 from .addon_stopper import AddonStopper
 
-logger = getLogger(__name__)
+logger: StandardLogger = getLogger(__name__)
 
 
 class PendingSnapshot(AbstractSnapshot):
@@ -38,7 +38,7 @@ class PendingSnapshot(AbstractSnapshot):
             protected=protected,
             retained=False,
             uploadable=False,
-            details={})
+            details=None)
         self._config = config
         self._failed = False
         self._complete = False
@@ -110,16 +110,20 @@ class PendingSnapshot(AbstractSnapshot):
         staleTime = self.getFailureTime() + delta
         return self._time.now() >= staleTime
 
+    def madeByTheAddon(self):
+        return True
+
 
 @singleton
-class HaSource(SnapshotSource[HASnapshot]):
+class HaSource(SnapshotSource[HASnapshot], Startable):
     """
     Stores logic for interacting with the supervisor add-on API
     """
     @inject
-    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo, stopper: AddonStopper, estimator: Estimator):
+    def __init__(self, config: Config, time: Time, ha: HaRequests, info: GlobalInfo, stopper: AddonStopper, estimator: Estimator, data_cache: DataCache):
         super().__init__()
         self.config: Config = config
+        self._data_cache = data_cache
         self.snapshot_thread: Thread = None
         self.pending_snapshot_error: Optional[Exception] = None
         self.pending_snapshot_slug: Optional[str] = None
@@ -137,6 +141,7 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.pending_options = {}
         self.stopper = stopper
         self.estimator = estimator
+        self._addons = {}
 
         # This lock should be used for _ANYTHING_ that interacts with self._pending_snapshot
         self._pending_snapshot_lock = asyncio.Lock()
@@ -152,6 +157,9 @@ class HaSource(SnapshotSource[HASnapshot]):
         if pending and pending.isStale():
             self.trigger()
         return super().check()
+
+    def icon(self) -> str:
+        return "home-assistant"
 
     def name(self) -> str:
         return SOURCE_HA
@@ -177,7 +185,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             options.name_template = self.config.get(Setting.SNAPSHOT_NAME)
 
         # Build the snapshot request json, get type, etc
-        request, options, type_name, protected = self._buildSnapshotInfo(
+        request, type_name, protected = self._buildSnapshotInfo(
             options)
 
         async with self._pending_snapshot_lock:
@@ -197,10 +205,19 @@ class HaSource(SnapshotSource[HASnapshot]):
             self._pending_snapshot_task = asyncio.create_task(self._requestAsync(
                 self.pending_snapshot), name="Pending Snapshot Requester")
             await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
+            # set up the pending snapshot info
+            pending = self._data_cache.snapshot(KEY_PENDING)
+            pending[KEY_NAME] = request['name']
+            pending[KEY_CREATED] = options.when.isoformat()
+            pending[KEY_LAST_SEEN] = self.time.now().isoformat()
+            self._data_cache.makeDirty()
             self.pending_snapshot.raiseIfNeeded()
             if self.pending_snapshot.isComplete():
                 # It completed while we waited, so just query the new snapshot
-                return await self.harequests.snapshot(self.pending_snapshot.createdSlug())
+                ret = await self.harequests.snapshot(self.pending_snapshot.createdSlug())
+                self.setDataCacheInfo(ret)
+                self._data_cache.snapshot(ret.slug())[KEY_I_MADE_THIS] = True
+                return ret
             else:
                 return self.pending_snapshot
 
@@ -214,6 +231,11 @@ class HaSource(SnapshotSource[HASnapshot]):
             await self.init()
         except Exception:
             pass
+
+    async def stop(self):
+        if self._pending_snapshot_task:
+            self._pending_snapshot_task.cancel()
+            await asyncio.wait([self._pending_snapshot_task])
 
     async def get(self) -> Dict[str, HASnapshot]:
         if not self._initialized:
@@ -231,6 +253,7 @@ class HaSource(SnapshotSource[HASnapshot]):
             snapshots[slug] = item
             if item.retained():
                 retained.append(item.slug())
+            self.setDataCacheInfo(item)
         if self.pending_snapshot:
             async with self._pending_snapshot_lock:
                 if self.pending_snapshot:
@@ -253,26 +276,56 @@ class HaSource(SnapshotSource[HASnapshot]):
         self.last_slugs = slugs
         return snapshots
 
+    def setDataCacheInfo(self, snapshot: HASnapshot):
+        if snapshot.slug() not in self._data_cache.snapshots:
+            # its a new snapshot, so we need to create a record for it
+            pending = self._data_cache.snapshots.get(KEY_PENDING, {})
+            pending_created = self.time.parse(pending.get(KEY_CREATED, self.time.now().isoformat()))
+
+            # If the snapshot has the same name as the one we created and it was created within a day
+            # of the requested time, then assume the addon created it.
+            self_created = snapshot.name() == pending.get(KEY_NAME, None) and abs((pending_created - snapshot.date()).total_seconds()) < timedelta(days=1).total_seconds()
+
+            stored_snapshot = self._data_cache.snapshot(snapshot.slug())
+            stored_snapshot[KEY_I_MADE_THIS] = self_created
+            stored_snapshot[KEY_CREATED] = snapshot.date().isoformat()
+            stored_snapshot[KEY_NAME] = snapshot.name()
+            if self_created:
+                # Remove the pending snapshot info from the cache so it doesn't get reused.
+                del self._data_cache.snapshots[KEY_PENDING]
+        # bump the last seen time
+        self._data_cache.snapshot(snapshot.slug())[KEY_LAST_SEEN] = self.time.now().isoformat()
+        self._data_cache.makeDirty()
+
     async def delete(self, snapshot: Snapshot):
         slug = self._validateSnapshot(snapshot).slug()
         logger.info("Deleting '{0}' from Home Assistant".format(snapshot.name()))
         await self.harequests.delete(slug)
         snapshot.removeSource(self.name())
 
+    async def ignore(self, snapshot: Snapshot, ignore: bool):
+        slug = self._validateSnapshot(snapshot).slug()
+        logger.info("Updating ignore settings for '{0}'".format(snapshot.name()))
+        self._data_cache.snapshot(slug)[KEY_IGNORE] = ignore
+        self._data_cache.makeDirty()
+
     async def save(self, snapshot: Snapshot, source: AsyncHttpGetter) -> HASnapshot:
         logger.info("Downloading '{0}'".format(snapshot.name()))
         self._info.upload(0)
         resp = None
         try:
-            snapshot.overrideStatus("Downloading {0}%", source)
+            snapshot.overrideStatus("Loading {0}%", source)
+            snapshot.setUploadSource(self.title(), source)
             async with source:
                 with aiohttp.MultipartWriter('mixed') as mpwriter:
                     mpwriter.append(source, {'CONTENT-TYPE': 'application/tar'})
                     resp = await self.harequests.upload(mpwriter)
             snapshot.clearStatus()
+            snapshot.clearUploadSource()
         except Exception as e:
             logger.printException(e)
             snapshot.overrideStatus("Failed!")
+            snapshot.uploadFailure(logger.formatException(e))
         if resp and 'slug' in resp and resp['slug'] == snapshot.slug():
             self.config.setRetained(snapshot.slug(), True)
             return await self.harequests.snapshot(snapshot.slug())
@@ -314,6 +367,10 @@ class HaSource(SnapshotSource[HASnapshot]):
                 "slug", self.self_info, "addon metdata")
             self._info.url = self.getAddonUrl()
 
+            self._addons = {}
+            for addon in self.super_info['addons']:
+                self._addons[addon.get('slug', "default")] = addon
+
             self._info.addDebugInfo("self_info", self.self_info)
             self._info.addDebugInfo("host_info", self.host_info)
             self._info.addDebugInfo("ha_info", self.ha_info)
@@ -322,6 +379,9 @@ class HaSource(SnapshotSource[HASnapshot]):
             logger.debug("Failed to connect to supervisor")
             logger.debug(logger.formatException(e))
             raise e
+
+    def addonHasLogo(self, slug):
+        return self._addons.get(slug, {}).get('logo', False)
 
     def getAddonUrl(self):
         """
@@ -420,4 +480,4 @@ class HaSource(SnapshotSource[HASnapshot]):
         name = SnapshotName().resolve(type_name, options.name_template,
                                       self.time.toLocal(options.when), self.host_info)
         request_info['name'] = name
-        return request_info, options, type_name, protected
+        return request_info, type_name, protected

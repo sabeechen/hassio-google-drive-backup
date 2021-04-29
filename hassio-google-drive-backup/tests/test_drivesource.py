@@ -4,15 +4,15 @@ from time import sleep
 
 import pytest
 import asyncio
+from yarl import URL
 from aiohttp.client_exceptions import ClientResponseError
 from backup.config import Config, Setting
 from dev.simulationserver import SimulationServer
 from dev.simulated_google import SimulatedGoogle, URL_MATCH_UPLOAD_PROGRESS, URL_MATCH_FILE
 from dev.request_interceptor import RequestInterceptor
-from backup.drive import DriveSource, FolderFinder
+from backup.drive import DriveSource, FolderFinder, DriveRequests, RETRY_SESSION_ATTEMPTS, UPLOAD_SESSION_EXPIRATION_DURATION, URL_START_UPLOAD
 from backup.drive.driverequests import (BASE_CHUNK_SIZE,
-                                        CHUNK_UPLOAD_TARGET_SECONDS, MAX_CHUNK_SIZE,
-                                        RETRY_SESSION_ATTEMPTS)
+                                        CHUNK_UPLOAD_TARGET_SECONDS, MAX_CHUNK_SIZE)
 from backup.drive.drivesource import FOLDER_MIME_TYPE
 from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
                                DriveQuotaExceeded, ExistingBackupFolderError,
@@ -261,7 +261,6 @@ async def test_drive_timeout(drive, config, time: FakeTime):
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_resume_upload_attempts_exhausted(drive: DriveSource, time, snapshot_helper, interceptor: RequestInterceptor, google: SimulatedGoogle):
     # Allow an upload to update one chunk and then fail.
     from_snapshot, data = await snapshot_helper.createFile()
@@ -272,14 +271,14 @@ async def test_resume_upload_attempts_exhausted(drive: DriveSource, time, snapsh
 
     # Verify we have a cached location
     assert drive.drivebackend.last_attempt_location is not None
-    assert drive.drivebackend.last_attempt_count == 0
+    assert drive.drivebackend.last_attempt_count == 1
     last_location = drive.drivebackend.last_attempt_location
 
-    for x in range(1, 11):
+    for x in range(1, RETRY_SESSION_ATTEMPTS):
         data.position(0)
         with pytest.raises(GoogleInternalError):
             await drive.save(from_snapshot, data)
-        assert drive.drivebackend.last_attempt_count == x
+        assert drive.drivebackend.last_attempt_count == x + 1
 
     # We should still be using the same location url
     assert drive.drivebackend.last_attempt_location == last_location
@@ -344,7 +343,7 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
     # Verify a requst was made to start the upload but not cached
     assert server.wasUrlRequested(
         "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
-    assert drive.drivebackend.last_attempt_count == 0
+    assert drive.drivebackend.last_attempt_count == 1
     assert drive.drivebackend.last_attempt_location is None
     assert drive.drivebackend.last_attempt_metadata is None
 
@@ -353,8 +352,7 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
     interceptor.clear()
     data.position(0)
     snapshot = await drive.save(from_snapshot, data)
-    assert server.wasUrlRequested(
-        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(URL_START_UPLOAD)
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
@@ -364,14 +362,80 @@ async def test_resume_session_abandoned_on_http4XX(time, drive: DriveSource, con
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
+async def test_resume_session_abandoned_after_a_long_time(time: FakeTime, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper, interceptor: RequestInterceptor):
+    from_snapshot, data = await snapshot_helper.createFile()
+
+    # Configure the upload to fail after the first upload chunk
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 501, 1)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
+
+    # Verify it reuses the session a few times
+    assert server.wasUrlRequested(URL_START_UPLOAD)
+    assert drive.drivebackend.last_attempt_count == 1
+    assert drive.drivebackend.last_attempt_location is not None
+    assert drive.drivebackend.last_attempt_metadata is not None
+
+    data.position(0)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
+    assert drive.drivebackend.last_attempt_count == 2
+    assert drive.drivebackend.last_attempt_location is not None
+    assert drive.drivebackend.last_attempt_metadata is not None
+    last_location = drive.drivebackend.last_attempt_location
+
+    # Fast forward a lot, then verify the session is restarted
+    server.urls.clear()
+    interceptor.clear()
+    time.advance(duration=UPLOAD_SESSION_EXPIRATION_DURATION)
+    data.position(0)
+    await drive.save(from_snapshot, data)
+    assert interceptor.urlWasCalled(URL_START_UPLOAD)
+    assert not interceptor.urlWasCalled(last_location)
+
+
+@pytest.mark.asyncio
+async def test_chunk_upload_resets_attempt_counter(time: FakeTime, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper: SnapshotHelper, interceptor: RequestInterceptor):
+    from_snapshot, data = await snapshot_helper.createFile(size=1024 * 1024 * 10)
+
+    # Configure the upload to fail after the first upload chunk
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 501, 1)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
+
+    data.position(0)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
+
+    # Verify the session was started
+    assert interceptor.urlWasCalled(URL_START_UPLOAD)
+    assert interceptor.urlWasCalled(URL_MATCH_UPLOAD_PROGRESS)
+    assert drive.drivebackend.last_attempt_count == 2
+    location = drive.drivebackend.last_attempt_location
+    assert location is not None
+
+    # Allow one more chunk to succeed
+    interceptor.clear()
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 501, 2)
+    data.position(0)
+    with pytest.raises(ClientResponseError):
+        await drive.save(from_snapshot, data)
+
+    # Verify the session was reused and the attempt counter was reset
+    assert not interceptor.urlWasCalled(URL_START_UPLOAD)
+    assert interceptor.urlWasCalled(URL_MATCH_UPLOAD_PROGRESS)
+    assert interceptor.urlWasCalled(URL(location).path)
+    assert drive.drivebackend.last_attempt_count == 1
+    assert drive.drivebackend.last_attempt_location == location
+
+
+@pytest.mark.asyncio
 async def test_resume_session_reused_on_http5XX(time, drive: DriveSource, config: Config, server, snapshot_helper, interceptor: RequestInterceptor):
     await verify_upload_resumed(time, drive, config, server, interceptor, 550, snapshot_helper)
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, server, snapshot_helper, interceptor: RequestInterceptor):
+async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper, interceptor: RequestInterceptor):
     from_snapshot, data = await snapshot_helper.createFile()
 
     # Configure the upload to fail after the first upload chunk
@@ -380,24 +444,22 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
         await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload but not cached
-    assert server.wasUrlRequested(
-        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
-    assert drive.drivebackend.last_attempt_count == 0
+    assert server.wasUrlRequested(URL_START_UPLOAD)
+    assert drive.drivebackend.last_attempt_count == 1
     assert drive.drivebackend.last_attempt_location is not None
     assert drive.drivebackend.last_attempt_metadata is not None
     last_location = drive.drivebackend.last_attempt_location
 
-    for x in range(1, RETRY_SESSION_ATTEMPTS + 1):
+    for x in range(1, RETRY_SESSION_ATTEMPTS):
         server.urls.clear()
         interceptor.clear()
         interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 501)
         data.position(0)
         with pytest.raises(ClientResponseError):
             await drive.save(from_snapshot, data)
-        assert not server.wasUrlRequested(
-            "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+        assert not server.wasUrlRequested(URL_START_UPLOAD)
         assert server.wasUrlRequested(last_location)
-        assert drive.drivebackend.last_attempt_count == x
+        assert drive.drivebackend.last_attempt_count == x + 1
         assert drive.drivebackend.last_attempt_location is last_location
         assert drive.drivebackend.last_attempt_metadata is not None
 
@@ -408,18 +470,16 @@ async def test_resume_session_reused_abonded_after_retries(time, drive: DriveSou
     data.position(0)
     with pytest.raises(ClientResponseError):
         await drive.save(from_snapshot, data)
-    assert server.wasUrlRequested(
-        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(URL_START_UPLOAD)
     assert not server.wasUrlRequested(last_location)
-    assert drive.drivebackend.last_attempt_count == 0
+    assert drive.drivebackend.last_attempt_count == 1
 
     # upload again, which should retry
     server.urls.clear()
     interceptor.clear()
     data.position(0)
     snapshot = await drive.save(from_snapshot, data)
-    assert not server.wasUrlRequested(
-        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert not server.wasUrlRequested(URL_START_UPLOAD)
 
     # Verify the uploaded bytes are identical
     from_snapshot.addSource(snapshot)
@@ -437,8 +497,7 @@ async def verify_upload_resumed(time, drive: DriveSource, config: Config, server
         await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload
-    assert server.wasUrlRequested(
-        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(URL_START_UPLOAD)
     assert drive.drivebackend.last_attempt_location is not None
     assert drive.drivebackend.last_attempt_metadata is not None
     last_location = drive.drivebackend.last_attempt_location
@@ -450,8 +509,7 @@ async def verify_upload_resumed(time, drive: DriveSource, config: Config, server
     snapshot = await drive.save(from_snapshot, data)
 
     # We shoudl nto see the upload "initialize" url
-    assert not server.wasUrlRequested(
-        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert not server.wasUrlRequested(URL_START_UPLOAD)
 
     # We should see the last location url (which has a unique token) reused to resume the upload
     assert server.wasUrlRequested(last_location)
@@ -788,8 +846,7 @@ async def test_resume_session_reused_on_http410(time, drive: DriveSource, config
         await drive.save(from_snapshot, data)
 
     # Verify a requst was made to start the upload
-    assert server.wasUrlRequested(
-        "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true")
+    assert server.wasUrlRequested(URL_START_UPLOAD)
     assert drive.drivebackend.last_attempt_location is not None
 
     server.urls.clear()
@@ -798,3 +855,86 @@ async def test_resume_session_reused_on_http410(time, drive: DriveSource, config
 
     interceptor.setError(drive.drivebackend.last_attempt_location, 0, 410)
     await drive.save(from_snapshot, data)
+
+
+@pytest.mark.asyncio
+async def test_resume_session_reused_on_http408(time, drive: DriveSource, config: Config, server: SimulationServer, snapshot_helper: SnapshotHelper, interceptor: RequestInterceptor):
+    from_snapshot, data = await snapshot_helper.createFile()
+
+    # Configure the upload to fail
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 408)
+    with pytest.raises(GoogleTimeoutError):
+        await drive.save(from_snapshot, data)
+
+    # Verify a requst was made to start the upload
+    assert server.wasUrlRequested(URL_START_UPLOAD)
+    location = drive.drivebackend.last_attempt_location
+    assert location is not None
+
+    server.urls.clear()
+    interceptor.clear()
+    data.position(0)
+
+    await drive.save(from_snapshot, data)
+    assert interceptor.urlWasCalled(URL(location).path)
+
+
+@pytest.mark.asyncio
+async def test_shared_drive_manager(drive: DriveSource, time: FakeTime, folder_finder: FolderFinder, snapshot_helper: SnapshotHelper, drive_requests: DriveRequests):
+    # Make a shared drive folder
+    folder_metadata = {
+        'name': "Shared Drive",
+        'mimeType': FOLDER_MIME_TYPE,
+        'driveId': "test_shared_drive_id",
+        'appProperties': {
+            "backup_folder": "true",
+        },
+    }
+    shared_drive_folder_id = (await drive.drivebackend.createFolder(folder_metadata))['id']
+    await folder_finder.save(shared_drive_folder_id)
+
+    # Save a snapshot
+    from_snapshot, data = await snapshot_helper.createFile()
+    snapshot = await drive.save(from_snapshot, data)
+    assert len(await drive.get()) == 1
+    from_snapshot.addSource(snapshot)
+
+    # Delete the snapshot, and verify it was deleted instead of trashed
+    await drive.delete(from_snapshot)
+    assert len(await drive.get()) == 0
+    with pytest.raises(ClientResponseError) as exc:
+        await drive_requests.get(snapshot.id())
+    assert exc.value.code == 404
+
+
+@pytest.mark.asyncio
+async def test_shared_drive_content_manager(drive: DriveSource, time: FakeTime, folder_finder: FolderFinder, snapshot_helper: SnapshotHelper, drive_requests: DriveRequests):
+    # Make a shared drive folder where the user has capabilities consistent with a "content manager" role.
+    folder_metadata = {
+        'name': "Shared Drive",
+        'mimeType': FOLDER_MIME_TYPE,
+        'driveId': "test_shared_drive_id",
+        'appProperties': {
+            "backup_folder": "true",
+        },
+        'capabilities': {
+            'canDeleteChildren': False,
+            'canTrashChildren': True,
+            'canDelete': False,
+            'canTrash': True,
+        }
+    }
+
+    shared_drive_folder_id = (await drive.drivebackend.createFolder(folder_metadata))['id']
+    await folder_finder.save(shared_drive_folder_id)
+
+    # Save a snapshot
+    from_snapshot, data = await snapshot_helper.createFile()
+    snapshot = await drive.save(from_snapshot, data)
+    assert len(await drive.get()) == 1
+    from_snapshot.addSource(snapshot)
+
+    # Delete the snapshot, and verify it was onyl trashed
+    await drive.delete(from_snapshot)
+    assert len(await drive.get()) == 0
+    assert (await drive_requests.get(snapshot.id()))['trashed']

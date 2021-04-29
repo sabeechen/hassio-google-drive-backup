@@ -1,24 +1,22 @@
 import asyncio
 import ssl
 import json
-from aiohttp.web_routedef import get
 import aiohttp_jinja2
 import jinja2
 import base64
 from datetime import timedelta
 from os.path import abspath, join
 from typing import Any, Dict
-from urllib.parse import quote
 
-from aiohttp import BasicAuth, hdrs, web, ClientSession
-from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther
+from aiohttp import BasicAuth, hdrs, web, ClientSession, ClientResponseError
+from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther, HTTPNotFound
 from injector import ClassAssistedBuilder, inject, singleton
 
-from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, VERSION
+from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, Version, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Snapshot, AbstractSnapshot
 from backup.exceptions import KnownError, ensureKey
-from backup.util import GlobalInfo, Estimator, File
+from backup.util import GlobalInfo, Estimator, File, DataCache
 from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
 from backup.ha import Password
 from backup.time import Time
@@ -38,6 +36,7 @@ SCOPE: str = 'https://www.googleapis.com/auth/drive.file'
 
 MIME_TEXT_HTML = "text/html"
 MIME_JSON = "application/json"
+VERSION_CREATION_TRACKING = Version(0, 104, 0)
 
 
 @singleton
@@ -45,7 +44,7 @@ class UiServer(Trigger, Startable):
     @inject
     def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests,
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
-                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker, folder_finder: FolderFinder):
+                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker, folder_finder: FolderFinder, data_cache: DataCache):
         super().__init__()
         # Currently running server tasks
         self.runners = []
@@ -68,6 +67,8 @@ class UiServer(Trigger, Startable):
         self.session = session
         self.debug_worker = debug_worker
         self.folder_finder = folder_finder
+        self.ignore_other_turned_on = False
+        self._data_cache = data_cache
 
     def name(self):
         return "UI Server"
@@ -115,9 +116,9 @@ class UiServer(Trigger, Startable):
             status['next_snapshot_machine'] = self._time.asRfc3339String(next)
             status['next_snapshot_detail'] = self._time.toLocal(
                 next).strftime("%c")
-
-        if len(snapshots) > 0:
-            latest = snapshots[len(snapshots) - 1].date()
+        not_ignored = list(filter(lambda s: not s.ignore(), self._coord.snapshots()))
+        if len(not_ignored) > 0:
+            latest = not_ignored[len(not_ignored) - 1].date()
             status['last_snapshot_text'] = self._time.formatDelta(latest)
             status['last_snapshot_machine'] = self._time.asRfc3339String(
                 latest)
@@ -153,6 +154,19 @@ class UiServer(Trigger, Startable):
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['is_specify_folder'] = self.config.get(
             Setting.SPECIFY_SNAPSHOT_FOLDER)
+        status['snapshot_cooldown_active'] = self._coord.isWaitingForStartup()
+        name_keys = {}
+        for key in SNAPSHOT_NAME_KEYS:
+            name_keys[key] = SNAPSHOT_NAME_KEYS[key](
+                "Full", self._time.now(), self._ha_source.getHostInfo())
+        status['snapshot_name_keys'] = name_keys
+
+        # Indicate the user should be notified for a specific situation where:
+        #  - They recently turned on "IGNORE_OTHER_SNAPSHOTS"
+        #  - They have ignored snapshots created before upgrading to v0.104.0 or higher.
+        upgrade_date = self._data_cache.getUpgradeTime(VERSION_CREATION_TRACKING)
+        ignored = len(list(filter(lambda s: s.date() < upgrade_date, filter(Snapshot.ignore, self._coord.snapshots()))))
+        status["notify_check_ignored"] = ignored > 0 and self.ignore_other_turned_on
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -168,7 +182,9 @@ class UiServer(Trigger, Startable):
                 'key': source_key,
                 'size': source.size(),
                 'retained': source.retained(),
-                'delete_next': snapshot.getPurges().get(source_key) or False
+                'delete_next': snapshot.getPurges().get(source_key) or False,
+                'slug': snapshot.slug(),
+                'ignored': source.ignore(),
             })
 
         return {
@@ -177,14 +193,32 @@ class UiServer(Trigger, Startable):
             'size': snapshot.sizeString(),
             'status': snapshot.status(),
             'date': self._time.toLocal(snapshot.date()).strftime("%c"),
+            'createdAt': self._time.formatDelta(snapshot.date()),
             'isPending': ha is not None and type(ha) is PendingSnapshot,
             'protected': snapshot.protected(),
             'type': snapshot.snapshotType(),
-            'details': snapshot.details(),
+            'folders': snapshot.details().get("folders", []),
+            'addons': self.formatAddons(snapshot.details()),
             'sources': sources,
+            'haVersion': snapshot.version(),
             'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
             'restorable': snapshot.getSource(SOURCE_HA) is not None,
+            'status_detail': snapshot.getStatusDetail(),
+            'upload_info': snapshot.getUploadInfo(self._time),
+            'ignored': snapshot.ignore(),
+            'timestamp': snapshot.date().timestamp(),
         }
+
+    def formatAddons(self, snapshot_data):
+        addons = []
+        for addon in snapshot_data.get("addons", []):
+            addons.append({
+                'name' : addon.get('name', "Unknown"),
+                'slug': addon.get("slug", "unknown"),
+                'version': addon.get("version", ""),
+                'size': self._estimator.asSizeString(addon.get("size", 0)),
+            })
+        return addons
 
     async def manualauth(self, request: Request) -> None:
         client_id = request.query.get("client_id", "")
@@ -235,23 +269,23 @@ class UiServer(Trigger, Startable):
         await self._coord.delete(data['sources'], data['slug'])
         return web.json_response({"message": "Deleted from {0} place(s)".format(len(data['sources']))})
 
+    async def ignore(self, request: Request):
+        data = await request.json()
+        # Check to make sure the slug is valid.
+        snapshot = self._coord.getSnapshot(data['slug'])
+        await self._coord.ignore(data['slug'], data['ignore'])
+        await self.startSync(request)
+        if data['ignore']:
+            return web.json_response({"message": "'{0}' will be ignored.".format(snapshot.name())})
+        else:
+            return web.json_response({"message": "'{0}' will be included.".format(snapshot.name())})
+
     async def retain(self, request: Request):
         data = await request.json()
         slug = data['slug']
 
-        snapshot: Snapshot = self._coord.getSnapshot(slug)
-        retention = {}
-        for source in data['sources']:
-            retention[source] = True
-        for source in snapshot.sources.values():
-            if source.source() not in retention:
-                retention[source.source()] = False
-
-        # override create options for future uploads
-        options = CreateOptions(self._time.now(), self.config.get(Setting.SNAPSHOT_NAME), retention)
-        snapshot.setOptions(options)
-
-        await self._coord.retain(retention, slug)
+        self._coord.getSnapshot(slug)
+        await self._coord.retain(data['sources'], slug)
         return web.json_response({'message': "Updated the snapshot's settings"})
 
     async def resolvefolder(self, request: Request):
@@ -359,10 +393,6 @@ class UiServer(Trigger, Startable):
 
     async def getconfig(self, request: Request):
         await self._ha_source.refresh()
-        name_keys = {}
-        for key in SNAPSHOT_NAME_KEYS:
-            name_keys[key] = SNAPSHOT_NAME_KEYS[key](
-                "Full", self._time.now(), self._ha_source.getHostInfo())
         current_config = {}
         for setting in Setting:
             current_config[setting.key()] = self.config.getForUi(setting)
@@ -373,7 +403,6 @@ class UiServer(Trigger, Startable):
             'config': current_config,
             'addons': self._global_info.addons,
             'folders': FOLDERS,
-            'name_keys': name_keys,
             'defaults': default_config,
             'snapshot_folder': self.folder_finder.getCachedFolder(),
             'is_custom_creds': self._coord._model.dest.isCustomCreds()
@@ -388,6 +417,10 @@ class UiServer(Trigger, Startable):
         validated = self.config.validateUpdate(update)
         await self._updateConfiguration(validated)
         return web.json_response({'message': 'Configuration updated'})
+
+    async def ignorestartupcooldown(self, request: Request):
+        self._coord.ignoreStartupDelay()
+        return await self.sync(request)
 
     async def exposeserver(self, request: Request):
         expose = BoolValidator.strToBool(request.query.get("expose", False))
@@ -436,7 +469,7 @@ class UiServer(Trigger, Startable):
 
     async def saveconfig(self, request: Request) -> Any:
         data = await request.json()
-        update = ensureKey("config", data, "the confgiuration update request")
+        update = ensureKey("config", data, "the configuration update request")
 
         # validate the snapshot password
         Password(self.config.getConfigFor(update)).resolve()
@@ -451,14 +484,22 @@ class UiServer(Trigger, Startable):
             pass
         return web.json_response(message)
 
+    async def ackignorecheck(self, request: Request):
+        self.ignore_other_turned_on = False
+        return web.json_response({'message': "Acknowledged."})
+
     async def _updateConfiguration(self, new_config, snapshot_folder_id=None, trigger=True):
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
         old_drive_option = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
+        old_ignore_others_option = self.config.get(Setting.IGNORE_OTHER_SNAPSHOTS)
         await self._harequests.updateConfig(update)
 
         self.config.update(new_config)
+
+        if not old_ignore_others_option and self.config.get(Setting.IGNORE_OTHER_SNAPSHOTS):
+            self.ignore_other_turned_on = True
 
         if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and snapshot_folder_id is not None and len(snapshot_folder_id):
             await self.folder_finder.save(snapshot_folder_id)
@@ -467,15 +508,6 @@ class UiServer(Trigger, Startable):
         return {
             'message': 'Settings saved',
             'reload_page': self.config.get(Setting.ENABLE_DRIVE_UPLOAD) != old_drive_option
-        }
-
-    def _getServerOptions(self):
-        return {
-            "ssl": self.config.get(Setting.USE_SSL),
-            "login": self.config.get(Setting.REQUIRE_LOGIN),
-            "certfile": self.config.get(Setting.CERTFILE),
-            "keyfile": self.config.get(Setting.KEYFILE),
-            "extra_server": self.config.get(Setting.EXPOSE_EXTRA_SERVER)
         }
 
     async def upload(self, request: Request):
@@ -491,6 +523,16 @@ class UiServer(Trigger, Startable):
         return aiohttp_jinja2.render_template("redirect.jinja2",
                                               request,
                                               context)
+
+    async def addonLogo(self, request: Request):
+        slug = request.match_info.get('slug')
+        if not self._ha_source.addonHasLogo(slug):
+            raise HTTPNotFound()
+        try:
+            (content_type, data) = await self._harequests.getAddonLogo(slug)
+            return web.Response(headers={hdrs.CONTENT_TYPE: content_type}, body=data)
+        except ClientResponseError as e:
+            return web.Response(status=e.status)
 
     async def download(self, request: Request):
         slug = request.query.get("slug", "")
@@ -558,6 +600,8 @@ class UiServer(Trigger, Startable):
         app.add_routes([web.get('/', self.index)])
         app.add_routes([web.get('/index.html', self.index)])
         app.add_routes([web.get('/index', self.index)])
+        app.add_routes([web.get('/favicon.ico', self.favicon)])
+        app.add_routes([web.get('/logo/{slug}', self.addonLogo)])
         self._addRoute(app, self.reauthenticate)
         self._addRoute(app, self.bootstrap)
         self._addRoute(app, self.tos)
@@ -591,6 +635,9 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self._debug.simerror)
         self._addRoute(app, self._debug.getTasks)
         self._addRoute(app, self.makeanissue)
+        self._addRoute(app, self.ignorestartupcooldown)
+        self._addRoute(app, self.ignore)
+        self._addRoute(app, self.ackignorecheck)
 
     def _addRoute(self, app, method):
         app.add_routes([
@@ -638,10 +685,10 @@ class UiServer(Trigger, Startable):
             logger.trace("Completed %s %s", request.method, request.url)
             return handled
         except Exception as ex:
-            logger.trace("Error serving %s %s", request.method, request.url)
-            logger.trace(logger.formatException(ex))
             if isinstance(ex, HTTPException):
                 raise
+            logger.error("Error serving %s %s", request.method, request.url)
+            logger.error(logger.formatException(ex))
             data = self.processError(ex)
             return web.json_response(data, status=data['http_status'])
 
@@ -704,6 +751,9 @@ class UiServer(Trigger, Startable):
     @aiohttp_jinja2.template('terms_of_service.jinja2')
     async def tos(self, request: Request):
         return self.base_context()
+
+    async def favicon(self, request: Request):
+        return web.FileResponse('hassio-google-drive-backup/backup/static/images/favicon.png')
 
     @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:

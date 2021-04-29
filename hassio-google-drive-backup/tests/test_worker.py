@@ -16,7 +16,7 @@ async def test_worker(time: FakeTime):
         data['count'] += 1
 
     worker = Worker("test", work, time, 1)
-    task = worker.start()
+    task = await worker.start()
     await asyncio.wait([task])
     assert not worker.isRunning()
     assert data['count'] == 5
@@ -29,14 +29,14 @@ async def test_worker(time: FakeTime):
 async def test_worker_error(time: FakeTime):
     data = {'count': 0}
 
-    def work():
+    async def work():
         if data['count'] >= 5:
             raise StopWorkException()
         data['count'] += 1
         raise OSError()
 
     worker = Worker("test", work, time, 1)
-    task = worker.start()
+    task = await worker.start()
     await asyncio.wait([task])
     assert not worker.isRunning()
     assert data['count'] == 5

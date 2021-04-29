@@ -17,6 +17,7 @@ If english isn't your first language, don't sweat it.  Just try to be clear and 
  * What logs is the add-on printing out?  You can see the detailed logs by clicking "Logs" at the right of the web-UI.
  * Are there any problematic looking logs from the supervisor?  You can get to them from the Home Assistant Interface from "Supervisor" > "System" > "System Log"
  \n\n`;
+ var name_keys = {}
 
 function toggleSlide(checkbox, target) {
   if ($(checkbox).is(':checked')) {
@@ -82,49 +83,26 @@ function doUpload(slug, name) {
   postJson(url, {}, refreshstats, null, message);
 }
 
-function showDetails(target) {
-  var snapshot = $(target).data('snapshot');
-  var details = snapshot.details;
-  console.log(details)
-  $("#details_name").html(snapshot.name);
-  $("#details_date").html(snapshot.date);
-  $("#details_type").html(snapshot.type);
-  if (snapshot.protected) {
-    $("#details_password").html("yes");
+function configureDetailBadge(name, text, show) {
+  let container = $('.' + name);
+  let span = $('.detail-name', container);
+  if (show) {
+    span.html(text);
+    container.show();
   } else {
-    $("#details_password").html("no");
+    container.hide();
   }
-  if (details) {
-    $("#details_ha_version").html(details.homeassistant);
-    $("#details_folders").html("")
-    for (folder in details.folders) {
-      folder = details.folders[folder];
-      if (folder == "share") {
-        folder = "Share";
-      } else if (folder == "ssl") {
-        folder = "SSL";
-      } else if (folder == "addons/local") {
-        folder = "Local add-ons";
-      } else if (folder == "homeassistant") {
-        folder = "Home Assistant Configuration"
+}
+ var SIZE_SI = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+function asSizeString(size) {
+  current = size * 1.0;
+  for (let id in SIZE_SI) {
+      if (current < 1024) {
+          return (Math.round(current * 10) / 10) + " " + SIZE_SI[id];
       }
-      $("#details_folders").append("<li>" + folder + "</li>");
-    }
-
-    $("#details_addons").html("")
-    for (addon in details.addons) {
-      addon = details.addons[addon];
-      $("#details_addons").append("<li>" + addon.name + " <span class='grey-text text-darken-2'>(v" + addon.version + ") " + addon.size + "MB</span></li>")
-    }
-    $("#details_folders_and_addons").show();
-    $("#details_upload_reminder").hide();
-  } else {
-    $("#details_ha_version").html("?");
-    $("#details_folders_and_addons").hide();
-    $("#details_upload_reminder").show();
+      current /= 1024
   }
-
-  M.Modal.getInstance(document.querySelector('#details_modal')).open();
+  return "Beyond mortal comprehension"
 }
 
 function errorReports(send) {
@@ -147,11 +125,25 @@ function exposeServer(expose) {
   }, null, "Saving setting...");
 }
 
+function ackCheckIgnoredSnapshots() {
+  postJson("ackignorecheck", {}, function (data) {
+    $('#ignore_helper_card').fadeOut(500);
+  }, null, "Acknowledging..");
+  
+}
+
 function resolvefolder(use_existing) {
   var url = "resolvefolder?use_existing=" + use_existing;
   postJson(url, {}, refreshstats, null, null);
   setErrorWatermark();
   $('#existing_backup_folder').hide();
+  refreshstats();
+}
+
+function allowImmediateSnapshot(use_existing) {
+  var url = "ignorestartupcooldown";
+  postJson("ignorestartupcooldown", {}, refreshstats, null, "Ignoring delay...");
+  $('#snapshots_boot_waiting_card').hide();
   refreshstats();
 }
 
@@ -219,12 +211,11 @@ function postJson(path, json, onSuccess, onFail = null, toastWhile = null) {
       var info = parseErrorInfo(e);
       if (onFail) {
         onFail(info);
-      } else {
-        button_text = "&nbsp;&nbsp;<a class='waves-effect waves-light btn' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
-        $('#error_details_paragraph').text(info.details);
+      } 
+      button_text = "&nbsp;&nbsp;<a class='btn-flat' target='_blank' onClick=\"$('#error_details_card').fadeIn(400);return false;\">Details</a>"
+      $('#error_details_paragraph').text(info.details);
 
-        M.toast({ html: info.message + button_text, displayLength: 10000 });
-      }
+      M.toast({ html: info.message + button_text, displayLength: 10000 });
     }
   )
 }
@@ -379,7 +370,8 @@ function processSourcesUpdate(sources) {
       template.data("source", key);
     }
 
-    $(".source_title", template).html("In " + source.title + ":");
+    $(".source_title", template).html("in " + source.title );
+    $("use", template).attr('xlink:href', "#" + source.icon);
 
     if (source.retained > 0) {
       $(".source_retain_count", template).html(source.retained);
@@ -387,15 +379,21 @@ function processSourcesUpdate(sources) {
     } else {
       $(".source_retain_label", template).hide();
     }
+    if (source.ignored > 0) {
+      $(".source_ignored_count", template).html(source.ignored);
+      $(".source_ignored_size", template).html(source.ignored_size);
+      $(".source_ignored_label", template).show();
+    } else {
+      $(".source_ignored_label", template).hide();
+    }
     $(".source_snapshot_count", template).html(source.snapshots + " (" + source.size + ")");
 
-    let free_space = $('.source_free_space', template);
     if (source.hasOwnProperty("free_space")) {
-      free_space.html(source.free_space + " remaining");
-      free_space.attr("data-tooltip", "An estimate of the space available in " + source.title + ".");
-      free_space.show();
+      $('.source_free_space_text', template).html(source.free_space + " remaining");
+      $('.source_free_space_tooltip', template).attr("data-tooltip", "An estimate of the space available in " + source.title + ".");
+      $('.source_free_space', template).show();
     } else {
-      free_space.hide();
+      $('.source_free_space', template).hide();
     }
 
     if (isNew) {
@@ -412,43 +410,83 @@ function processSourcesUpdate(sources) {
 }
 
 function processSnapshotsUpdate(data) {
-  snapshot_div = $('#snapshots');
-  slugs = []
-  var count = 0;
+  let detail_modal = document.getElementById('details_modal');
+  let detail_modal_slug = $("#details_modal").data('slug');
+  detail_modal = M.Modal.getInstance(detail_modal);
+
+  let regular_snapshots = [];
+  let ignored_snapshots = [];
   for (var key in data.snapshots) {
     if (data.snapshots.hasOwnProperty(key)) {
-      count++;
       snapshot = data.snapshots[key];
-      slugs.push(snapshot.slug);
+      if (snapshot.ignored) {
+        ignored_snapshots.push(snapshot);
+      } else {
+        regular_snapshots.push(snapshot);
+      }
+
+       // Update the detail modal is necessary
+       if (detail_modal_slug == snapshot.slug && detail_modal && detail_modal.isOpen) {
+        setValuesForSnapshotUpdate(snapshot);
+      }
+    }
+  }
+
+  let count_regular = populateSnapshotDiv($('#snapshots'), regular_snapshots, "archive");
+  let count_ignored = populateSnapshotDiv($('#snapshots_ignored'), ignored_snapshots, "cloud_off");
+
+  if (count_ignored == 0) {
+    $(".ignored_snapshot_slider").addClass("default-hidden");
+  } else {
+    $(".ignored_snapshot_slider").removeClass("default-hidden");
+  }
+  if (count_ignored > 1) {
+    $(".ignored_snapshot_plural").removeClass("default-hidden");
+  } else {
+    $(".ignored_snapshot_plural").addClass("default-hidden");
+  }
+
+  $(".ignored_snapshot_count").html(count_ignored);
+  return count_regular + count_ignored;
+}
+
+function populateSnapshotDiv(snapshot_div, snapshots, icon) {
+  slugs = []
+  count = 0;
+  for (var key in snapshots) {
+    if (snapshots.hasOwnProperty(key)) {
+      count++;
+      snapshot = snapshots[key];
       // try to find the item
-      var template = $(".slug" + snapshot.slug)
+      var template = $(".slug" + snapshot.slug, snapshot_div);
+      slugs.push(snapshot.slug);
       var isNew = false;
       if (template.length == 0) {
         var template = $('#snapshot-template').find(".snapshot-ui").clone();
         template.addClass("slug" + snapshot.slug);
         template.addClass("active-snapshot");
         template.data("slug", snapshot.slug);
-        var dropdown = $("#action_dropdown", template);
-        dropdown.attr("id", "action_dropdown" + snapshot.slug);
-        $("#action_dropdown_button", template).attr("data-target", "action_dropdown" + snapshot.slug);
-        $("#action_dropdown_button", template).attr('id', "action_dropdown_button" + snapshot.slug);
-
-        $("#delete_link", template).attr('id', "delete_link" + snapshot.slug);
-        $("#restore_link", template).attr('id', "restore_link" + snapshot.slug);
-        $("#upload_link", template).attr('id', "upload_link" + snapshot.slug);
-        $("#download_link", template).attr('id', "download_link" + snapshot.slug);
-        $("#retain_link", template).attr('id', "retain_link" + snapshot.slug);
-        $("#delete_option", template).attr('id', "delete_option" + snapshot.slug);
-        $("#restore_option", template).attr('id', "restore_option" + snapshot.slug);
-        $("#upload_option", template).attr('id', "upload_option" + snapshot.slug);
-        $("#download_option", template).attr('id', "download_option" + snapshot.slug);
-        $("#retain_option", template).attr('id', "retain_option" + snapshot.slug);
+        template.data("timestamp", snapshot.timestamp);
+        $("#snapshot_card", template).attr('id', "snapshot_card" + snapshot.slug);
+        $("#loading", template).attr('id', "loading" + snapshot.slug);
+        $(".snapshot_icon", template).html(icon);
         isNew = true;
       }
 
       $("#size", template).html(snapshot['size']);
+      $("#type", template).html(snapshot['type'] === "full" ? "Full snapshot" : "Partial snapshot");
+      $("#createdAt", template).html(snapshot['createdAt']);
       $("#name", template).html(snapshot['name']);
+      $("#name", template).attr('title', snapshot['name']);
       $("#status", template).html(snapshot['status']);
+      if (snapshot.status_detail) {
+        $("#gen_detail", template).show();
+        tooltip = "Kept generationally for " + snapshot.status_detail[0];
+        $("#gen_detail", template).attr('data-tooltip', tooltip);
+      } else {
+        $("#gen_detail", template).hide();
+      }
+      
 
       if (snapshot.protected) {
         $(".icon-protected", template).show();
@@ -502,41 +540,37 @@ function processSnapshotsUpdate(data) {
       $("#status-help", template).attr("data-tooltip", tip);
 
       if (isNew) {
-        snapshot_div.prepend(template);
-        var elems = document.querySelectorAll("#action_dropdown_button" + snapshot.slug)
-        var instances = M.Dropdown.init(elems, { 'constrainWidth': false });
+        before = null;
+        // Find where the snapshot should be inserted, which is almost always at the top.
+        // This is an inefficient way of sorting but prevents juggling DOM entities around
+        // and the "search" is almsot always O(1) in practice.
+        $(".active-snapshot", snapshot_div).each(function () {
+          if (template.data('timestamp') > $(this).data('timestamp')) {
+            before = $(this);
+            return false;
+          }
+        });
+        if (before != null) {
+          template.insertBefore(before);
+        } else {
+          snapshot_div.append(template);
+        }
       }
 
       if (snapshot.isPending) {
-        $("#action_dropdown_button" + snapshot.slug).hide();
+        $("#loading" + snapshot.slug).show();
+        $("#snapshot_card" + snapshot.slug).css("cursor", "auto");
       } else {
-        $("#action_dropdown_button" + snapshot.slug).show();
+        $("#loading" + snapshot.slug).hide();
+        $("#snapshot_card" + snapshot.slug).css("cursor", "pointer");
       }
 
-      if (snapshot.restorable) {
-        $("#restore_option" + snapshot.slug).show();
-      } else {
-        $("#restore_option" + snapshot.slug).hide();
-      }
-
-      if (snapshot.uploadable) {
-        $("#upload_option" + snapshot.slug).show();
-      } else {
-        $("#upload_option" + snapshot.slug).hide();
-      }
-
-      $("#status-details", template).data('snapshot', snapshot)
-
-      // Set up context menu
-      $("#delete_link" + snapshot.slug).data('snapshot', snapshot);
-      //$("#restore_link" + snapshot.slug).data('url', data.restore_link.replace("{host}", window.location.hostname));
-      $("#upload_link" + snapshot.slug).data('snapshot', snapshot);
-      $("#download_link" + snapshot.slug).data('snapshot', snapshot);
-      $("#retain_link" + snapshot.slug).data('snapshot', snapshot);
+      // Set up context
+      $("#snapshot_card" + snapshot.slug).data('snapshot', snapshot);
     }
   }
-
-  $(".active-snapshot").each(function () {
+  // Remove the snapshot card if the snapshot was deleted.
+  $(".active-snapshot", snapshot_div).each(function () {
     var snapshot = $(this)
     if (!slugs.includes(snapshot.data('slug'))) {
       snapshot.remove();
@@ -546,6 +580,7 @@ function processSnapshotsUpdate(data) {
 }
 
 function processStatusUpdate(data) {
+  name_keys = data.snapshot_name_keys;
   $('#last_snapshot').empty().append(data.last_snapshot_text);
   $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
   $('#last_snapshot').attr("title", data.last_snapshot_detail);
@@ -567,7 +602,7 @@ function processStatusUpdate(data) {
   // Update the "syncing" toast message
   if (data.syncing) {
     if (sync_toast == null) {
-      sync_toast = M.toast({ html: '<span>Syncing...</span><button class="btn-flat toast-action" onclick="cancelSync()">Cancel</button>', displayLength: 999999999 })
+      sync_toast = M.toast({ html: '<span>Syncing...</span><a class="btn-flat toast-action" onclick="cancelSync()">Cancel</button>', displayLength: 999999999 })
     }
   } else {
     // Make sure the toast isn't up
@@ -595,6 +630,11 @@ function processStatusUpdate(data) {
   var error = data.last_error;
   $('.error_card').each(function (i) {
     var item = $(this);
+    let id = item.attr('id');
+    if (id == "error_card" || id == "error_details_card") {
+      // This card gets handled separately because it catches any other error.
+      return;
+    }
     if (data.last_error == null) {
       if (item.is(":visible")) {
         item.hide();
@@ -633,17 +673,38 @@ function processStatusUpdate(data) {
 
   if (data.last_error != null && !found && data.last_error_count != error_minimum && !data.ignore_errors_for_now && !data.ignore_sync_error) {
     var card = $("#error_card")
+    if (!card.is(":visible")) {
+      card.fadeIn();
+    }
     populateGitHubInfo(card, data.last_error);
-    card.fadeIn();
   } else {
     $("#error_card").hide();
   }
 
-  if (data.ask_error_reports && !found) {
-    $('#error_reports_card').fadeIn(500);
-  } else {
-    $('#error_reports_card').hide();
+  // Only show one of the "question" cards at a TimeRanges, ir order to prevent the UI from blowing up
+  let question_card = null;
+  if (data.notify_check_ignored) {
+    question_card = "ignore_helper_card";
+  } else if (data.snapshot_cooldown_active) {
+    question_card = "snapshots_boot_waiting_card";
+  } else if(data.warn_ingress_upgrade && !hideIngress) {
+    question_card = "ingress_upgrade_card";
+  } else if (data.ask_error_reports && !found) {
+    question_card = "error_reports_card";
   }
+
+  $('.question-card').each(function (i) {
+    let item = $(this);
+    let id = item.attr('id');
+    let visible = item.is(":visible");
+    if (id == question_card && !visible) {
+        item.fadeIn(500);
+        item.slideDown(1000);
+    } else if (id != question_card && visible) {
+        item.slideUp(1000);
+        item.fadeOut(500);
+    }
+  });
 
   if (data.is_custom_creds) {
     $(".hide-for-custom-creds").hide();
@@ -653,17 +714,11 @@ function processStatusUpdate(data) {
     $(".hide-for-default-creds").hide();
   }
 
-  if (data.warn_ingress_upgrade && !hideIngress) {
-    $('#ingress_upgrade_card').fadeIn(500);
-  } else {
-    $('#ingress_upgrade_card').hide();
-  }
-
 
   $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_snapshot_path, data.ha_url_base));
 
   last_data = data;
-
+  
   $('.tooltipped').tooltip({ "exitDelay": 1000 });
   if (error_toast != null) {
     error_toast.dismiss();
@@ -732,7 +787,6 @@ function doNewSnapshot() {
   return false;
 }
 
-
 function allowDeletion(always) {
   var url = "confirmdelete?always=" + always;
   postJson(url, {}, refreshstats, null, "Allowing deletion and syncing...");
@@ -749,14 +803,16 @@ function skipLowSpaceWarning() {
 
 
 $(document).ready(function () {
-  if (window.top.location == window.location) {
-    // We're in a standard webpage, only show the header
+  if (window.top.location === window.location) {
+    // We're in a standard webpage, show the full header
     $(".ingress-only").hide();
+    $(".nav-wrapper .right").addClass("hide-on-med-and-down")
   } else {
     // We're in an ingress iframe.
     $(".non-ingress").hide();
+    $(".nav-wrapper .brand-logo").addClass("hide-on-med-and-down")
   }
-  var instance = M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
+  M.Tabs.init(document.querySelector("#bug_report_tabs"), { "onShow": renderMarkdown });
 });
 
 
@@ -769,4 +825,15 @@ function copyFromInput(id) {
 function saveFolder(id) {
   url = "changefolder?id=" + id
   postJson(url, {}, refreshstats, null, "Setting snapshot folder...");
+}
+
+function exampleSnapshotName(snapshot_type, template) {
+  name_keys["{type}"] = $("#partial_snapshots").is(':checked') ? "Partial" : "Full";
+  if (template.length == 0) {
+    template = last_data.snapshot_name_template;
+  }
+  for (key in name_keys) {
+    template = template.replace(key, name_keys[key]);
+  }
+  return template;
 }

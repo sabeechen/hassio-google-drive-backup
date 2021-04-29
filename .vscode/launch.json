@@ -8,9 +8,9 @@
             "name": "Run Addon (Dev Backends)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
-            "args": ["dev"],
+            "args": ["--config", "hassio-google-drive-backup/dev/data/dev_options.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
             }
@@ -19,9 +19,9 @@
             "name": "Run Addon (Dev Drive)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
-            "args": ["drive_dev"],
+            "args": ["--config", "hassio-google-drive-backup/dev/data/drive_dev_options.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
             }
@@ -30,9 +30,9 @@
             "name": "Run Addon (Real Google Drive)",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup",
-            "args": ["drive"],
+            "args": ["--config", "hassio-google-drive-backup/dev/data/drive_options.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
             }
@@ -41,7 +41,7 @@
             "name": "Run Mock Backend Server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.dev.simulationserver",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
@@ -51,7 +51,7 @@
             "name": "Run Error Analyzer",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.backup.util.error_analyzer",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup"
@@ -87,7 +87,7 @@
             "name": "Run Auth Server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.server",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup",
@@ -100,7 +100,7 @@
             "name": "(DEV) Build/Upload Addon Container",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.dev.deploy_dev_addon",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup",
@@ -113,7 +113,7 @@
             "name": "(PROD) Build/Upload Server Container",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.dev.deploy_server",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup",
@@ -126,7 +126,7 @@
             "name": "(DEV) Build/Upload Server Container",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.dev.deploy_dev_server",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup",
@@ -139,7 +139,7 @@
             "name": "(PROD) Build/Upload Addon Containers",
             "type": "python",
             "request": "launch",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "module": "hassio-google-drive-backup.dev.deploy_addon",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup",

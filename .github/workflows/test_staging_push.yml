@@ -1,0 +1,55 @@
+name: push_to_staging
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy_to_staging:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+  
+    - name: Check out dev repo
+      uses: actions/checkout@v2
+      with:
+        path: dev
+        persist-credentials: false
+    
+    - name: Checkout Staging Repo
+      uses: actions/checkout@v2
+      with:
+        path: staging
+        repository: sabeechen/hgdb-dev-staging
+        persist-credentials: true
+        token: ${{ secrets.STAGING_REPO_TOKEN }}
+
+    - name: Update addon verison number
+      run: |
+          python3 staging/update.py dev staging
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+    - name: Publish Staging Addon image
+      uses: home-assistant/builder@master
+      with:
+        args: |
+          --all \
+          --target dev/hassio-google-drive-backup
+
+    - name: Publish Staging Addon Version
+      run: |
+          cd staging
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Updating staging addon config"
+          git push

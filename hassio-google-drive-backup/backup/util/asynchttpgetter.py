@@ -1,12 +1,15 @@
+from datetime import timedelta
 import io
 from typing import Dict
 
 from aiohttp import ClientSession
-from aiohttp.client import ClientResponse, ClientPayloadError, ClientOSError, ClientTimeout
+from aiohttp.client import ClientResponse, ClientPayloadError, ClientOSError
 from asyncio.exceptions import TimeoutError
+from collections import deque
 
 from ..exceptions import LogicError, ensureKey
 from ..logger import getLogger
+from ..time import Time
 
 logger = getLogger(__name__)
 
@@ -17,13 +20,14 @@ POSITION_ERROR_MESSAGE = "AsyncHttpGetter must also be set up at position 0"
 DEFAULT_CHUNK_SIZE = 1024 * 1024
 
 
+# This class is dumb but it gets around a dumb problem
 class Stupid(io.BytesIO):
     def __len__(self):
         return len(self.getvalue())
 
 
 class AsyncHttpGetter:
-    def __init__(self, url, headers: Dict[str, str], session, size: int = None, timeout=None, timeoutFactory=None, otherErrorFactory=None):
+    def __init__(self, url, headers: Dict[str, str], session, size: int = None, timeout=None, timeoutFactory=None, otherErrorFactory=None, time: Time = None):
         self._url: str = url
 
         # Current position of the stream
@@ -44,6 +48,9 @@ class AsyncHttpGetter:
         # Where the resposne currently starts
         self._responseStart = 0
 
+        self._history = deque()
+        self._time = time
+        self._startTime = self._time.now()
         self.timeoutFactory = timeoutFactory
         self.otherErrorFactory = otherErrorFactory
         self.timeout = timeout
@@ -58,6 +65,8 @@ class AsyncHttpGetter:
         elif self._size is None:
             raise LogicError(
                 CONTENT_LENGTH_ERROR)
+
+        self._history.append([self._time.now(), 0])
         return self._size
 
     def _ensureSetup(self):
@@ -90,6 +99,51 @@ class AsyncHttpGetter:
         if self._size == 0:
             return 0
         return 100 * float(self.position()) / float(self._size)
+
+    # return the estimated speed of the tranfser in bytes/second
+    def speed(self, period: timedelta = timedelta(seconds=10)):
+        if len(self._history) < 2:
+            return None
+        now = self._time.now()
+        intervals = []
+        current = self._history[0]
+        last_speed = 0
+        for x in range(1, len(self._history)):
+            next = self._history[x]
+            seconds = (next[0] - current[0]).total_seconds()
+            data = next[1] - current[1]
+            if seconds == 0:
+                speed = 0  # avoid div by 0
+            else:
+                speed = data / seconds
+            intervals.append([current[0], next[0], speed])
+            current = next
+            last_speed = speed
+
+        if current[0] < now - period:
+            # if we didn't transfer any data over the sample period, don't try to estimate
+            return None
+
+        # behave as though we continued with the pseed form the last interval
+        intervals.append([current[0], now, last_speed])
+
+        # calculate the time-averaged speed over the given period
+        stop = now
+        start = now - period
+        total = 0
+        for interval in intervals:
+            if start > interval[1]:
+                continue
+            if stop < interval[0]:
+                continue
+            overlap_start = max(start, interval[0])
+            overlap_stop = min(stop, interval[1])
+            if overlap_stop > overlap_start:
+                total += (overlap_stop - overlap_start).total_seconds() * interval[2]
+        return total / period.total_seconds()
+
+    def startTime(self):
+        return self._startTime
 
     def __format__(self, format_spec: str) -> str:
         return str(int(self.progress()))
@@ -156,6 +210,9 @@ class AsyncHttpGetter:
         # Keep track of where we are in the stream
         self._responseStart += len(data)
         self._position += len(data)
+        self._history.append([self._time.now(), self._position])
+        if len(self._history) > 50:
+            self._history.popleft()
 
         ret.seek(0)
         return ret

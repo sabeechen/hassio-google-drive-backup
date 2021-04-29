@@ -15,6 +15,7 @@ logger = getLogger(__name__)
 
 REPORT_DELAY_SECONDS = 5
 
+
 @singleton
 class Watcher(Trigger, FileSystemEventHandler, Startable):
     @inject
@@ -91,6 +92,6 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
         else:
             return super().check()
 
-    def stop(self):
+    async def stop(self):
         self.observer.stop()
         self.observer.join()

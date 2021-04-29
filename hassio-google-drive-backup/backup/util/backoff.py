@@ -1,6 +1,7 @@
+from ..logger import getLogger
+
 MAX_FACTOR = 20  # avoid weirdness with python's arbitary integer precision
 MAX_WAIT = 60 * 60  # 1 hour
-from ..logger import getLogger
 
 logger = getLogger(__name__)
 

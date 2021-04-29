@@ -35,10 +35,10 @@ So when you authenticate the add-on, the workflow actually looks like this:
 6.  https://habackup.io redirects you back to your add-on web-UI (which it kept track of in step 2) along with the access token.
 7.  The addon (on your local Home Assistant installation) persists the access token and uses it in the future any time it needs to talk to Google Drive.
 
-Noteably, your access token isn't persisted at https://habackup.io, its only passed through back to your local add-on installation.  I do this because:
+Noteably, your access token isn't persisted at https://habackup.io, it is only passed through back to your local add-on installation.  I do this because:
 - It ensures your information is only ever stored on your machine, which is reassuring from from the user's perspective (eg you).  
 - If my server (https://habackup.io) ever gets compromised, there isn't any valuable information stored there that compomises you as well.
-- This is practicing a form of [defense-in-depth](https://en.wikipedia.org/wiki/Defense_in_depth_%28computing%29) secuity, where-in [personal data](https://en.wikipedia.org/wiki/Personal_data) is only stored in the palces where it is strictly crtitical.
-- It makes the server more simple, since it is a stateless machien that doesn't require a database (eg to store your token).  
+- This is practicing a form of [defense-in-depth](https://en.wikipedia.org/wiki/Defense_in_depth_%28computing%29) security, where-in [personal data](https://en.wikipedia.org/wiki/Personal_data) is only stored in the places where it is strictly crtitical.
+- It makes the server more simple, since it is a stateless machine that doesn't require a database (eg to store your token).  
 
 After your token is generated and stored on your machine, it needs to be *refreshed* periodically with Google Drive.  To do this, the addon will again ask https://habackup.io who will relay the request with Google Drive.

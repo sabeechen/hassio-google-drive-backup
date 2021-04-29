@@ -87,10 +87,13 @@ class RequestInterceptor:
         return None
 
     def record(self, request: Request):
-        self._history.append(str(request.url.path))
+        record = str(request.url.path)
+        if len(request.url.query_string) > 0:
+            record += "?" + str(request.url.query_string)
+        self._history.append(record)
 
     def urlWasCalled(self, url) -> bool:
         for called_url in self._history:
-            if re.match(url, called_url):
+            if url == called_url or re.match(url, called_url):
                 return True
         return False

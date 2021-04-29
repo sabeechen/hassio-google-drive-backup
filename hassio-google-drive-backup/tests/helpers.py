@@ -10,6 +10,7 @@ from injector import inject, singleton
 
 from backup.util import AsyncHttpGetter
 from backup.model import SimulatedSource
+from backup.time import Time
 
 all_folders = [
     "share",
@@ -23,7 +24,8 @@ all_addons = [
         "slug": "sexy_robots",
         "description": "The robots you already know, but sexier. See what they don't want you to see.",
         "version": "0.69",
-        "size": 0.0,
+        "size": 1024,
+        "logo": True,
         "state": "started"
     },
     {
@@ -31,7 +33,8 @@ all_addons = [
         "slug": "particla_accel",
         "description": "What CAN'T you do with Home Assistant?",
         "version": "0.5",
-        "size": 0.0,
+        "size": 500000000,
+        "logo": True,
         "state": "started"
     },
     {
@@ -39,7 +42,8 @@ all_addons = [
         "slug": "addon_empty",
         "description": "Explore the meaning of the universe by contemplating whats missing.",
         "version": "0.-1",
-        "size": 0.0,
+        "size": 234568783,
+        "logo": False,
         "state": "started"
     }
 ]
@@ -52,12 +56,12 @@ def skipForWindows():
 
 def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:
     snapshot_type = "full"
-    if included_folders:
+    if included_folders is not None:
         folders = included_folders.copy()
     else:
         folders = all_folders.copy()
 
-    if included_addons:
+    if included_addons is not None:
         snapshot_type = "partial"
         addons = []
         for addon in all_addons:
@@ -72,15 +76,7 @@ def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, includ
         "date": date.isoformat(),
         "type": snapshot_type,
         "protected": password is not None,
-        "homeassistant": {
-            "ssl": True,
-            "watchdog": True,
-            "port": 8123,
-            "wait_boot": 600,
-            "boot": True,
-            "version": "0.92.2",
-            "refresh_token": "fake_token"
-        },
+        "homeassistant": "0.92.2",
         "folders": folders,
         "addons": addons,
         "repositories": [
@@ -172,12 +168,13 @@ class HelperTestSource(SimulatedSource):
 @singleton
 class Uploader():
     @inject
-    def __init__(self, host, session: ClientSession):
+    def __init__(self, host, session: ClientSession, time: Time):
         self.host = host
         self.session = session
+        self.time = time
 
     async def upload(self, data):
         async with await self.session.post(self.host + "/uploadfile", data=data) as resp:
             resp.raise_for_status()
-        source = AsyncHttpGetter(self.host + "/readfile", {}, self.session)
+        source = AsyncHttpGetter(self.host + "/readfile", {}, self.session, time=self.time)
         return source

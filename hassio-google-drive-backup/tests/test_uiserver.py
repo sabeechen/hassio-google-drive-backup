@@ -1,4 +1,4 @@
-import logging
+from datetime import timedelta
 import os
 import json
 from os.path import abspath, join
@@ -30,47 +30,7 @@ from yarl import URL
 from dev.ports import Ports
 from dev.simulated_supervisor import SimulatedSupervisor
 from bs4 import BeautifulSoup
-
-
-class ReaderHelper:
-    def __init__(self, session, ui_port, ingress_port):
-        self.session = session
-        self.ui_port = ui_port
-        self.ingress_port = ingress_port
-        self.timeout = aiohttp.ClientTimeout(total=20)
-
-    def getUrl(self, ingress=True, ssl=False):
-        if ssl:
-            protocol = "https"
-        else:
-            protocol = "http"
-        if ingress:
-            return protocol + "://localhost:" + str(self.ingress_port) + "/"
-        else:
-            return protocol + "://localhost:" + str(self.ui_port) + "/"
-
-    async def getjson(self, path, status=200, json=None, auth=None, ingress=True, ssl=False, sslcontext=None):
-        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, ssl=sslcontext, timeout=self.timeout) as resp:
-            assert resp.status == status
-            return await resp.json()
-
-    async def get(self, path, status=200, json=None, auth=None, ingress=True, ssl=False):
-        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, timeout=self.timeout) as resp:
-            if resp.status != status:
-                import logging
-                logging.getLogger().error(resp.text())
-                assert resp.status == status
-            return await resp.text()
-
-    async def postjson(self, path, status=200, json=None, ingress=True):
-        async with self.session.post(self.getUrl(ingress) + path, json=json, timeout=self.timeout) as resp:
-            assert resp.status == status
-            return await resp.json()
-
-    async def assertError(self, path, error_type="generic_error", status=500, ingress=True, json=None):
-        logging.getLogger().info("Requesting " + path)
-        data = await self.getjson(path, status=status, ingress=ingress, json=json)
-        assert data['error_type'] == error_type
+from .conftest import ReaderHelper
 
 
 @pytest.fixture
@@ -89,24 +49,10 @@ def simple_config(config):
 
 
 @pytest.fixture
-async def ui_server(injector, server):
-    os.mkdir("static")
-    server = injector.get(UiServer)
-    await server.run()
-    yield server
-    await server.shutdown()
-
-
-@pytest.fixture
 async def restarter(injector, server):
     restarter = injector.get(Restarter)
     await restarter.start()
     return restarter
-
-
-@pytest.fixture
-def reader(ui_server, session, ui_port, ingress_port):
-    return ReaderHelper(session, ui_port, ingress_port)
 
 
 @pytest.mark.asyncio
@@ -147,7 +93,10 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'size': '0.0 B',
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'google-drive',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -159,13 +108,15 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': "0.0 B",
+        'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert len(data['sources']) == 2
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: FakeTime):
     data = await reader.getjson("getstatus")
     assert data['firstSync'] is False
@@ -183,7 +134,11 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'google-drive',
+        'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -195,7 +150,10 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': data['sources'][SOURCE_HA]['free_space'],
+        'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert len(data['sources']) == 2
 
@@ -203,7 +161,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
 @pytest.mark.asyncio
 async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
     slug = snapshot.slug()
-    assert await reader.getjson("retain", json={'slug': slug, 'sources': ["GoogleDrive", "HomeAssistant"]}) == {
+    assert await reader.getjson("retain", json={'slug': slug, 'sources': {"GoogleDrive": True, "HomeAssistant": True}}) == {
         'message': "Updated the snapshot's settings"
     }
     status = await reader.getjson("getstatus")
@@ -216,7 +174,11 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'google-drive',
+        'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -228,10 +190,13 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': status['sources'][SOURCE_HA]["free_space"],
+        'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
 
-    await reader.getjson("retain", json={'slug': slug, 'sources': []})
+    await reader.getjson("retain", json={'slug': slug, 'sources': {"GoogleDrive": False, "HomeAssistant": False}})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
@@ -242,7 +207,11 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'google-drive',
+        'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -254,14 +223,17 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': status['sources'][SOURCE_HA]["free_space"],
+        'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     delete_req = {
         "slug": slug,
         "sources": ["GoogleDrive"]
     }
     await reader.getjson("deleteSnapshot", json=delete_req)
-    await reader.getjson("retain", json={'slug': slug, 'sources': ["HomeAssistant"]})
+    await reader.getjson("retain", json={'slug': slug, 'sources': {"HomeAssistant": True}})
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 0,
@@ -272,7 +244,11 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
-        'title': "Google Drive"
+        'title': "Google Drive",
+        'icon': 'google-drive',
+        'free_space': "4.0 GB",
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -284,7 +260,10 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'enabled': True,
         'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
         'title': "Home Assistant",
-        'free_space': "0.0 B"
+        'free_space': status['sources'][SOURCE_HA]["free_space"],
+        'icon': 'home-assistant',
+        'ignored': 0,
+        'ignored_size': '0.0 B',
     }
 
     # sync again, which should upoload the snapshot to Drive
@@ -385,7 +364,6 @@ async def test_config(reader, ui_server, config: Config, supervisor: SimulatedSu
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_auth_and_restart(reader, ui_server, config: Config, restarter, coord: Coordinator, supervisor: SimulatedSupervisor):
     update = {"config": {"require_login": True,
                          "expose_extra_server": True}, "snapshot_folder": "unused"}
@@ -414,7 +392,6 @@ async def test_auth_and_restart(reader, ui_server, config: Config, restarter, co
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(100)
-@pytest.mark.flaky(5)
 async def test_expose_extra_server_option(reader, ui_server: UiServer, config: Config):
     with pytest.raises(aiohttp.client_exceptions.ClientConnectionError):
         await reader.getjson("sync", ingress=False)
@@ -484,7 +461,6 @@ async def test_drive_cred_generation(reader: ReaderHelper, ui_server: UiServer, 
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
     config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
@@ -534,7 +510,6 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_update_multiple_deletes_setting(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource, global_info: GlobalInfo):
     assert await reader.getjson("confirmdelete?always=true") == {
         'message': 'Configuration updated, I\'ll never ask again'
@@ -640,26 +615,24 @@ async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: UiSer
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
+async def test_download_drive(reader, ui_server, snapshot, drive: DriveSource, ha: HaSource, session, time):
     await ha.delete(snapshot)
     # download the item from Google Drive
     from_drive = await drive.read(snapshot)
     # Download rom the web server
     from_server = AsyncHttpGetter(
-        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session, time=time)
     await compareStreams(from_drive, from_server)
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot, drive: DriveSource, ha: HaSource, session):
+async def test_download_home_assistant(reader: ReaderHelper, ui_server, snapshot, drive: DriveSource, ha: HaSource, session, time):
     await drive.delete(snapshot)
     # download the item from Google Drive
     from_ha = await ha.read(snapshot)
     # Download rom the web server
     from_server = AsyncHttpGetter(
-        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session)
+        reader.getUrl() + "download?slug=" + snapshot.slug(), {}, session, time=time)
     await compareStreams(from_ha, from_server)
 
 
@@ -942,3 +915,69 @@ async def test_update_disable_drive(reader: ReaderHelper, server, coord: Coordin
     assert coord.enabled()
     await coord.waitForSyncToFinish()
     assert len(coord.snapshots()) == 1
+
+
+@pytest.mark.asyncio
+async def test_update_ignore(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource):
+    config.override(Setting.IGNORE_UPGRADE_SNAPSHOTS, True)
+    config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
+
+    # make an ignored_snapshot
+    slug = await supervisor.createSnapshot({'name': "Ignore_me", 'folders': ['homeassistant'], 'addons': []}, date=time.now())
+
+    await coord.sync()
+    assert len(await drive.get()) == 0
+    assert len(await ha.get()) == 1
+    assert len(coord.snapshots()) == 1
+
+    # Disable Drive Upload
+    update = {
+        "ignore": False,
+        "slug": slug,
+    }
+    await reader.postjson("ignore", json=update)
+    await coord.waitForSyncToFinish()
+    assert len(coord.snapshots()) == 1
+    assert len(await drive.get()) == 1
+    assert len(await ha.get()) == 1
+
+
+@pytest.mark.asyncio
+async def test_check_ignored_snapshot_notification(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource):
+    # Create an "ignored" snapshot after upgrade to the current version.
+    time.advance(days=1)
+    await supervisor.createSnapshot({'name': "test_name"}, date=time.now())
+
+    # cerate one that isn't ignored.
+    time.advance(days=1)
+    await ha.create(CreateOptions(time.now(), name_template=None))
+
+    update = {
+        "config": {
+            Setting.IGNORE_OTHER_SNAPSHOTS.value: True
+        },
+        "snapshot_folder": ""
+    }
+    await reader.postjson("saveconfig", json=update)
+    await coord.waitForSyncToFinish()
+
+    status = await reader.getjson("getstatus")
+    assert status["snapshots"][0]["ignored"]
+    assert not status["snapshots"][1]["ignored"]
+    assert not status["notify_check_ignored"]
+
+    # Create an ignored snapshot from "before" the addon was upgraded to v0.104.0
+    await supervisor.createSnapshot({'name': "test_name"}, date=time.now() - timedelta(days=10))
+    await coord.sync()
+
+    # The UI should nofify about checking ignored snapshots
+    status = await reader.getjson("getstatus")
+    assert status["snapshots"][0]["ignored"]
+    assert status["snapshots"][1]["ignored"]
+    assert not status["snapshots"][2]["ignored"]
+    assert status["notify_check_ignored"]
+
+    # Acknowledge the notification
+    await reader.postjson("ackignorecheck") == {'message': "Acknowledged."}
+    status = await reader.getjson("getstatus")
+    assert not status["notify_check_ignored"]

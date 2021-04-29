@@ -98,6 +98,7 @@ class SimulatedGoogle(BaseServer):
             post('/oauth2/v4/token', self._oauth2Token),
             get('/o/oauth2/v2/auth', self._oAuth2Authorize),
             get('/drive/customcreds', self._getCustomCred),
+            get('/drive/v3/about', self._driveAbout),
             post('/token', self._driveToken),
         ]
 
@@ -200,8 +201,28 @@ class SimulatedGoogle(BaseServer):
         return fields
 
     def formatItem(self, base, id):
-        base['capabilities'] = {'canAddChildren': True,
-                                'canListChildren': True, 'canDeleteChildren': True}
+        caps = base.get('capabilites', {})
+        if 'capabilities' not in base:
+            base['capabilities'] = caps
+        if 'canAddChildren' not in caps:
+            caps['canAddChildren'] = True
+        if 'canListChildren' not in caps:
+            caps['canListChildren'] = True
+        if 'canDeleteChildren' not in caps:
+            caps['canDeleteChildren'] = True
+        if 'canTrashChildren' not in caps:
+            caps['canTrashChildren'] = True
+        if 'canTrash' not in caps:
+            caps['canTrash'] = True
+        if 'canDelete' not in caps:
+            caps['canDelete'] = True
+
+        for parent in base.get("parents", []):
+            parent_item = self.items[parent]
+            # This simulates a very simply shared drive permissions structure
+            if parent_item.get("driveId", None) is not None:
+                base["driveId"] = parent_item["driveId"]
+                base["capabilities"] = parent_item["capabilities"]
         base['trashed'] = False
         base['id'] = id
         base['modifiedTime'] = self.timeToRfc3339String(self._time.now())
@@ -240,6 +261,14 @@ class SimulatedGoogle(BaseServer):
             else:
                 self.items[id][key] = update[key]
         return Response()
+
+    async def _driveAbout(self, request: Request):
+        return json_response({
+            'storageQuota': {
+                'usage': 1024 * 1024 * 1024,
+                'limit': 5 * 1024 * 1024 * 1024
+            }
+        })
 
     async def _delete(self, request: Request):
         id = request.match_info.get('id')
@@ -284,9 +313,8 @@ class SimulatedGoogle(BaseServer):
 
     async def _create(self, request: Request):
         await self._checkDriveHeaders(request)
-        id = self.generateId(30)
-        item = self.formatItem(await request.json(), id)
-        self.items[id] = item
+        item = self.formatItem(await request.json(), self.generateId(30))
+        self.items[item['id']] = item
         return json_response({'id': item['id']})
 
     async def _upload(self, request: Request):
@@ -385,8 +413,9 @@ class SimulatedGoogle(BaseServer):
         self.chunks.append(len(received_bytes))
         if end == total - 1:
             # upload is complete, so create the item
-            self.items[self._upload_info['id']] = self._upload_info['item']
-            return json_response({"id": self._upload_info['id']})
+            completed = self.formatItem(self._upload_info['item'], self._upload_info['id'])
+            self.items[completed['id']] = completed
+            return json_response({"id": completed['id']})
         else:
             # Return an incomplete response
             # For some reason, the tests like to stop right here

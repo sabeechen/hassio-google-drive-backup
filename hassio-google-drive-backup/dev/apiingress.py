@@ -143,9 +143,9 @@ class APIIngress(CoreSysAttributes, BaseServer):
             </head>
             <body>
                 <div>
-                    The Web-UI below is loaded through an iframe. <a href='/startingress'>Start a new ingress session</a> if you get permission errors.
+                    The Web-UI below is loaded through an iframe. <a href='startingress'>Start a new ingress session</a> if you get permission errors.
                 </div>
-                <iframe src="/api/hassio_ingress/{1}/">
+                <iframe src="api/hassio_ingress/{0}/">
                     <html>
                         <head></head>
                         <body></body>
@@ -153,11 +153,10 @@ class APIIngress(CoreSysAttributes, BaseServer):
                 </iframe>
             </body>
         </html>
-        """.format(self.ports.server, self.addon_token)
+        """.format(self.addon_token)
         resp = web.Response(body=body, content_type="text/html")
         resp.set_cookie(name=COOKIE_INGRESS, value=self.cookie_value, expires="Session", domain=request.url.host, path="/api/hassio_ingress/", httponly="false", secure="false")
         return resp
-
 
     """
     The class body below here is copied from

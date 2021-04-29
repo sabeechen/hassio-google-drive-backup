@@ -5,6 +5,7 @@ import os
 import re
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
+from datetime import timedelta
 
 from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientResponseError, ServerTimeoutError
@@ -28,12 +29,13 @@ FOLDER_NAME = 'Home Assistant Snapshots'
 DRIVE_VERSION = "v3"
 DRIVE_SERVICE = "drive"
 
-SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabilities,parents"
+SELECT_FIELDS = "id,name,appProperties,size,trashed,mimeType,modifiedTime,capabilities,parents,driveId"
 THUMBNAIL_MIME_TYPE = "image/png"
 QUERY_FIELDS = "nextPageToken,files(" + SELECT_FIELDS + ")"
 CREATE_FIELDS = SELECT_FIELDS
 URL_FILES = "/drive/v3/files/"
-URL_UPLOAD = "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true"
+URL_ABOUT = "/drive/v3/about"
+URL_START_UPLOAD = "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true"
 URL_AUTH = "/oauth2/v4/token"
 PAGE_SIZE = 100
 CHUNK_SIZE = 5 * 262144
@@ -45,9 +47,15 @@ MAX_CHUNK_SIZE = BASE_CHUNK_SIZE * 40
 # During upload, chunks get sized to complete upload after 10s so we can give status updates on progress.
 CHUNK_UPLOAD_TARGET_SECONDS = 10
 
-# don't attempt to resue a session mroe than this many times.  Just in case something is broken on Google's
-# # end so we don't retry the same broken session indefinitely.
-RETRY_SESSION_ATTEMPTS = 10
+# don't attempt to resume a session with than this many times consistant failures, just in case something is broken on Google's
+# end so we don't retry the same broken session forever.  Because the addon eventually backs off to doing 1 attempt/hour, this will
+# cause uploads to fail and start over after about 4 days.  This gets reset every time a chunk successfully uploads.
+# God be with you if your upload takes that long.
+RETRY_SESSION_ATTEMPTS = 100
+
+# Google claims that an upload session becomes invalid after 7 days.  I have not verified this, but probably better to call it
+# after 6 and restart the session.
+UPLOAD_SESSION_EXPIRATION_DURATION = timedelta(days=6)
 
 
 RATE_LIMIT_EXCEEDED = 403
@@ -78,6 +86,7 @@ class DriveRequests():
         self.last_attempt_metadata = None
         self.last_attempt_location = None
         self.last_attempt_count = 0
+        self.last_attempt_start_time = None
         self.tryLoadCredentials()
 
     async def _getHeaders(self):
@@ -149,7 +158,8 @@ class DriveRequests():
                               otherErrorFactory=GoogleUnexpectedError.factory,
                               timeout=ClientTimeout(
                                   sock_connect=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS),
-                                  sock_read=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)))
+                                  sock_read=self.config.get(Setting.DOWNLOAD_TIMEOUT_SECONDS)),
+                              time=self.time)
         return ret
 
     async def query(self, query):
@@ -184,13 +194,19 @@ class DriveRequests():
         async with resp:
             pass
 
+    async def getAboutInfo(self):
+        q = {
+                "fields": 'storageQuota'
+            }
+        return await self.retryRequest("GET", URL_ABOUT + "?" + urlencode(q), is_json=True)
+
     async def create(self, stream, metadata, mime_type):
         # Upload logic is complicated. See https://developers.google.com/drive/api/v3/manage-uploads#resumable
         total_size = stream.size()
         location = None
-        if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS:
+        if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION:
             logger.debug(
-                "Attempting to resume a previosuly failed upload where we left off")
+                "Attempting to resume a previously failed upload where we left off")
             self.last_attempt_count += 1
             # Attempt to resume from a partially completed upload.
             headers = {
@@ -229,7 +245,7 @@ class DriveRequests():
                 "X-Upload-Content-Type": mime_type,
                 "X-Upload-Content-Length": str(total_size),
             }
-            initial = await self.retryRequest("POST", URL_UPLOAD, headers=headers, json=metadata)
+            initial = await self.retryRequest("POST", URL_START_UPLOAD, headers=headers, json=metadata)
             async with initial:
                 # Google returns a url in the header "Location", which is where subsequent requests to upload
                 # the snapshot's bytes should be sent.  Logic below handles uploading the file bytes in chunks.
@@ -239,10 +255,11 @@ class DriveRequests():
                 stream.position(0)
 
         # Keep track of the location in case the upload fails and we want to resume where we left off.
-        # "metadata" is a durable fingerprint that identifies a snapshot, so we can use it to identify a
+        # "metadata" is a durable fingerprint that uniquely identifies a snapshot, so we can use it to identify a
         # resumable partial upload in future retrys.
         self.last_attempt_location = location
         self.last_attempt_metadata = metadata
+        self.last_attempt_start_time = self.time.now()
 
         # Always start with the minimum chunk size and work up from there in case the last attempt
         # failed due to connectivity errors or ... whatever.
@@ -267,10 +284,14 @@ class DriveRequests():
                 # Base the next chunk size on how long it took to send the last chunk.
                 current_chunk_size = self._getNextChunkSize(
                     current_chunk_size, (self.time.now() - startTime).total_seconds())
+
+                # any time a chunk gets uploaded, reset the retry counter.  This lets very flaky connections
+                # complete eventually after enough retrying.
+                self.last_attempt_count = 1
             except ClientResponseError as e:
                 if math.floor(e.status / 100) == 4:
-                    # clear the cached session location URI, since this usually
-                    # means the endpoint is no good anymore.
+                    # clear the cached session location URI, since a 4XX error
+                    # always means the upload session is no good anymore (AFAIK)
                     self.last_attempt_location = None
                     self.last_attempt_metadata = None
 

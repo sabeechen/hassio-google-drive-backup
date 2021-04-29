@@ -10,6 +10,9 @@ from backup.logger import getLast
 from backup.util import Estimator
 from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_CORE_API
 from dev.request_interceptor import RequestInterceptor
+from backup.model import Coordinator
+from backup.config import Config, Setting
+from backup.time import Time
 
 STALE_ATTRIBUTES = {
     "friendly_name": "Snapshots Stale",
@@ -128,7 +131,6 @@ async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime, supe
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(5)
 async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime, snapshot, supervisor: SimulatedSupervisor):
     await updater.update()
     assert not updater._stale()
@@ -250,7 +252,6 @@ async def test_failure_logging(updater: HaUpdater, server, time: FakeTime, inter
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 async def test_publish_retries(updater: HaUpdater, server: SimulationServer, time: FakeTime, snapshot, drive, supervisor: SimulatedSupervisor):
     await updater.update()
     assert supervisor.getEntity("sensor.snapshot_backup") is not None
@@ -271,6 +272,18 @@ async def test_publish_retries(updater: HaUpdater, server: SimulationServer, tim
     await drive.delete(snapshot)
     await updater.update()
     assert supervisor.getEntity("sensor.snapshot_backup") is not None
+
+
+@pytest.mark.asyncio
+async def test_ignored_snapshots(updater: HaUpdater, time: Time, server: SimulationServer, snapshot, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
+    config.override(Setting.IGNORE_OTHER_SNAPSHOTS, True)
+    await supervisor.createSnapshot({'name': "test_snapshot"}, date=time.now())
+    await coord.sync()
+    await updater.update()
+    state = supervisor.getAttributes("sensor.snapshot_backup")
+    assert state["snapshots_in_google_drive"] == 1
+    assert state["snapshots_in_home_assistant"] == 1
+    assert len(state["snapshots"]) == 2
 
 
 def verifyEntity(backend: SimulatedSupervisor, name, state, attributes):

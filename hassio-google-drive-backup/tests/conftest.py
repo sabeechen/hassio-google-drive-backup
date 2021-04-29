@@ -4,6 +4,7 @@ import os
 import tempfile
 import asyncio
 import platform
+import aiohttp
 from yarl import URL
 
 import pytest
@@ -15,7 +16,7 @@ from backup.config import Config, Setting
 from backup.model import Coordinator
 from dev.simulationserver import SimulationServer
 from backup.drive import DriveRequests, DriveSource, FolderFinder
-from backup.util import GlobalInfo, Estimator, Resolver
+from backup.util import GlobalInfo, Estimator, Resolver, DataCache
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
 from backup.model import Model
@@ -25,6 +26,7 @@ from backup.debugworker import DebugWorker
 from backup.creds import Creds
 from backup.server import ErrorStore
 from backup.ha import AddonStopper
+from backup.ui import UiServer
 from .faketime import FakeTime
 from .helpers import Uploader
 from dev.ports import Ports
@@ -60,10 +62,52 @@ class FsFaker():
             self.bytes_total = self.bytes_free
 
 
+class ReaderHelper:
+    def __init__(self, session, ui_port, ingress_port):
+        self.session = session
+        self.ui_port = ui_port
+        self.ingress_port = ingress_port
+        self.timeout = aiohttp.ClientTimeout(total=20)
+
+    def getUrl(self, ingress=True, ssl=False):
+        if ssl:
+            protocol = "https"
+        else:
+            protocol = "http"
+        if ingress:
+            return protocol + "://localhost:" + str(self.ingress_port) + "/"
+        else:
+            return protocol + "://localhost:" + str(self.ui_port) + "/"
+
+    async def getjson(self, path, status=200, json=None, auth=None, ingress=True, ssl=False, sslcontext=None):
+        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, ssl=sslcontext, timeout=self.timeout) as resp:
+            assert resp.status == status
+            return await resp.json()
+
+    async def get(self, path, status=200, json=None, auth=None, ingress=True, ssl=False):
+        async with self.session.get(self.getUrl(ingress, ssl) + path, json=json, auth=auth, timeout=self.timeout) as resp:
+            if resp.status != status:
+                import logging
+                logging.getLogger().error(resp.text())
+                assert resp.status == status
+            return await resp.text()
+
+    async def postjson(self, path, status=200, json=None, ingress=True):
+        async with self.session.post(self.getUrl(ingress) + path, json=json, timeout=self.timeout) as resp:
+            assert resp.status == status
+            return await resp.json()
+
+    async def assertError(self, path, error_type="generic_error", status=500, ingress=True, json=None):
+        logging.getLogger().info("Requesting " + path)
+        data = await self.getjson(path, status=status, ingress=ingress, json=json)
+        assert data['error_type'] == error_type
+
+
 # This module should onyl ever have bindings that can also be satisfied by MainModule
 class TestModule(Module):
-    def __init__(self, ports: Ports):
+    def __init__(self, config: Config, ports: Ports):
         self.ports = ports
+        self.config = config
 
     @provider
     @singleton
@@ -80,8 +124,13 @@ class TestModule(Module):
     def getPorts(self) -> Ports:
         return self.ports
 
+    @provider
+    @singleton
+    def getConfig(self) -> Config:
+        return self.config
 
-@pytest.yield_fixture()
+
+@pytest.fixture
 def event_loop():
     if platform.system() == "Windows":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -89,15 +138,8 @@ def event_loop():
 
 
 @pytest.fixture
-async def injector(cleandir, server_url, ports):
-    drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token")
-    with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
-        f.write("for_unit_tests: \"password value\"\n")
-
-    with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
-        f.write(json.dumps(drive_creds.serialize()))
-
-    config = Config.withOverrides({
+async def generate_config(server_url, ports, cleandir):
+    return Config.withOverrides({
         Setting.DRIVE_URL: server_url,
         Setting.HASSIO_URL: server_url + "/",
         Setting.HOME_ASSISTANT_URL: server_url + "/core/api/",
@@ -113,21 +155,42 @@ async def injector(cleandir, server_url, ports):
         Setting.FOLDER_FILE_PATH: "folder.dat",
         Setting.RETAINED_FILE_PATH: "retained.json",
         Setting.ID_FILE_PATH: "id.json",
+        Setting.DATA_CACHE_FILE_PATH: "data_cache.json",
         Setting.STOP_ADDON_STATE_PATH: "stop_addon.json",
         Setting.INGRESS_TOKEN_FILE_PATH: "ingress.dat",
         Setting.DEFAULT_DRIVE_CLIENT_ID: "test_client_id",
         Setting.DEFAULT_DRIVE_CLIENT_SECRET: "test_client_secret",
         Setting.BACKUP_DIRECTORY_PATH: cleandir,
         Setting.PORT: ports.ui,
-        Setting.INGRESS_PORT: ports.ingress
+        Setting.INGRESS_PORT: ports.ingress,
+        Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 0,
     })
 
-    # PROBLEM: Something in uploading snapshot chunks hangs between the client and server, so his keeps tests from
-    # taking waaaaaaaay too long.  Remove this line and the @pytest.mark.flaky annotations once the problem is identified.
-    config.override(Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS, 5)
 
-    # logging.getLogger('injector').setLevel(logging.DEBUG)
-    return Injector([BaseModule(config), TestModule(ports)])
+@pytest.fixture
+async def injector(cleandir, ports, generate_config):
+    drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token")
+    with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
+        f.write("for_unit_tests: \"password value\"\n")
+
+    with open(os.path.join(cleandir, "credentials.dat"), "w") as f:
+        f.write(json.dumps(drive_creds.serialize()))
+
+    return Injector([BaseModule(), TestModule(generate_config, ports)])
+
+
+@pytest.fixture
+async def ui_server(injector, server):
+    os.mkdir("static")
+    server = injector.get(UiServer)
+    await server.run()
+    yield server
+    await server.shutdown()
+
+
+@pytest.fixture
+def reader(server, ui_server, session, ui_port, ingress_port):
+    return ReaderHelper(session, ui_port, ingress_port)
 
 
 @pytest.fixture
@@ -149,6 +212,7 @@ async def interceptor(injector: Injector):
 async def supervisor(injector: Injector, server, session):
     return injector.get(SimulatedSupervisor)
 
+
 @pytest.fixture
 async def addon_stopper(injector: Injector):
     return injector.get(AddonStopper)
@@ -163,6 +227,11 @@ async def server(injector, port, drive_creds: Creds, session):
     await server.start(port)
     yield server
     await server.stop()
+
+
+@pytest.fixture
+async def data_cache(injector):
+    return injector.get(DataCache)
 
 
 @pytest.fixture

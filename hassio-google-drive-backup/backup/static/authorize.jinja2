@@ -1,3 +1,4 @@
+{% import "layouts/macros.jinja2" as macros %}
 {% extends "layouts/base-server.jinja2" %}
 
 {% block head %}
@@ -20,15 +21,7 @@
 {% endblock %}
 
 {% block content %}
-<header>
-  <nav class="non-ingress ha-blue" role="navigation">
-    <div class="nav-wrapper">
-      <a class="brand-logo"> <img style="vertical-align: middle;" src="/static/images/logo.png" width=40 height=40 />
-        <span>Home Assistant Google Drive Backup</span>
-      </a>
-    </div>
-  </nav>
-</header>
+{% call macros.header() %}{% endcall %}
 <main>
   <div class="section no-pad-bot" id="index-banner">
     <div class="container">
@@ -45,8 +38,8 @@
                 and paste it into the addon where you clicked the "Authenticate With Google Drive" button that brought you here.
               </div>
               <br>
-              <a class="center right btn waves-effect waves-light btn-flat" target="_blank" href="{{ redirect_url }}">
-                <i class="material-icons" style="vertical-align: middle; padding-right: 5px">open_in_new</i>Send Credentials
+              <a class="center right btn-flat btn-high-vis" target="_blank" href="{{ redirect_url }}">
+                <i class="material-icons">open_in_new</i>Send Credentials
               </a>
             </div>
         </h6>
@@ -64,8 +57,8 @@
         </div>
         <br>
         <div class="col s12 m8 offset-m2 l4 offset-l4">
-          <button id="copy_button" onclick="copyFromInput('credentials_serialized')" class="right btn waves-effect waves-light btn-flat">
-            <i class="material-icons" style="vertical-align: middle; padding-right: 5px">content_copy</i>Copy
+          <button id="copy_button" onclick="copyFromInput('credentials_serialized')" class="right btn-flat btn-high-vis">
+            <i class="material-icons">content_copy</i>Copy
           </button>
         </div>
         <br>

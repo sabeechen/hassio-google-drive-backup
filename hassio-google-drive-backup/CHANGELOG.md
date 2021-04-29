@@ -1,3 +1,8 @@
+## [0.104.3 2021-4-28]
+### Fixes
+- A config error that made an optional config parameter mandatory
+
+
 ## [0.104.2 2021-4-22]
 ### Fixes
 - An issue parsing Google Drive's free space that prevents the web-ui from loading.

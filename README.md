@@ -28,9 +28,11 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
 [<img src="http://img.youtube.com/vi/GwmPPtBRdjQ/0.jpg" width="300"/>](http://www.youtube.com/watch?v=GwmPPtBRdjQ "Everything Smart Home")
 [<img src="http://img.youtube.com/vi/WcErD5PvIYw/0.jpg" width="300"/>](http://www.youtube.com/watch?v=WcErD5PvIYw "DrZzs")
 
-> This project's integration with Google Drive requires consistant financial support to keep it running.  Join those helping keep the lights on
+>This project requires financial support to make the Google Drive integration work, but it is free for you to use.  You can join those helping to keep the lights on at:
 >  
 >[<img src="images/bmc-button.svg" width="150"/>](https://www.buymeacoffee.com/sabeechen)
+>[<img src="images/paypal-button.svg" width="150"/>](https://www.paypal.com/paypalme/stephenbeechen)
+>[<img src="images/patreon-button.svg" width=150/>](https://www.patreon.com/bePatron?u=4064183)
 
 ### Detailed Install Instructions
 1. Navigate in your Home Assistant frontend to <kbd>Supervisor</kbd> -> <kbd>Add-on Store</kbd>.

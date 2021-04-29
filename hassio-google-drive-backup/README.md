@@ -6,9 +6,12 @@ A complete and easy way to back up your Home Assistant snapshots to Google Drive
 
 Quickly set up a backup strategy without much fuss. It doesn't require much familiarity with Home Assistant, its architecture, or Google Drive. Detailed install instructions are provided below but you can just add the repo, click install and open the Web UI. It will tell you what to do and only takes a few simple clicks.
 
->Do you like this? The project requires financial support make the Google Drive integration work.  Donate to keep it going:
+>This project requires financial support to make the Google Drive integration work, but it is free for you to use.  You can join those helping to keep the lights on at:
 >  
->[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images//bmc-button.svg" width="150"/>](https://www.buymeacoffee.com/sabeechen)
+>[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/bmc-button.svg" width="150"/>](https://www.buymeacoffee.com/sabeechen)
+>[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/paypal-button.svg" width="150"/>](https://www.paypal.com/paypalme/stephenbeechen)
+>[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/patreon-button.svg" width=150/>](https://www.patreon.com/bePatron?u=4064183)
+
 
 ### Features
 

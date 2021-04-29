@@ -6,56 +6,60 @@
 
 A complete and easy way to back up your Home Assistant snapshots to Google Drive.
 
-This is for you if you want to quickly set up a backup strategy without much fuss. It doesn't require much familiarity with Home Assistant, its architecture, or Google Drive. Detailed install instructions are provided below but you can just add the repo, click install and open the Web UI. It will tell you what to do and only takes a few simple clicks.
+This is for you if you want to quickly set up a backup strategy without much fuss. It doesn't require much familiarity with Home Assistant, its architecture, or Google Drive. Detailed install instructions are provided below but you can just add this repo, click install and open the Web UI. It will tell you what to do and only takes a few simple clicks.  [Detailed install instructions are below](#detailed-install-instructions) if that doesn't seem clear.
 
-### Features
+### Features Overview
 
 - Creates snapshots on a configurable schedule.
 - Uploads snapshot to Drive, even the ones it didn't create.
 - Clean up old snapshots in Home Assistant and Google Drive, so you don't run out of space.
+- Lots of options for customization, but never requires you to write a yaml file.
 - Restore from a fresh install or recover quickly from disaster by uploading your snapshots directly from Google Drive.
 - Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
 - Notifies you when something goes wrong with your snapshots.
 - Super easy installation and configuration.
 - Privacy-centric design philosophy.
 - Comprehensive documentation.
-- _Most certainly_ doesn't mine bitcoin on your home automation server. Definitely no.
+- _Most certainly_ doesn't mine bitcoin on your home automation server. Definitely no.  Or does it?
 
+### The Upsell
+This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed as an _essential_ addon when starting out with Home Assistant.  Here are some videos about it from others if you'd like to get an idea of what using it looks like or what the community thinks:
 
->Do you like this? The project requires financial support make the Google Drive integration work.  Donate to keep it going:
+[<img src="http://img.youtube.com/vi/GwmPPtBRdjQ/0.jpg" width="300"/>](http://www.youtube.com/watch?v=GwmPPtBRdjQ "Everything Smart Home")
+[<img src="http://img.youtube.com/vi/WcErD5PvIYw/0.jpg" width="300"/>](http://www.youtube.com/watch?v=WcErD5PvIYw "DrZzs")
+
+>This project requires financial support to make the Google Drive integration work, but it is free for you to use.  You can join those helping to keep the lights on at:
 >  
 >[<img src="images/bmc-button.svg" width="150"/>](https://www.buymeacoffee.com/sabeechen)
+>[<img src="images/paypal-button.svg" width="150"/>](https://www.paypal.com/paypalme/stephenbeechen)
+>[<img src="images/patreon-button.svg" width=150/>](https://www.patreon.com/bePatron?u=4064183)
 
-## Installation
+### Detailed Install Instructions
+1. Navigate in your Home Assistant frontend to <kbd>Supervisor</kbd> -> <kbd>Add-on Store</kbd>.
 
-The add-on is installed like any other.
+2. Click the 3-dots menu at upper right <kbd>...</kbd> > <kbd>Repositories</kbd> and add this repository's URL: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
 
-1. Navigate in your Home Assistant frontend to **Supervisor** -> **Add-on Store**.
-
-2. Click 3-dots menu at upper right > **Repositories** and add this repository URL: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
-
-   ![Add Repo Screenshot](images/add_ss.png)
+   <img src="images/add_ss.png" width="300"/>
 
 3. Scroll down the page to find the new repository, and click the new add-on named "Home Assistant Google Drive Backup"
 
-   ![Repo Screenshot](images/repo_ss.png)
+   <img src="images/repo_ss.png" width="429"/>
 
 4. Click <kbd>Install</kbd> and give it a few minutes to finish downloading.
 
-5. Click <kbd>Start</kbd>, give it a few seconds to spin up, and then click the `Open Web UI` button that appears. For the majority of people, this should take you to [https://homeassistant.local:1627/](https://homeassistant.local:1627/).
+5. Click <kbd>Start</kbd>, give it a few seconds to spin up, and then click the `Open Web UI` button that appears.
 
-6. The "Getting Started" page will tell you how many snapshots you have and what it will do with them once you connect it to Google Drive. You can click `Settings` to change those options through the add-on (takes effect immediately), or update them from the page where you installed the add-on as shown below (restart for them to take effect).
+6. The "Getting Started" page will tell you how many snapshots you have and what it will do with them once you connect it to Google Drive. You can click `Settings` to change those options through the add-on (which is the recommended way, they take effect immediately), or update them from the page where you installed the add-on as described below (also works, restart for them to take effect).
 
 7. Click the `Authenticate with Drive` button to link the add-on with your Google Drive account. Alternatively, you can generate your [own Google API credentials](#can-i-use-my-own-google-api-information-to-authenticate-instead-of-yours), though the process is not simple.
 
 8. You should be redirected automatically to the backup status page. Here you can make a new snapshot, see the progress of uploading to Google Drive, etc. You're done!
 
-## Configuration Options
+## Configuration
 
-The list of configurable options is available [here](./hassio-google-drive-backup/DOCS.md#configuration).
+After you start the addon you have an opportunity to review your settings within the addon's Web-UI before you connect it to Google Drive.  It is recommended to modify the setting this way because the UI makes it easy and explains what each option does.
 
-_Note_: The configuration can be changed easily by starting the add-on and clicking `Settings` in the web UI.
-The UI explains what each setting is and you don't need to modify anything before clicking `Start`.
+If you'd still prefer use edit your setting in yaml or through the supervisor, the list of configurable options with exaplanations is available [here](./hassio-google-drive-backup/DOCS.md#configuration).
 
 ## FAQ
 
@@ -65,11 +69,11 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 
 - Notifications in Home Assistant UI
 
-  ![Notification](images/notification_error.png)
+  <img src="images/notification_error.png" width="300"/>
 
 - A [binary_sensor](#lovelace-card) you can use to trigger additional actions.
 
-  ![Binary Sensor](images/binary_sensor.png)
+  <img src="images/binary_sensor.png" width="600"/>
 
 Redundancy is the foundation of reliability. With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
 

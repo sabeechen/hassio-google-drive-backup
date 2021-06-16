@@ -297,7 +297,9 @@ class Model():
         """
         Given a list of snapshots, decides if one should be purged.
         """
-        if source.maxCount() == 0 or not source.enabled() or len(snapshots) == 0:
+        if not source.enabled() or len(snapshots) == 0:
+            return None
+        if source.maxCount() == 0 and not self.config.get(Setting.DELETE_AFTER_UPLOAD):
             return None
 
         scheme = self._buildDeleteScheme(source, findNext=findNext)

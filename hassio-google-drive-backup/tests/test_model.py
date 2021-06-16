@@ -678,3 +678,24 @@ async def test_dirty_cache_gets_saved(time: FakeTime, model: Model, data_cache: 
     data_cache.makeDirty()
     await model.sync(time.now())
     assert not data_cache.dirty
+
+
+@pytest.mark.asyncio
+async def test_delete_after_upload_with_no_snapshots(source: HelperTestSource, dest: HelperTestSource, time: FakeTime, model: Model, data_cache: DataCache, simple_config: Config):
+    source.setMax(0)
+    dest.setMax(2)
+    simple_config.override(Setting.DELETE_AFTER_UPLOAD, True)
+
+    source.insert("older", time.now() - timedelta(days=1), slug="older")
+    source.insert("newer", time.now(), slug="newer")
+    source.reset()
+
+    with pytest.raises(DeleteMutlipleSnapshotsError):
+        await model.sync(time.now())
+    
+    simple_config.override(Setting.CONFIRM_MULTIPLE_DELETES, False)
+    await model.sync(time.now())
+
+
+    dest.assertThat(saved=2, current=2)
+    source.assertThat(deleted=2, current=0)

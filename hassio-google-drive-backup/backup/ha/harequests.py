@@ -189,7 +189,7 @@ class HaRequests():
 
             if "data" not in details:
                 return {}
-
+            logger.trace("Hassio replied: %s", details)
             return details["data"]
 
     async def getAddonLogo(self, slug: str):

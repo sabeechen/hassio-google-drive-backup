@@ -3,7 +3,7 @@ import tarfile
 import pytest
 import platform
 from datetime import datetime
-from io import BytesIO
+from io import BytesIO, IOBase
 
 from aiohttp import ClientSession
 from injector import inject, singleton
@@ -11,6 +11,7 @@ from injector import inject, singleton
 from backup.util import AsyncHttpGetter
 from backup.model import SimulatedSource
 from backup.time import Time
+from backup.config import CreateOptions
 
 all_folders = [
     "share",
@@ -144,9 +145,15 @@ async def compareStreams(left, right):
         assert from_left.getbuffer() == from_right.getbuffer()
 
 
+class IntentionalFailure(Exception):
+    pass
+
+
 class HelperTestSource(SimulatedSource):
     def __init__(self, name):
         super().__init__(name)
+        self.allow_create = True
+        self.allow_save = True
 
     def reset(self):
         self.saved = []
@@ -163,6 +170,16 @@ class HelperTestSource(SimulatedSource):
     def assertUnchanged(self):
         self.assertThat(current=len(self.current))
         return self
+
+    async def create(self, options: CreateOptions):
+        if not self.allow_create:
+            raise IntentionalFailure()
+        return await super().create(options)
+
+    async def save(self, snapshot, bytes: IOBase = None):
+        if not self.allow_save:
+            raise IntentionalFailure()
+        return await super().save(snapshot, bytes=bytes)
 
 
 @singleton

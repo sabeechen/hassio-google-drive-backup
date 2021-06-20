@@ -178,6 +178,8 @@ class Model():
         self._handleSnapshotDetails()
         next_snapshot = self.nextSnapshot(now)
         if next_snapshot and now >= next_snapshot and self.source.enabled() and not self.dest.needsConfiguration():
+            if self.config.get(Setting.DELETE_BEFORE_NEW_SNAPSHOT):
+                await self._purge(self.source, pre_purge=True)
             await self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
             await self._purge(self.source)
             self._handleSnapshotDetails()
@@ -197,6 +199,8 @@ class Model():
                 proposed = list(self.snapshots.values())
                 proposed.append(dummy)
                 if self._nextPurge(self.dest, proposed) != dummy:
+                    if self.config.get(Setting.DELETE_BEFORE_NEW_SNAPSHOT):
+                        await self._purge(self.dest, pre_purge=True)
                     upload.addSource(await self.dest.save(upload, await self.source.read(upload)))
                     await self._purge(self.dest)
                     self._handleSnapshotDetails()
@@ -312,9 +316,9 @@ class Model():
             return None
         return scheme.getOldest(consider_purging)
 
-    async def _purge(self, source: SnapshotSource):
+    async def _purge(self, source: SnapshotSource, pre_purge=False):
         while True:
-            purge = self._getPurgeList(source)
+            purge = self._getPurgeList(source, pre_purge)
             if len(purge) <= 0:
                 return
             if len(purge) > 1 and (self.config.get(Setting.CONFIRM_MULTIPLE_DELETES) and not self.info.isPermitMultipleDeletes()):
@@ -327,13 +331,13 @@ class Model():
             ret[source.name()] = len(self._getPurgeList(source))
         return ret
 
-    def _getPurgeList(self, source: SnapshotSource):
+    def _getPurgeList(self, source: SnapshotSource, pre_purge=False):
         if not source.enabled():
             return []
         candidates = list(self.snapshots.values())
         purges = []
         while True:
-            next_purge = self._nextPurge(source, candidates)
+            next_purge = self._nextPurge(source, candidates, findNext=pre_purge)
             if next_purge is None:
                 return purges
             else:

@@ -8,7 +8,7 @@ from backup.exceptions import DeleteMutlipleSnapshotsError
 from backup.util import GlobalInfo, DataCache
 from backup.model import Model, SnapshotSource
 from .faketime import FakeTime
-from .helpers import HelperTestSource
+from .helpers import HelperTestSource, IntentionalFailure
 
 test_tz = gettz('EST')
 
@@ -177,7 +177,7 @@ async def test_sync_single_source(model, source, dest, time):
 
 
 @pytest.mark.asyncio
-async def test_sync_source_and_dest(model, time, source, dest):
+async def test_sync_source_and_dest(model, time, source, dest: HelperTestSource):
     snapshot_source = await source.create(CreateOptions(time.now(), "name"))
     await model._syncSnapshots([source, dest])
     assert len(model.snapshots) == 1
@@ -692,10 +692,63 @@ async def test_delete_after_upload_with_no_snapshots(source: HelperTestSource, d
 
     with pytest.raises(DeleteMutlipleSnapshotsError):
         await model.sync(time.now())
-    
+
     simple_config.override(Setting.CONFIRM_MULTIPLE_DELETES, False)
     await model.sync(time.now())
 
-
     dest.assertThat(saved=2, current=2)
     source.assertThat(deleted=2, current=0)
+
+
+@pytest.mark.asyncio
+async def test_purge_before_upload(source: HelperTestSource, dest: HelperTestSource, time: FakeTime, model: Model, data_cache: DataCache, simple_config: Config):
+    source.setMax(2)
+    dest.setMax(2)
+    older = source.insert("older", time.now() - timedelta(days=7), slug="older")
+    oldest = source.insert("oldest", time.now() - timedelta(days=14), slug="oldest")
+    await model.sync(time.now() - timedelta(days=7))
+
+    source.allow_create = False
+    dest.allow_save = False
+
+    dest.reset()
+    source.reset()
+
+    # trying to sync now should do nothing.
+    with pytest.raises(IntentionalFailure):
+        await model.sync(time.now())
+    source.assertThat(current=2)
+    dest.assertThat(current=2)
+
+    simple_config.override(Setting.DELETE_BEFORE_NEW_SNAPSHOT, True)
+    # Trying to sync should delete the snapshot before syncing and then fail to create a new one.
+    with pytest.raises(IntentionalFailure):
+        await model.sync(time.now())
+    source.assertThat(deleted=1, current=1)
+    assert oldest.slug() not in (await source.get()).keys()
+    dest.assertThat(current=2)
+
+    #trying to do it again should do nothing (eg not delete another snapshot)
+    with pytest.raises(IntentionalFailure):
+        await model.sync(time.now())
+    source.assertThat(deleted=1, current=1)
+    dest.assertThat(current=2)
+
+    # let the new source snapshot get created, which then deletes the destination but fails to save
+    source.allow_create = True
+    with pytest.raises(IntentionalFailure):
+        await model.sync(time.now())
+    source.assertThat(deleted=1, current=2, created=1)
+    dest.assertThat(current=1, deleted=1)
+    assert oldest.slug() not in (await dest.get()).keys()
+
+    # now let the new snapshot get saved.
+    dest.allow_save = True
+    await model.sync(time.now())
+    source.assertThat(deleted=1, current=2, created=1)
+    dest.assertThat(current=2, deleted=1, saved=1)
+
+    assert oldest.slug() not in (await source.get()).keys()
+    assert older.slug() in (await source.get()).keys()
+    assert oldest.slug() not in (await dest.get()).keys()
+    assert older.slug() in (await dest.get()).keys()

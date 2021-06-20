@@ -26,6 +26,7 @@
     "ignore_upgrade_snapshots": "bool?",
 
     "delete_after_upload": "bool?",
+    "delete_before_new_snapshot": "bool?",
     "verbose": "bool?",
     "use_ssl": "bool?",
     "certfile": "str?",

@@ -43,6 +43,19 @@
         <div class="row">
           <div class="col s12">
             <label>
+              <input type="checkbox" name="delete_before_new_snapshot" id="delete_before_new_snapshot"
+                class="filled-in checkbox-ha" />
+              <span>Delete Oldest Snapshot Before Making a New One</span>
+              <br />
+              <span class="helper-text">Makes the addon delete the oldest snapshot before a new one is created in Home Assistant or uploaded to Google Drive.  
+                When turned off (the default) the oldest snapshot will only be deleted after a new one has been created or uploaded.  Be warned that if a 
+                snapshot fails to be created or uploaded to Google Drive, this can make you have one fewer than the number of snapshots you intended to keep there.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
               <input type="checkbox" name="ignore_other_snapshots" id="ignore_other_snapshots"
                 class="filled-in checkbox-ha" />
               <span>Ignore Other Snapshots</span>

@@ -29,6 +29,7 @@ class Setting(Enum):
     WARN_FOR_LOW_SPACE = "warn_for_low_space"
     LOW_SPACE_THRESHOLD = "low_space_threshold"
     DELETE_AFTER_UPLOAD = "delete_after_upload"
+    DELETE_BEFORE_NEW_SNAPSHOT = "delete_before_new_snapshot"
 
     # generational settings
     GENERATIONAL_DAYS = "generational_days"
@@ -147,6 +148,7 @@ _DEFAULTS = {
     Setting.WARN_FOR_LOW_SPACE: True,
     Setting.LOW_SPACE_THRESHOLD: 1024 * 1024 * 1024,
     Setting.DELETE_AFTER_UPLOAD: False,
+    Setting.DELETE_BEFORE_NEW_SNAPSHOT: False,
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: 0,
@@ -262,6 +264,7 @@ _CONFIG = {
     Setting.WARN_FOR_LOW_SPACE: "bool?",
     Setting.LOW_SPACE_THRESHOLD: "int(0,)?",
     Setting.DELETE_AFTER_UPLOAD: "bool?",
+    Setting.DELETE_BEFORE_NEW_SNAPSHOT: "bool?",
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: "int(0,)?",

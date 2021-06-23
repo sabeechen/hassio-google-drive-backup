@@ -1,5 +1,6 @@
 import re
 from typing import Dict
+from aiohttp.helpers import TOKEN
 from yarl import URL
 import aiohttp
 from aiohttp.web import (Application,
@@ -131,7 +132,7 @@ class SimServerModule(BaseModule):
     def getConfig(self) -> Config:
         return Config.withOverrides({
             Setting.DRIVE_AUTHORIZE_URL: str(self._base_url.with_path("o/oauth2/v2/auth")),
-            Setting.AUTHENTICATE_URL: str(self._base_url.with_path("drive/authorize")),
+            Setting.TOKEN_SERVER_HOST: self._base_url.host,
             Setting.DRIVE_TOKEN_URL: str(self._base_url.with_path("token")),
             Setting.DRIVE_REFRESH_URL: str(self._base_url.with_path("oauth2/v4/token")),
             Setting.INGRESS_PORT: 56152

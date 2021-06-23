@@ -30,7 +30,7 @@ class Server():
         self.exchanger = exchanger_builder.build(
             client_id=config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             client_secret=config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
-            redirect=config.get(Setting.AUTHENTICATE_URL))
+            redirect=config.getAuthrnticateUrl())
         self.logger = logger
         self.config = config
         self.error_store = error_store

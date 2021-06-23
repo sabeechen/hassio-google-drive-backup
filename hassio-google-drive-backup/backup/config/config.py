@@ -3,6 +3,7 @@ import os
 import os.path
 import uuid
 from typing import Any, Dict, List, Optional
+from yarl import URL
 
 from .settings import _LOOKUP, Setting, _VALIDATORS
 from ..logger import getLogger
@@ -31,11 +32,8 @@ SERVER_OPTIONS = {
 
 NON_UI_SETTING = {
     Setting.HASSIO_URL,
-    Setting.AUTHENTICATE_URL,
+    Setting.TOKEN_SERVER_HOST,
     Setting.DRIVE_AUTHORIZE_URL,
-    Setting.AUTHENTICATE_URL,
-    Setting.REFRESH_URL,
-    Setting.CHOOSE_FOLDER_URL,
     Setting.DEFAULT_DRIVE_CLIENT_ID,
     Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS,
     Setting.LOG_LEVEL,
@@ -270,3 +268,6 @@ class Config():
 
     def getForUi(self, setting: Setting):
         return _VALIDATORS[setting].formatForUi(self.get(setting))
+
+    def getAuthrnticateUrl(self):
+        return str(URL(self.get(Setting.TOKEN_SERVER_HOST)).with_path("/drive/authorize"))

@@ -1,9 +1,7 @@
 {
     "hassio_url": "http://localhost:56153/",
     "home_assistant_url": "http://localhost:56153/core/api/",
-    "authenticate_url": "https://dev.habackup.io/drive/authorize",
-    "refresh_url": "https://dev.habackup.io/drive/refresh",
-    "choose_folder_url": "https://dev.habackup.io/drive/picker",
+    "token_server_host": "https://dev.habackup.io",
     "hassio_header": "test_header",
     "data_cache_file_path": "hassio-google-drive-backup/dev/data/data_cache.json",
     "retained_file_path": "hassio-google-drive-backup/dev/data/retained.json",

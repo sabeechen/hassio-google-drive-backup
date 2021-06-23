@@ -93,14 +93,11 @@ class Setting(Enum):
     DATA_CACHE_FILE_PATH = "data_cache_file_path"
 
     # endpoints
+    TOKEN_SERVER_HOST = "token_server_host"
     HASSIO_URL = "hassio_url"
     DRIVE_URL = "drive_url"
     HOME_ASSISTANT_URL = "home_assistant_url"
     HASSIO_TOKEN = "hassio_header"
-    AUTHENTICATE_URL = "authenticate_url"
-    REFRESH_URL = "refresh_url"
-    CHOOSE_FOLDER_URL = "choose_folder_url"
-    ERROR_REPORT_URL = "error_report_url"
     DRIVE_HOST_NAME = "drive_host_name"
     DRIVE_REFRESH_URL = "drive_refresh_url"
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
@@ -198,17 +195,14 @@ _DEFAULTS = {
     Setting.GOOGLE_DRIVE_PAGE_SIZE: 100,
 
     # Remote endpoints
+    Setting.TOKEN_SERVER_HOST: "https://habackup.io",
     Setting.HASSIO_URL: "http://hassio/",
     Setting.HASSIO_TOKEN: "",
     Setting.HOME_ASSISTANT_URL: "http://hassio/core/api/",
     Setting.DRIVE_URL: "https://www.googleapis.com",
-    Setting.REFRESH_URL: "https://habackup.io/drive/refresh",
-    Setting.AUTHENTICATE_URL: "https://habackup.io/drive/authorize",
     Setting.DRIVE_REFRESH_URL: "https://www.googleapis.com/oauth2/v4/token",
     Setting.DRIVE_AUTHORIZE_URL: "https://accounts.google.com/o/oauth2/v2/auth",
     Setting.DRIVE_TOKEN_URL: "https://oauth2.googleapis.com/token",
-    Setting.CHOOSE_FOLDER_URL: "https://habackup.io/drive/picker",
-    Setting.ERROR_REPORT_URL: "https://habackup.io/logerror",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
     Setting.SAVE_DRIVE_CREDS_PATH: "token",
 
@@ -243,10 +237,7 @@ _DEFAULTS = {
 }
 
 _STAGING_DEFAULTS = {
-    Setting.AUTHENTICATE_URL: "https://dev.habackup.io/drive/authorize",
-    Setting.REFRESH_URL: "https://dev.habackup.io/drive/refresh",
-    Setting.CHOOSE_FOLDER_URL: "https://dev.habackup.io/drive/picker",
-    Setting.ERROR_REPORT_URL: "https://dev.habackup.io/logerror",
+    Setting.TOKEN_SERVER_HOST: "https://dev.habackup.io",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com",
 }
 
@@ -314,17 +305,14 @@ _CONFIG = {
     Setting.GOOGLE_DRIVE_PAGE_SIZE: "int(1,)?",
 
     # Remote endpoints
+    Setting.TOKEN_SERVER_HOST: "str?",
     Setting.HASSIO_URL: "url?",
     Setting.HASSIO_TOKEN: "str?",
     Setting.HOME_ASSISTANT_URL: "url?",
     Setting.DRIVE_URL: "url?",
-    Setting.REFRESH_URL: "url?",
-    Setting.AUTHENTICATE_URL: "url?",
     Setting.DRIVE_REFRESH_URL: "url?",
     Setting.DRIVE_AUTHORIZE_URL: "url?",
     Setting.DRIVE_TOKEN_URL: "url?",
-    Setting.CHOOSE_FOLDER_URL: "url?",
-    Setting.ERROR_REPORT_URL: "url?",
     Setting.DRIVE_HOST_NAME: "str?",
     Setting.SAVE_DRIVE_CREDS_PATH: "str?",
 

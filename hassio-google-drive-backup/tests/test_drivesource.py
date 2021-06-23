@@ -791,7 +791,7 @@ async def test_cred_refresh_upgrade_default_client(drive: DriveSource, server: S
 
 @pytest.mark.asyncio
 async def test_cant_reach_refresh_server(drive: DriveSource, server: SimulationServer, config: Config, time):
-    config.override(Setting.REFRESH_URL, "http://lkasdpoiwehjhcty.com")
+    config.override(Setting.TOKEN_SERVER_HOST, "http://lkasdpoiwehjhcty.com")
     drive.drivebackend.creds._secret = None
     time.advanceDay()
     with pytest.raises(CredRefreshMyError) as error:

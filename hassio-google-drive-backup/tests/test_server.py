@@ -7,8 +7,8 @@ from backup.config import Config
 
 
 @pytest.mark.asyncio
-async def test_refresh_known_error(server: SimulationServer, session: ClientSession, config: Config, server_url: str):
-    async with session.post(URL(server_url).with_path("drive/refresh"), json={"blah": "blah"}) as r:
+async def test_refresh_known_error(server: SimulationServer, session: ClientSession, config: Config, server_url: URL):
+    async with session.post(server_url.with_path("drive/refresh"), json={"blah": "blah"}) as r:
         assert r.status == 503
         assert await r.json() == {
             'error': "Required key 'refresh_token' was missing from the request payload"
@@ -16,15 +16,15 @@ async def test_refresh_known_error(server: SimulationServer, session: ClientSess
 
 
 @pytest.mark.asyncio
-async def test_refresh_unknown_error(server: SimulationServer, session: ClientSession, config: Config, server_url: str):
-    async with session.post(URL(server_url).with_path("drive/refresh"), data={}) as r:
+async def test_refresh_unknown_error(server: SimulationServer, session: ClientSession, config: Config, server_url: URL):
+    async with session.post(server_url.with_path("drive/refresh"), data={}) as r:
         assert r.status == 500
         assert len((await r.json())["error"]) > 0
 
 
 @pytest.mark.asyncio
-async def test_old_auth_method(server: SimulationServer, session: ClientSession, server_url: str):
-    start_auth = URL(server_url).with_path("drive/authorize").with_query({
+async def test_old_auth_method(server: SimulationServer, session: ClientSession, server_url: URL):
+    start_auth = server_url.with_path("drive/authorize").with_query({
         "redirectbacktoken": "http://example.com"
     })
 

@@ -138,17 +138,15 @@ def event_loop():
 
 
 @pytest.fixture
-async def generate_config(server_url, ports, cleandir):
+async def generate_config(server_url: URL, ports, cleandir):
     return Config.withOverrides({
-        Setting.DRIVE_URL: server_url,
-        Setting.HASSIO_URL: server_url + "/",
-        Setting.HOME_ASSISTANT_URL: server_url + "/core/api/",
-        Setting.AUTHENTICATE_URL: server_url + "/drive/authorize",
-        Setting.DRIVE_REFRESH_URL: server_url + "/oauth2/v4/token",
-        Setting.DRIVE_AUTHORIZE_URL: server_url + "/o/oauth2/v2/auth",
-        Setting.DRIVE_TOKEN_URL: server_url + "/token",
-        Setting.REFRESH_URL: server_url + "/drive/refresh",
-        Setting.ERROR_REPORT_URL: server_url + "/logerror",
+        Setting.DRIVE_URL: str(server_url),
+        Setting.HASSIO_URL: str(server_url) + "/",
+        Setting.HOME_ASSISTANT_URL: str(server_url.with_path("/core/api/")),
+        Setting.TOKEN_SERVER_HOST: str(server_url),
+        Setting.DRIVE_REFRESH_URL: str(server_url.with_path("/oauth2/v4/token")),
+        Setting.DRIVE_AUTHORIZE_URL: str(server_url.with_path("/o/oauth2/v2/auth")),
+        Setting.DRIVE_TOKEN_URL: str(server_url.with_path("/token")),
         Setting.HASSIO_TOKEN: "test_header",
         Setting.SECRETS_FILE_PATH: "secrets.yaml",
         Setting.CREDENTIALS_FILE_PATH: "credentials.dat",
@@ -195,7 +193,7 @@ def reader(server, ui_server, session, ui_port, ingress_port):
 
 @pytest.fixture
 async def uploader(injector: Injector, server_url):
-    return injector.get(ClassAssistedBuilder[Uploader]).build(host=server_url)
+    return injector.get(ClassAssistedBuilder[Uploader]).build(host=str(server_url))
 
 
 @pytest.fixture
@@ -277,7 +275,7 @@ async def global_info(injector):
 
 @pytest.fixture
 async def server_url(port):
-    return "http://localhost:" + str(port)
+    return URL("http://localhost:").with_port(port)
 
 
 @pytest.fixture

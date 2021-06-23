@@ -111,7 +111,7 @@ class Exchanger():
             KEY_REFRESH_TOKEN: creds.refresh_token,
         }
 
-        url = URL(self.config.get(Setting.REFRESH_URL))
+        url = URL(self.config.get(Setting.TOKEN_SERVER_HOST)).with_path("/drive/refresh")
         try:
             headers = {
                 'addon_version': VERSION,

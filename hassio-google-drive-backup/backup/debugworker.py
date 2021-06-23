@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from aiohttp import ClientSession
 from injector import inject, singleton
+from yarl import URL
 
 from backup.config import Config, Setting, VERSION, _DEFAULTS, PRIVATE
 from backup.exceptions import KnownError
@@ -68,7 +69,7 @@ class DebugWorker(Worker):
                 'client': self.config.clientIdentifier(),
                 'addon_version': VERSION
             }
-            async with self.session.post(self.config.get(Setting.ERROR_REPORT_URL), headers=headers, json=package):
+            async with self.session.post(URL(self.config.get(Setting.TOKEN_SERVER_HOST)).with_path('/logerror'), headers=headers, json=package):
                 pass
 
     async def updateDns(self):

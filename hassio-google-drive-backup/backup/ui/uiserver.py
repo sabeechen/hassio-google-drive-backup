@@ -141,8 +141,8 @@ class UiServer(Trigger, Startable):
         status["snapshot_name_template"] = self.config.get(
             Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
-        status['authenticate_url'] = self.config.get(Setting.AUTHENTICATE_URL)
-        choose_url = URL(self.config.get(Setting.CHOOSE_FOLDER_URL)).with_query({
+        status['authenticate_url'] = self.config.getAuthrnticateUrl()
+        choose_url = URL(self.config.get(Setting.TOKEN_SERVER_HOST)).with_path('/drive/picker').with_query({
             "bg": self.config.get(Setting.BACKGROUND_COLOR),
             "ac": self.config.get(Setting.ACCENT_COLOR),
             "version": VERSION
@@ -213,7 +213,7 @@ class UiServer(Trigger, Startable):
         addons = []
         for addon in snapshot_data.get("addons", []):
             addons.append({
-                'name' : addon.get('name', "Unknown"),
+                'name': addon.get('name', "Unknown"),
                 'slug': addon.get("slug", "unknown"),
                 'version': addon.get("version", ""),
                 'size': self._estimator.asSizeString(addon.get("size", 0)),

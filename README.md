@@ -15,7 +15,7 @@ This is for you if you want to quickly set up a backup strategy without much fus
 - Clean up old snapshots in Home Assistant and Google Drive, so you don't run out of space.
 - Lots of options for customization, but never requires you to write a yaml file.
 - Restore from a fresh install or recover quickly from disaster by uploading your snapshots directly from Google Drive.
-- Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
+- Integrates with Home Assistant Notifications and provides sensors you can trigger off of.
 - Notifies you when something goes wrong with your snapshots.
 - Super easy installation and configuration.
 - Privacy-centric design philosophy.
@@ -23,7 +23,7 @@ This is for you if you want to quickly set up a backup strategy without much fus
 - _Most certainly_ doesn't mine bitcoin on your home automation server. Definitely no.  Or does it?
 
 ### The Upsell
-This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed as an _essential_ addon when starting out with Home Assistant.  Here are some videos about it from others if you'd like to get an idea of what using it looks like or what the community thinks:
+This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed as an _essential_ addon when starting with Home Assistant.  Here are some videos about it from others if you'd like to get an idea of what using it looks like or what the community thinks:
 
 [<img src="http://img.youtube.com/vi/GwmPPtBRdjQ/0.jpg" width="300"/>](http://www.youtube.com/watch?v=GwmPPtBRdjQ "Everything Smart Home")
 [<img src="http://img.youtube.com/vi/WcErD5PvIYw/0.jpg" width="300"/>](http://www.youtube.com/watch?v=WcErD5PvIYw "DrZzs")
@@ -59,13 +59,13 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
 
 After you start the addon you have an opportunity to review your settings within the addon's Web-UI before you connect it to Google Drive.  It is recommended to modify the setting this way because the UI makes it easy and explains what each option does.
 
-If you'd still prefer use edit your setting in yaml or through the supervisor, the list of configurable options with exaplanations is available [here](./hassio-google-drive-backup/DOCS.md#configuration).
+If you'd still prefer use edit your setting in yaml or through the supervisor, the list of configurable options with explanations is available [here](./hassio-google-drive-backup/DOCS.md#configuration).
 
 ## FAQ
 
 ### How will I know this will be there when I need it?
 
-Home Assistant is notorious for failing silently, and your backups aren't something you want to find is broken after an erroneous comma makes you unable to turn on any of the lights in your house. Thats why I've added some functionality to keep you informed if things start to break. If the add-on runs into trouble and gets more than 12 hours behind its schedule, you'll know in two ways:
+Home Assistant is notorious for failing silently, and your backups aren't something you want to find is broken after an erroneous comma makes you unable to turn on any of the lights in your house. That's why I've added some functionality to keep you informed if things start to break. If the add-on runs into trouble and gets more than 12 hours behind its schedule, you'll know in two ways:
 
 - Notifications in Home Assistant UI
 
@@ -78,17 +78,17 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 Redundancy is the foundation of reliability. With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
 
 ### How do I restore a snapshot?
-The snapshots this addon creates are exactly the same snapshots that Home Assistant makes by itself, and can be restored using any of the methods documented elsewhere.  Here are few pointers to get you started.
+The snapshots this addon creates are the same snapshots that Home Assistant makes by itself and can be restored using any of the methods documented elsewhere.  Here are few pointers to get you started.
 - If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant.
-- If not (eg, maybe your harddrive died and you're starting over):
+- If not (eg, maybe your hard drive died and you're starting over):
   - Download one of the snapshots you've previously created from [Google Drive](https://drive.google.com).
   - On whatever hardware you're using to run Home Assistant now, follow the [normal instructions](https://www.home-assistant.io/getting-started/) to install Home Assistant.
-  - Once its running (but before you create a user), click the link on the Home Assistant setup page that says "Alternatively you can restore from a previous snapshot" and upload the snapshot you downloaded from Google Drive.
-- If you've got snapshot that you'd like to restore to an already set up Home Assistant instance that doesn't already have this addon installed, you'll need to use soemthing like the [Samba Addon](https://www.home-assistant.io/hassio/haos_common_tasks/#installing-and-using-the-samba-add-on) to copy a snapshot downloaded from Google Drive into the /backup folder.  
+  - Once it's running (but before you create a user), click the link on the Home Assistant setup page that says "Alternatively you can restore from a previous snapshot" and upload the snapshot you downloaded from Google Drive.
+- If you've got a snapshot that you'd like to restore to an already set up Home Assistant instance that doesn't already have this addon installed, you'll need to use something like the [Samba Addon](https://www.home-assistant.io/hassio/haos_common_tasks/#installing-and-using-the-samba-add-on) to copy a snapshot downloaded from Google Drive into the /backup folder.  
 
 ### I never look at HA notifications. Can I show information about backups in my Home Assistant Interface?
 
-The add-on creates a few sensors that show the status of snapshots that you could trigger automations off of. `binary_sensor.snapshots_stale` becomes true when the add-on has trouble backing up or creating snapshots. For example the lovelace card below only shows up in the UI when snapshots go stale:
+The add-on creates a few sensors that show the status of snapshots that you could trigger automations off of. `binary_sensor.snapshots_stale` becomes true when the add-on has trouble backing up or creating snapshots. For example, the Lovelace card below only shows up in the UI when snapshots go stale:
 
 #### Lovelace Card
 
@@ -126,11 +126,11 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
             for details.
 ```
 
-You could automate anything off of this binary sensor. The add-on also exposes a sensor `sensor.snapshot_backup` that exposes the details of each snapshot. I'm working on a custom lovelace component to expose that information.
+You could automate anything off of this binary sensor. The add-on also exposes a sensor `sensor.snapshot_backup` that exposes the details of each snapshot. I'm working on a custom Lovelace component to expose that information.
 
 ### Can I specify what time of day snapshots should be created?
 
-You can add `"snapshot_time_of_day": "13:00"` to your add-on configuration to make snapshots always happen at 1pm. Specify the time in 24 hour format of `"HH:MM"`. When unspecified, the next snapshot will be created at the same time of day as the last one.
+You can add `"snapshot_time_of_day": "13:00"` to your add-on configuration to make snapshots always happen at 1 pm. Specify the time in the 24-hour format of `"HH:MM"`. When unspecified, the next snapshot will be created at the same time of day as the last one.
 
 ### Can I keep older backups for longer?
 
@@ -145,7 +145,7 @@ generational_months: 12
 generational_years: 5
 ```
 
-... a snapshot will be kept for the last 3 days, the last 4 weeks, the last 12 months, and the last 5 years. Additionally you may configure the day of the week, day of the month, and day of the year that weekly, monthly, and yearly snapshots are maintained.
+... a snapshot will be kept for the last 3 days, the last 4 weeks, the last 12 months, and the last 5 years. Additionally, you may configure the day of the week, day of the month, and day of the year that weekly, monthly, and yearly snapshots are maintained.
 
 ```yaml
 generational_days: 3
@@ -161,8 +161,8 @@ generational_day_of_year: 1 # can be 1 through 365 (defaults to 1)
 ```
 
 - Any combination of days, weeks, months, and years can be used. They all default to 0.
-- Its highly reccommended to set '`days_between_snapshots: 1`' to ensure a snapshot is available for each day.
-- Ensure you've set `max_snapshots_in_drive` appropriatly high to keep enough snapshots (24 in the example above).
+- It's highly recommended to set '`days_between_snapshots: 1`' to ensure a snapshot is available for each day.
+- Ensure you've set `max_snapshots_in_drive` appropriately high to keep enough snapshots (24 in the example above).
 - Once this option is enabled, it may take several days or weeks to see older snapshots get cleaned up. Old snapshots will only get deleted when the number present exceeds `max_snapshots_in_drive` or `max_snapshots_in_hassio`
 
 ### I already have something that creates snapshots on a schedule. Can I use this just to backup to Google Drive?
@@ -199,7 +199,7 @@ The config option `snapshot_name` can be changed to give snapshots a different n
 
 ### Will this ever upload to Dropbox/OnDrive/FTP/SMB/MyFavoriteProtocol?
 
-Most likely no. I started this project to solve a specific problem I had, storing snapshot in a redundant cloud provider without having to write a bunch of buggy logic and automations. It might seem like a small change to make this work with another cloud provider, but trust me. I wrote this version of it, and its not a simple change. I don't have the time to do.
+Most likely no. I started this project to solve a specific problem I had, storing snapshots in a redundant cloud provider without having to write a bunch of buggy logic and automations. It might seem like a small change to make this work with another cloud provider, but trust me. I wrote this version of it, and it's not a simple change. I don't have the time to do it.
 
 ### But Google reads my emails!
 
@@ -213,39 +213,39 @@ On a matter of principle, I only keep track of and store information necessary f
 - Once authenticated with Google, your Google credentials are only stored locally on your Home Assistant instance. This isn't your actual username and password, only an opaque token returned from Google used to verify that you previously gave the Add-on permission to access your Google Drive. Your password is never seen by me or the add-on. You can read more about how authentication with Google is accomplished [here](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md).
 - The add-on has access to the files in Google Drive it created, which is the 'Home Assistant Snapshots' folder and any snapshots it uploads. See the https://www.googleapis.com/auth/drive.file scope in the [Drive REST API v3 Documentation](https://developers.google.com/drive/api/v3/about-auth) for details, this is the only scope the add-on requests for your account.
 - Google stores a history of information about the number of requests, number of errors, and latency of requests made by this Add-on and makes a graph of that visible to me. This is needed because Google only gives me a certain quota for requests shared between all users of the add-on, so I need to be aware if someone is abusing it.
-- The Add-on is distributed as a Docker container hosted on Docker Hub, which his how almost all add-ons work. Docker keeps track of how many people have requested an image and makes that information publicly visible.
+- The Add-on is distributed as a Docker container hosted on Docker Hub, which is how almost all add-ons work. Docker keeps track of how many people have requested an image and makes that information publicly visible.
 
-This invariably means that I have a very limited ability to see how many people are using the add-on or if it is functioning well. If you do like it, feel free to shoot me an email at [stephen@beechens.com](mailto:stephen@beechens.com) or star this repo on GitHub, it really helps keep me motivated. If you run into problems or think a new feature would be nice, file an issue on GitHub.
+This invariably means that I have a very limited ability to see how many people are using the add-on or if it is functioning well. If you do like it, feel free to shoot me an email at [stephen@beechens.com](mailto:stephen@beechens.com) or star this repo on GitHub, it helps keep me motivated. If you run into problems or think a new feature would be nice, file an issue on GitHub.
 
 ### Can I use my own Google API information to authenticate instead of yours?
 
-On the first "Getting Started" page of the add-on underneath the "Authenticate with Google Drive" button is a link that lets you enter your own `Client Id` and `Client Sercet` to authenticate with Google Drive. You can get back to that page by going to "Actions" -> "Reauthorize Google Drive" from the add-on's web UI if you've already connected it previously. Instructions are also provided for those who are unfamiliar with the process, its tedious to complete but ensures the add-on's communication is only between you and Google Drive.
+On the first "Getting Started" page of the add-on underneath the "Authenticate with Google Drive" button is a link that lets you enter your own `Client Id` and `Client Sercet` to authenticate with Google Drive. You can get back to that page by going to "Actions" -> "Reauthorize Google Drive" from the add-on's web UI if you've already connected it previously. Instructions are also provided for those who are unfamiliar with the process, it's tedious to complete but ensures the add-on's communication is only between you and Google Drive.
 
 ### Can I permanently save a snapshot so it doesn't get cleaned up?
 
-Select "Never Delete" from menu next to a snapshot in the add-on's Web UI. You can choose to keep it from being deleted in Home Assistant or Google Drive. When you do this, the snapshots will no longer count against the maximum number of snapshots allowed in Google Drive or Home Assistant.
+Select "Never Delete" from the menu next to a snapshot in the add-on's Web UI. You can choose to keep it from being deleted in Home Assistant or Google Drive. When you do this, the snapshots will no longer count against the maximum number of snapshots allowed in Google Drive or Home Assistant.
 Alternatively, you can move a snapshot in Google Drive out of the snapshot folder. the add-on will ignore any files that aren't in the snapshot folder. Just don't move them back in accidentally since they'll get "cleaned up" like any old snapshot after a while :)
 
 ### What do I do if I've found an error?
 
-If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage. This should include a link to pre-populate a new issue in github, which I'd encourage you to do. Additionally you can set the add-on config option `"verbose": true` to get information from the add-on's logs to help me with debugging.
+If the add-on runs into trouble and can't back up, you should see a big red box with the text of the error on the status webpage. This should include a link to pre-populate a new issue in GitHub, which I'd encourage you to do. Additionally, you can set the add-on config option `"verbose": true` to get information from the add-on's logs to help me with debugging.
 
 ### Will this fill up my Google Drive? Why are my snapshots so big?
 
 You'll need to take care to ensure you don't configure this to blow up your Google Drive. You might want to consider:
 
-- If your snapshots are HUGE, its probably because Home Assistant by default keeps a long sensor history. Consider setting `purge_keep_days: N` in your [recorder configuration](https://www.home-assistant.io/components/recorder/) to trim it down to something more manageable, like 1 day of history.
-- Some other of the add-ons are designed to manage large amounts of media. For example, add-ons like the Plex Media Server are designed to store media in the /share folder, and Mobile Upload folders default to a sub-folder in the addons folder. If you migrate all of your media to the Home Assistant folder structure and you don't exclude it from the backup, you _could easily chew up your entire Google Drive space in a single snapshot_.
-- If you use the Google Drive Desktop sync client, you'll probably want to tell it not to sync this folder (its available in the options).
+- If your snapshots are HUGE, it's probably because Home Assistant by default keeps a long sensor history. Consider setting `purge_keep_days: N` in your [recorder configuration](https://www.home-assistant.io/components/recorder/) to trim it down to something more manageable, like 1 day of history.
+- Some other add-ons are designed to manage large amounts of media. For example, add-ons like the Plex Media Server are designed to store media in the /share folder, and Mobile Upload folders default to a sub-folder in the addons folder. If you migrate all of your media to the Home Assistant folder structure and you don't exclude it from the backup, you _could easily chew up your entire Google Drive space in a single snapshot_.
+- If you use the Google Drive Desktop sync client, you'll probably want to tell it not to sync this folder (it's available in the options).
 
 ### I want my snapshots to sync to my Desktop computer too
 
-Thats not a question but you can use [Google Drive Backup & Sync]([https://www.google.com/drive/download/) to download anything in your Google Drive to your desktop/laptop automatically.
+That's not a question but you can use [Google Drive Backup & Sync]([https://www.google.com/drive/download/) to download anything in your Google Drive to your desktop/laptop automatically.
 
 ### I configured this to only keep 4 snapshots in Drive and Home Assistant, but sometimes I can see there are 5?
 
-The add-on will only delete an old snapshot if a new one exists to replace it, so it will create a 5th one before deleting the first. This is a reliability/disk usage compromise that favors reliability, because otherwise it would have to delete an old snapshot (leaving only 3) before it could guarantee the 4th one exists.
+The add-on will only delete an old snapshot if a new one exists to replace it, so it will create a 5th one before deleting the first. This is a reliability/disk usage compromise that favors reliability because otherwise, it would have to delete an old snapshot (leaving only 3) before it could guarantee the 4th one exists.
 
 ### Can I exclude specific sub-folders from my snapshot?
 
-The addon uses the supervisor to create snapshots, and the supervisor only permits you to include or exclude the 5 main folders (home assistant configuration, share, SSL, media, and local addons). Excluding specific subfolders, or only including specific subfolders from a snapshot isn't possible today.
+The add-on uses the supervisor to create snapshots, and the supervisor only permits you to include or exclude the 5 main folders (home assistant configuration, share, SSL, media, and local add-ons). Excluding specific subfolders, or only including specific subfolders from a snapshot isn't possible today.

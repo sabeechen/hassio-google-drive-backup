@@ -10,7 +10,7 @@ _Note_: The configuration can be changed easily by starting the add-on and click
 The UI explains what each setting is and you don't need to modify anything before clicking `Start`.
 If you would still prefer to modify the settings in yaml, the options are detailed below.
 
-Add-on configuration example. Don't use this directly, the addon has a lot of configurability that most users don't need:
+Add-on configuration example. Don't use this directly, the addon has a lot of configuration options that most users don't need:
 
 ```yaml
 # Keep 10 snapshots in Home Assistant
@@ -19,10 +19,10 @@ max_snapshots_in_hassio: 10
 # Keep 10 snapshots in Google Drive
 max_snapshots_in_google_drive: 10
 
-# Ignore snapshots the addons doesn't create
+# Ignore snapshots the add-on hasn't created
 ignore_other_snapshots: True
 
-# Ignore snapshots that looks like they were created form an automatic upgrade
+# Ignore snapshots that look like they were created by the update mechanism
 ignore_upgrade_snapshots: True
 
 # Take a snapshot every 3 days
@@ -59,7 +59,7 @@ exclude_addons: "core_configurator"
 enable_snapshot_stale_sensor: false
 notify_for_stale_snapshots: false
 
-# Enable server directly on port port 1627
+# Enable server directly on port 1627
 expose_extra_server: true
 
 # Allow sending error reports
@@ -81,7 +81,7 @@ The number of snapshots the add-on will keep in Google Drive before old ones are
 Make the addon ignore any snapshot it didn't directly create.  Any snapshot already uploaded to Google Drive will not be ignored until you delete it from Google Drive.
 
 ### Option: `ignore_upgrade_snapshots` (default: False)
-Ignores snapshots that look like they were automatically created form updating an addon or Home Assistant.  This will make the addon ignore any partial snapshot that has onyl one addon or folder in it.
+Ignores snapshots that look like they were automatically created from updating an add-on or Home Assistant itself.  This will make the add-on ignore any partial snapshot that has only one add-on or folder in it.
 
 ### Option: `days_between_snapshots` (default: 3)
 
@@ -89,16 +89,16 @@ How often a new snapshot should be scheduled, eg `1` for daily and `7` for weekl
 
 ### Option: `snapshot_time_of_day`
 
-The time of day (local time) that new snapshots should be created in 24 hour "HH:MM" format. When not specified (the default), snapshots are created at the same time of day of the most recent snapshot.
+The time of day (local time) that new snapshots should be created in 24-hour ("HH:MM") format. When not specified snapshots are created at the same time of day as the most recent snapshot.
 
 
 ### Options: `delete_after_upload` (default: False)
 
-Deletes snapshot from Home Assistant immediately after uploading them to Google Drive.  This is useful if you have very limited space inside Home Assistant, since you only need to have available space for a single snapshot locally.
+Deletes snapshot from Home Assistant immediately after uploading them to Google Drive.  This is useful if you have very limited space inside Home Assistant since you only need to have available space for a single snapshot locally.
 
 ### Option: `specify_snapshot_folder` (default: False)
 
-When true, you must select the folder in Google Drive where snapshots are stored. Once you turn this on, restart the add-on and visit the web-ui to be prompted to select the snapshot folder.
+When true, you must select the folder in Google Drive where snapshots are stored. Once you turn this on, restart the add-on and visit the Web-UI to be prompted to select the snapshot folder.
 
 ### Option: `background_color` and `accent_color`
 
@@ -122,7 +122,7 @@ When set, snapshots are created with a password. You can use a value from your s
 
 ### Option: `snapshot_name` (default: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}")
 
-Sets the name for new snapshots. Variable parameters of the form `{variable_name}` can be used to modify the name to your liking. A list of available variables are given [here](https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name).
+Sets the name for new snapshots. Variable parameters of the form `{variable_name}` can be used to modify the name to your liking. A list of available variables is available [here](https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name).
 
 ### Option: `generational_*`
 
@@ -130,11 +130,11 @@ When set, older snapshots will be kept longer using a [generational backup schem
 
 ### Option: `exclude_folders`
 
-When set, excludes the comma separated list of folders by creating a partial snapshot.
+When set, excludes the comma-separated list of folders by creating a partial snapshot.
 
 ### Option: `exclude_addons`
 
-When set, excludes the comma separated list of addons by creating a partial snapshot.
+When set, excludes the comma-separated list of addons by creating a partial snapshot.
 
 _Note_: Folders and add-ons must be identified by their "slug" name. It is recommended to use the `Settings` dialog within the add-on web UI to configure partial snapshots since these names are esoteric and hard to find.
 
@@ -156,7 +156,7 @@ When false, the add-on will send a [persistent notification](https://github.com/
 
 The UI is available through Home Assistant [ingress](https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/).
 
-It can also be exposed through a webserver on port `1627`, which you can map to an externally visible port from the add-on `Network` panel. You can configure a few more options to add SSL or require your Home Assistant username/password.
+It can also be exposed through a web server on port `1627`, which you can map to an externally visible port from the add-on `Network` panel. You can configure a few more options to add SSL or require your Home Assistant username/password.
 
 #### Option: `expose_extra_server` (default: False)
 
@@ -172,11 +172,11 @@ When true, requires your home assistant username and password to access the Web 
 
 #### Option: `certfile` (default: `/ssl/certfile.pem`)
 
-Required when `use_ssl: True`. The path to your ssl keyfile
+Required when `use_ssl: True`. The path to your SSL key file
 
 #### Option: `keyfile` (default: `/ssl/keyfile.pem`)
 
-Required when `use_ssl: True`. The path to your ssl certfile.
+Required when `use_ssl: True`. The path to your SSL cert file.
 
 #### Option: `verbose` (default: False)
 
@@ -184,7 +184,7 @@ If true, enable additional debug logging. Useful if you start seeing errors and 
 
 #### Option: `send_error_reports` (default: False)
 
-When true, the text of unexpected errors will be sent to database maintained by the developer. This helps identify problems with new releases and provide better context messages when errors come up.
+When true, the text of unexpected errors will be sent to a database maintained by the developer. This helps identify problems with new releases and provide better context messages when errors come up.
 
 #### Option: `delete_after_upload` (default: False)
 

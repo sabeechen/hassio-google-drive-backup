@@ -7,7 +7,7 @@ jobs:
   run-pytest:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.3.4
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -36,12 +36,12 @@ jobs:
         path: junit/test-results.xml
       if: ${{ always() }}
     - name: Publish Unit Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v1
+      uses: EnricoMi/publish-unit-test-result-action@v1.19
       if: always()
       with:
         files: junit/**/*.xml
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v1.5.2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml

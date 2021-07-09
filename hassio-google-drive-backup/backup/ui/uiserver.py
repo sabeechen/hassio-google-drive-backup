@@ -216,7 +216,8 @@ class UiServer(Trigger, Startable):
                 'name': addon.get('name', "Unknown"),
                 'slug': addon.get("slug", "unknown"),
                 'version': addon.get("version", ""),
-                'size': self._estimator.asSizeString(addon.get("size", 0)),
+                # The supervisor stores snapshot size in MB
+                'size': self._estimator.asSizeString(float(addon.get("size", 0)) * 1024 * 1024),
             })
         return addons
 

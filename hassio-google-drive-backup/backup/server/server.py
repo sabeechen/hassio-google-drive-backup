@@ -30,7 +30,7 @@ class Server():
         self.exchanger = exchanger_builder.build(
             client_id=config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             client_secret=config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
-            redirect=config.getAuthrnticateUrl())
+            redirect=config.getPreferredTokenUrl("/drive/authorize"))
         self.logger = logger
         self.config = config
         self.error_store = error_store
@@ -169,6 +169,12 @@ class Server():
     async def index(self, request: Request):
         return self.base_context(request)
 
+    async def health(self, request: Request):
+        return json_response({
+            'status': 'ok',
+            'messages': []
+        })
+
     def buildApp(self, app):
         path = abspath(join(__file__, "..", "..", "static"))
         app.add_routes([
@@ -178,7 +184,8 @@ class Server():
             get("/", self.index),
             get("/drive/authorize", self.authorize),
             post("/drive/refresh", self.refresh),
-            post("/logerror", self.error)
+            post("/logerror", self.error),
+            get("/health", self.health)
         ])
         aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(path))
         return app

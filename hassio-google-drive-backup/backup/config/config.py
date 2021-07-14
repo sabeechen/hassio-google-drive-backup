@@ -107,6 +107,10 @@ class Config():
         self.retained = self._loadRetained()
         self._gen_config_cache = self.getGenerationalConfig()
 
+        # Tracks when hosts have been seen to be offline to retry on different hosts.
+        self._commFailure = {}
+        self._preferredTokenHost = None
+
     def getConfigFor(self, options):
         new_config = Config()
         new_config.overrides = self.overrides.copy()
@@ -269,5 +273,15 @@ class Config():
     def getForUi(self, setting: Setting):
         return _VALIDATORS[setting].formatForUi(self.get(setting))
 
-    def getAuthrnticateUrl(self):
-        return str(URL(self.get(Setting.TOKEN_SERVER_HOST)).with_path("/drive/authorize"))
+    def getTokenServers(self, path: str = "") -> List[URL]:
+        return list(map(lambda s: URL(s).with_path(path), self.get(Setting.TOKEN_SERVER_HOST).split(",")))
+
+    def setPreferredTokenHost(self, host: str):
+        self._preferredTokenHost = host
+
+    def getPreferredTokenUrl(self, path: str):
+        hosts = self.getTokenServers(path)
+        for host in hosts:
+            if host.host == self._preferredTokenHost:
+                return host
+        return hosts[0]

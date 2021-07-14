@@ -1,4 +1,4 @@
-from aiohttp import ClientSession, ClientConnectorError
+from aiohttp import ClientSession, ClientConnectorError, ClientTimeout
 from .creds import Creds, KEY_CLIENT_ID, KEY_CLIENT_SECRET, KEY_ACCESS_TOKEN, KEY_REFRESH_TOKEN, KEY_EXPIRES_IN
 from ..exceptions import ensureKey, GoogleCredentialsExpired, CredRefreshGoogleError, CredRefreshMyError
 from ..config import Config, Setting, VERSION
@@ -39,7 +39,7 @@ class Exchanger():
                  drive: DriveRequester,
                  client_id: str,
                  client_secret: str,
-                 redirect: str):
+                 redirect: URL):
         self.time = time
         self.config = config
         self.session = session
@@ -56,7 +56,7 @@ class Exchanger():
             KEY_INCLUDE_GRANTED_SCOPES: 'true',
             KEY_ACCESS_TYPE: "offline",
             KEY_STATE: state,
-            KEY_REDIRECT_URI: self._redirect,
+            KEY_REDIRECT_URI: str(self._redirect),
             KEY_PROMPT: "consent"
         })
         return str(url)
@@ -66,7 +66,7 @@ class Exchanger():
             KEY_CLIENT_ID: self._client_id,
             KEY_CLIENT_SECRET: self._client_secret,
             KEY_CODE: code,
-            KEY_REDIRECT_URI: self._redirect,
+            KEY_REDIRECT_URI: str(self._redirect),
             KEY_GRANT_TYPE: 'authorization_code'
         }
         resp = None
@@ -111,27 +111,29 @@ class Exchanger():
             KEY_REFRESH_TOKEN: creds.refresh_token,
         }
 
-        url = URL(self.config.get(Setting.TOKEN_SERVER_HOST)).with_path("/drive/refresh")
-        try:
-            headers = {
-                'addon_version': VERSION,
-                'client': self.config.clientIdentifier()
-            }
-            async with self.session.post(str(url), headers=headers, json=data) as resp:
-                if resp.status < 400:
-                    return Creds.load(self.time, await resp.json())
-                elif resp.status == 503:
-                    raise CredRefreshGoogleError((await resp.json())["error"])
-                elif resp.status == 401:
-                    raise GoogleCredentialsExpired()
-                else:
-                    try:
-                        extra = (await resp.json())["error"]
-                    except BaseException:
-                        extra = ""
-                    raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
-        except ClientConnectorError:
-            raise CredRefreshMyError("Unable to connect to https://habackup.io")
+        for url in self.config.getTokenServers("/drive/refresh"):
+            try:
+                headers = {
+                    'addon_version': VERSION,
+                    'client': self.config.clientIdentifier()
+                }
+                async with self.session.post(str(url), headers=headers, json=data, timeout=ClientTimeout(total=10)) as resp:
+                    if resp.status < 400:
+                        self.config.setPreferredTokenHost(url.host)
+                        return Creds.load(self.time, await resp.json())
+                    elif resp.status == 503:
+                        raise CredRefreshGoogleError((await resp.json())["error"])
+                    elif resp.status == 401:
+                        raise GoogleCredentialsExpired()
+                    else:
+                        try:
+                            extra = (await resp.json())["error"]
+                        except BaseException:
+                            extra = ""
+                        raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
+            except ClientConnectorError:
+                logger.error("Unable to communicate with " + str(url) + ", trying alternate servers...")
+        raise CredRefreshMyError("Unable to connect to https://habackup.io")
 
     def refreshCredentials(self, refresh_token):
         return Creds(self.time, id=self._client_id, expiration=None, access_token=None, refresh_token=refresh_token, secret=self._client_secret)

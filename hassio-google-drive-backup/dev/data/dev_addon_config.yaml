@@ -1,2 +1,2 @@
-token_server_host: "https://dev.habackup.io"
+token_server_host: "https://dev.habackup.io,https://reliable.dev.habackup.io"
 default_drive_client_id: "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com"

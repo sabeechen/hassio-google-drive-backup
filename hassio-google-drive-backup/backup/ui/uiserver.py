@@ -26,7 +26,6 @@ from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
 from backup.debugworker import DebugWorker
 from backup.drive import FolderFinder
 from backup.const import FOLDERS
-from yarl import URL
 from .debug import Debug
 
 logger = getLogger(__name__)
@@ -141,8 +140,8 @@ class UiServer(Trigger, Startable):
         status["snapshot_name_template"] = self.config.get(
             Setting.SNAPSHOT_NAME)
         status['sources'] = self._coord.buildSnapshotMetrics()
-        status['authenticate_url'] = self.config.getAuthrnticateUrl()
-        choose_url = URL(self.config.get(Setting.TOKEN_SERVER_HOST)).with_path('/drive/picker').with_query({
+        status['authenticate_url'] = str(self.config.getPreferredTokenUrl("/drive/authorize"))
+        choose_url = self.config.getPreferredTokenUrl('/drive/picker').with_query({
             "bg": self.config.get(Setting.BACKGROUND_COLOR),
             "ac": self.config.get(Setting.ACCENT_COLOR),
             "version": VERSION

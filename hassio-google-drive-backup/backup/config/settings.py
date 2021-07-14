@@ -195,7 +195,7 @@ _DEFAULTS = {
     Setting.GOOGLE_DRIVE_PAGE_SIZE: 100,
 
     # Remote endpoints
-    Setting.TOKEN_SERVER_HOST: "https://habackup.io",
+    Setting.TOKEN_SERVER_HOST: "https://habackup.io,https://reliable.habackup.io",
     Setting.HASSIO_URL: "http://hassio/",
     Setting.HASSIO_TOKEN: "",
     Setting.HOME_ASSISTANT_URL: "http://hassio/core/api/",
@@ -237,7 +237,7 @@ _DEFAULTS = {
 }
 
 _STAGING_DEFAULTS = {
-    Setting.TOKEN_SERVER_HOST: "https://dev.habackup.io",
+    Setting.TOKEN_SERVER_HOST: "https://dev.habackup.io,https://reliable.dev.habackup.io",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com",
 }
 

@@ -104,7 +104,7 @@ class HaUpdater(Worker):
             return "waiting" if self._info._first_sync else "backed_up"
 
     def _buildSnapshotUpdate(self):
-        snapshots = self._coordinator.snapshots()
+        snapshots = list(filter(lambda s: not s.ignore(), self._coordinator.snapshots()))
         last = "Never"
         if len(snapshots) > 0:
             last = max(snapshots, key=lambda s: s.date()).date().isoformat()
@@ -116,8 +116,8 @@ class HaUpdater(Worker):
                 "state": snapshot.status(),
                 "size": snapshot.sizeString()
             }
-        ha_snapshots = list(filter(lambda s: s.getSource(SOURCE_HA) is not None and not s.ignore(), snapshots))
-        drive_snapshots = list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None and not s.ignore(), snapshots))
+        ha_snapshots = list(filter(lambda s: s.getSource(SOURCE_HA) is not None, snapshots))
+        drive_snapshots = list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, snapshots))
         return {
             "state": self._state(),
             "attributes": {

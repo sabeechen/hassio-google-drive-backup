@@ -1,3 +1,4 @@
+import asyncio
 from aiohttp import ClientSession, ClientConnectorError, ClientTimeout
 from .creds import Creds, KEY_CLIENT_ID, KEY_CLIENT_SECRET, KEY_ACCESS_TOKEN, KEY_REFRESH_TOKEN, KEY_EXPIRES_IN
 from ..exceptions import ensureKey, GoogleCredentialsExpired, CredRefreshGoogleError, CredRefreshMyError
@@ -132,7 +133,10 @@ class Exchanger():
                             extra = ""
                         raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
             except ClientConnectorError:
-                logger.error("Unable to communicate with " + str(url) + ", trying alternate servers...")
+                logger.warn("Unable to communicate with " + str(url) + ", trying alternate servers...")
+            except asyncio.exceptions.TimeoutError:
+                # TODO: Add tests for this exception
+                logger.warn("Timed out communicating with " + str(url) + ", trying alternate servers...")
         raise CredRefreshMyError("Unable to connect to https://habackup.io")
 
     def refreshCredentials(self, refresh_token):

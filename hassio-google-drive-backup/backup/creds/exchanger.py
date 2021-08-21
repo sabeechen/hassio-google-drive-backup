@@ -133,10 +133,10 @@ class Exchanger():
                             extra = ""
                         raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
             except ClientConnectorError:
-                logger.warn("Unable to communicate with " + str(url) + ", trying alternate servers...")
+                logger.warning("Unable to communicate with " + str(url) + ", trying alternate servers...")
             except asyncio.exceptions.TimeoutError:
                 # TODO: Add tests for this exception
-                logger.warn("Timed out communicating with " + str(url) + ", trying alternate servers...")
+                logger.warning("Timed out communicating with " + str(url) + ", trying alternate servers...")
         raise CredRefreshMyError("Unable to connect to https://habackup.io")
 
     def refreshCredentials(self, refresh_token):

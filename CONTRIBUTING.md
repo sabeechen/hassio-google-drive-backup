@@ -23,6 +23,10 @@ The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whom 
  - Releases of the addon are made as-needed for bug fixes and new features.  If you've made a signifigant change to the addon, you can expect me to communicate to you when you can expect to see it released.  Important fixes will often demand an out-of-schedule rushed release.
 ## Setting up a Development Environment
 
+### Easy: Using the Dev Container
+If the you open the repository folder in Visual Studio code with docker installed, it will notice that it provides a devcontainer configuration and ask you to open it.  This is the easiest method to use, sets up all the necessary plugins and dependencies, and its how I (the primary maintainer of the project) develop the addon.
+
+### Harder but also works: Manual Setup
 1. Install [Visual Studio Code](https://code.visualstudio.com/)
 2. Install [Python 3.8](https://www.python.org/downloads/) for your platform.
 3. Install a git client. I like [GitHub Desktop](https://desktop.github.com/)
@@ -34,7 +38,7 @@ The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whom 
 6. <kbd>File</kbd> > <kbd>Open Folder</kbd> to open the cloned repository folder.
 7. Open the terminal (`Ctrl` + `Shift` + <code>`</code>) and install the Python packages required for development:
    ```
-   > python3.8 -m pip install -r hassio-google-drive-backup/dev/requirements-dev.txt
+   > python3.8 -m pip install -r .devcontainer/requirements-dev.txt
    ```
    That should set you up!
 

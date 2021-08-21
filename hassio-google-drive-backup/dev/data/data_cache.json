@@ -1,0 +1,11 @@
+{
+    "snapshots": {},
+    "upgrades": [
+        {
+            "prev_version": "0",
+            "new_version": "0.104.3",
+            "date": "2021-08-18T18:41:34.095885+00:00"
+        }
+    ],
+    "last_verison": "0.104.3"
+}

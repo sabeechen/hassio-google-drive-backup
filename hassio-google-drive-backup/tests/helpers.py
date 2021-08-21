@@ -2,6 +2,7 @@ import json
 import tarfile
 import pytest
 import platform
+import os
 from datetime import datetime
 from io import BytesIO, IOBase
 
@@ -53,6 +54,11 @@ all_addons = [
 def skipForWindows():
     if platform.system() == "Windows":
         pytest.skip("This test can't be run in windows environments")
+
+
+def skipForRoot():
+    if os.getuid() == 0:
+        pytest.skip("This test can't be run as root")
 
 
 def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:

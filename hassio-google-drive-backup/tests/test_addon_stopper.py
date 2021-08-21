@@ -9,6 +9,7 @@ from backup.exceptions import SupervisorFileSystemError
 from .faketime import FakeTime
 from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_ADDON_INFO
 from dev.request_interceptor import RequestInterceptor
+from .helpers import skipForRoot
 
 
 def getSaved(config: Config):
@@ -311,6 +312,9 @@ async def test_get_info_failure_on_start(supervisor: SimulatedSupervisor, addon_
 
 @pytest.mark.asyncio
 async def test_read_only_fs(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config, interceptor: RequestInterceptor) -> None:
+    # This test can't be run as the root user, since no file is read-only to root.
+    skipForRoot()
+
     # Stop an addon
     slug1 = "test_slug_1"
     supervisor.installAddon(slug1, "Test decription")

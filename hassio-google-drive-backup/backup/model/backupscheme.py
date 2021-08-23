@@ -187,6 +187,8 @@ class GenerationalScheme(BackupScheme):
             return min(keepers, default=None, key=lambda s: s.date())
 
     def handleNaming(self, snapshots: Sequence[Snapshot]) -> None:
+        if len(snapshots) == 0:
+            return
         sorted = list(snapshots)
         sorted.sort(key=lambda s: s.date())
         for snapshot in sorted:

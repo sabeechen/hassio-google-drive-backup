@@ -728,7 +728,7 @@ async def test_purge_before_upload(source: HelperTestSource, dest: HelperTestSou
     assert oldest.slug() not in (await source.get()).keys()
     dest.assertThat(current=2)
 
-    #trying to do it again should do nothing (eg not delete another snapshot)
+    # Trying to do it again should do nothing (eg not delete another snapshot)
     with pytest.raises(IntentionalFailure):
         await model.sync(time.now())
     source.assertThat(deleted=1, current=1)
@@ -752,3 +752,22 @@ async def test_purge_before_upload(source: HelperTestSource, dest: HelperTestSou
     assert older.slug() in (await source.get()).keys()
     assert oldest.slug() not in (await dest.get()).keys()
     assert older.slug() in (await dest.get()).keys()
+
+
+@pytest.mark.asyncio
+async def test_generational_empty(time, model: Model, dest, source, simple_config: Config):
+    time.setNow(time.local(2019, 5, 10))
+    now = time.now()
+
+    simple_config.config.update({
+        "days_between_snapshots": 1,
+        "generational_weeks": 1,
+        "generational_days": 2
+    })
+
+    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+
+    model.reinitialize()
+    assert len(model.snapshots) == 0
+    await model.sync(now)
+    assert len(model.snapshots) == 1

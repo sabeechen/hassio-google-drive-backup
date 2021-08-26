@@ -76,7 +76,7 @@ class HaRequests():
         if slug in self.cache:
             del self.cache[slug]
         try:
-            await self._postHassioData(delete_url, {})
+            await self._sendHassioData("delete", delete_url, {})
         except ClientResponseError as e:
             if e.status == 400:
                 raise HomeAssistantDeleteError()
@@ -220,10 +220,13 @@ class HaRequests():
         logger.debug("Making Hassio request: " + url)
         return await self._validateHassioReply(await self.session.get(url, headers=self._getHassioHeaders()))
 
-    @supervisor_call
     async def _postHassioData(self, url: str, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
+        return await self._sendHassioData("post", url, json, file, data, timeout)
+
+    @supervisor_call
+    async def _sendHassioData(self, method: str, url: str, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
         logger.debug("Making Hassio request: " + url)
-        return await self._validateHassioReply(await self.session.post(url, headers=self._getHassioHeaders(), json=json, data=data, timeout=timeout))
+        return await self._validateHassioReply(await self.session.request(method, url, headers=self._getHassioHeaders(), json=json, data=data, timeout=timeout))
 
     async def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
         async with self.session.post(self.config.get(Setting.HOME_ASSISTANT_URL) + path, headers=self._getHaHeaders(), json=data) as resp:

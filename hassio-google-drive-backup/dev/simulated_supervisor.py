@@ -8,7 +8,7 @@ from backup.config import Config
 from backup.time import Time
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, get,
-                         json_response, post, FileResponse)
+                         json_response, post, delete, FileResponse)
 from injector import inject, singleton
 from .base_server import BaseServer
 from .ports import Ports
@@ -73,24 +73,36 @@ class SimulatedSupervisor(BaseServer):
             get('/info', self._miscInfo),
             get('/addons/self/info', self._selfInfo),
             get('/addons/{slug}/info', self._addonInfo),
-            get('/snapshots/{slug}/download', self._snapshotDownload),
-            get('/snapshots/{slug}/info', self._snapshotDetail),
+
             post('/addons/{slug}/start', self._startAddon),
             post('/addons/{slug}/stop', self._stopAddon),
             get('/addons/{slug}/logo', self._logoAddon),
             get('/addons/{slug}/icon', self._logoAddon),
-            post('/snapshots/{slug}/remove', self._deleteSnapshot),
-            post('/snapshots/new/upload', self._uploadSnapshot),
-            get('/snapshots/new/upload', self._uploadSnapshot),
-            post('/snapshots/new/partial', self._newSnapshot),
-            post('/snapshots/new/full', self._newSnapshot),
-            get('/snapshots/new/full', self._newSnapshot),
+
             get('/core/info', self._coreInfo),
             get('/supervisor/info', self._supervisorInfo),
             get('/supervisor/logs', self._supervisorLogs),
             get('/core/logs', self._coreLogs),
+            get('/debug/insert/snapshot', self._debug_insert_snapshot),
+
+            get('/backups', self._getBackups),
+            delete('/backups/{slug}/remove', self._deleteSnapshot),
+            post('/backups/new/upload', self._uploadSnapshot),
+            post('/backups/new/partial', self._newSnapshot),
+            post('/backups/new/full', self._newSnapshot),
+            get('/backups/new/full', self._newSnapshot),
+            get('/backups/{slug}/download', self._snapshotDownload),
+            get('/backups/{slug}/info', self._snapshotDetail),
+
+            # TODO: remove once the api path is fully deprecated
             get('/snapshots', self._getSnapshots),
-            get('/debug/insert/snapshot', self._debug_insert_snapshot)
+            delete('/snapshots/{slug}/remove', self._deleteSnapshot),
+            post('/snapshots/new/upload', self._uploadSnapshot),
+            post('/snapshots/new/partial', self._newSnapshot),
+            post('/snapshots/new/full', self._newSnapshot),
+            get('/snapshots/new/full', self._newSnapshot),
+            get('/snapshots/{slug}/download', self._snapshotDownload),
+            get('/snapshots/{slug}/info', self._snapshotDetail),
         ]
 
     def getEvents(self):
@@ -136,6 +148,10 @@ class SimulatedSupervisor(BaseServer):
     async def _getSnapshots(self, request: Request):
         await self._verifyHeader(request)
         return self._formatDataResponse({'snapshots': list(self._snapshots.values())})
+
+    async def _getBackups(self, request: Request):
+        await self._verifyHeader(request)
+        return self._formatDataResponse({'backups': list(self._snapshots.values())})
 
     async def _stopAddon(self, request: Request):
         await self._verifyHeader(request)

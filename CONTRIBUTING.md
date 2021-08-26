@@ -57,14 +57,14 @@ To try out changes locally during development, I've written a server that simula
 
 To give it a shot, open up Visual Studio's "Run" Dialog and start up `Run Mock Backend Server`. Then also run one of these options:
 
-- `Run Addons (Dev Backends)` - This starts up the addon web server and connects it to the simulated Home Assistant, Supervisor, and Google Drive. All of the functionality of the addon is supported (creating/deleting snapshot, authenticating with Google drive, etc.).
+- `Run Addons (Dev Backends)` - This starts up the addon web server and connects it to the simulated Home Assistant, Supervisor, and Google Drive. All of the functionality of the addon is supported (creating/deleting backups, authenticating with Google drive, etc.).
 - `Run Addons (Dev Drive)` - This should be unused by contributors, as its only used for testing prior to a release by @sabeechen.
 - `Run Addons (Real Drive)` - This uses a simulated Home Assistant and Supervisor, but connects to the real Google Drive. You'll have to use a real Google account to work with this configuration.
 
 ## The Staging Addon
 Any submissions made to the dev branch (including PR's) get automatically built and deployed to a staging version of the addon.  You can install this by adding the repository [https://github.com/sabeechen/hgdb-dev-staging](https://github.com/sabeechen/hgdb-dev-staging) to your home assistant machine.  This addon is identical to what will be released with the next version of the addon but:
- - It is a separate "App" in Google's perspective, so it can't see any snapshots created by the "Production" addon.
- - Its not reocmmended to run it along side the "Production" addon on the same machine (it see's the same snapshots).
+ - It is a separate "App" in Google's perspective, so it can't see any backups created by the "Production" addon.
+ - Its not reocmmended to run it along side the "Production" addon on the same machine (it see's the same backups).
  - It talks to [https://dev.habackup.io](https://dev.habackup.io) instead of [https://habackup.io](https://habackup.io) to authenticate with Google Drive.
  - If you submit code to the dev branch, you should see an update to the addon show up in Home Assistant ~25 minutes later.
  - It is the "bleeding edge" of changes, so it might have bugs.  Be warned!

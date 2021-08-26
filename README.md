@@ -4,19 +4,19 @@
 
 ## About
 
-A complete and easy way to back up your Home Assistant snapshots to Google Drive.
+A complete and easy way to back up Home Assistant to Google Drive.
 
 This is for you if you want to quickly set up a backup strategy without much fuss. It doesn't require much familiarity with Home Assistant, its architecture, or Google Drive. Detailed install instructions are provided below but you can just add this repo, click install and open the Web UI. It will tell you what to do and only takes a few simple clicks.  [Detailed install instructions are below](#detailed-install-instructions) if that doesn't seem clear.
 
 ### Features Overview
 
-- Creates snapshots on a configurable schedule.
-- Uploads snapshot to Drive, even the ones it didn't create.
-- Clean up old snapshots in Home Assistant and Google Drive, so you don't run out of space.
+- Creates backups on a configurable schedule.
+- Uploads backups to Drive, even the ones it didn't create.
+- Clean up old backups in Home Assistant and Google Drive, so you don't run out of space.
 - Lots of options for customization, but never requires you to write a yaml file.
-- Restore from a fresh install or recover quickly from disaster by uploading your snapshots directly from Google Drive.
+- Restore from a fresh install or recover quickly from disaster by uploading your backups directly from Google Drive.
 - Integrates with Home Assistant Notifications and provides sensors you can trigger off of.
-- Notifies you when something goes wrong with your snapshots.
+- Notifies you when something goes wrong with your backups.
 - Super easy installation and configuration.
 - Privacy-centric design philosophy.
 - Comprehensive documentation.
@@ -49,11 +49,11 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
 
 5. Click <kbd>Start</kbd>, give it a few seconds to spin up, and then click the `Open Web UI` button that appears.
 
-6. The "Getting Started" page will tell you how many snapshots you have and what it will do with them once you connect it to Google Drive. You can click `Settings` to change those options through the add-on (which is the recommended way, they take effect immediately), or update them from the page where you installed the add-on as described below (also works, restart for them to take effect).
+6. The "Getting Started" page will tell you how many backups you have and what it will do with them once you connect it to Google Drive. You can click `Settings` to change those options through the add-on (which is the recommended way, they take effect immediately), or update them from the page where you installed the add-on as described below (also works, restart for them to take effect).
 
 7. Click the `Authenticate with Drive` button to link the add-on with your Google Drive account. Alternatively, you can generate your [own Google API credentials](#can-i-use-my-own-google-api-information-to-authenticate-instead-of-yours), though the process is not simple.
 
-8. You should be redirected automatically to the backup status page. Here you can make a new snapshot, see the progress of uploading to Google Drive, etc. You're done!
+8. You should be redirected automatically to the backup status page. Here you can make a new backups, see the progress of uploading to Google Drive, etc. You're done!
 
 ## Configuration
 
@@ -75,10 +75,10 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 
   <img src="images/binary_sensor.png" width="600"/>
 
-Redundancy is the foundation of reliability. With local snapshots, Google Drive's backups, and two flavors of notification I think you're covered.
+Redundancy is the foundation of reliability. With local backups, Google Drive's backups, and two flavors of notification I think you're covered.
 
-### How do I restore a snapshot?
-The snapshots this addon creates are the same snapshots that Home Assistant makes by itself and can be restored using any of the methods documented elsewhere.  Here are few pointers to get you started.
+### How do I restore a backups?
+The backups this addon creates are the same backups that Home Assistant makes by itself and can be restored using any of the methods documented elsewhere.  Here are few pointers to get you started.
 - If you can still get to the addon's web-UI then can select "Actions" -> "Upload" from any snapshot to have it copied back into Home Assistant.
 - If not (eg, maybe your hard drive died and you're starting over):
   - Download one of the snapshots you've previously created from [Google Drive](https://drive.google.com).

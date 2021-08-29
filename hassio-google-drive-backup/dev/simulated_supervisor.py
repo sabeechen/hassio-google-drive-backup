@@ -4,7 +4,7 @@ from datetime import timedelta
 import random
 import io
 
-from backup.config import Config
+from backup.config import Config, Version
 from backup.time import Time
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, get,
@@ -15,14 +15,17 @@ from .ports import Ports
 from typing import Any, Dict
 from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
 
-URL_MATCH_SNAPSHOT_FULL = "^/snapshots/new/full$"
-URL_MATCH_SNAPSHOT_DELETE = "^/snapshots/.*/remove$"
-URL_MATCH_SNAPSHOT_DOWNLOAD = "^/snapshots/.*/download$"
+URL_MATCH_SNAPSHOT_FULL = "^/backups/new/full$"
+URL_MATCH_SNAPSHOT_DELETE = "^/backups/.*/remove$"
+URL_MATCH_SNAPSHOT_DOWNLOAD = "^/backups/.*/download$"
 URL_MATCH_MISC_INFO = "^/info$"
 URL_MATCH_CORE_API = "^/core/api.*$"
 URL_MATCH_START_ADDON = "^/addons/.*/start$"
 URL_MATCH_STOP_ADDON = "^/addons/.*/stop$"
 URL_MATCH_ADDON_INFO = "^/addons/.*/info$"
+
+URL_MATCH_SNAPSHOT = "^/snapshots.*$"
+URL_MATCH_BACKUPS = "^/backups.*$"
 
 
 @singleton
@@ -48,6 +51,7 @@ class SimulatedSupervisor(BaseServer):
         self._username = "user"
         self._password = "pass"
         self._addons = all_addons.copy()
+        self._super_version = Version(2021, 8)
 
         self.installAddon(self._addon_slug, "Home Assistant Google drive Backup")
         self.installAddon("42", "The answer")
@@ -139,8 +143,6 @@ class SimulatedSupervisor(BaseServer):
             await self._snapshot_lock.acquire()
 
     async def _verifyHeader(self, request) -> bool:
-        if request.headers.get("X-Supervisor-Token", None) == self._auth_token:
-            return
         if request.headers.get("Authorization", None) == "Bearer " + self._auth_token:
             return
         raise HTTPUnauthorized()
@@ -193,7 +195,8 @@ class SimulatedSupervisor(BaseServer):
         await self._verifyHeader(request)
         return self._formatDataResponse(
             {
-                "addons": list(self._addons).copy()
+                "addons": list(self._addons).copy(),
+                'version': str(self._super_version)
             }
         )
 

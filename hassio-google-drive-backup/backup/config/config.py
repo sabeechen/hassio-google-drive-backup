@@ -31,7 +31,7 @@ SERVER_OPTIONS = {
 }
 
 NON_UI_SETTING = {
-    Setting.HASSIO_URL,
+    Setting.SUPERVISOR_URL,
     Setting.TOKEN_SERVER_HOST,
     Setting.DRIVE_AUTHORIZE_URL,
     Setting.DEFAULT_DRIVE_CLIENT_ID,

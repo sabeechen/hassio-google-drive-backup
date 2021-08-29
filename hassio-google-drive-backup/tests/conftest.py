@@ -141,13 +141,12 @@ def event_loop():
 async def generate_config(server_url: URL, ports, cleandir):
     return Config.withOverrides({
         Setting.DRIVE_URL: str(server_url),
-        Setting.HASSIO_URL: str(server_url) + "/",
-        Setting.HOME_ASSISTANT_URL: str(server_url.with_path("/core/api/")),
+        Setting.SUPERVISOR_URL: str(server_url) + "/",
         Setting.TOKEN_SERVER_HOST: str(server_url),
         Setting.DRIVE_REFRESH_URL: str(server_url.with_path("/oauth2/v4/token")),
         Setting.DRIVE_AUTHORIZE_URL: str(server_url.with_path("/o/oauth2/v2/auth")),
         Setting.DRIVE_TOKEN_URL: str(server_url.with_path("/token")),
-        Setting.HASSIO_TOKEN: "test_header",
+        Setting.SUPERVISOR_TOKEN: "test_header",
         Setting.SECRETS_FILE_PATH: "secrets.yaml",
         Setting.CREDENTIALS_FILE_PATH: "credentials.dat",
         Setting.FOLDER_FILE_PATH: "folder.dat",

@@ -1,10 +1,11 @@
 import asyncio
 from datetime import timedelta
+import os
 
 import pytest
 from aiohttp.client_exceptions import ClientResponseError
 
-from backup.config import Config, Setting, CreateOptions
+from backup.config import Config, Setting, CreateOptions, Version
 from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
                                SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError)
@@ -14,10 +15,11 @@ from backup.model import DummySnapshot
 from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
 from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
-from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD
+from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD, URL_MATCH_BACKUPS, URL_MATCH_SNAPSHOT
 from dev.request_interceptor import RequestInterceptor
 from backup.model import Model
 from backup.time import Time
+from yarl import URL
 
 
 @pytest.mark.asyncio
@@ -715,3 +717,30 @@ async def test_bump_last_seen(ha: HaSource, time: Time, config: Config, supervis
     time.advance(days=1)
     assert snapshot.slug() in await ha.get()
     assert data_cache.snapshot(snapshot.slug())[KEY_LAST_SEEN] == time.now().isoformat()
+
+
+@pytest.mark.asyncio
+async def test_backup_supervisor_path(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    supervisor._super_version = Version(2021, 8)
+    await ha.get()
+    assert interceptor.urlWasCalled(URL_MATCH_BACKUPS)
+    assert not interceptor.urlWasCalled(URL_MATCH_SNAPSHOT)
+
+
+@pytest.mark.asyncio
+async def test_snapshot_supervisor_path(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    supervisor._super_version = Version(2021, 7)
+    await ha.get()
+    assert not interceptor.urlWasCalled(URL_MATCH_BACKUPS)
+    assert interceptor.urlWasCalled(URL_MATCH_SNAPSHOT)
+
+
+@pytest.mark.asyncio
+async def test_supervisor_host(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, server_url):
+    assert ha.harequests.getSupervisorURL() == server_url
+
+    config.override(Setting.SUPERVISOR_URL, "")
+    assert ha.harequests.getSupervisorURL() == URL("http://hassio")
+
+    os.environ['SUPERVISOR_TOKEN'] = "test"
+    assert ha.harequests.getSupervisorURL() == URL("http://supervisor")

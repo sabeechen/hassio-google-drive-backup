@@ -60,22 +60,22 @@ def test_validate_string():
 
 
 def test_validate_url():
-    assert Config().validate({Setting.HASSIO_URL: True}) == defaultAnd(
-        {Setting.HASSIO_URL: "True"})
-    assert Config().validate({Setting.HASSIO_URL: False}) == defaultAnd(
-        {Setting.HASSIO_URL: "False"})
-    assert Config().validate({Setting.HASSIO_URL: "true"}) == defaultAnd(
-        {Setting.HASSIO_URL: "true"})
-    assert Config().validate({Setting.HASSIO_URL: "false"}) == defaultAnd(
-        {Setting.HASSIO_URL: "false"})
-    assert Config().validate({Setting.HASSIO_URL: "1"}) == defaultAnd(
-        {Setting.HASSIO_URL: "1"})
-    assert Config().validate({Setting.HASSIO_URL: "0"}) == defaultAnd(
-        {Setting.HASSIO_URL: "0"})
-    assert Config().validate({Setting.HASSIO_URL: "yes"}) == defaultAnd(
-        {Setting.HASSIO_URL: "yes"})
-    assert Config().validate({Setting.HASSIO_URL: "no"}) == defaultAnd(
-        {Setting.HASSIO_URL: "no"})
+    assert Config().validate({Setting.SUPERVISOR_URL: True}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "True"})
+    assert Config().validate({Setting.SUPERVISOR_URL: False}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "False"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "true"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "true"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "false"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "false"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "1"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "1"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "0"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "0"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "yes"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "yes"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "no"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "no"})
 
 
 def test_validate_regex():

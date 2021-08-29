@@ -7,19 +7,22 @@ from injector import inject
 from asyncio.exceptions import TimeoutError
 
 from ..util import AsyncHttpGetter
-from ..config import Config, Setting
+from ..config import Config, Setting, Version
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError
 from ..model import HASnapshot, Snapshot
 from ..logger import getLogger
 from ..util import DataCache
 from backup.time import Time
+from yarl import URL
 
 logger = getLogger(__name__)
 
 NOTIFICATION_ID = "backup_broken"
 EVENT_SNAPSHOT_START = "snapshot_started"
 EVENT_SNAPSHOT_END = "snapshot_ended"
+
+VERSION_BACKUP_PATH = Version.parse("2021.8")
 
 
 def supervisor_call(func):
@@ -49,30 +52,45 @@ class HaRequests():
         self._time = time
         self._data_cache = data_cache
 
+        # default the supervisor versio to using the "most featured" when it can't be parsed.
+        # TODO: remove when we no longer support the "snapshot" query path
+        self._super_version = VERSION_BACKUP_PATH
+
+    def getSupervisorURL(self) -> URL:
+        if len(self.config.get(Setting.SUPERVISOR_URL)) > 0:
+            return URL(self.config.get(Setting.SUPERVISOR_URL))
+        if 'SUPERVISOR_TOKEN' in os.environ:
+            return URL("http://supervisor")
+        else:
+            # TODO: remove when we no longer support the "snapshot" query path
+            return URL("http://hassio")
+
+    def _getSnapshotPath(self):
+        if not self._super_version or self._super_version >= VERSION_BACKUP_PATH:
+            return "backups"
+        # TODO: remove when we no longer support the "snapshot" query path
+        return "snapshots"
+
     @supervisor_call
     async def createSnapshot(self, info):
         if 'folders' in info or 'addons' in info:
-            url = "{0}snapshots/new/partial".format(
-                self.config.get(Setting.HASSIO_URL))
+            url = self.getSupervisorURL().with_path("{0}/new/partial".format(self._getSnapshotPath()))
         else:
-            url = "{0}snapshots/new/full".format(
-                self.config.get(Setting.HASSIO_URL))
+            url = self.getSupervisorURL().with_path("{0}/new/full".format(self._getSnapshotPath()))
         return await self._postHassioData(url, info, timeout=ClientTimeout(total=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS)))
 
     @supervisor_call
     async def auth(self, user: str, password: str) -> None:
-        await self._postHassioData("{}auth".format(self.config.get(Setting.HASSIO_URL)), {"username": user, "password": password})
+        await self._postHassioData(self.getSupervisorURL().with_path("auth"), {"username": user, "password": password})
 
     @supervisor_call
     async def upload(self, stream):
-        url: str = "{0}snapshots/new/upload".format(
-            self.config.get(Setting.HASSIO_URL))
+        url = self.getSupervisorURL().with_path("{0}/new/upload".format(self._getSnapshotPath()))
         return await self._postHassioData(url, data=stream)
 
     @supervisor_call
     async def delete(self, slug) -> None:
-        delete_url: str = "{0}snapshots/{1}/remove".format(
-            self.config.get(Setting.HASSIO_URL), slug)
+        delete_url = self.getSupervisorURL().with_path("{1}/{0}/remove".format(slug, self._getSnapshotPath()))
         if slug in self.cache:
             del self.cache[slug]
         try:
@@ -84,14 +102,12 @@ class HaRequests():
 
     @supervisor_call
     async def startAddon(self, slug) -> None:
-        url: str = "{0}addons/{1}/start".format(
-            self.config.get(Setting.HASSIO_URL), slug)
+        url = self.getSupervisorURL().with_path("addons/{0}/start".format(slug))
         await self._postHassioData(url, {})
 
     @supervisor_call
     async def stopAddon(self, slug) -> None:
-        url: str = "{0}addons/{1}/stop".format(
-            self.config.get(Setting.HASSIO_URL), slug)
+        url = self.getSupervisorURL().with_path("addons/{0}/stop".format(slug))
         await self._postHassioData(url, {})
 
     @supervisor_call
@@ -99,19 +115,17 @@ class HaRequests():
         if slug in self.cache:
             info = self.cache[slug]
         else:
-            info = await self._getHassioData("{0}snapshots/{1}/info".format(self.config.get(Setting.HASSIO_URL), slug))
+            info = await self._getHassioData(self.getSupervisorURL().with_path("{1}/{0}/info".format(slug, self._getSnapshotPath())))
             self.cache[slug] = info
         return HASnapshot(info, self._data_cache, self.config, self.config.isRetained(slug))
 
     @supervisor_call
     async def snapshots(self):
-        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "snapshots")
+        return await self._getHassioData(self.getSupervisorURL().with_path(self._getSnapshotPath()))
 
     @supervisor_call
     async def haInfo(self):
-        url = "{0}core/info".format(
-            self.config.get(Setting.HASSIO_URL))
-        return await self._getHassioData(url)
+        return await self._getHassioData(self.getSupervisorURL().with_path("core/info"))
 
     @supervisor_call
     async def selfInfo(self) -> Dict[str, Any]:
@@ -119,30 +133,34 @@ class HaRequests():
 
     @supervisor_call
     async def getAddonInfo(self, addon_slug) -> Dict[str, Any]:
-        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "addons/{0}/info".format(addon_slug))
+        return await self._getHassioData(self.getSupervisorURL().with_path("addons/{0}/info".format(addon_slug)))
 
     @supervisor_call
     async def hassosInfo(self) -> Dict[str, Any]:
-        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "hassos/info")
+        return await self._getHassioData(self.getSupervisorURL().with_path("hassos/info"))
 
     @supervisor_call
     async def info(self) -> Dict[str, Any]:
-        return await self._getHassioData(self.config.get(Setting.HASSIO_URL) + "info")
+        return await self._getHassioData(self.getSupervisorURL().with_path("info"))
 
     @supervisor_call
     async def refreshSnapshots(self):
-        url = "{0}snapshots/reload".format(self.config.get(Setting.HASSIO_URL))
+        url = self.getSupervisorURL().with_path("{0}/reload".format(self._getSnapshotPath()))
         return await self._postHassioData(url)
 
     @supervisor_call
     async def supervisorInfo(self):
-        url = "{0}supervisor/info".format(self.config.get(Setting.HASSIO_URL))
-        return await self._getHassioData(url)
+        url = self.getSupervisorURL().with_path("supervisor/info")
+        info = await self._getHassioData(url)
+
+        # parse the supervisor version
+        if 'version' in info:
+            self._super_version = Version.parse(info['version'])
+        return info
 
     @supervisor_call
     async def restore(self, slug: str, password: str = None) -> None:
-        url: str = "{0}snapshots/{1}/restore/full".format(
-            self.config.get(Setting.HASSIO_URL), slug)
+        url = self.getSupervisorURL().with_path("{1}/{0}/restore/full".format(slug, self._getSnapshotPath()))
         if password:
             await self._postHassioData(url, {'password': password})
         else:
@@ -150,8 +168,7 @@ class HaRequests():
 
     @supervisor_call
     async def download(self, slug) -> AsyncHttpGetter:
-        url = "{0}snapshots/{1}/download".format(
-            self.config.get(Setting.HASSIO_URL), slug)
+        url = self.getSupervisorURL().with_path("{1}/{0}/download".format(slug, self._getSnapshotPath()))
         ret = AsyncHttpGetter(url,
                               self._getHassioHeaders(),
                               self.session,
@@ -164,14 +181,14 @@ class HaRequests():
 
     @supervisor_call
     async def getSuperLogs(self):
-        url = "{0}supervisor/logs".format(self.config.get(Setting.HASSIO_URL))
+        url = self.getSupervisorURL().with_path("supervisor/logs")
         async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
             resp.raise_for_status()
             return await resp.text()
 
     @supervisor_call
     async def getCoreLogs(self):
-        url = "{0}core/logs".format(self.config.get(Setting.HASSIO_URL))
+        url = self.getSupervisorURL().with_path("core/logs")
         async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
             resp.raise_for_status()
             return await resp.text()
@@ -193,22 +210,22 @@ class HaRequests():
             return details["data"]
 
     async def getAddonLogo(self, slug: str):
-        url = "{0}addons/{1}/icon".format(
-            self.config.get(Setting.HASSIO_URL), slug)
+        url = self.getSupervisorURL().with_path("addons/{0}/icon".format(slug))
         async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
             resp.raise_for_status()
             return (resp.headers['Content-Type'], await resp.read())
 
     def _getToken(self):
-        configured = self.config.get(Setting.HASSIO_TOKEN)
+        configured = self.config.get(Setting.SUPERVISOR_TOKEN)
         if configured and len(configured) > 0:
             return configured
+        if "SUPERVISOR_TOKEN" in os.environ:
+            return os.environ.get("SUPERVISOR_TOKEN")
+        # Older versions of the supervisor use a different name for the token.
         return os.environ.get("HASSIO_TOKEN")
 
     def _getHassioHeaders(self):
-        return {
-            'X-Supervisor-Token': self._getToken()
-        }
+        return self._getHaHeaders()
 
     def _getHaHeaders(self):
         return {
@@ -216,20 +233,21 @@ class HaRequests():
         }
 
     @supervisor_call
-    async def _getHassioData(self, url: str) -> Dict[str, Any]:
-        logger.debug("Making Hassio request: " + url)
+    async def _getHassioData(self, url: URL) -> Dict[str, Any]:
+        logger.debug("Making Hassio request: " + str(url))
         return await self._validateHassioReply(await self.session.get(url, headers=self._getHassioHeaders()))
 
-    async def _postHassioData(self, url: str, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
+    async def _postHassioData(self, url: URL, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
         return await self._sendHassioData("post", url, json, file, data, timeout)
 
     @supervisor_call
-    async def _sendHassioData(self, method: str, url: str, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
-        logger.debug("Making Hassio request: " + url)
+    async def _sendHassioData(self, method: str, url: URL, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
+        logger.debug("Making Hassio request: " + str(url))
         return await self._validateHassioReply(await self.session.request(method, url, headers=self._getHassioHeaders(), json=json, data=data, timeout=timeout))
 
     async def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
-        async with self.session.post(self.config.get(Setting.HOME_ASSISTANT_URL) + path, headers=self._getHaHeaders(), json=data) as resp:
+        url = self.getSupervisorURL().with_path("/core/api/" + path)
+        async with self.session.post(url, headers=self._getHaHeaders(), json=data) as resp:
             resp.raise_for_status()
 
     async def sendNotification(self, title: str, message: str) -> None:
@@ -274,11 +292,11 @@ class HaRequests():
 
     @supervisor_call
     async def updateConfig(self, config) -> None:
-        return await self._postHassioData("{0}addons/self/options".format(self.config.get(Setting.HASSIO_URL)), {'options': config})
+        return await self._postHassioData(self.getSupervisorURL().with_path("addons/self/options"), {'options': config})
 
     @supervisor_call
     async def updateAddonOptions(self, slug, options):
-        return await self._postHassioData("{0}addons/{1}/options".format(self.config.get(Setting.HASSIO_URL), slug), options)
+        return await self._postHassioData(self.getSupervisorURL().with_path("addons/{0}/options".format(slug)), options)
 
     async def updateEntity(self, entity, data):
         await self._postHaData("states/" + entity, data)

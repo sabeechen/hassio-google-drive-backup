@@ -94,10 +94,9 @@ class Setting(Enum):
 
     # endpoints
     TOKEN_SERVER_HOST = "token_server_host"
-    HASSIO_URL = "hassio_url"
+    SUPERVISOR_URL = "supervisor_url"
     DRIVE_URL = "drive_url"
-    HOME_ASSISTANT_URL = "home_assistant_url"
-    HASSIO_TOKEN = "hassio_header"
+    SUPERVISOR_TOKEN = "hassio_header"
     DRIVE_HOST_NAME = "drive_host_name"
     DRIVE_REFRESH_URL = "drive_refresh_url"
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
@@ -196,9 +195,8 @@ _DEFAULTS = {
 
     # Remote endpoints
     Setting.TOKEN_SERVER_HOST: "https://habackup.io,https://reliable.habackup.io",
-    Setting.HASSIO_URL: "http://hassio/",
-    Setting.HASSIO_TOKEN: "",
-    Setting.HOME_ASSISTANT_URL: "http://hassio/core/api/",
+    Setting.SUPERVISOR_URL: "",
+    Setting.SUPERVISOR_TOKEN: "",
     Setting.DRIVE_URL: "https://www.googleapis.com",
     Setting.DRIVE_REFRESH_URL: "https://www.googleapis.com/oauth2/v4/token",
     Setting.DRIVE_AUTHORIZE_URL: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -306,9 +304,8 @@ _CONFIG = {
 
     # Remote endpoints
     Setting.TOKEN_SERVER_HOST: "str?",
-    Setting.HASSIO_URL: "url?",
-    Setting.HASSIO_TOKEN: "str?",
-    Setting.HOME_ASSISTANT_URL: "url?",
+    Setting.SUPERVISOR_URL: "url?",
+    Setting.SUPERVISOR_TOKEN: "str?",
     Setting.DRIVE_URL: "url?",
     Setting.DRIVE_REFRESH_URL: "url?",
     Setting.DRIVE_AUTHORIZE_URL: "url?",

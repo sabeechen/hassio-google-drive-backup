@@ -240,11 +240,23 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
     async def get(self) -> Dict[str, HASnapshot]:
         if not self._initialized:
             await self.init()
+        else:
+            # Always ensure the supervisor version is fresh
+            # TODO: remove when we no longer support the "snapshot" query path
+            self.super_info = await self.harequests.supervisorInfo()
         slugs = set()
         retained = []
         snapshots: Dict[str, HASnapshot] = {}
         query = await self.harequests.snapshots()
-        for snapshot in query['snapshots']:
+
+        # Different supervisor version use different names for the list of backups
+        backup_list = []
+        if 'snapshots' in query:
+            backup_list = query['snapshots']
+        if 'backups' in query:
+            backup_list = query['backups']
+
+        for snapshot in backup_list:
             slug = snapshot['slug']
             slugs.add(slug)
             item = await self.harequests.snapshot(slug)

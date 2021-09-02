@@ -8,7 +8,7 @@
     <i class="material-icons prefix">folder_open</i>
     <input type="text" id="{{ id }}" />
     <label for="{{ id }}">Enter your folder ID here, then click "Save"</label>
-    <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload snapshots into. You
+    <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload backups into. You
       can get this id by navigating to the folder in
       <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
       and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
@@ -17,8 +17,8 @@
         href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
       then the Drive ID is 1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
     <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
-      folder you'd like to use.  Doing this gives the addon permission to store snapshots in that folder.</span>
-    <a href="#!" id="choose_folder_button" style="margin-left: 50px" onclick="chooseSnapshotFolder()"
+      folder you'd like to use.  Doing this gives the addon permission to store backups in that folder.</span>
+    <a href="#!" id="choose_folder_button" style="margin-left: 50px" onclick="chooseBackupFolder()"
       class="btn-flat hide-for-custom-creds">
       <i class="material-icons left">open_in_new</i>
       Choose Folder
@@ -42,9 +42,9 @@
 {% endset %}
 {% call macros.errorMessage("Error while backing up", "error_card", "sync_problem", error_card_actions) %}
   <p>
-    The add-on got the error below while trying to sync your snapshots. Some transient errors are expected
+    The add-on got the error below while trying to sync your backups. Some transient errors are expected
     (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your
-    snapshots won't get backed up and the information you see on this page may be stale. If you file an
+    backups won't get uploaded and the information you see on this page may be stale. If you file an
     issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the
     "Download Logs" link below
   </p>
@@ -61,16 +61,16 @@
 
 {% set low_space_actions %}
   <a class="btn-flat" href="#" onclick="sync('low_space'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-  <a class="btn-flat" href="#" onclick="skipLowSpaceWarning(); return false;"><i class="material-icons">add</i>Create snapshot anyway</a>
+  <a class="btn-flat" href="#" onclick="skipLowSpaceWarning(); return false;"><i class="material-icons">add</i>Create backup anyway</a>
 {% endset %}
 {% call macros.errorMessage("Low Disk Space", "low_space", "disc_full", low_space_actions) %}
   <p>
-    It looks like you're low on disk space. The addon won't attempt to create a snapshot until you take
+    It looks like you're low on disk space. The addon won't attempt to create a backup until you take
     action or more space becomes available. It looks like your backup folder in Home Assistant is
     <b id="data_pct_used"></b> full and only has <b id="data_space_remaining"></b> left so creating 
-    another snapshot runs the risk of exhausting the space available.  When Home Assistant runs out of 
+    another backup runs the risk of exhausting the space available.  When Home Assistant runs out of 
     disk space, it can stop responding and become very difficult to fix.  This addon can only estimate 
-    how big the the next snapshot will be based on your most recent one, it can't know how big the snapshot 
+    how big the the next backup will be based on your most recent one, it can't know how big the backup 
     will be until its actually created.
   </p>
   <p>To resolve this you can:</p>
@@ -79,23 +79,23 @@
       Free up space in Home Assistant. Addons like the <a target="_blank" rel="noreferrer" href="https://www.home-assistant.io/addons/configurator/">Configurator</a> can help you see what files might be taking up space.
     </li>
     <li>
-      Make your snapshots smaller (see <a target="_blank" rel="noreferrer" href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive-why-are-my-snapshots-so-big">this tip</a>).
+      Make your backups smaller (see <a target="_blank" rel="noreferrer" href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive-why-are-my-backups-so-big">this tip</a>).
       You can also click the little <i class="material-icons" style="display: inline; font-size: 15px">info</i>
-      next to snapshots below to see which parts of them are taking up the most space.
+      next to backups below to see which parts of them are taking up the most space.
     </li>
     <li>
       Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-      to store fewer snapshots in Home Assistant.
+      to store fewer backups in Home Assistant.
     </li>
     <li>
-      Delete existing snapshots from Home Assistant by clicking <b>"Action"</b> -> <b>"Delete"</b> on snapshots below.  Make sure either you don't need them anymore or they're backed up to Google Drive.
+      Delete existing backups from Home Assistant by clicking <b>"Action"</b> -> <b>"Delete"</b> on backups below.  Make sure either you don't need them anymore or they're uploaded to Google Drive.
     </li>
     <li>
       Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
       and disable "Stop on low disk space".  This will make the addon stop checking disk usage, do so at your own peril.
     </li>
     <li>
-      Click "Create snapshot anyway" to bypass this warning just this one time. This is useful if you're confident that the snapshot actually will fit in the available space. Again, do so at your own peril.
+      Click "Create backup anyway" to bypass this warning just this one time. This is useful if you're confident that the backup actually will fit in the available space. Again, do so at your own peril.
     </li>
   </ul>
 {% endcall %}
@@ -118,18 +118,18 @@
     </li>
     <li>
       Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-      to store fewer snapshots in Google Drive
+      to store fewer backups in Google Drive
     </li>
     <li>
       <a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">Buy more storage</a> from Google
     </li>
     <li>
-      Make your snapshots smaller (see <a href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-snapshots-so-big" target="_blank" rel="noreferrer">this tip</a>)
+      Make your backups smaller (see <a href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive--why-are-my-backups-so-big" target="_blank" rel="noreferrer">this tip</a>)
     </li>
 {% endcall %}
 
 {% call macros.errorMessage("Couldn't Log in with Google", "creds_bad", "error") %}
-  <p>Google Drive rejected your credentials. Your snapshots will not be backed up until this is resolved.</p>
+  <p>Google Drive rejected your credentials. Your backups will not be uploaded until this is resolved.</p>
   <p>This can happen if:</p>
   <ul class="browser-default">
     <li>You revoked the add-on's access in your Google account settings.</li>
@@ -143,16 +143,16 @@
 {% set delete_error_actions %}
   <a class="btn-flat" href="#" onclick="sync('delete_error'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
-{% call macros.errorMessage("Couldn't delete old snapshots in Home Assistant", "delete_error", "delete_forever", delete_error_actions) %}
+{% call macros.errorMessage("Couldn't delete old backups in Home Assistant", "delete_error", "delete_forever", delete_error_actions) %}
   <p>
-    The add-on ran into an error (HTTP 400) trying to delete your oldest snapshot. This can happen
-    sometimes (especially if you just installed the add-on) when Home Assistant's cache of your existing snapshots
+    The add-on ran into an error (HTTP 400) trying to delete your oldest backup. This can happen
+    sometimes (especially if you just installed the add-on) when Home Assistant's cache of your existing backups
     is out of sync. The add-on can't continue until this is resolved.
   </p>
   <p>To resolve this, you can try:</p>
   <ul class="browser-default">
     <li>
-      Refreshing your snapshots by going to the snapshot page in Home Assistant and clicking the refresh icon in the top right.
+      Refreshing your backups by going to the "Backups" page in Home Assistant and clicking the refresh icon in the top right.
     </li>
     <li>Restarting the machine Home Assistant runs on.</li>
   </ul>
@@ -168,7 +168,7 @@
 {% endset %}
 {% call macros.errorMessage("Couldn't Reach Google Drive (DNS error)", "google_dns", "cloud_off", google_dns_actions) %}
   <p>
-    The add-on couldn't resolve Google Drive's server address. Snapshots can't be backed up
+    The add-on couldn't resolve Google Drive's server address. Backups can't be uploaded
     without being able to reach Google Drive.
   </p>
   <p>Please ensure:</p>
@@ -203,8 +203,8 @@
 {% call macros.errorMessage("Google Drive Connection Timeout", "google_timeout", "cloud_off", google_timeout_actions) %}
   <p>
     The connection timed out or was closed unexpectedly while trying to communicate with Google Drive.
-    Snapshots can't be backed up without being able to reach Google Drive reliably. This can happen transiently from time to
-    time and the addon will continue to attempt to sync your snapshots. This problem almost always resolves itself after some time.
+    Backups can't be uploaded without being able to reach Google Drive reliably. This can happen transiently from time to
+    time and the addon will continue to attempt to sync your backups. This problem almost always resolves itself after some time.
   </p>
   <p>Please ensure:</p>
   <ul class="browser-default">
@@ -239,7 +239,7 @@
 {% endset %}
 {% call macros.errorMessage("Can't Connect to Google Drive", "google_cant_connect", "cloud_off", google_cant_connect_actions) %}
   <p>
-    Google Drive refused an attempt to connect with it. Snapshots can't be backed up without being able
+    Google Drive refused an attempt to connect with it. Backups can't be uploaded without being able
     to reach Google Drive.
   </p>
   <p>Please ensure:</p>
@@ -273,9 +273,9 @@
 {% set password_key_invalid_actions %}
   <a class="btn-flat" href="#" onclick="sync('password_key_invalid'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
-{% call macros.errorMessage("Invalid Snapshot Password", "password_key_invalid", "vpn_key", password_key_invalid_actions) %}
+{% call macros.errorMessage("Invalid Backup Password", "password_key_invalid", "vpn_key", password_key_invalid_actions) %}
   <p>
-    The add-on couldn't find your snapshot password in your secrets.yaml file. Snapshots can't be created
+    The add-on couldn't find your backup password in your secrets.yaml file. Backups can't be created
     until you either configure a valid password or remove it.
   </p>
   <p>This can happen if:</p>
@@ -286,23 +286,23 @@
   <p>
     Please review your <a href="#!" onclick="loadSettings()"><i class="material-icons"
         style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-    to ensure you've set the snapshot password you intended, then sync again.
+    to ensure you've set the backup password you intended, then sync again.
   </p>
 {% endcall %}
 
-{% set snapshot_in_progress_actions %}
-  <a class="btn-flat" href="#" onclick="sync('snapshot_in_progress'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
+{% set backup_in_progress_actions %}
+  <a class="btn-flat" href="#" onclick="sync('backup_in_progress'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
-{% call macros.errorMessage("Snapshot Already in Progress", "snapshot_in_progress", "settings_backup_restore", snapshot_in_progress_actions) %}
-  <p>The add-on couldn't create a snapshot on schedule because one is already in progress. Home Assistant can
-    only create one snapshot at a time. This can happen if:</p>
+{% call macros.errorMessage("Backup Already in Progress", "backup_in_progress", "settings_backup_restore", backup_in_progress_actions) %}
+  <p>The add-on couldn't create a backup on schedule because one is already in progress. Home Assistant can
+    only create one backup at a time. This can happen if:</p>
   <ul class="browser-default">
-    <li>The add-on was started while a snapshot was already in progress</li>
-    <li>A snapshot was started outside of the add-on, eg manually from the supervisor snapshots page.</li>
+    <li>The add-on was started while a backup was already in progress</li>
+    <li>A backup was started outside of the add-on, eg manually from the supervisor Backups page.</li>
   </ul>
   <p>Typically you don't need to do anything to resolve this, as the add-on will pick up again once the
-    snapshot in progress finishes.
-    If you are certain no snapshot is in progress already or this error sticks around, you can try
+    backup in progress finishes.
+    If you are certain no backup is in progress already or this error sticks around, you can try
     restarting the addon or Home Assistant's host machine.</p>
 {% endcall %}
 
@@ -310,18 +310,18 @@
   <a class="btn-flat" href="#" onclick="allowDeletion('false'); return false;"><i class="material-icons">delete</i>Allow Deletion</a>
   <a class="btn-flat" href="#" onclick="allowDeletion('true'); return false;"><i class="material-icons">delete_forever</i>Never Ask again</a>
 {% endset %}
-{% call macros.errorMessage("Attempting to Delete Multiple Snapshots", "multiple_deletes", "delete_forever", multiple_deletes_actions) %}
-  <p>The add-on attempted to delete <span id="data_GoogleDrive">(?)</span> snapshot(s) from Google
-    Drive and <span id="data_HomeAssistant">(?)</span> snapshot(s) from Home Assistant.
-    Under normal circumstance, the add-on will only delete one snapshot at a time (the oldest).
-    This warning is produced to prevent the add-on from accidentally deleting your history of snapshots.
-    This is normal if you recently lowered the number of snapshots to keep in Google Drive or Home
+{% call macros.errorMessage("Attempting to Delete Multiple Backups", "multiple_deletes", "delete_forever", multiple_deletes_actions) %}
+  <p>The add-on attempted to delete <span id="data_GoogleDrive">(?)</span> backup(s) from Google
+    Drive and <span id="data_HomeAssistant">(?)</span> backup(s) from Home Assistant.
+    Under normal circumstance, the add-on will only delete one backup at a time (the oldest).
+    This warning is produced to prevent the add-on from accidentally deleting your history of backups.
+    This is normal if you recently lowered the number of backups to keep in Google Drive or Home
     Assistant.</p>
   <p>To resolve this you can:</p>
   <ul class="browser-default">
     <li>
       Review the <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-      and increase the number of snapshots you keep.
+      and increase the number of backups you keep.
     </li>
     <li>Click "Allow Deletion" below to permit these deletions to happen this one time.</li>
     <li>Click "Never ask again" below to permit the deletes this time and in the future (not recommended)
@@ -333,7 +333,7 @@
   <a class="btn-flat" href="#" onclick="sync('google_server_error'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Google Server Error", "google_server_error", "cloud_off", google_server_error_actions) %}
-  <p>Google returned a server error (HTTP code 500) while trying to backup your snapshots.</p>
+  <p>Google returned a server error (HTTP code 500) while trying to backup your backups.</p>
   <p>This happens sometimes for reasons beyond anyone's control and almost always the problem goes away on
     its own. The add-on will attempt uploading again soon, but you can also click "Try Syncing Again"
     below to make it retry now.</p>
@@ -353,10 +353,10 @@
   <a class="btn-flat" href="#" onclick="sync('google_session_expired'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Google Session Expired", "google_session_expired", "cloud_off", google_session_expired_actions) %}
-  <p>Google returned a server error (HTTP code 404) while trying to upload your snapshots.</p>
+  <p>Google returned a server error (HTTP code 404) while trying to upload your backups.</p>
   <p>In most cases, this indicates that your upload took too long to upload. According to Google's
     documentation if an upload takes longer than a week then it will be forcibly cancelled and return this
-    error. This can happen if your internet is very slow or your snapshots are very large, however the 
+    error. This can happen if your internet is very slow or your backups are very large, however the 
     developer of this addon suspects this can happen in more common circumstances. If the below options don't
     help, please file an issue on <a onclick="bugReport()">GitHub</a> with as much
     detail as you can stomach to help him look into it.
@@ -369,7 +369,7 @@
         account</a> and upload files without problems.</li>
     <li>Ensuring your internet connection is reasonably fast by doing a <a target="_blank" rel="noreferrer"
         href="https://www.google.com/search?q=speed+test">speed test</a></li>
-    <li>Making your snapshots smaller. Usually snapshots are large because of a huge sensor database. You
+    <li>Making your backups smaller. Usually backups are large because of a huge sensor database. You
       can keep a smaller history by setting up the <a target="_blank" rel="noreferrer"
         href="https://www.home-assistant.io/components/recorder/">recorder component</a> purge settings in
       Home Assistant</li>
@@ -380,22 +380,22 @@
 
 {% set existing_backup_folder_actions %}
   <a class="btn-flat" href="#" onclick="resolvefolder('true')"><i class="material-icons">folder</i>Use the folder</a>
-  <a class="btn-flat" href="#" onclick="chooseSnapshotFolder()"><i class="material-icons">open_in_new</i>Choose a different folder</a>
+  <a class="btn-flat" href="#" onclick="chooseBackupFolder()"><i class="material-icons">open_in_new</i>Choose a different folder</a>
   <a class="btn-flat" href="#" onclick="resolvefolder('false')"><i class="material-icons">create_new_folder</i>Create a new folder</a>
 {% endset %}
 {% call macros.errorMessage("Existing Backup Folder Found", "existing_backup_folder", "folder_special", existing_backup_folder_actions) %}
-  <p>The add-on found a snapshot folder named "<b><span id="data_existing_name"></span></b>" in Google
-    Drive that might already have snapshots
-    in it. This is normal if you've used this addon before, but you'll need to decide where snapshots
+  <p>The add-on found a backup folder named "<b><span id="data_existing_name"></span></b>" in Google
+    Drive that might already have backups
+    in it. This is normal if you've used this addon before, but you'll need to decide where backups
     should go before this will start backing up again. <a id="data_existing_url" target="_blank">Click
       here</a> to see the folder contents in Google Drive.</p>
   <p>To resolve this you can:</p>
   <ul class="browser-default">
-    <li>"Use the folder" and merge in snapshots from this Home Assistant instance. If this
-      instance has newer snapshots, then some of the snapshots in Google Drive might get deleted to make
+    <li>"Use the folder" and merge in backups from this Home Assistant instance. If this
+      instance has newer backups, then some of the backups in Google Drive might get deleted to make
       room for these newer ones (this depends on your settings). You probably want this option if you just
       reinstalled the addon.</li>
-    <li>"Choose a different folder" to store snapshots in, ignoring the existing folder. You probably want
+    <li>"Choose a different folder" to store backups in, ignoring the existing folder. You probably want
       his option if you have multiple Home Assistant instances that should all back up to their
       own folder.</li>
     <li>Or "create a new folder" to automatically create a folder and ignore the existing one. The new folder will be created
@@ -405,18 +405,18 @@
     Drive account,
     its recommended that you use a different folder for each instance. Otherwise they'll delete
     eachother's
-    snapshots!</p>
+    backups!</p>
 {% endcall %}
 
 {% set backup_folder_missing_actions %}
   <a class="btn-flat" href="#" onclick="loadSettings()"><i class="material-icons">settings</i>Open settings</a>
 {% endset %}
 {% call macros.errorMessage("Please choose a backup folder", "backup_folder_missing", "folder_special", backup_folder_missing_actions) %}
-  <p class="hide-for-custom-creds">You've choosen to backup your snapshots to a folder of your choosing.
+  <p class="hide-for-custom-creds">You've choosen to upload your backups to a folder of your choosing.
     Click the link below to open a new window and select the folder in Google Drive you'd like to store
-    your snapshot in.</p>
-  <p class="hide-for-default-creds">You've choosen to backup your snapshots to a folder of your choosing.
-    Please navigate to the addon settings to specify a folder to store snapshots in.</p>
+    your backups in.</p>
+  <p class="hide-for-default-creds">You've choosen to upload your backups to a folder of your choosing.
+    Please navigate to the addon settings to specify a folder to store backups in.</p>
     {{ chooseFolder(id="choose_folder_folder_missing") }}
   <ul class="browser-default">
     <li>
@@ -426,7 +426,7 @@
           settings</a> and change your preference.</p>
     </li>
     <li>
-      Your snapshots in Home Assistant will be re-uploaded to the new folder. If you already have them in
+      Your backups in Home Assistant will be re-uploaded to the new folder. If you already have them in
       an existing folder in Google Drive and you'd like to avoid this, please move them in manually before
       selecting the folder.
     </li>
@@ -434,7 +434,7 @@
       <p>If you run multiple instances of
         Home Assistant with this addon using the same Google Drive account, its recommended that you use a
         different folder
-        for each instance. Otherwise they'll delete eachother's snapshots!</p>
+        for each instance. Otherwise they'll delete eachother's backups!</p>
     </li>
   </ul>
   <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to
@@ -447,9 +447,8 @@
   <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>Try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Couldn't use your backup folder", "backup_folder_inaccessible", "sync_problem", backup_folder_inaccessible_actions) %}
-  <p>The addon couldn't use the folder you chose for storing snapshots. The addon can't backup your
-    snapshots
-    until you resolve this. This can happen if:
+  <p>The addon couldn't use the folder you chose for storing backups. The addon can't backup your
+    backups until you resolve this. This can happen if:
     <ul class="browser-default">
     <li>The folder was deleted</li>
     <li>You lost permissions on the folder</li> 
@@ -463,19 +462,19 @@
   </p>
   <ul class="browser-default">
     <li class="hide-for-custom-creds">
-      <p>Use the link below to choose a new folder to store snapshots in.
+      <p>Use the link below to choose a new folder to store backups in.
         {{ chooseFolder(id="choose_folder_folder_inaccessible") }}
       </p>
     </li>
     <li class="hide-for-default-creds">
       <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
             style="display: inline; font-size: 15px">settings</i> add-on
-          settings</a> and, enter a valid "Snapshot Folder Id".</p>
+          settings</a> and, enter a valid "Backup Folder Id".</p>
     </li>
     <li>
       <p>Open your <a href="#!" onclick="loadSettings()"><i class="material-icons"
             style="display: inline; font-size: 15px">settings</i> add-on
-          settings</a> and deselect "Manually specify the snapshot folder". The addon will automatically
+          settings</a> and deselect "Manually specify the backup folder". The addon will automatically
         create a new folder for you.</p>
     </li>
     <li>
@@ -502,7 +501,7 @@
   </p>
   <ul class="browser-default">
     <li>
-      <p>A pending snapshot can't be stopped once its started, because its creation is managed by Home Assistant.  Being "Paused" only stops the addon from creating new snapshots and syncing them with Google Drive.</p>
+      <p>A pending backup can't be stopped once its started, because its creation is managed by Home Assistant.  Being "Paused" only stops the addon from creating new backups and syncing them with Google Drive.</p>
     </li>
     <li>
       <p>You can resume by clicking the link below or just waiting.</p>
@@ -565,7 +564,7 @@
 {% call macros.errorMessage("Unable to Reach Home Assistant Supervisor", "supervisor_connection", "error", supervisor_connection_actions) %}
   <p>
     The addon was unable to connect to the Home Assistant Supervisor.  This addon requires the supervisor to be running to create 
-    snapshots, load configuration, etc.  Without the supervisor the addon will not be able to do anything useful.  Typically this 
+    backups, load configuration, etc.  Without the supervisor the addon will not be able to do anything useful.  Typically this 
     should never happen, and indicates that something is wrong with your Home Assistant installation.
   </p>
   <p>To resolve this you can try:</p>
@@ -582,7 +581,7 @@
 {% call macros.errorMessage("Unable to Talk to the Home Assistant Supervisor", "supervisor_permission", "error", supervisor_permission_actions) %}
   <p>
     The addon was unable to communicate with the Supervisor because it said the addon is unauthorized.  This addon 
-    must communicate with the supervisor to create snapshots, load configuration, etc.  Without the supervisor the 
+    must communicate with the supervisor to create backups, load configuration, etc.  Without the supervisor the 
     addon will not be able to do anything useful.  Typically this should never happen, and indicates that something
     is wrong with your Home Assistant installation.
   </p>
@@ -601,7 +600,7 @@
 {% call macros.errorMessage("A Request to the Supervisor Timed Out", "supervisor_timeout", "error", supervisor_timeout_actions) %}
   <p>
     The addon was unable to communicate with the Supervisor because it timed out.  This addon 
-    must communicate with the supervisor to create snapshots, load configuration, etc.  Without the supervisor the 
+    must communicate with the supervisor to create backups, load configuration, etc.  Without the supervisor the 
     addon will not be able to do anything useful. This usually resolves itself after the addon retrys, but if 
     you see this error stick around for a while you can try
   </p>
@@ -619,7 +618,7 @@
 {% call macros.errorMessage("The Supervisor Returned an Unexpected Response", "supervisor_unexpected", "error", supervisor_unexpected_actions) %}
   <p>
     The addon was unable to communicate with the Supervisor because it gave back an unreadable response.  
-    This addon must communicate with the supervisor to create snapshots, load configuration, etc.  Without 
+    This addon must communicate with the supervisor to create backups, load configuration, etc.  Without 
     the supervisor the addon will not be able to do anything useful. This usually 
     resolves itself after the addon retrys, but if you see this error stick around for a while you can try:
   </p>
@@ -654,7 +653,7 @@
 {% call macros.errorMessage("Google drive Returned an Unexpected Response", "google_unexpected", "error", google_unexpected_actions) %}
   <p>
     The addon was unable to communicate with Google Drive because it gave back an unreadable response.  
-    Withotu beign able to communicate with google drive, the addon will nto be able to back up snapshots to the cloud.
+    Withotu beign able to communicate with google drive, the addon will nto be able to back up backups to the cloud.
     This usually resolves itself after the addon retrys, but if you see this error stick around for a while you can try:
   </p>
   <ul class="browser-default">
@@ -668,7 +667,7 @@
   <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>try syncing again</a>
 {% endset %}
 {% call macros.errorMessage("Please log in to Google Drive Manually", "log_in_to_drive", "account_circle", log_in_to_drive_actions) %}
-  <p>The addon couldn't backup your snapshots because it looks like it you've never logged in 
+  <p>The addon couldn't backup your backups because it looks like it you've never logged in 
     to the <a href="https://drive.google.com" target="_blank">Google Drive website</a> before. Doing this at 
     least once is required for applications like this to use Google Drive.
   </p>

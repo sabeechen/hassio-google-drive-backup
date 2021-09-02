@@ -103,7 +103,7 @@ async def test_folder_creation(drive, time, config):
 
     item = await drive.drivebackend.get(folderId)
     assert not item["trashed"]
-    assert item["name"] == "Home Assistant Snapshots"
+    assert item["name"] == "Home Assistant Backups"
     assert item["mimeType"] == FOLDER_MIME_TYPE
     assert item["appProperties"]['backup_folder'] == 'true'
 
@@ -550,7 +550,7 @@ async def test_folder_missing_on_upload(time, drive: DriveSource, config: Config
     await drive.get()
 
     # Require a specified folder so we don't query
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, True)
 
     # Delete the folder
     await drive.drivebackend.delete(await drive.getFolderId())
@@ -569,7 +569,7 @@ async def test_folder_error_on_upload_lost_permission(time, drive: DriveSource, 
     await drive.get()
 
     # Require a specified folder so we don't query
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, True)
 
     # Make the folder inaccessible
     google.lostPermission.append(await drive.getFolderId())
@@ -586,7 +586,7 @@ async def test_folder_error_on_upload_lost_permission_custom_client(time, drive:
     await drive.get()
 
     # Require a specified folder so we don't query
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, True)
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, True)
 
     google._client_id_hack = config.get(Setting.DEFAULT_DRIVE_CLIENT_ID)
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something-else")
@@ -606,7 +606,7 @@ async def test_folder_error_on_query_lost_permission(time, drive: DriveSource, c
     await drive.get()
 
     # Require a specified folder so we don't query
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, "true")
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Make the folder inaccessible
@@ -623,7 +623,7 @@ async def test_folder_error_on_query_deleted(time, drive: DriveSource, config: C
     await drive.get()
 
     # Require a specified folder so we don't query
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, "true")
     config.override(Setting.DEFAULT_DRIVE_CLIENT_ID, "something")
 
     # Delete the folder
@@ -636,7 +636,7 @@ async def test_folder_error_on_query_deleted(time, drive: DriveSource, config: C
 
 @pytest.mark.asyncio
 async def test_backup_folder_not_specified(time, drive: DriveSource, config: Config, server, snapshot_helper):
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, "true")
 
     with pytest.raises(BackupFolderMissingError):
         await drive.get()
@@ -656,7 +656,7 @@ async def test_backup_folder_not_specified(time, drive: DriveSource, config: Con
 async def test_folder_invalid_when_specified(time, drive: DriveSource, config: Config, server):
     await drive.get()
 
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, "true")
     await drive.drivebackend.update(await drive.getFolderId(), {"trashed": True})
 
     time.advanceDay()
@@ -667,7 +667,7 @@ async def test_folder_invalid_when_specified(time, drive: DriveSource, config: C
 
 @pytest.mark.asyncio
 async def test_no_folder_when_required(time, drive: DriveSource, config: Config):
-    config.override(Setting.SPECIFY_SNAPSHOT_FOLDER, "true")
+    config.override(Setting.SPECIFY_BACKUP_FOLDER, "true")
     with pytest.raises(BackupFolderMissingError):
         await drive.get()
 

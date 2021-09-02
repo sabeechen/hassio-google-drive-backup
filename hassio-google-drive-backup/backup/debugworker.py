@@ -152,7 +152,7 @@ class DebugWorker(Worker):
             report["arch"] = "Uninitialized"
             report["timezone"] = "Uninitialized"
             report["ha_version"] = "Uninitialized"
-        report["snapshots"] = self.coord.buildSnapshotMetrics()
+        report["backups"] = self.coord.buildBackupMetrics()
         return report
 
     async def buildBugReportData(self, error):

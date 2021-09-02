@@ -1,5 +1,5 @@
 # flake8: noqa
-from .config import Config, GenConfig
+from .config import Config, GenConfig, UPGRADE_OPTIONS
 from .settings import Setting, _DEFAULTS, _VALIDATORS, _LOOKUP, VERSION, PRIVATE, isStaging
 from .createoptions import CreateOptions
 from .boolvalidator import BoolValidator

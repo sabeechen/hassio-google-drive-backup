@@ -5,7 +5,7 @@ import pytest
 from pytest import raises
 
 from backup.config import Config, Setting, CreateOptions
-from backup.exceptions import LogicError, LowSpaceError, NoSnapshot, PleaseWait, UserCancelledError
+from backup.exceptions import LogicError, LowSpaceError, NoBackup, PleaseWait, UserCancelledError
 from backup.util import GlobalInfo
 from backup.model import Coordinator, Model, Snapshot
 from .conftest import FsFaker
@@ -135,10 +135,10 @@ async def test_delete(coord: Coordinator, snapshot, source, dest):
 
 @pytest.mark.asyncio
 async def test_delete_errors(coord: Coordinator, source, dest, snapshot):
-    with raises(NoSnapshot):
+    with raises(NoBackup):
         await coord.delete([source.name()], "badslug")
     bad_source = HelperTestSource("bad")
-    with raises(NoSnapshot):
+    with raises(NoBackup):
         await coord.delete([bad_source.name()], snapshot.slug())
 
 
@@ -156,10 +156,10 @@ async def test_retain(coord: Coordinator, source, dest, snapshot):
 
 @pytest.mark.asyncio
 async def test_retain_errors(coord: Coordinator, source, dest, snapshot):
-    with raises(NoSnapshot):
+    with raises(NoBackup):
         await coord.retain({source.name(): True}, "badslug")
     bad_source = HelperTestSource("bad")
-    with raises(NoSnapshot):
+    with raises(NoBackup):
         await coord.delete({bad_source.name(): True}, snapshot.slug())
 
 
@@ -253,11 +253,11 @@ async def test_upload(coord: Coordinator, source: HelperTestSource, dest: Helper
     with raises(LogicError):
         await coord.uploadSnapshot(snapshot.slug())
 
-    with raises(NoSnapshot):
+    with raises(NoBackup):
         await coord.uploadSnapshot("bad slug")
 
     await coord.delete([dest.name()], snapshot.slug())
-    with raises(NoSnapshot):
+    with raises(NoBackup):
         await coord.uploadSnapshot(snapshot.slug())
 
 
@@ -267,14 +267,14 @@ async def test_download(coord: Coordinator, source, dest, snapshot):
     await coord.delete([source.name()], snapshot.slug())
     await coord.download(snapshot.slug())
 
-    with raises(NoSnapshot):
+    with raises(NoBackup):
         await coord.download("bad slug")
 
 
 @pytest.mark.asyncio
 async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, snapshot, time: FakeTime, simple_config: Config):
     assert coord.check()
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)
 
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
@@ -303,7 +303,7 @@ async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest
     assert not coord.check()
 
     # if the next snapshot is less that 6 hours from the last one, that that shoudl be when we sync
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1.0 / 24.0)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1.0 / 24.0)
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=1)
     assert not coord.check()
 
@@ -376,8 +376,8 @@ async def test_working_through_upload(coord: Coordinator, global_info: GlobalInf
 @pytest.mark.asyncio
 async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Model, dest, source, simple_config: Config):
     time.setTimeZone("Europe/Stockholm")
-    simple_config.override(Setting.SNAPSHOT_TIME_OF_DAY, "12:00")
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "12:00")
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
 
     source.setMax(10)
     source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 18, 5)))
@@ -427,12 +427,12 @@ async def test_schedule_snapshot_next_sync_attempt(coord: Coordinator, model, so
     """
     Next snapshot is before max sync interval is reached
     """
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
 
     time.setTimeZone("Europe/Stockholm")
-    simple_config.override(Setting.SNAPSHOT_TIME_OF_DAY, "03:23")
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
 
     source.setMax(10)
     source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 3, 33)))
@@ -450,12 +450,12 @@ async def test_max_sync_interval_next_sync_attempt(coord: Coordinator, model, so
     """
     Next snapshot is after max sync interval is reached
     """
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
 
     time.setTimeZone("Europe/Stockholm")
-    simple_config.override(Setting.SNAPSHOT_TIME_OF_DAY, "03:23")
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
 
     source.setMax(10)
     source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 3, 33)))

@@ -1,12 +1,12 @@
 <div id="deletemodal" class="modal">
   <script type="text/javascript">
     function renderDeleteDialog(target) {
-      var snapshot = $(target).data('snapshot');
-      var slug = snapshot['slug'];
-      var sources = snapshot['sources'];
+      var backup = $(target).data('snapshot');
+      var slug = backup['slug'];
+      var sources = backup['sources'];
       let list = $('#delete_sources');
       list.html('');
-      for (let source of snapshot.sources) {
+      for (let source of backup.sources) {
         let template = `<li>
           <label>
             <input type="checkbox" name="{id}" id="{id}" data-sourcename='{id}' class="filled-in checkbox-ha" onchange="deleteOneChanged(this);" />
@@ -18,7 +18,7 @@
         template = template.replaceAll("{name}", sourceToName(source.key));
         list.append(template);
       }
-      if (snapshot.sources.length > 1) {
+      if (backup.sources.length > 1) {
         $("#delete_multiple_text").show();
         $("#delete_single_text").hide();
         $("#delete_button").addClass("disabled");
@@ -33,10 +33,10 @@
         $("#delete_everywhere_input").hide();
         list.hide();
       }
-      $("#delete_button").attr("onClick", "doDeleteSnapshot('" + slug + "')");
+      $("#delete_button").attr("onClick", "doDeleteBackup('" + slug + "')");
     }
 
-    function doDeleteSnapshot(slug) {
+    function doDeleteBackup(slug) {
       sources = []
       $("input", $("#delete_sources")).each(function () {
         let input = $(this);
@@ -46,7 +46,7 @@
       });
 
       //console.log("Delete: " + slug + " Drive: " + drive + " HA: " + ha)
-      message = "Deleting snapshot from ";
+      message = "Deleting backup from ";
       if (sources.length == 1) {
         message += sourceToName(sources[0])
       } else if (sources.length > 1) {
@@ -86,10 +86,10 @@
   <div class="modal-content">
     <h4>Are you sure?</h4>
     <p id="delete_multiple_text">
-      Choose below where you'd like to delete snapshots from, or check "Delete Everywhere" to delete the snapshot from everywhere.  Be careful!  There is no way to recover a snapshot once you've deleted it.
+      Choose below where you'd like to delete backup from, or check "Delete Everywhere" to delete the backup from everywhere.  Be careful!  There is no way to recover a backup once you've deleted it.
     </p>
     <p id="delete_single_text">
-       Be careful!  There is no way to recover a snapshot once you've deleted it and it doesn't look like this snapshot is backed up anywhere else.
+       Be careful!  There is no way to recover a backup once you've deleted it and it doesn't look like this backup is uploaded anywhere else.
     </p>
     <label id="delete_everywhere_input">
       <input type="checkbox" name="delete_dialog_everywhere" id="delete_dialog_everywhere" class="filled-in checkbox-ha" onchange="deleteEverywhereChanged(this)" />

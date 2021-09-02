@@ -17,7 +17,7 @@ from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Snapshot, AbstractSnapshot
 from backup.exceptions import KnownError, ensureKey
 from backup.util import GlobalInfo, Estimator, File, DataCache
-from backup.ha import HaSource, PendingSnapshot, SNAPSHOT_NAME_KEYS, HaRequests
+from backup.ha import HaSource, PendingSnapshot, BACKUP_NAME_KEYS, HaRequests
 from backup.ha import Password
 from backup.time import Time
 from backup.worker import Trigger
@@ -90,43 +90,43 @@ class UiServer(Trigger, Startable):
         status['folder_id'] = self.folder_finder.getCachedFolder()
         status['snapshots'] = []
         snapshots = self._coord.snapshots()
-        for snapshot in snapshots:
-            status['snapshots'].append(self.getSnapshotDetails(snapshot))
+        for backup in snapshots:
+            status['snapshots'].append(self.getBackupDetails(backup))
         status['ha_url_base'] = self._ha_source.getHomeAssistantUrl()
-        status['restore_snapshot_path'] = "hassio/snapshots"
+        status['restore_backup_path'] = "hassio/backups"
         status['ask_error_reports'] = not self.config.isExplicit(
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = False
         status['cred_version'] = self._global_info.credVersion
         next = self._coord.nextSnapshotTime()
         if next is None:
-            status['next_snapshot_text'] = "Disabled"
-            status['next_snapshot_machine'] = ""
-            status['next_snapshot_detail'] = "Disabled"
+            status['next_backup_text'] = "Disabled"
+            status['next_backup_machine'] = ""
+            status['next_backup_detail'] = "Disabled"
         elif (next < self._time.now()):
-            status['next_snapshot_text'] = self._time.formatDelta(
+            status['next_backup_text'] = self._time.formatDelta(
                 self._time.now())
-            status['next_snapshot_machine'] = self._time.asRfc3339String(
+            status['next_backup_machine'] = self._time.asRfc3339String(
                 self._time.now())
-            status['next_snapshot_detail'] = self._time.toLocal(
+            status['next_backup_detail'] = self._time.toLocal(
                 self._time.now()).strftime("%c")
         else:
-            status['next_snapshot_text'] = self._time.formatDelta(next)
-            status['next_snapshot_machine'] = self._time.asRfc3339String(next)
-            status['next_snapshot_detail'] = self._time.toLocal(
+            status['next_backup_text'] = self._time.formatDelta(next)
+            status['next_backup_machine'] = self._time.asRfc3339String(next)
+            status['next_backup_detail'] = self._time.toLocal(
                 next).strftime("%c")
         not_ignored = list(filter(lambda s: not s.ignore(), self._coord.snapshots()))
         if len(not_ignored) > 0:
             latest = not_ignored[len(not_ignored) - 1].date()
-            status['last_snapshot_text'] = self._time.formatDelta(latest)
-            status['last_snapshot_machine'] = self._time.asRfc3339String(
+            status['last_backup_text'] = self._time.formatDelta(latest)
+            status['last_backup_machine'] = self._time.asRfc3339String(
                 latest)
-            status['last_snapshot_detail'] = self._time.toLocal(
+            status['last_backup_detail'] = self._time.toLocal(
                 latest).strftime("%c")
         else:
-            status['last_snapshot_text'] = "Never"
-            status['last_snapshot_machine'] = ""
-            status['last_snapshot_detail'] = "Never"
+            status['last_backup_text'] = "Never"
+            status['last_backup_machine'] = ""
+            status['last_backup_detail'] = "Never"
 
         status['last_error'] = None
         if self._global_info._last_error is not None and self._global_info.isErrorSuppressed():
@@ -137,9 +137,9 @@ class UiServer(Trigger, Startable):
         status["syncing"] = self._coord.isSyncing()
         status["ignore_sync_error"] = self._coord.isWorkingThroughUpload()
         status["firstSync"] = self._global_info._first_sync
-        status["snapshot_name_template"] = self.config.get(
-            Setting.SNAPSHOT_NAME)
-        status['sources'] = self._coord.buildSnapshotMetrics()
+        status["backup_name_template"] = self.config.get(
+            Setting.BACKUP_NAME)
+        status['sources'] = self._coord.buildBackupMetrics()
         status['authenticate_url'] = str(self.config.getPreferredTokenUrl("/drive/authorize"))
         choose_url = self.config.getPreferredTokenUrl('/drive/picker').with_query({
             "bg": self.config.get(Setting.BACKGROUND_COLOR),
@@ -152,16 +152,16 @@ class UiServer(Trigger, Startable):
             Setting.ENABLE_DRIVE_UPLOAD)
         status['is_custom_creds'] = self._coord._model.dest.isCustomCreds()
         status['is_specify_folder'] = self.config.get(
-            Setting.SPECIFY_SNAPSHOT_FOLDER)
-        status['snapshot_cooldown_active'] = self._coord.isWaitingForStartup()
+            Setting.SPECIFY_BACKUP_FOLDER)
+        status['backup_cooldown_active'] = self._coord.isWaitingForStartup()
         name_keys = {}
-        for key in SNAPSHOT_NAME_KEYS:
-            name_keys[key] = SNAPSHOT_NAME_KEYS[key](
+        for key in BACKUP_NAME_KEYS:
+            name_keys[key] = BACKUP_NAME_KEYS[key](
                 "Full", self._time.now(), self._ha_source.getHostInfo())
-        status['snapshot_name_keys'] = name_keys
+        status['backup_name_keys'] = name_keys
 
         # Indicate the user should be notified for a specific situation where:
-        #  - They recently turned on "IGNORE_OTHER_SNAPSHOTS"
+        #  - They recently turned on "IGNORE_OTHER_BACKUPS"
         #  - They have ignored snapshots created before upgrading to v0.104.0 or higher.
         upgrade_date = self._data_cache.getUpgradeTime(VERSION_CREATION_TRACKING)
         ignored = len(list(filter(lambda s: s.date() < upgrade_date, filter(Snapshot.ignore, self._coord.snapshots()))))
@@ -171,41 +171,41 @@ class UiServer(Trigger, Startable):
     async def bootstrap(self, request) -> Dict[Any, Any]:
         return web.Response(body="bootstrap_update_data = {0};".format(json.dumps(await self.buildStatusInfo(), indent=4)), content_type="text/javascript")
 
-    def getSnapshotDetails(self, snapshot: Snapshot):
-        ha = snapshot.getSource(SOURCE_HA)
+    def getBackupDetails(self, backup: Snapshot):
+        ha = backup.getSource(SOURCE_HA)
         sources = []
-        for source_key in snapshot.sources:
-            source: AbstractSnapshot = snapshot.sources[source_key]
+        for source_key in backup.sources:
+            source: AbstractSnapshot = backup.sources[source_key]
             sources.append({
                 'name': source.name(),
                 'key': source_key,
                 'size': source.size(),
                 'retained': source.retained(),
-                'delete_next': snapshot.getPurges().get(source_key) or False,
-                'slug': snapshot.slug(),
+                'delete_next': backup.getPurges().get(source_key) or False,
+                'slug': backup.slug(),
                 'ignored': source.ignore(),
             })
 
         return {
-            'name': snapshot.name(),
-            'slug': snapshot.slug(),
-            'size': snapshot.sizeString(),
-            'status': snapshot.status(),
-            'date': self._time.toLocal(snapshot.date()).strftime("%c"),
-            'createdAt': self._time.formatDelta(snapshot.date()),
+            'name': backup.name(),
+            'slug': backup.slug(),
+            'size': backup.sizeString(),
+            'status': backup.status(),
+            'date': self._time.toLocal(backup.date()).strftime("%c"),
+            'createdAt': self._time.formatDelta(backup.date()),
             'isPending': ha is not None and type(ha) is PendingSnapshot,
-            'protected': snapshot.protected(),
-            'type': snapshot.snapshotType(),
-            'folders': snapshot.details().get("folders", []),
-            'addons': self.formatAddons(snapshot.details()),
+            'protected': backup.protected(),
+            'type': backup.snapshotType(),
+            'folders': backup.details().get("folders", []),
+            'addons': self.formatAddons(backup.details()),
             'sources': sources,
-            'haVersion': snapshot.version(),
-            'uploadable': snapshot.getSource(SOURCE_HA) is None and len(snapshot.sources) > 0,
-            'restorable': snapshot.getSource(SOURCE_HA) is not None,
-            'status_detail': snapshot.getStatusDetail(),
-            'upload_info': snapshot.getUploadInfo(self._time),
-            'ignored': snapshot.ignore(),
-            'timestamp': snapshot.date().timestamp(),
+            'haVersion': backup.version(),
+            'uploadable': backup.getSource(SOURCE_HA) is None and len(backup.sources) > 0,
+            'restorable': backup.getSource(SOURCE_HA) is not None,
+            'status_detail': backup.getStatusDetail(),
+            'upload_info': backup.getUploadInfo(self._time),
+            'ignored': backup.ignore(),
+            'timestamp': backup.date().timestamp(),
         }
 
     def formatAddons(self, snapshot_data):
@@ -260,7 +260,7 @@ class UiServer(Trigger, Startable):
             SOURCE_HA: retain_ha
         })
         snapshot = await self._coord.startSnapshot(options)
-        return web.json_response({"message": "Requested snapshot '{0}'".format(snapshot.name())})
+        return web.json_response({"message": "Requested backup '{0}'".format(snapshot.name())})
 
     async def deleteSnapshot(self, request: Request):
         data = await request.json()
@@ -286,7 +286,7 @@ class UiServer(Trigger, Startable):
 
         self._coord.getSnapshot(slug)
         await self._coord.retain(data['sources'], slug)
-        return web.json_response({'message': "Updated the snapshot's settings"})
+        return web.json_response({'message': "Updated the backup's settings"})
 
     async def resolvefolder(self, request: Request):
         use_existing = BoolValidator.strToBool(
@@ -315,7 +315,7 @@ class UiServer(Trigger, Startable):
             return web.json_response({'message': 'Configuration updated, I\'ll never ask again'})
         else:
             await self.sync()
-            return web.json_response({'message': 'Snapshots deleted this one time'})
+            return web.json_response({'message': 'Backups deleted this one time'})
 
     async def log(self, request: Request) -> Any:
         format = request.query.get("format", "download")
@@ -370,7 +370,7 @@ class UiServer(Trigger, Startable):
 
     async def changefolder(self, request: Request) -> None:
         # update config to specify snapshot folder
-        await self._updateConfiguration(self.config.validateUpdate({Setting.SPECIFY_SNAPSHOT_FOLDER: True}))
+        await self._updateConfiguration(self.config.validateUpdate({Setting.SPECIFY_BACKUP_FOLDER: True}))
 
         id = request.query.get("id", None)
         await self.folder_finder.save(id)
@@ -404,7 +404,7 @@ class UiServer(Trigger, Startable):
             'addons': self._global_info.addons,
             'folders': FOLDERS,
             'defaults': default_config,
-            'snapshot_folder': self.folder_finder.getCachedFolder(),
+            'backup_folder': self.folder_finder.getCachedFolder(),
             'is_custom_creds': self._coord._model.dest.isCustomCreds()
         })
 
@@ -474,8 +474,8 @@ class UiServer(Trigger, Startable):
         # validate the snapshot password
         Password(self.config.getConfigFor(update)).resolve()
 
-        validated = self.config.validate(update)
-        message = await self._updateConfiguration(validated, ensureKey("snapshot_folder", data, "the configuration update request"), trigger=False)
+        validated, needUpdate = self.config.validate(update)
+        message = await self._updateConfiguration(validated, ensureKey("backup_folder", data, "the configuration update request"), trigger=False)
         try:
             await self.cancelSync(request)
             await self.startSync(request)
@@ -488,21 +488,21 @@ class UiServer(Trigger, Startable):
         self.ignore_other_turned_on = False
         return web.json_response({'message': "Acknowledged."})
 
-    async def _updateConfiguration(self, new_config, snapshot_folder_id=None, trigger=True):
+    async def _updateConfiguration(self, new_config, backup_folder_id=None, trigger=True):
         update = {}
         for key in new_config:
             update[key.key()] = new_config[key]
         old_drive_option = self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
-        old_ignore_others_option = self.config.get(Setting.IGNORE_OTHER_SNAPSHOTS)
+        old_ignore_others_option = self.config.get(Setting.IGNORE_OTHER_BACKUPS)
         await self._harequests.updateConfig(update)
 
         self.config.update(new_config)
 
-        if not old_ignore_others_option and self.config.get(Setting.IGNORE_OTHER_SNAPSHOTS):
+        if not old_ignore_others_option and self.config.get(Setting.IGNORE_OTHER_BACKUPS):
             self.ignore_other_turned_on = True
 
-        if self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and snapshot_folder_id is not None and len(snapshot_folder_id):
-            await self.folder_finder.save(snapshot_folder_id)
+        if self.config.get(Setting.SPECIFY_BACKUP_FOLDER) and backup_folder_id is not None and len(backup_folder_id):
+            await self.folder_finder.save(backup_folder_id)
         if trigger:
             self.trigger()
         return {
@@ -513,7 +513,7 @@ class UiServer(Trigger, Startable):
     async def upload(self, request: Request):
         slug = request.query.get("slug", "")
         await self._coord.uploadSnapshot(slug)
-        return web.json_response({'message': "Snapshot uploaded to Home Assistant"})
+        return web.json_response({'message': "Backup uploaded to Home Assistant"})
 
     async def redirect(self, request, url):
         context = {
@@ -736,7 +736,7 @@ class UiServer(Trigger, Startable):
             context = {
                 **self.base_context(),
                 'showOpenDriveLink': True,
-                'navBarTitle': 'Snapshots'
+                'navBarTitle': 'Backups'
             }
         response = aiohttp_jinja2.render_template(template,
                                                   request,

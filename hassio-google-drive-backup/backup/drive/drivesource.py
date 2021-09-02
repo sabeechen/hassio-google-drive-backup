@@ -62,7 +62,7 @@ class DriveSource(SnapshotDestination):
         return "Google Drive"
 
     def maxCount(self) -> None:
-        return self.config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE)
+        return self.config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE)
 
     def upload(self) -> bool:
         return self.config.get(Setting.ENABLE_DRIVE_UPLOAD)
@@ -83,7 +83,7 @@ class DriveSource(SnapshotDestination):
         return super().freeSpace()
 
     async def create(self, options: CreateOptions) -> DriveSnapshot:
-        raise LogicError("Snapshots can't be created in Drive")
+        raise LogicError("Backups can't be created in Drive")
 
     def checkBeforeChanges(self):
         existing = self.folder_finder.getExisting()
@@ -115,7 +115,7 @@ class DriveSource(SnapshotDestination):
         except ClientResponseError as e:
             if e.status == 404:
                 # IIUC, 404 on create can only mean that the parent id isn't valid anymore.
-                if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and allow_retry:
+                if not self.config.get(Setting.SPECIFY_BACKUP_FOLDER) and allow_retry:
                     self.folder_finder.deCache()
                     await self.folder_finder.create()
                     return await self.get(False)
@@ -123,7 +123,7 @@ class DriveSource(SnapshotDestination):
             raise e
         except GoogleDrivePermissionDenied:
             # This should always mean we lost permission on the backup folder, but at least it still exists.
-            if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER) and allow_retry:
+            if not self.config.get(Setting.SPECIFY_BACKUP_FOLDER) and allow_retry:
                 self.folder_finder.deCache()
                 await self.folder_finder.create()
                 return await self.get(False)
@@ -146,7 +146,7 @@ class DriveSource(SnapshotDestination):
         file_metadata = {
             'name': str(snapshot.name()) + ".tar",
             'parents': [parent_id],
-            'description': 'A Home Assistant snapshot file uploaded by HomeAssistant Google Drive Backup',
+            'description': 'A Home Assistant backup file uploaded by Home Assistant Google Drive Backup',
             'appProperties': {
                 PROP_KEY_SLUG: snapshot.slug(),
                 PROP_KEY_DATE: str(snapshot.date()),
@@ -156,7 +156,7 @@ class DriveSource(SnapshotDestination):
                 PROP_RETAINED: str(retain)
             },
             'contentHints': {
-                'indexableText': 'Hass.io hassio snapshot backup home assistant',
+                'indexableText': 'Home Assistant hassio snapshot backup home assistant',
                 'thumbnail': {
                     'image': THUMBNAIL_IMAGE,
                     'mimeType': THUMBNAIL_MIME_TYPE
@@ -185,7 +185,7 @@ class DriveSource(SnapshotDestination):
                     else:
                         return DriveSnapshot(progress)
                 raise LogicError(
-                    "Google Drive snapshot upload didn't return a completed item before exiting")
+                    "Google Drive backup upload didn't return a completed item before exiting")
             except ClientResponseError as e:
                 if e.status == 404:
                     # IIUC, 404 on create can only mean that the parent id isn't valid anymore.

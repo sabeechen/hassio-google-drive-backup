@@ -16,7 +16,7 @@ from ..logger import getLogger
 logger = getLogger(__name__)
 
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
-FOLDER_NAME = 'Home Assistant Snapshots'
+FOLDER_NAME = 'Home Assistant Backups'
 FOLDER_CACHE_SECONDS = 30
 
 
@@ -64,7 +64,7 @@ class FolderFinder():
             try:
                 self._folderId = await self._readFolderId()
             except (BackupFolderMissingError, BackupFolderInaccessible):
-                if not self.config.get(Setting.SPECIFY_SNAPSHOT_FOLDER):
+                if not self.config.get(Setting.SPECIFY_BACKUP_FOLDER):
                     # Search for a folder, they may have created one before
                     self._existing_folder = await self._search()
                     if self._existing_folder:
@@ -86,7 +86,7 @@ class FolderFinder():
             folder = folder.get('id')
         else:
             self._folder_details = None
-        logger.info("Saving snapshot folder: " + folder)
+        logger.info("Saving backup folder: " + folder)
         with open(self.config.get(Setting.FOLDER_FILE_PATH), 'w') as folder_file:
             folder_file.write(folder)
         self._folderId = folder
@@ -157,7 +157,7 @@ class FolderFinder():
         try:
             folder = await self.drivebackend.get(id)
             if not self._isValidFolder(folder):
-                logger.info("Provided snapshot folder {0} is invalid".format(id))
+                logger.info("Provided backup folder {0} is invalid".format(id))
                 return False
             self._folder_details = folder
             return True

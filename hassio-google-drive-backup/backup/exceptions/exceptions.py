@@ -7,9 +7,9 @@ from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_GOOGLE_DNS, ERROR_GOOGLE_INTERNAL,
                      ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT,
                      ERROR_HA_DELETE_ERROR, ERROR_INVALID_CONFIG, ERROR_LOGIC,
-                     ERROR_LOW_SPACE, ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
+                     ERROR_LOW_SPACE, ERROR_MULTIPLE_DELETES, ERROR_NO_BACKUP,
                      ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL,
-                     ERROR_SNAPSHOT_IN_PROGRESS, ERROR_UPLOAD_FAILED, LOG_IN_TO_DRIVE,
+                     ERROR_BACKUP_IN_PROGRESS, ERROR_UPLOAD_FAILED, LOG_IN_TO_DRIVE,
                      SUPERVISOR_PERMISSION, ERROR_GOOGLE_UNEXPECTED, ERROR_SUPERVISOR_TIMEOUT, ERROR_SUPERVISOR_UNEXPECTED, ERROR_SUPERVISOR_FILE_SYSTEM)
 
 
@@ -80,17 +80,17 @@ class ProtocolError(KnownError):
         return ERROR_PROTOCOL
 
 
-class SnapshotInProgress(KnownError):
+class BackupInProgress(KnownError):
     def message(self):
-        return "A snapshot is already in progress"
+        return "A backup is already in progress"
 
     def code(self):
-        return ERROR_SNAPSHOT_IN_PROGRESS
+        return ERROR_BACKUP_IN_PROGRESS
 
 
-class SnapshotPasswordKeyInvalid(KnownError):
+class BackupPasswordKeyInvalid(KnownError):
     def message(self):
-        return "Couldn't find your snapshot password in your secrets file.  Please check your settings."
+        return "Couldn't find your backup password in your secrets file.  Please check your settings."
 
     def code(self):
         return ERROR_BAD_PASSWORD_KEY
@@ -101,7 +101,7 @@ class SnapshotPasswordKeyInvalid(KnownError):
 
 class UploadFailed(KnownError):
     def message(self):
-        return "Snapshot upload failed.  Please check the supervisor logs for details."
+        return "Backup upload failed.  Please check the supervisor logs for details."
 
     def code(self):
         return ERROR_UPLOAD_FAILED
@@ -118,17 +118,17 @@ class GoogleCredentialsExpired(KnownError):
         return False
 
 
-class NoSnapshot(KnownError):
+class NoBackup(KnownError):
     def message(self):
-        return "The snapshot doesn't exist anymore"
+        return "The backup doesn't exist anymore"
 
     def code(self):
-        return ERROR_NO_SNAPSHOT
+        return ERROR_NO_BACKUP
 
 
 class NotUploadable(KnownError):
     def message(self):
-        return "This snapshot can't be uploaded to Home Assistant yet"
+        return "This backup can't be uploaded to Home Assistant yet"
 
     def code(self):
         return ERROR_NOT_UPLOADABLE
@@ -156,12 +156,12 @@ class InvalidConfigurationValue(KnownError):
 
 # UI Handler Done and updated
 
-class DeleteMutlipleSnapshotsError(KnownError):
+class DeleteMutlipleBackupsError(KnownError):
     def __init__(self, delete_sources=None):
         self.delete_sources = delete_sources
 
     def message(self):
-        return "The add-on has been configured to delete more than one older snapshots.  Please confirm this by visiting the add-on's web UI or by setting the config option 'confirm_multiple_deletes'=false in your add-on configuration."
+        return "The add-on has been configured to delete more than one older backups.  Please confirm this by visiting the add-on's web UI or by setting the config option 'confirm_multiple_deletes'=false in your add-on configuration."
 
     def code(self):
         return ERROR_MULTIPLE_DELETES
@@ -238,7 +238,7 @@ class GoogleSessionError(KnownError):
 
 class HomeAssistantDeleteError(KnownError):
     def message(self):
-        return "Home Assistant refused to delete the snapshot."
+        return "Home Assistant refused to delete the backup."
 
     def code(self):
         return ERROR_HA_DELETE_ERROR
@@ -306,7 +306,7 @@ class LowSpaceError(KnownError):
         self.space_remaining = space_remaining
 
     def message(self):
-        return "Your backup folder is low on disk space.  Snapshots can't be created until space is available."
+        return "Your backup folder is low on disk space.  Backups can't be created until space is available."
 
     def code(self):
         return ERROR_LOW_SPACE

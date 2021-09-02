@@ -4,11 +4,11 @@ SOURCE_HA = "HomeAssistant"
 
 ERROR_PLEASE_WAIT = "please_wait"
 ERROR_NOT_UPLOADABLE = "not_uploadable"
-ERROR_NO_SNAPSHOT = "invalid_slug"
+ERROR_NO_BACKUP = "invalid_slug"
 ERROR_CREDS_EXPIRED = "creds_bad"
 ERROR_UPLOAD_FAILED = "upload_failed"
 ERROR_BAD_PASSWORD_KEY = "password_key_invalid"
-ERROR_SNAPSHOT_IN_PROGRESS = "snapshot_in_progress"
+ERROR_BACKUP_IN_PROGRESS = "backup_in_progress"
 ERROR_PROTOCOL = "protocol_error"
 ERROR_LOGIC = "logic_error"
 ERROR_INVALID_CONFIG = "illegal_config"
@@ -57,9 +57,9 @@ If you have anything else that could help explain what happened, click "Markdown
  ```
  {error}
  ```
- Snapshots:
+ Backups:
  ```
- {snapshots}
+ {backups}
  ```
  ###### Config:
  ```

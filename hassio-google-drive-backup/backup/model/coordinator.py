@@ -6,7 +6,7 @@ from typing import Dict, List
 from injector import inject, singleton
 
 from backup.config import Config, Setting, CreateOptions
-from backup.exceptions import (KnownError, LogicError, NoSnapshot, PleaseWait,
+from backup.exceptions import (KnownError, LogicError, NoBackup, PleaseWait,
                                UserCancelledError)
 from backup.util import GlobalInfo, Backoff, Estimator
 from backup.time import Time
@@ -106,8 +106,8 @@ class Coordinator(Trigger):
             else:
                 scheduled += timedelta(seconds=self._config.get(
                     Setting.MAX_SYNC_INTERVAL_SECONDS))
-            next_snapshot = self.nextSnapshotTime()
-            if next_snapshot is None:
+            next_backup = self.nextSnapshotTime()
+            if next_backup is None:
                 return scheduled
             else:
                 return min(self.nextSnapshotTime(), scheduled)
@@ -115,7 +115,7 @@ class Coordinator(Trigger):
     def nextSnapshotTime(self):
         return self._buildModel().nextSnapshot(self._time.now())
 
-    def buildSnapshotMetrics(self):
+    def buildBackupMetrics(self):
         info = {}
         for source in self._sources:
             source_class = self._sources[source]
@@ -170,7 +170,7 @@ class Coordinator(Trigger):
         try:
             self._sync_start.set()
             await self._sync_wait.wait()
-            logger.info("Syncing Snapshots")
+            logger.info("Syncing Backups")
             self._global_info.sync()
             self._estimator.refresh()
             await self._buildModel().sync(self._time.now())
@@ -224,10 +224,10 @@ class Coordinator(Trigger):
         snapshot_dest = snapshot.getSource(self._model.dest.name())
         snapshot_source = snapshot.getSource(self._model.source.name())
         if snapshot_source:
-            raise LogicError("This snapshot already exists in Home Assistant")
+            raise LogicError("This backup already exists in Home Assistant")
         if not snapshot_dest:
             # Unreachable?
-            raise LogicError("This snapshot isn't in Google Drive")
+            raise LogicError("This backup isn't in Google Drive")
         created = await self._model.source.save(snapshot, await self._model.dest.read(snapshot))
         snapshot.addSource(created)
         self._updateFreshness()
@@ -255,7 +255,7 @@ class Coordinator(Trigger):
                 continue
             if snapshot.getSource(source.name()):
                 return await source.read(snapshot)
-        raise NoSnapshot()
+        raise NoBackup()
 
     async def retain(self, sources: Dict[str, bool], slug: str):
         for source in sources:
@@ -284,13 +284,13 @@ class Coordinator(Trigger):
     def _ensureSnapshot(self, source: str = None, slug=None) -> Snapshot:
         snapshot = self._buildModel().snapshots.get(slug)
         if not snapshot:
-            raise NoSnapshot()
+            raise NoBackup()
         if not source:
             return snapshot
         if not source:
             return snapshot
         if not snapshot.getSource(source):
-            raise NoSnapshot()
+            raise NoBackup()
         return snapshot
 
     def _ensureSource(self, source):

@@ -16,7 +16,7 @@ from backup.util import AsyncHttpGetter, GlobalInfo, File
 from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
-                          ERROR_MULTIPLE_DELETES, ERROR_NO_SNAPSHOT,
+                          ERROR_MULTIPLE_DELETES, ERROR_NO_BACKUP,
                           SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from backup.creds import Creds
 from backup.model import Coordinator, Snapshot
@@ -79,9 +79,9 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
     assert data['firstSync'] is True
     assert data['folder_id'] is None
     assert data['last_error'] is None
-    assert data['last_snapshot_text'] == "Never"
-    assert data['next_snapshot_text'] == "right now"
-    assert data['snapshot_name_template'] == config.get(Setting.SNAPSHOT_NAME)
+    assert data['last_backup_text'] == "Never"
+    assert data['next_backup_text'] == "right now"
+    assert data['backup_name_template'] == config.get(Setting.BACKUP_NAME)
     assert data['warn_ingress_upgrade'] is False
     assert len(data['snapshots']) == 0
     assert data['sources'][SOURCE_GOOGLE_DRIVE] == {
@@ -92,7 +92,7 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'latest': None,
         'size': '0.0 B',
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
         'ignored': 0,
@@ -106,7 +106,7 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'latest': None,
         'size': '0.0 B',
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'max': config.get(Setting.MAX_BACKUPS_IN_HA),
         'title': "Home Assistant",
         'free_space': "0.0 B",
         'icon': 'home-assistant',
@@ -122,8 +122,8 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
     assert data['firstSync'] is False
     assert data['folder_id'] is not None
     assert data['last_error'] is None
-    assert data['last_snapshot_text'] != "Never"
-    assert data['next_snapshot_text'] != "right now"
+    assert data['last_backup_text'] != "Never"
+    assert data['next_backup_text'] != "right now"
     assert len(data['snapshots']) == 1
     assert data['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
@@ -133,7 +133,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'latest': time.asRfc3339String(time.now()),
         'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
@@ -148,7 +148,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
         'latest': time.asRfc3339String(time.now()),
         'size': data['sources'][SOURCE_HA]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'max': config.get(Setting.MAX_BACKUPS_IN_HA),
         'title': "Home Assistant",
         'free_space': data['sources'][SOURCE_HA]['free_space'],
         'icon': 'home-assistant',
@@ -162,7 +162,7 @@ async def test_getstatus_sync(reader, config: Config, snapshot: Snapshot, time: 
 async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, coord: Coordinator, time: FakeTime):
     slug = snapshot.slug()
     assert await reader.getjson("retain", json={'slug': slug, 'sources': {"GoogleDrive": True, "HomeAssistant": True}}) == {
-        'message': "Updated the snapshot's settings"
+        'message': "Updated the backup's settings"
     }
     status = await reader.getjson("getstatus")
     assert status['sources'][SOURCE_GOOGLE_DRIVE] == {
@@ -173,7 +173,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
@@ -188,7 +188,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_HA]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'max': config.get(Setting.MAX_BACKUPS_IN_HA),
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
         'icon': 'home-assistant',
@@ -206,7 +206,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
@@ -221,7 +221,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_HA]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'max': config.get(Setting.MAX_BACKUPS_IN_HA),
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
         'icon': 'home-assistant',
@@ -243,7 +243,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'latest': None,
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE),
+        'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
         'free_space': "4.0 GB",
@@ -258,7 +258,7 @@ async def test_retain(reader: ReaderHelper, config: Config, snapshot: Snapshot, 
         'latest': time.asRfc3339String(snapshot.date()),
         'size': status['sources'][SOURCE_HA]['size'],
         'enabled': True,
-        'max': config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO),
+        'max': config.get(Setting.MAX_BACKUPS_IN_HA),
         'title': "Home Assistant",
         'free_space': status['sources'][SOURCE_HA]["free_space"],
         'icon': 'home-assistant',
@@ -289,12 +289,12 @@ async def test_delete(reader: ReaderHelper, ui_server, snapshot):
     slug = snapshot.slug()
 
     data = {"slug": "bad_slug", "sources": ["GoogleDrive"]}
-    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_BACKUP)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
     data["slug"] = slug
     assert await reader.getjson("deleteSnapshot", json=data) == {"message": "Deleted from 1 place(s)"}
-    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_BACKUP)
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 0
@@ -303,7 +303,7 @@ async def test_delete(reader: ReaderHelper, ui_server, snapshot):
     status = await reader.getjson("getstatus")
     assert len(status['snapshots']) == 0
     data["sources"] = []
-    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_SNAPSHOT)
+    await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_BACKUP)
 
 
 @pytest.mark.asyncio
@@ -313,7 +313,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName&retain_drive=False&retain_ha=False") == {
-        'message': "Requested snapshot 'TestName'"
+        'message': "Requested backup 'TestName'"
     }
     status = await reader.getjson('getstatus')
     assert len(status["snapshots"]) == 2
@@ -324,7 +324,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName2&retain_drive=True&retain_ha=False") == {
-        'message': "Requested snapshot 'TestName2'"
+        'message': "Requested backup 'TestName2'"
     }
     await coord.sync()
     status = await reader.getjson('getstatus')
@@ -336,7 +336,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
 
     time.advance(hours=1)
     assert await reader.getjson("snapshot?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
-        'message': "Requested snapshot 'TestName3'"
+        'message': "Requested backup 'TestName3'"
     }
     await coord.sync()
     status = await reader.getjson('getstatus')
@@ -351,22 +351,22 @@ async def test_backup_now(reader, ui_server, time: FakeTime, snapshot: Snapshot,
 async def test_config(reader, ui_server, config: Config, supervisor: SimulatedSupervisor):
     update = {
         "config": {
-            "days_between_snapshots": 20,
+            "days_between_backups": 20,
             "drive_ipv4": ""
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert ui_server._starts == 1
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
-    assert config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) == 20
-    assert supervisor._options["days_between_snapshots"] == 20
+    assert config.get(Setting.DAYS_BETWEEN_BACKUPS) == 20
+    assert supervisor._options["days_between_backups"] == 20
     assert ui_server._starts == 1
 
 
 @pytest.mark.asyncio
 async def test_auth_and_restart(reader, ui_server, config: Config, restarter, coord: Coordinator, supervisor: SimulatedSupervisor):
     update = {"config": {"require_login": True,
-                         "expose_extra_server": True}, "snapshot_folder": "unused"}
+                         "expose_extra_server": True}, "backup_folder": "unused"}
     assert ui_server._starts == 1
     assert not config.get(Setting.REQUIRE_LOGIN)
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
@@ -463,8 +463,8 @@ async def test_drive_cred_generation(reader: ReaderHelper, ui_server: UiServer, 
 @pytest.mark.asyncio
 async def test_confirm_multiple_deletes(reader, ui_server, server, config: Config, time: FakeTime, ha: HaSource):
     # reconfigure to only store 1 snapshot
-    config.override(Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE, 1)
-    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 1)
+    config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 1)
+    config.override(Setting.MAX_BACKUPS_IN_HA, 1)
 
     # create three snapshots
     await ha.create(CreateOptions(time.now(), "Name1"))
@@ -482,7 +482,7 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
 
     # request that multiple deletes be allowed
     assert await reader.getjson("confirmdelete?always=false") == {
-        'message': 'Snapshots deleted this one time'
+        'message': 'Backups deleted this one time'
     }
     assert config.get(Setting.CONFIRM_MULTIPLE_DELETES)
 
@@ -559,7 +559,7 @@ async def test_ssl_server(reader: ReaderHelper, ui_server: UiServer, config, ser
             "certfile": join(cleandir, "localhost.crt"),
             "keyfile": join(cleandir, "localhost.key")
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert ui_server._starts == 1
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
@@ -576,7 +576,7 @@ async def test_bad_ssl_config_missing_files(reader: ReaderHelper, ui_server: UiS
             "certfile": join(cleandir, "localhost.crt"),
             "keyfile": join(cleandir, "localhost.key")
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert ui_server._starts == 1
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
@@ -601,7 +601,7 @@ async def test_bad_ssl_config_wrong_files(reader: ReaderHelper, ui_server: UiSer
             "certfile": join(cleandir, "localhost.key"),
             "keyfile": join(cleandir, "localhost.crt")
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert ui_server._starts == 1
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
@@ -683,7 +683,7 @@ async def test_token_extra_server(reader: ReaderHelper, coord: Coordinator, ha, 
         "config": {
             "expose_extra_server": True
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
@@ -705,7 +705,7 @@ async def test_changefolder_extra_server(reader: ReaderHelper, coord: Coordinato
         "config": {
             "expose_extra_server": True
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     await restarter.waitForRestart()
@@ -733,7 +733,7 @@ async def test_update_sync_interval(reader, ui_server, config: Config, superviso
         "config": {
             "max_sync_interval_seconds": '1 hour',
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60
@@ -744,7 +744,7 @@ async def test_update_sync_interval(reader, ui_server, config: Config, superviso
         "config": {
             "max_sync_interval_seconds": '2 hours',
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60 * 2
@@ -793,10 +793,10 @@ async def test_setting_cancels_and_resyncs(reader: ReaderHelper, ui_server: UiSe
     # Change some config
     update = {
         "config": {
-            "days_between_snapshots": 20,
+            "days_between_backups": 20,
             "drive_ipv4": ""
         },
-        "snapshot_folder": "unused"
+        "backup_folder": "unused"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
@@ -814,9 +814,9 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
     # Change some config
     update = {
         "config": {
-            "specify_snapshot_folder": True
+            "specify_backup_folder": True
         },
-        "snapshot_folder": ""
+        "backup_folder": ""
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
@@ -850,9 +850,9 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
     # Specify the snapshot folder, which should cache the new one
     update = {
         "config": {
-            Setting.SPECIFY_SNAPSHOT_FOLDER.value: True
+            Setting.SPECIFY_BACKUP_FOLDER.value: True
         },
-        "snapshot_folder": "12345"
+        "backup_folder": "12345"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert folder_finder.getCachedFolder() == "12345"
@@ -860,9 +860,9 @@ async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHel
     # Un change the folder, which should keep the existing folder
     update = {
         "config": {
-            Setting.SPECIFY_SNAPSHOT_FOLDER.value: False
+            Setting.SPECIFY_BACKUP_FOLDER.value: False
         },
-        "snapshot_folder": ""
+        "backup_folder": ""
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert folder_finder.getCachedFolder() == "12345"
@@ -876,7 +876,7 @@ async def test_update_non_ui_setting(reader: ReaderHelper, server, session, coor
         "config": {
             "new_snapshot_timeout_seconds": 10
         },
-        "snapshot_folder": ""
+        "backup_folder": ""
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
 
@@ -884,9 +884,9 @@ async def test_update_non_ui_setting(reader: ReaderHelper, server, session, coor
 
     update = {
         "config": {
-            "max_snapshots_in_hassio": 1
+            "max_backups_in_ha": 1
         },
-        "snapshot_folder": ""
+        "backup_folder": ""
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
     assert config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS) == 10
@@ -906,7 +906,7 @@ async def test_update_disable_drive(reader: ReaderHelper, server, coord: Coordin
         "config": {
             Setting.ENABLE_DRIVE_UPLOAD.value: False
         },
-        "snapshot_folder": ""
+        "backup_folder": ""
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": True}
     assert config.get(Setting.ENABLE_DRIVE_UPLOAD) is False
@@ -919,8 +919,8 @@ async def test_update_disable_drive(reader: ReaderHelper, server, coord: Coordin
 
 @pytest.mark.asyncio
 async def test_update_ignore(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource):
-    config.override(Setting.IGNORE_UPGRADE_SNAPSHOTS, True)
-    config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
+    config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
 
     # make an ignored_snapshot
     slug = await supervisor.createSnapshot({'name': "Ignore_me", 'folders': ['homeassistant'], 'addons': []}, date=time.now())
@@ -954,9 +954,9 @@ async def test_check_ignored_snapshot_notification(reader: ReaderHelper, time: F
 
     update = {
         "config": {
-            Setting.IGNORE_OTHER_SNAPSHOTS.value: True
+            Setting.IGNORE_OTHER_BACKUPS.value: True
         },
-        "snapshot_folder": ""
+        "backup_folder": ""
     }
     await reader.postjson("saveconfig", json=update)
     await coord.waitForSyncToFinish()

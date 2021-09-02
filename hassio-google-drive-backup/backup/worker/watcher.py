@@ -55,7 +55,7 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
 
             if self.report_debug:
                 logger.debug(
-                    "Backup directory was written to, we'll reload snapshots from Home Assistant soon")
+                    "Backup directory was written to, we'll reload backups from Home Assistant soon")
                 self.report_debug = False
         finally:
             self.lock.release()

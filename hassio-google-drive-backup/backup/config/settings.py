@@ -16,7 +16,21 @@ logger = getLogger(__name__)
 
 @unique
 class Setting(Enum):
-    # Basic snapshot settings
+    MAX_BACKUPS_IN_HA = "max_backups_in_ha"
+    MAX_BACKUPS_IN_GOOGLE_DRIVE = "max_backups_in_google_drive"
+    DAYS_BETWEEN_BACKUPS = "days_between_backups"
+    IGNORE_OTHER_BACKUPS = "ignore_other_backups"
+    IGNORE_UPGRADE_BACKUPS = "ignore_upgrade_backups"
+    DELETE_BEFORE_NEW_BACKUP = "delete_before_new_backup"
+    BACKUP_NAME = "backup_name"
+    BACKUP_TIME_OF_DAY = "backup_time_of_day"
+    SPECIFY_BACKUP_FOLDER = "specify_backup_folder"
+    NOTIFY_FOR_STALE_BACKUPS = "notify_for_stale_backups"
+    ENABLE_BACKUP_STALE_SENSOR = "enable_backup_stale_sensor"
+    ENABLE_BACKUP_STATE_SENSOR = "enable_backup_state_sensor"
+    BACKUP_PASSWORD = "backup_password"
+
+    # Old, deprecated settings
     MAX_SNAPSHOTS_IN_HASSIO = "max_snapshots_in_hassio"
     MAX_SNAPSHOTS_IN_GOOGLE_DRIVE = "max_snapshots_in_google_drive"
     DAYS_BETWEEN_SNAPSHOTS = "days_between_snapshots"
@@ -26,10 +40,16 @@ class Setting(Enum):
     SNAPSHOT_TIME_OF_DAY = "snapshot_time_of_day"
     SNAPSHOT_PASSWORD = "snapshot_password"
     SPECIFY_SNAPSHOT_FOLDER = "specify_snapshot_folder"
+    DELETE_BEFORE_NEW_SNAPSHOT = "delete_before_new_snapshot"
+    NOTIFY_FOR_STALE_SNAPSHOTS = "notify_for_stale_snapshots"
+    ENABLE_SNAPSHOT_STALE_SENSOR = "enable_snapshot_stale_sensor"
+    ENABLE_SNAPSHOT_STATE_SENSOR = "enable_snapshot_state_sensor"
+    CALL_BACKUP_SNAPSHOT = "call_backup_snapshot"
+
+    # Basic snapshot settings
     WARN_FOR_LOW_SPACE = "warn_for_low_space"
     LOW_SPACE_THRESHOLD = "low_space_threshold"
     DELETE_AFTER_UPLOAD = "delete_after_upload"
-    DELETE_BEFORE_NEW_SNAPSHOT = "delete_before_new_snapshot"
 
     # generational settings
     GENERATIONAL_DAYS = "generational_days"
@@ -59,9 +79,6 @@ class Setting(Enum):
 
     # Add-on options
     VERBOSE = "verbose"
-    NOTIFY_FOR_STALE_SNAPSHOTS = "notify_for_stale_snapshots"
-    ENABLE_SNAPSHOT_STALE_SENSOR = "enable_snapshot_stale_sensor"
-    ENABLE_SNAPSHOT_STATE_SENSOR = "enable_snapshot_state_sensor"
     SEND_ERROR_REPORTS = "send_error_reports"
     CONFIRM_MULTIPLE_DELETES = "confirm_multiple_deletes"
     ENABLE_DRIVE_UPLOAD = "enable_drive_upload"
@@ -131,6 +148,20 @@ class Setting(Enum):
 
 
 _DEFAULTS = {
+    Setting.MAX_BACKUPS_IN_HA: 4,
+    Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: 4,
+    Setting.DAYS_BETWEEN_BACKUPS: 3,
+    Setting.IGNORE_OTHER_BACKUPS: False,
+    Setting.IGNORE_UPGRADE_BACKUPS: False,
+    Setting.DELETE_BEFORE_NEW_BACKUP: False,
+    Setting.BACKUP_NAME: "{type} Backup {year}-{month}-{day} {hr24}:{min}:{sec}",
+    Setting.BACKUP_TIME_OF_DAY: "",
+    Setting.SPECIFY_BACKUP_FOLDER: False,
+    Setting.NOTIFY_FOR_STALE_BACKUPS: True,
+    Setting.ENABLE_BACKUP_STALE_SENSOR: True,
+    Setting.ENABLE_BACKUP_STATE_SENSOR: True,
+    Setting.BACKUP_PASSWORD: "",
+
     # Basic snapshot settings
     Setting.MAX_SNAPSHOTS_IN_HASSIO: 4,
     Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: 4,
@@ -145,6 +176,7 @@ _DEFAULTS = {
     Setting.LOW_SPACE_THRESHOLD: 1024 * 1024 * 1024,
     Setting.DELETE_AFTER_UPLOAD: False,
     Setting.DELETE_BEFORE_NEW_SNAPSHOT: False,
+    Setting.CALL_BACKUP_SNAPSHOT: False,
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: 0,
@@ -240,9 +272,23 @@ _STAGING_DEFAULTS = {
 }
 
 _CONFIG = {
+    Setting.MAX_BACKUPS_IN_HA: "int(0,)",
+    Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: "int(0,)",
+    Setting.DAYS_BETWEEN_BACKUPS: "float(0,)?",
+    Setting.IGNORE_OTHER_BACKUPS: "bool?",
+    Setting.IGNORE_UPGRADE_BACKUPS: "bool?",
+    Setting.DELETE_BEFORE_NEW_BACKUP: "bool?",
+    Setting.BACKUP_NAME: "str?",
+    Setting.BACKUP_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
+    Setting.SPECIFY_BACKUP_FOLDER: "bool?",
+    Setting.NOTIFY_FOR_STALE_BACKUPS: "bool?",
+    Setting.ENABLE_BACKUP_STALE_SENSOR: "bool?",
+    Setting.ENABLE_BACKUP_STATE_SENSOR: "bool?",
+    Setting.BACKUP_PASSWORD: "str?",
+
     # Basic snapshot settings
-    Setting.MAX_SNAPSHOTS_IN_HASSIO: "int(0,)",
-    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: "int(0,)",
+    Setting.MAX_SNAPSHOTS_IN_HASSIO: "int(0,)?",
+    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: "int(0,)?",
     Setting.DAYS_BETWEEN_SNAPSHOTS: "float(0,)?",
     Setting.IGNORE_OTHER_SNAPSHOTS: "bool?",
     Setting.IGNORE_UPGRADE_SNAPSHOTS: "bool?",
@@ -254,6 +300,7 @@ _CONFIG = {
     Setting.LOW_SPACE_THRESHOLD: "int(0,)?",
     Setting.DELETE_AFTER_UPLOAD: "bool?",
     Setting.DELETE_BEFORE_NEW_SNAPSHOT: "bool?",
+    Setting.CALL_BACKUP_SNAPSHOT: "bool?",
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: "int(0,)?",
@@ -345,7 +392,9 @@ _CONFIG = {
 
 PRIVATE = [
     Setting.SNAPSHOT_PASSWORD,
-    Setting.SNAPSHOT_NAME
+    Setting.SNAPSHOT_NAME,
+    Setting.BACKUP_PASSWORD,
+    Setting.BACKUP_NAME
 ]
 
 _LOOKUP = {}

@@ -1,5 +1,5 @@
 <div id="details_modal" class="modal modal-fixed-footer" style="max-width: 900px;">
-  <div id="snapshot-source-container" class="snapshot-source-container card default-hidden" data-slug='slug'
+  <div id="backup-source-container" class="backup-source-container card default-hidden" data-slug='slug'
     data-source='source' data-source-name='fake_source_name'>
     <div class="card-content">
       <span class="detail-badge">
@@ -43,25 +43,25 @@
       </div>
       <div class="retain-warning small sub-detail indent">
         <i class="material-icons">lock</i>
-        <span>This snapshot will not be deleted or count against the total snapshots kept in <span
+        <span>This backup will not be deleted or count against the total backups kept in <span
             class="detail-source-name">Source Name</span> until you allow it manually.</span>
       </div>
       <div class="delete-warning small sub-detail indent">
         <i class="material-icons">warning</i>
-        <span>This snapshot will be deleted from <span class="detail-source-name">Source Name</span> as soon as a new
-          snapshot is made.</span>
+        <span>This backup will be deleted from <span class="detail-source-name">Source Name</span> as soon as a new
+          backup is made.</span>
       </div>
       <div class="ignore-warning small sub-detail indent">
         <i class="material-icons">warning</i>
-        <span>This snapshot is being ignored because you configured the addon to ignore some types of snapshots
-          in your addon settings.  It won't count against the snapshots stored in Home Assistant and it will never be automatically backed up or deleted.  Click "Don't Ignore" to have the addon track, upload, and eventually delete this snapshot.</span>
+        <span>This backup is being ignored because you configured the addon to ignore some types of backups
+          in your addon settings.  It won't count against the backups stored in Home Assistant and it will never be automatically uploaded or deleted.  Click "Don't Ignore" to have the addon track, upload, and eventually delete this backup.</span>
       </div>
       
     </div>
   </div>
   <script type="text/javascript">
     function deleteButtonClick(element) {
-      let container = $(element).closest('.snapshot-source-container');
+      let container = $(element).closest('.backup-source-container');
       container.data('processing', true);
       $(".delete-initial", container).addClass('disabled');
       $(".never-delete", container).addClass('default-hidden');
@@ -71,7 +71,7 @@
     }
 
     function deleteButtonCancel(element) {
-      let container = $(element).closest('.snapshot-source-container');
+      let container = $(element).closest('.backup-source-container');
       $(".delete-initial", container).removeClass('disabled');
       $(".never-delete", container).removeClass('default-hidden');
       $(".delete-confirm", container).addClass('default-hidden');
@@ -80,7 +80,7 @@
     }
 
     function confirmDeleteButtonClick(element) {
-      let container = $(element).closest('.snapshot-source-container');
+      let container = $(element).closest('.backup-source-container');
       container.data('processing', true);
       let source = container.data('source');
       $(".preloader-wrapper", container).addClass("active");
@@ -99,13 +99,13 @@
         },
         function () { 
           container.data('processing', false); 
-          configureSnapshotSource(container); 
+          configureBackupSource(container); 
         },
-        "Deleting snapshot from " + sourceToName(source.key));
+        "Deleting backup from " + sourceToName(source.key));
     }
 
     function neverDeleteButtonClick(element) {
-      let container = $(element).closest('.snapshot-source-container');
+      let container = $(element).closest('.backup-source-container');
       container.data('processing', true);
       let source = container.data('source');
       $(".never-delete", container).addClass('disabled');
@@ -117,11 +117,11 @@
       data['sources'][source.key] = true;
       let success = function (info) { neverDeleteCompleted(container, true); };
       let fail = function (info) { neverDeleteCompleted(container, false); };
-      postJson("retain", data, success, fail, "Updating snapshot... ");
+      postJson("retain", data, success, fail, "Updating backup... ");
     }
 
     function dontIgnoreButtonClick(element) {
-      let container = $(element).closest('.snapshot-source-container');
+      let container = $(element).closest('.backup-source-container');
       container.data('processing', true);
       let source = container.data('source');
       $(".dont-ignore-button", container).addClass('disabled');
@@ -132,7 +132,7 @@
       };
       let success = function (info) { ignoreCompleted(container, false); };
       let fail = function (info) { ignoreCompleted(container, true); };
-      postJson("ignore", data, success, fail, "Updating snapshot... ");
+      postJson("ignore", data, success, fail, "Updating backup... ");
     }
 
     function ignoreCompleted(container, ignored) {
@@ -142,11 +142,11 @@
       refreshstats();
 
       // Get the updated source info
-      configureSnapshotSource(container);
+      configureBackupSource(container);
     }
 
     function allowDeleteButtonClick(element) {
-      let container = $(element).closest('.snapshot-source-container');
+      let container = $(element).closest('.backup-source-container');
       container.data('processing', true);
       let source = container.data('source');
       $(".allow-delete", container).addClass('disabled');
@@ -158,7 +158,7 @@
       data['sources'][source.key] = false;
       let success = function (info) { neverDeleteCompleted(container, false); };
       let fail = function (info) { neverDeleteCompleted(container, true); };
-      postJson("retain", data, success, fail, "Updating snapshot... ");
+      postJson("retain", data, success, fail, "Updating backup... ");
     }
 
     function neverDeleteCompleted(container, retained) {
@@ -170,13 +170,13 @@
       refreshstats();
 
       // Get the updated source info
-      configureSnapshotSource(container);
+      configureBackupSource(container);
     }
 
     function deleteSuccessful(element) {
       let container = $(element);
       container.data('processing', false);
-      let parent = container.closest(".detail-snapshot-sources");
+      let parent = container.closest(".detail-backup-sources");
       container.remove();
 
       if (parent.children().length == 0) {
@@ -185,7 +185,7 @@
       refreshstats();
     }
 
-    function configureSnapshotSource(container) {
+    function configureBackupSource(container) {
       let source = container.data('source');
       if (container.data('processing')) {
         return;
@@ -230,9 +230,9 @@
       }
     }
 
-    function setValuesForSnapshotUpdate(snapshot) {
-      let sources_container = $('.detail-snapshot-sources');
-      let rendered_sources = $(".snapshot-source-container", sources_container);
+    function setValuesForBackupUpdate(backup) {
+      let sources_container = $('.detail-backup-sources');
+      let rendered_sources = $(".backup-source-container", sources_container);
       let modal = $('#details_modal');
 
       // Update values for any sources that have changed.
@@ -242,23 +242,23 @@
       });
 
       let new_sources = new Set();
-      for (let i = 0; i < snapshot.sources.length; i++) {
-        let source = snapshot.sources[i];
+      for (let i = 0; i < backup.sources.length; i++) {
+        let source = backup.sources[i];
         if (existing_sources[source.key] == undefined) {
           // Add the source info to the list
-          let template = $('#snapshot-source-container').clone();
+          let template = $('#backup-source-container').clone();
           template.attr('id', 'detail-source-' + source.key);
           template.data('source', source);
           template.data('source-name', source.key);
           template.data('processing', false);
           template.removeClass('default-hidden');
-          configureSnapshotSource(template);
+          configureBackupSource(template);
           sources_container.append(template);
         } else {
           // Update with new info instead
           let container = existing_sources[source.key];
           container.data('source', source);
-          configureSnapshotSource(container);
+          configureBackupSource(container);
         }
         new_sources.add(source.key);
       }
@@ -271,18 +271,18 @@
 
       // Render the upload card if needed
       let upload_card = $('.detail-uploader-info');
-      if (snapshot.upload_info) {
-        $('.source-name', upload_card).html(snapshot.upload_info.name);
-        let progress = Math.round(snapshot.upload_info.progress);
-        let data = progress + "% (" + asSizeString(snapshot.upload_info.total) + ") - ";
+      if (backup.upload_info) {
+        $('.source-name', upload_card).html(backup.upload_info.name);
+        let progress = Math.round(backup.upload_info.progress);
+        let data = progress + "% (" + asSizeString(backup.upload_info.total) + ") - ";
 
         $('.determinate', upload_card).css("width", progress + "%");
-        if (snapshot.upload_info.speed != undefined) {
-          data += asSizeString(snapshot.upload_info.speed) + "/second - ";
+        if (backup.upload_info.speed != undefined) {
+          data += asSizeString(backup.upload_info.speed) + "/second - ";
         } else {
           data += "(determining speed) - ";
         }
-        data += "Started " + snapshot.upload_info.started;
+        data += "Started " + backup.upload_info.started;
         $('.progress-info', upload_card).html(data);
         upload_card.removeClass('default-hidden');
       } else {
@@ -291,24 +291,24 @@
 
 
       // Render the card the suggests uploadign to HA if necessary
-      if (snapshot.uploadable && snapshot.upload_info == null) {
+      if (backup.uploadable && backup.upload_info == null) {
         $(".upload-reminder").show();
       } else {
         $(".upload-reminder").hide();
       }
 
-      if (snapshot.restorable) {
+      if (backup.restorable) {
         $("#restore_link").removeClass('default-hidden');
       } else {
         $("#restore_link").addClass('default-hidden');
       }
 
-      if (snapshot.folders.length + snapshot.addons.length > 0 && !modal.data('details_shown')) {
+      if (backup.folders.length + backup.addons.length > 0 && !modal.data('details_shown')) {
         let content = [];
         let content_container = $(".details-contents")
         content_container.html("");
-        for (var i = 0; i < snapshot.folders.length; i++) {
-          let slug = snapshot.folders[i];
+        for (var i = 0; i < backup.folders.length; i++) {
+          let slug = backup.folders[i];
           let folder = "Unknown Folder";
           let icon = "folder-outline";
           let subtext = "";
@@ -324,8 +324,8 @@
           } else if (slug == "homeassistant") {
             folder = "HA Config Folder";
             icon = "folder-home";
-            if (snapshot.haVersion) {
-              subtext = `v${snapshot.haVersion}`;
+            if (backup.haVersion) {
+              subtext = `v${backup.haVersion}`;
             }
           } else if (slug == "media") {
             folder = "Media Folder";
@@ -337,8 +337,8 @@
           content_container.append(genContentTemplate(folder, subtext, "broken", icon));
         }
 
-        for (var i = 0; i < snapshot.addons.length; i++) {
-          let addon = snapshot.addons[i];
+        for (var i = 0; i < backup.addons.length; i++) {
+          let addon = backup.addons[i];
           let sub = `v${addon.version} - ${addon.size}`;
           content_container.append(genContentTemplate(addon.name, sub, `logo/${addon.slug}`, 'puzzle-outline'));
         }
@@ -364,40 +364,40 @@
     }
 
     function showDetails(target) {
-      var snapshot = $(target).data('snapshot');
-      if (snapshot.isPending) {
+      var backup = $(target).data('snapshot');
+      if (backup.isPending) {
         return;
       }
 
       let modal = $('#details_modal');
-      modal.data('slug', snapshot.slug);
-      modal.data('snapshot', snapshot);
+      modal.data('slug', backup.slug);
+      modal.data('snapshot', backup);
       modal.data('details_shown', false);
       $(".detail-contents-card").addClass('default-hidden');
 
-      var details = snapshot.details;
-      $("#details_name").html(snapshot.name);
-      $("#details_name").attr("title", snapshot.name);
+      var details = backup.details;
+      $("#details_name").html(backup.name);
+      $("#details_name").attr("title", backup.name);
 
-      $("#details_date").html(snapshot.date);
+      $("#details_date").html(backup.date);
       gen_detail = "";
-      if (snapshot.status_detail) {
-        gen_detail = "Generation " + snapshot.status_detail[0];
+      if (backup.status_detail) {
+        gen_detail = "Generation " + backup.status_detail[0];
       }
-      configureDetailBadge('detail-type', snapshot.type == 'full' ? 'Full Snapshot' : 'Partial Snapshot', true);
-      configureDetailBadge('detail-ha-version', "HA v" + snapshot.haVersion, snapshot.haVersion);
-      configureDetailBadge('detail-password', "Password Protected", snapshot.protected);
-      configureDetailBadge('detail-time', snapshot.date, true);
-      configureDetailBadge('detail-size', snapshot.size, true);
-      configureDetailBadge('detail-generational', gen_detail, snapshot.status_detail);
+      configureDetailBadge('detail-type', backup.type == 'full' ? 'Full Backup' : 'Partial Backup', true);
+      configureDetailBadge('detail-ha-version', "HA v" + backup.haVersion, backup.haVersion);
+      configureDetailBadge('detail-password', "Password Protected", backup.protected);
+      configureDetailBadge('detail-time', backup.date, true);
+      configureDetailBadge('detail-size', backup.size, true);
+      configureDetailBadge('detail-generational', gen_detail, backup.status_detail);
 
-      let sources_container = $('.detail-snapshot-sources');
+      let sources_container = $('.detail-backup-sources');
       sources_container.html("");
-      setValuesForSnapshotUpdate(snapshot);
+      setValuesForBackupUpdate(backup);
 
       cancelUploadHaClicked();
 
-      $("#download_link").data('snapshot', snapshot);
+      $("#download_link").data('snapshot', backup);
       M.Modal.getInstance(document.getElementById('details_modal')).open();
     }
 
@@ -423,9 +423,9 @@
 
     function doUpload() {
       let modal = $("#details_modal");
-      let snapshot = modal.data("snapshot")
-      message = "Uploading '" + snapshot.name + "'";
-      url = "upload?slug=" + encodeURIComponent(snapshot.slug);
+      let backup = modal.data("snapshot")
+      message = "Uploading '" + backup.name + "'";
+      url = "upload?slug=" + encodeURIComponent(backup.slug);
       $(".cancel-load-ha-button", modal).addClass('disabled');
       $(".confirm-load-ha-button", modal).addClass('disabled');
       postJson(url, {}, function () { refreshstats(); cancelUploadHaClicked(); }, cancelUploadHaClicked, message);
@@ -441,7 +441,7 @@
   <div class="modal-content">
     <h5 id="details_name" class="truncate-two-lines"></h5>
     <div class="row">
-      <div class="detail-badge detail-type col s12 m6 l4" title="Snapshot Type">
+      <div class="detail-badge detail-type col s12 m6 l4" title="Backup Type">
         <i class="material-icons">archive</i>
         <span class="detail-name"></span>
       </div>
@@ -449,27 +449,27 @@
         <i class="material-icons">home</i>
         <span class="detail-name"></span>
       </div>
-      <div class="detail-badge detail-password col s12 m6 l4" title="The snapshot is password protected">
+      <div class="detail-badge detail-password col s12 m6 l4" title="The backup is password protected">
         <i class="material-icons">vpn_key</i>
         <span class="detail-name"></span>
       </div>
-      <div class="detail-badge detail-time col s12 m6 l4" title="When this snapshot was created">
+      <div class="detail-badge detail-time col s12 m6 l4" title="When this backup was created">
         <i class="material-icons">access_time</i>
         <span class="detail-name"></span>
       </div>
-      <div class="detail-badge detail-size col s12 m6 l4" title="The size of the snapshot">
+      <div class="detail-badge detail-size col s12 m6 l4" title="The size of the backup">
         <i class="material-icons">sd_card</i>
         <span class="detail-name"></span>
       </div>
       <div class="detail-badge detail-generational col s12 m6 l4"
-        title="This snapshot is kept because of your generational configuration">
+        title="This backup is kept because of your generational configuration">
         <i class="material-icons">date_range</i>
         <span class="detail-name"></span>
       </div>
     </div>
-    <div class="snapshot_presence_window">
-      This snapshot is present in:
-      <div class="detail-snapshot-sources">
+    <div class="backup_presence_window">
+      This backup is present in:
+      <div class="detail-backup-sources">
       </div>
       <div class="card detail-uploader-info">
         <div class="card-content">
@@ -485,29 +485,29 @@
       <div class="card-content">
         <div class="load-ha-info">
           <p>
-            To see more details about this snapshot or restore it, you'll need to
+            To see more details about this backup or restore it, you'll need to
             load it into Home Assistant. You can do that using the button below or by manually
             copying it from Google Drive into your Home Assistant '/backup' folder using something like the the
             <a href="https://github.com/home-assistant/addons/blob/master/samba/DOCS.md" target="_blank">Samba
               Addon</a>.
           <blockquote>
-            Note: This won't restore the snapshot, it'll just copy the snapshot archive into a folder on your Home
+            Note: This won't restore the backup, it'll just copy the backup archive into a folder on your Home
             Assistant machine and make it available for restoration.
           </blockquote>
           </p>
         </div>
         <div class="load-ha-confirm-warning">
           <p>
-            Before loading this snapshot please note:
+            Before loading this backup please note:
           <blockquote>
             <i class="material-icons left" style="font-size: 40px;">disc_full</i>
-            The snapshot takes up space, maybe a lot of space. Please make sure you have enough disk space in Home
-            Assistant to store the snapshot, as running out of disk space can make the machine dangerously unstable.
+            The backup takes up space, maybe a lot of space. Please make sure you have enough disk space in Home
+            Assistant to store the backup, as running out of disk space can make the machine dangerously unstable.
           </blockquote>
           <blockquote>
             <i class="material-icons left" style="font-size: 40px;">lock</i>
-            The uploaded snapshot will be marked as "Never Delete" in Home Assistant. It won't count toward the limit
-            you've configured for snapshots kept in Home Assistant and it will be never be deleted until you manually
+            The uploaded backup will be marked as "Never Delete" in Home Assistant. It won't count toward the limit
+            you've configured for backup kept in Home Assistant and it will be never be deleted until you manually
             tell the addon to do so.
           </blockquote>
           </p>
@@ -529,7 +529,7 @@
     </div>
   </div>
   <div class="modal-footer">
-    <a id="download_link" href="#!" onclick="downloadSnapshot(this);" class="btn-flat">
+    <a id="download_link" href="#!" onclick="downloadBackup(this);" class="btn-flat">
       <i class="material-icons">file_download</i>Download
     </a>
     <a id="restore_link" href="#!" onclick="restoreClick(this)" class="modal-close btn-flat">

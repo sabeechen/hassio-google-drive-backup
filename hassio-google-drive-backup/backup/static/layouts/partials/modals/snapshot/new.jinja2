@@ -1,29 +1,29 @@
-<div id="snapshotmodal" class="modal">
+<div id="backupmodal" class="modal">
   <div class="modal-content">
-    <h4>New Snapshot</h4>
+    <h4>New Backup</h4>
     <p style="margin-bottom: 0;">
-      Create a new snapshot immediately, using the settings you've configured for the automatic snapshots
+      Create a new backup immediately, using the settings you've configured for the automatic backups
       (eg full/partial, password, etc).
     </p>
     <form>
       <div class="row" style="margin-bottom: 12px;">
         <div class="input-field col s12">
           <i class="material-icons prefix">label_outline</i>
-          <input type="text" id="snapshot_name_one_off" name="snapshot_name_one_off" class="validate"
-            onkeyup="snapshotNameOneOffExample()" />
-          <label for="snapshot_name_one_off">Snapshot Name</label>
+          <input type="text" id="backup_name_one_off" name="backup_name_one_off" class="validate"
+            onkeyup="backupNameOneOffExample()" />
+          <label for="backup_name_one_off">Backup Name</label>
           <span class="helper-text">
-            The name to use for this snapshot, or leave it blank to use the default
+            The name to use for this backup, or leave it blank to use the default
             naming scheme. Optionally you can use template variables.
             <a target="_blank" rel="noreferrer"
-              href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-snapshots-a-different-name">
+              href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-backups-a-different-name">
               See here
             </a>
             for a list of all available options.
             <div style="margin-top: 10px;">
-              Your snapshots name will look something like:
+              Your backup's name will look something like:
               <br />
-              <b id="snapshot_name_example_one_off"></b>
+              <b id="backup_name_example_one_off"></b>
             </div>
           </span>
         </div>
@@ -45,10 +45,10 @@
   </div>
   <div class="modal-footer">
     <p class="left" style="margin-left: 18px; font-size: 12px;">
-      These options will only apply to this one-off snapshot.
+      These options will only apply to this one-off backup.
     </p>
-    <a href="#!" class="modal-close btn-flat" id="create_snapshot_button"
-      onclick="doNewSnapshot(); return false;"><i class="material-icons left">add</i>Create Snapshot</a>
-    <a href="#!" class="modal-close btn-flat" id="cancel_snapshot"><i class="material-icons left">close</i>Cancel</a>
+    <a href="#!" class="modal-close btn-flat" id="create_backup_button"
+      onclick="doNewBackup(); return false;"><i class="material-icons left">add</i>Create backup</a>
+    <a href="#!" class="modal-close btn-flat" id="cancel_backup"><i class="material-icons left">close</i>Cancel</a>
   </div>
 </div>

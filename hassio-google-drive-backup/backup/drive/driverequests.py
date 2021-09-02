@@ -25,7 +25,7 @@ logger = getLogger(__name__)
 
 MIME_TYPE = "application/tar"
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
-FOLDER_NAME = 'Home Assistant Snapshots'
+FOLDER_NAME = 'Home Assistant Backups'
 DRIVE_VERSION = "v3"
 DRIVE_SERVICE = "drive"
 
@@ -268,7 +268,7 @@ class DriveRequests():
             chunk_size = len(data.getbuffer())
             if chunk_size == 0:
                 raise LogicError(
-                    "Snapshot file stream ended prematurely while uploading to Google Drive")
+                    "Backup file stream ended prematurely while uploading to Google Drive")
             headers = {
                 "Content-Length": str(chunk_size),
                 "Content-Range": "bytes {0}-{1}/{2}".format(start, start + chunk_size - 1, total_size)

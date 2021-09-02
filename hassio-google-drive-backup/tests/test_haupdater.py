@@ -70,7 +70,7 @@ async def test_init_failure(updater: HaUpdater, global_info: GlobalInfo, time: F
     assert updater._state() == "error"
     await updater.update()
     assert supervisor.getNotification() == {
-        'message': 'The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on status page for details.',
+        'message': 'The add-on is having trouble making backups and needs attention.  Please visit the add-on status page for details.',
         'title': 'Home Assistant Google Drive Backup is Having Trouble',
         'notification_id': 'backup_broken'
     }
@@ -180,7 +180,7 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     time.advanceDay()
     await updater.update()
     assert supervisor.getNotification() == {
-        'message': 'The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page](http://localhost/test) for details.',
+        'message': 'The add-on is having trouble making backups and needs attention.  Please visit the add-on [status page](http://localhost/test) for details.',
         'title': 'Home Assistant Google Drive Backup is Having Trouble',
         'notification_id': 'backup_broken'
     }
@@ -276,7 +276,7 @@ async def test_publish_retries(updater: HaUpdater, server: SimulationServer, tim
 
 @pytest.mark.asyncio
 async def test_ignored_snapshots(updater: HaUpdater, time: FakeTime, server: SimulationServer, snapshot: Snapshot, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
-    config.override(Setting.IGNORE_OTHER_SNAPSHOTS, True)
+    config.override(Setting.IGNORE_OTHER_BACKUPS, True)
     time.advance(hours=1)
     await supervisor.createSnapshot({'name': "test_snapshot"}, date=time.now())
     await coord.sync()

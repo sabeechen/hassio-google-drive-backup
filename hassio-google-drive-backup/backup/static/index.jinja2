@@ -245,39 +245,39 @@
         document.getElementById("authenticate-button").href = auth_url.toString();
 
         if (!data.firstSync) {
-          snapshots = data.sources.HomeAssistant.snapshots;
-          hasSnapshots = snapshots > 0;
+          backups = data.sources.HomeAssistant.snapshots;
+          hasBackups = backups > 0;
           maxConfigured = data.sources.HomeAssistant.max;
-          toDelete = Math.max(0, hasSnapshots - data.sources.HomeAssistant.max);
+          toDelete = Math.max(0, hasBackups - data.sources.HomeAssistant.max);
           if (data.sources.HomeAssistant.max == 0) {
             toDelete = 0;
           }
-          willSnapshot = data.next_snapshot != "Disabled";
+          willBackup = data.next_backup_text != "Disabled";
           willUpload = data.sources.GoogleDrive.max > 0;
-          toUpload = Math.min(data.sources.GoogleDrive.max, snapshots - toDelete);
+          toUpload = Math.min(data.sources.GoogleDrive.max, backups - toDelete);
           text = "";
-          if (!hasSnapshots && !willSnapshot) {
-            text = "You have no snapshots in Home Assistant and you've configured this add-on not to create any."
-          } else if (hasSnapshots && toDelete > 0) {
-            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toDelete + " oldest snapshots(s) will be deleted</b>";
+          if (!hasBackups && !willBackup) {
+            text = "You have no backups in Home Assistant and you've configured this add-on not to create any."
+          } else if (hasBackups && toDelete > 0) {
+            text = "You have <b>" + backups + " backup(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toDelete + " oldest backup(s) will be deleted</b>";
             if (toUpload > 0) {
-              text += " and the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
+              text += " and the <b>" + toUpload + " newest backup(s) will get uploaded</b>."
             } else {
               text += "."
             }
-          } else if (hasSnapshots && toUpload > 0) {
-            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest snapshot(s) will get backed up</b>."
-          } else if (!hasSnapshots) {
-            text = "You have <b>no snapshots in Home Assistant</b>";
+          } else if (hasBackups && toUpload > 0) {
+            text = "You have <b>" + backups + " backup(s)</b> in Home Assistant already. Once you authenticate with Google Drive the <b>" + toUpload + " newest backup(s) will get uploaded</b>."
+          } else if (!hasBackups) {
+            text = "You have <b>no backups in Home Assistant</b>";
             if (willUpload) {
               text += ", authenticate with Google Drive to start automatically creating and backing them up."
             } else {
               text += ", authenticate with Google Drive to start automatically creating them."
             }
-          } else if (willSnapshot) {
-            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already, Authenticate with Google Drive to start creating new ones on a schedule."
+          } else if (willBackup) {
+            text = "You have <b>" + backups + " backup(s)</b> in Home Assistant already, Authenticate with Google Drive to start creating new ones on a schedule."
           } else {
-            text = "You have <b>" + snapshots + " snapshot(s)</b> in Home Assistant already but you haven't configured this add-on to do anything with them or create new ones."
+            text = "You have <b>" + backups + " backup(s)</b> in Home Assistant already but you haven't configured this add-on to do anything with them or create new ones."
           }
           $("#what_do_next_now_please_text").html(text);
           $("#what_do_next_now_please").show();

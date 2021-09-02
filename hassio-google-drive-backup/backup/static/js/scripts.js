@@ -1,10 +1,10 @@
-tooltipBackedUp = "This snapshot has been backed up to Google Drive."
-tooltipDriveOnly = "This snapshot is only in Google Drive. Select \"Upload\" from the actions menu to Upload it to Home Assistant."
-tooltipHassio = "This snapshot is only in Home Assistant. Change the number of snapshots you keep in Drive to get it to upload."
-tooltipWaiting = "This snapshot is waiting to upload to Google Drive."
-tooltipLoading = "This snapshot is being downloaded from Google Drive to Home Assistant.  Soon it will be available to restore."
-tooltipPending = "This snapshot is being created.  If it takes a long time, see the addon's FAQ on GitHub"
-tooltipUploading = "This snapshot is being uploaded to Google Drive."
+tooltipBackedUp = "This backup has been uploaded to Google Drive."
+tooltipDriveOnly = "This backup is only in Google Drive. Select \"Upload\" from the actions menu to Upload it to Home Assistant."
+tooltipHassio = "This backup is only in Home Assistant. Change the number of backups you keep in Drive to get it to upload."
+tooltipWaiting = "This backup is waiting to upload to Google Drive."
+tooltipLoading = "This backup is being downloaded from Google Drive to Home Assistant.  Soon it will be available to restore."
+tooltipPending = "This backup is being created.  If it takes a long time, see the addon's FAQ on GitHub"
+tooltipUploading = "This backup is being uploaded to Google Drive."
 
 var github_bug_desc = `
 Please add some information about your configuration and the problem you ran into here. 
@@ -67,11 +67,11 @@ function test(target) {
   console.log(target);
 }
 
-function downloadSnapshot(target) {
+function downloadBackup(target) {
   window.location.assign('download?slug=' + encodeURIComponent($(target).data('snapshot').slug));
 }
 
-function uploadSnapshot(target) {
+function uploadBackup(target) {
   var slug = $(target).data('snapshot').slug;
   var name = $(target).data('snapshot').name;
   $("#do_upload_button").attr("onClick", "doUpload('" + slug + "', '" + name + "')");
@@ -125,7 +125,7 @@ function exposeServer(expose) {
   }, null, "Saving setting...");
 }
 
-function ackCheckIgnoredSnapshots() {
+function ackCheckIgnoredBackups() {
   postJson("ackignorecheck", {}, function (data) {
     $('#ignore_helper_card').fadeOut(500);
   }, null, "Acknowledging..");
@@ -140,10 +140,10 @@ function resolvefolder(use_existing) {
   refreshstats();
 }
 
-function allowImmediateSnapshot(use_existing) {
+function allowImmediateBackup(use_existing) {
   var url = "ignorestartupcooldown";
   postJson("ignorestartupcooldown", {}, refreshstats, null, "Ignoring delay...");
-  $('#snapshots_boot_waiting_card').hide();
+  $('#backups_boot_waiting_card').hide();
   refreshstats();
 }
 
@@ -339,7 +339,7 @@ function refreshstats() {
     function (e) {
       console.log("Status update failed: ");
       console.log(e);
-      $("#snapshots_loading").show();
+      $("#backups_loading").show();
       if (error_toast == null) {
         M.Toast.dismissAll();
         sync_toast = null;
@@ -386,7 +386,7 @@ function processSourcesUpdate(sources) {
     } else {
       $(".source_ignored_label", template).hide();
     }
-    $(".source_snapshot_count", template).html(source.snapshots + " (" + source.size + ")");
+    $(".source_backup_count", template).html(source.snapshots + " (" + source.size + ")");
 
     if (source.hasOwnProperty("free_space")) {
       $('.source_free_space_text', template).html(source.free_space + " remaining");
@@ -409,86 +409,86 @@ function processSourcesUpdate(sources) {
   });
 }
 
-function processSnapshotsUpdate(data) {
+function processBackupsUpdate(data) {
   let detail_modal = document.getElementById('details_modal');
   let detail_modal_slug = $("#details_modal").data('slug');
   detail_modal = M.Modal.getInstance(detail_modal);
 
-  let regular_snapshots = [];
-  let ignored_snapshots = [];
+  let regular_backups = [];
+  let ignored_backups = [];
   for (var key in data.snapshots) {
     if (data.snapshots.hasOwnProperty(key)) {
-      snapshot = data.snapshots[key];
-      if (snapshot.ignored) {
-        ignored_snapshots.push(snapshot);
+      backup = data.snapshots[key];
+      if (backup.ignored) {
+        ignored_backups.push(backup);
       } else {
-        regular_snapshots.push(snapshot);
+        regular_backups.push(backup);
       }
 
        // Update the detail modal is necessary
-       if (detail_modal_slug == snapshot.slug && detail_modal && detail_modal.isOpen) {
-        setValuesForSnapshotUpdate(snapshot);
+       if (detail_modal_slug == backup.slug && detail_modal && detail_modal.isOpen) {
+        setValuesForBackupUpdate(backup);
       }
     }
   }
 
-  let count_regular = populateSnapshotDiv($('#snapshots'), regular_snapshots, "archive");
-  let count_ignored = populateSnapshotDiv($('#snapshots_ignored'), ignored_snapshots, "cloud_off");
+  let count_regular = populateBackupDiv($('#backups'), regular_backups, "archive");
+  let count_ignored = populateBackupDiv($('#backups_ignored'), ignored_backups, "cloud_off");
 
   if (count_ignored == 0) {
-    $(".ignored_snapshot_slider").addClass("default-hidden");
+    $(".ignored_backup_slider").addClass("default-hidden");
   } else {
-    $(".ignored_snapshot_slider").removeClass("default-hidden");
+    $(".ignored_backup_slider").removeClass("default-hidden");
   }
   if (count_ignored > 1) {
-    $(".ignored_snapshot_plural").removeClass("default-hidden");
+    $(".ignored_backup_plural").removeClass("default-hidden");
   } else {
-    $(".ignored_snapshot_plural").addClass("default-hidden");
+    $(".ignored_backup_plural").addClass("default-hidden");
   }
 
-  $(".ignored_snapshot_count").html(count_ignored);
+  $(".ignored_backup_count").html(count_ignored);
   return count_regular + count_ignored;
 }
 
-function populateSnapshotDiv(snapshot_div, snapshots, icon) {
+function populateBackupDiv(backup_div, backups, icon) {
   slugs = []
   count = 0;
-  for (var key in snapshots) {
-    if (snapshots.hasOwnProperty(key)) {
+  for (var key in backups) {
+    if (backups.hasOwnProperty(key)) {
       count++;
-      snapshot = snapshots[key];
+      backup = backups[key];
       // try to find the item
-      var template = $(".slug" + snapshot.slug, snapshot_div);
-      slugs.push(snapshot.slug);
+      var template = $(".slug" + backup.slug, backup_div);
+      slugs.push(backup.slug);
       var isNew = false;
       if (template.length == 0) {
-        var template = $('#snapshot-template').find(".snapshot-ui").clone();
-        template.addClass("slug" + snapshot.slug);
-        template.addClass("active-snapshot");
-        template.data("slug", snapshot.slug);
-        template.data("timestamp", snapshot.timestamp);
-        $("#snapshot_card", template).attr('id', "snapshot_card" + snapshot.slug);
-        $("#loading", template).attr('id', "loading" + snapshot.slug);
-        $(".snapshot_icon", template).html(icon);
+        var template = $('#backup-template').find(".backup-ui").clone();
+        template.addClass("slug" + backup.slug);
+        template.addClass("active-backup");
+        template.data("slug", backup.slug);
+        template.data("timestamp", backup.timestamp);
+        $("#backup_card", template).attr('id', "backup_card" + backup.slug);
+        $("#loading", template).attr('id', "loading" + backup.slug);
+        $(".backup_icon", template).html(icon);
         isNew = true;
       }
 
-      $("#size", template).html(snapshot['size']);
-      $("#type", template).html(snapshot['type'] === "full" ? "Full snapshot" : "Partial snapshot");
-      $("#createdAt", template).html(snapshot['createdAt']);
-      $("#name", template).html(snapshot['name']);
-      $("#name", template).attr('title', snapshot['name']);
-      $("#status", template).html(snapshot['status']);
-      if (snapshot.status_detail) {
+      $("#size", template).html(backup['size']);
+      $("#type", template).html(backup['type'] === "full" ? "Full backup" : "Partial backup");
+      $("#createdAt", template).html(backup['createdAt']);
+      $("#name", template).html(backup['name']);
+      $("#name", template).attr('title', backup['name']);
+      $("#status", template).html(backup['status']);
+      if (backup.status_detail) {
         $("#gen_detail", template).show();
-        tooltip = "Kept generationally for " + snapshot.status_detail[0];
+        tooltip = "Kept generationally for " + backup.status_detail[0];
         $("#gen_detail", template).attr('data-tooltip', tooltip);
       } else {
         $("#gen_detail", template).hide();
       }
       
 
-      if (snapshot.protected) {
+      if (backup.protected) {
         $(".icon-protected", template).show();
       } else {
         $(".icon-protected", template).hide();
@@ -496,7 +496,7 @@ function populateSnapshotDiv(snapshot_div, snapshots, icon) {
 
       delete_next = [];
       retained = false;
-      for (let source of snapshot.sources){
+      for (let source of backup.sources){
         if (source.delete_next) {
           delete_next.push(source);
         }
@@ -506,10 +506,10 @@ function populateSnapshotDiv(snapshot_div, snapshots, icon) {
       }
       if (delete_next.length > 1) {
         $(".icon-warn-delete", template).show();
-        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from " + delete_next.length + " places when a new snapshot is created.");
+        $(".icon-warn-delete", template).attr("data-tooltip", "This backup will be deleted next from " + delete_next.length + " places when a new backup is created.");
       } else if (delete_next.length == 1) {
         $(".icon-warn-delete", template).show();
-        $(".icon-warn-delete", template).attr("data-tooltip", "This snapshot will be deleted next from " + sourceToName(delete_next[0].key) + " when a new snapshot is created.");
+        $(".icon-warn-delete", template).attr("data-tooltip", "This backup will be deleted next from " + sourceToName(delete_next[0].key) + " when a new backup is created.");
       } else {
         $(".icon-warn-delete", template).hide();
       }
@@ -522,29 +522,29 @@ function populateSnapshotDiv(snapshot_div, snapshots, icon) {
 
       tip = "Help unavailable";
 
-      if (snapshot.status.includes("Drive")) {
+      if (backup.status.includes("Drive")) {
         tip = tooltipDriveOnly;
-      } else if (snapshot.status.includes("Backed Up")) {
+      } else if (backup.status.includes("Backed Up")) {
         tip = tooltipBackedUp;
-      } else if (snapshot.status.includes("Loading")) {
+      } else if (backup.status.includes("Loading")) {
         tip = tooltipLoading;
-      } else if (snapshot.status.includes("HA Only")) {
+      } else if (backup.status.includes("HA Only")) {
         tip = tooltipHassio;
-      } else if (snapshot.status.includes("Pending")) {
+      } else if (backup.status.includes("Pending")) {
         tip = tooltipPending;
-      } else if (snapshot.status.includes("Upload")) {
+      } else if (backup.status.includes("Upload")) {
         tip = tooltipUploading;
-      } else if (snapshot.status.includes("aiting")) {
+      } else if (backup.status.includes("aiting")) {
         tip = tooltipWaiting;
       }
       $("#status-help", template).attr("data-tooltip", tip);
 
       if (isNew) {
         before = null;
-        // Find where the snapshot should be inserted, which is almost always at the top.
+        // Find where the backup should be inserted, which is almost always at the top.
         // This is an inefficient way of sorting but prevents juggling DOM entities around
         // and the "search" is almsot always O(1) in practice.
-        $(".active-snapshot", snapshot_div).each(function () {
+        $(".active-backup", backup_div).each(function () {
           if (template.data('timestamp') > $(this).data('timestamp')) {
             before = $(this);
             return false;
@@ -553,41 +553,41 @@ function populateSnapshotDiv(snapshot_div, snapshots, icon) {
         if (before != null) {
           template.insertBefore(before);
         } else {
-          snapshot_div.append(template);
+          backup_div.append(template);
         }
       }
 
-      if (snapshot.isPending) {
-        $("#loading" + snapshot.slug).show();
-        $("#snapshot_card" + snapshot.slug).css("cursor", "auto");
+      if (backup.isPending) {
+        $("#loading" + backup.slug).show();
+        $("#backup_card" + backup.slug).css("cursor", "auto");
       } else {
-        $("#loading" + snapshot.slug).hide();
-        $("#snapshot_card" + snapshot.slug).css("cursor", "pointer");
+        $("#loading" + backup.slug).hide();
+        $("#backup_card" + backup.slug).css("cursor", "pointer");
       }
 
       // Set up context
-      $("#snapshot_card" + snapshot.slug).data('snapshot', snapshot);
+      $("#backup_card" + backup.slug).data('snapshot', backup);
     }
   }
-  // Remove the snapshot card if the snapshot was deleted.
-  $(".active-snapshot", snapshot_div).each(function () {
-    var snapshot = $(this)
-    if (!slugs.includes(snapshot.data('slug'))) {
-      snapshot.remove();
+  // Remove the backup card if the backup was deleted.
+  $(".active-backup", backup_div).each(function () {
+    var backup = $(this)
+    if (!slugs.includes(backup.data('slug'))) {
+      backup.remove();
     }
   });
   return count;
 }
 
 function processStatusUpdate(data) {
-  name_keys = data.snapshot_name_keys;
-  $('#last_snapshot').empty().append(data.last_snapshot_text);
-  $('#last_snapshot').attr("datetime", data.last_snapshot_machine);
-  $('#last_snapshot').attr("title", data.last_snapshot_detail);
+  name_keys = data.backup_name_keys;
+  $('#last_backup').empty().append(data.last_backup_text);
+  $('#last_backup').attr("datetime", data.last_backup_machine);
+  $('#last_backup').attr("title", data.last_backup_detail);
 
-  $('#next_snapshot').empty().append(data.next_snapshot_text);
-  $('#next_snapshot').attr("datetime", data.next_snapshot_machine);
-  $('#next_snapshot').attr("title", data.next_snapshot_detail);
+  $('#next_backup').empty().append(data.next_backup_text);
+  $('#next_backup').attr("datetime", data.next_backup_machine);
+  $('#next_backup').attr("title", data.next_backup_detail);
 
   if (data.sources.GoogleDrive.enabled && data.folder_id && data.folder_id.length > 0 ) {
     $('.open_drive_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.folder_id);
@@ -597,7 +597,7 @@ function processStatusUpdate(data) {
   }
 
   processSourcesUpdate(data.sources);
-  count = processSnapshotsUpdate(data);
+  count = processBackupsUpdate(data);
 
   // Update the "syncing" toast message
   if (data.syncing) {
@@ -615,15 +615,15 @@ function processStatusUpdate(data) {
 
   if (count == 0) {
     if (!data.firstSync) {
-      $("#no_snapshots_block").show();
-      $("#snapshots_loading").hide();
+      $("#no_backups_block").show();
+      $("#backups_loading").hide();
     } else {
-      $("#snapshots_loading").show();
-      $("#no_snapshots_block").hide();
+      $("#backups_loading").show();
+      $("#no_backups_block").hide();
     }
   } else {
-    $("#no_snapshots_block").hide();
-    $("#snapshots_loading").hide();
+    $("#no_backups_block").hide();
+    $("#backups_loading").hide();
   }
 
   var found = false;
@@ -685,8 +685,8 @@ function processStatusUpdate(data) {
   let question_card = null;
   if (data.notify_check_ignored) {
     question_card = "ignore_helper_card";
-  } else if (data.snapshot_cooldown_active) {
-    question_card = "snapshots_boot_waiting_card";
+  } else if (data.backup_cooldown_active) {
+    question_card = "backups_boot_waiting_card";
   } else if(data.warn_ingress_upgrade && !hideIngress) {
     question_card = "ingress_upgrade_card";
   } else if (data.ask_error_reports && !found) {
@@ -715,7 +715,7 @@ function processStatusUpdate(data) {
   }
 
 
-  $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_snapshot_path, data.ha_url_base));
+  $("#restore_hard_link").attr("href", getHomeAssistantUrl(data.restore_backup_path, data.ha_url_base));
 
   last_data = data;
   
@@ -770,20 +770,20 @@ function stopSimulateError() {
     })
 }
 
-function newSnapshotClick() {
+function newBackupClick() {
   setInputValue("retain_drive_one_off", false);
   setInputValue("retain_ha_one_off", false);
-  setInputValue("snapshot_name_one_off", "");
-  snapshotNameOneOffExample();
-  M.Modal.getInstance(document.querySelector('#snapshotmodal')).open();
+  setInputValue("backup_name_one_off", "");
+  backupNameOneOffExample();
+  M.Modal.getInstance(document.querySelector('#backupmodal')).open();
 }
 
-function doNewSnapshot() {
+function doNewBackup() {
   var drive = $("#retain_drive_one_off").prop('checked');
   var ha = $("#retain_ha_one_off").prop('checked');
-  var name = $("#snapshot_name_one_off").val()
+  var name = $("#backup_name_one_off").val()
   var url = "snapshot?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
-  postJson(url, {}, refreshstats, null, "Requesting snapshot (takes a few seconds)...");
+  postJson(url, {}, refreshstats, null, "Requesting backup (takes a few seconds)...");
   return false;
 }
 
@@ -792,7 +792,7 @@ function allowDeletion(always) {
   postJson(url, {}, refreshstats, null, "Allowing deletion and syncing...");
 }
 
-function chooseSnapshotFolder() {
+function chooseBackupFolder() {
   window.open(last_data.choose_folder_url);
 }
 
@@ -824,13 +824,13 @@ function copyFromInput(id) {
 
 function saveFolder(id) {
   url = "changefolder?id=" + id
-  postJson(url, {}, refreshstats, null, "Setting snapshot folder...");
+  postJson(url, {}, refreshstats, null, "Setting backup folder...");
 }
 
-function exampleSnapshotName(snapshot_type, template) {
-  name_keys["{type}"] = $("#partial_snapshots").is(':checked') ? "Partial" : "Full";
+function exampleBackupName(backup_type, template) {
+  name_keys["{type}"] = $("#partial_backups").is(':checked') ? "Partial" : "Full";
   if (template.length == 0) {
-    template = last_data.snapshot_name_template;
+    template = last_data.backup_name_template;
   }
   for (key in name_keys) {
     template = template.replace(key, name_keys[key]);

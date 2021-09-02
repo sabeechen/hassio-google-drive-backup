@@ -20,7 +20,7 @@
         <use xlink:href="#dummy" />
       </svg>
       <span>
-        <b class="source_snapshot_count"></b>
+        <b class="source_backup_count"></b>
         <span class="source_title"></span>
       </span>
     </h6>
@@ -30,7 +30,7 @@
       </li>
       <li class="source_free_space">
         <span class="source_free_space_text"></span>
-        <i class="source_free_space_tooltip tooltipped material-icons snapshot-help-icon">info</i>
+        <i class="source_free_space_tooltip tooltipped material-icons backup-help-icon">info</i>
       </li>
       <li class="source_ignored_label">
         <span class="source_ignored_count"></span> ignored (<span class="source_ignored_size"></span>)
@@ -38,13 +38,13 @@
     </ul>
   </div>
 </div>
-<div id="snapshot-template" style="display: none">
-  <div class="snapshot-ui col s12 m12 l6 xl6">
-    <div id="snapshot_card" onclick="showDetails(this);return false;" class="card">
+<div id="backup-template" style="display: none">
+  <div class="backup-ui col s12 m12 l6 xl6">
+    <div id="backup_card" onclick="showDetails(this);return false;" class="card">
       <div class="card-content">
         <div style="display: flex; align-items: center;">
           <div class="archive-icon">
-            <i class="large material-icons snapshot_icon" style="font-size: 30px;"></i>
+            <i class="large material-icons backup_icon" style="font-size: 30px;"></i>
             <div id="loading" class="progress default-hidden" style="position: absolute;">
               <div class="indeterminate"></div>
             </div>
@@ -52,20 +52,20 @@
           <div style="min-width: 0;">
             <h7 id="name" class="truncate" style="font-weight: 600;"></h7>
             <div>
-              <i class="material-icons snapshot-card-icon icon-retain tooltipped danger-text" data-position="bottom"
-                data-tooltip="This snapshot is kept indefinitely until you delete it.">lock</i>
-              <i class="material-icons snapshot-card-icon icon-warn-delete tooltipped" data-position="bottom"
+              <i class="material-icons backup-card-icon icon-retain tooltipped danger-text" data-position="bottom"
+                data-tooltip="This backup is kept indefinitely until you delete it.">lock</i>
+              <i class="material-icons backup-card-icon icon-warn-delete tooltipped" data-position="bottom"
     
                 data-tooltip="">warning</i>
-              <i class="material-icons snapshot-card-icon icon-protected tooltipped blue-icon" data-position="bottom"
-                data-tooltip="This snapshot is password protected">vpn_key</i>
-              <i class="material-icons snapshot-card-icon tooltipped" id="gen_detail" data-position="bottom" 
+              <i class="material-icons backup-card-icon icon-protected tooltipped blue-icon" data-position="bottom"
+                data-tooltip="This backup is password protected">vpn_key</i>
+              <i class="material-icons backup-card-icon tooltipped" id="gen_detail" data-position="bottom" 
                 data-tooltip="Override">date_range</i>
               <span id="size"></span>
               -
               <span>
                 <span id="status"></span>
-                <i class="material-icons tooltipped snapshot-help-icon" id="status-help"
+                <i class="material-icons tooltipped backup-help-icon" id="status-help"
                   data-position="bottom" data-tooltip="error">help</i>
               </span>
             </div>
@@ -84,7 +84,7 @@
   <div style="margin: 20px auto; max-width: 1400px;">
     <div class="row" style="margin-bottom: 0;">
       <div class="col s12 m5 l4 xl3">
-        <h5>Snapshots Statistics</h5>
+        <h5>Backup Statistics</h5>
         <div style="margin-top: 20px;">
           <div id="sources">
           </div>
@@ -92,13 +92,13 @@
           <p style="display: flex; align-items: center;">
             <i class="material-icons" style="margin-right: 6px;">timer</i>
             <span>
-              Last Snapshot <time datetime="" title="" id="last_snapshot" style="font-weight: 600;"></time>
+              Last Backup <time datetime="" title="" id="last_backup" style="font-weight: 600;"></time>
             </span>
           </p>
           <p style="display: flex; align-items: center;">
             <i class="material-icons" style="margin-right: 6px;">update</i>
             <span>
-              Next Snapshot in <time datetime="" title="" id="next_snapshot" style="font-weight: 600;"></time>
+              Next Backup in <time datetime="" title="" id="next_backup" style="font-weight: 600;"></time>
             </span>
           </p>
         </div>
@@ -155,15 +155,15 @@
         </div>
         <div class="card default-hidden" id="restore_help_card">
           <div class="card-content">
-            <span class="card-title">Restore a Snapshot</span>
-            <p>Snapshots must be restored through the supervisor Snapshots page. You can restore a snapshot by
+            <span class="card-title">Restore a Backup</span>
+            <p>Backups must be restored through the supervisor Backups page. You can restore a backup by
               navigating to
-              "Supervisor" &gt; "Snapshots" from the Home Assistant Web-UI,
+              "Supervisor" &gt; "Backups" from the Home Assistant Web-UI,
               or by clicking the button below to navigate there by a direct link. Depending on how you access the Home
               Assistant Web-UI the direct link may not work, so you'll just have to navigate there.</p>
           </div>
           <div class="card-action">
-            <a target="_blank" id="restore_hard_link" class="btn-flat"><i class="material-icons">open_in_new</i>Open Snapshots</a>
+            <a target="_blank" id="restore_hard_link" class="btn-flat"><i class="material-icons">open_in_new</i>Open Backups</a>
             <a target="_blank" class="btn-flat modal-close" onClick="$('#restore_help_card').fadeOut(500)"><i class="material-icons">close</i>Dismiss</a>
           </div>
         </div>
@@ -171,62 +171,61 @@
           <div class="card-content">
             <span class="card-title">
               <i class="material-icons">info_outline</i>
-              <span>Double check your ignored snapshots</span>
+              <span>Double check your ignored backups</span>
             </span>
-            <p>Because this addon gets a limited view of the world, it might not be able to accurately determine if all of your older snapshots were created by the addon.  
-              Its recommended that you check below to ensure that all of the snapshots the addon is ignoring now are the ones you intend to have ignored.
-              If not, you can click on an ignored snapshot to see its details and click "Don't ignore" to have the addon include them in future backup, cleanup, etc.</p>
+            <p>Because this addon gets a limited view of the world, it might not be able to accurately determine if all of your older backups were created by the addon.  
+              Its recommended that you check below to ensure that all of the backups the addon is ignoring now are the ones you intend to have ignored.
+              If not, you can click on an ignored backups to see its details and click "Don't ignore" to have the addon include them in future backup, cleanup, etc.</p>
           </div>
           <div class="card-action">
-            <a target="_blank" class="btn-flat" onClick="toggleLinkSlide(this, 'snapshots_ignored');"><i class="material-icons">remove_red_eye</i>Show/Hide Ignored Snapshots</a>
-            <a target="_blank" class="btn-flat" onClick="ackCheckIgnoredSnapshots();"><i class="material-icons">check</i>Acknowledged</a>
+            <a target="_blank" class="btn-flat" onClick="toggleLinkSlide(this, 'backups_ignored');"><i class="material-icons">remove_red_eye</i>Show/Hide Ignored Backups</a>
+            <a target="_blank" class="btn-flat" onClick="ackCheckIgnoredBackups();"><i class="material-icons">check</i>Acknowledged</a>
           </div>
         </div>
-        <div class="card default-hidden question-card" id="snapshots_boot_waiting_card">
+        <div class="card default-hidden question-card" id="backups_boot_waiting_card">
           <div class="card-content">
             <span class="card-title">
               <i class="material-icons">timer</i>
-              <span>Taking a snapshot soon</span>
+              <span>Taking a backup soon</span>
             </span>
-            <p>Since the addon just started up a few minutes ago, its going to wait a few minutes before taking a snapshot to make sure thats what you want.  Look below to see exactly how long before the next snapshot.  
+            <p>Since the addon just started up a few minutes ago, its going to wait a few minutes before taking a backup to make sure thats what you want.  Look below to see exactly how long before the next backup.  
               You can wait for that to happen, change your <a href="#!" onclick="loadSettings()"><i class="material-icons inline-icon">settings</i>add-on
-            settings</a> to something different, or just click the button below to let the automatic snapshot happen immediately.</p>
+            settings</a> to something different, or just click the button below to let the automatic backup happen immediately.</p>
           </div>
           <div class="card-action">
-            <a target="_blank" class="btn-flat" onClick="allowImmediateSnapshot();"><i class="material-icons">alarm_on</i>Snapshot Now</a>
+            <a target="_blank" class="btn-flat" onClick="allowImmediateBackup();"><i class="material-icons">alarm_on</i>Backup Now</a>
           </div>
         </div>
-        <div class="default-hidden" id="no_snapshots_block">
+        <div class="default-hidden" id="no_backups_block">
           <div class="row">
             <div class='col s1'></div>
             <div class='col s2 valign-wrapper center'>
               <i class='material-icons' style="font-size: 90px">info_outline</i>
             </div>
             <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
-              <p>You don't have any snapshots in Google Drive or Home Assistant. Use the "Actions" menu up top
-                create a snapshot and start backing up.</p>
+              <p>You don't have any backups in Google Drive or Home Assistant yet.</p>
             </div>
           </div>
           <div class="divider"></div>
         </div>
-        <div id="snapshots_loading">
+        <div id="backups_loading">
           <div class="row">
             <div class='col s1'></div>
             <div class='col s2 valign-wrapper center'>
               <i class='material-icons' style="font-size: 90px">refresh</i>
             </div>
             <div class='col s7 center valign-wrapper' style="margin-top: 10px;">
-              <p>Waiting for snapshots to load. If you don't see this go away soon, make sure the add-on is still
+              <p>Waiting for backups to load. If you don't see this go away soon, make sure the add-on is still
                 running. Info on this page may be stale until then.</p>
             </div>
           </div>
           <div class="divider"></div>
         </div>
-        <div id="snapshots" class="s12 row"></div>
-        <div class="indent ignored_snapshot_slider">
-          <a class="btn-flat" href="#" onclick="toggleLinkSlide(this, 'snapshots_ignored');"><i class="material-icons">expand_more</i> and <span class="ignored_snapshot_count"></span> ignored snapshot<span class="ignored_snapshot_plural">s</span></a>
+        <div id="backups" class="s12 row"></div>
+        <div class="indent ignored_backup_slider">
+          <a class="btn-flat" href="#" onclick="toggleLinkSlide(this, 'backups_ignored');"><i class="material-icons">expand_more</i> and <span class="ignored_backup_count"></span> ignored backup<span class="ignored_backup_plural">s</span></a>
         </div>
-        <div id="snapshots_ignored" class="s12 row" style="display: none;"></div>
+        <div id="backups_ignored" class="s12 row" style="display: none;"></div>
       </div>
     </div>
   </div>

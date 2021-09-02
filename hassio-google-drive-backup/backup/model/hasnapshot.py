@@ -43,10 +43,10 @@ class HASnapshot(AbstractSnapshot):
             return override
         if self.madeByTheAddon():
             return False
-        if self._config.get(Setting.IGNORE_OTHER_SNAPSHOTS):
+        if self._config.get(Setting.IGNORE_OTHER_BACKUPS):
             return True
         single_backup = len(self.details().get("addons", [])) + len(self.details().get("folders", [])) == 1
-        if single_backup and self._config.get(Setting.IGNORE_UPGRADE_SNAPSHOTS):
+        if single_backup and self._config.get(Setting.IGNORE_UPGRADE_BACKUPS):
             return True
         return super().ignore()
 

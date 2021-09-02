@@ -20,7 +20,7 @@ class SimulatedSource(SnapshotDestination):
         self._upload = True
         self.index = 0
         self.max = 0
-        self.snapshot_name = SnapshotName()
+        self.backup_name = SnapshotName()
         self.host_info = {}
         self.snapshot_type = "Full"
         self.working = False
@@ -82,7 +82,7 @@ class SimulatedSource(SnapshotDestination):
     async def create(self, options: CreateOptions) -> DummySnapshotSource:
         assert self.enabled
         new_snapshot = DummySnapshotSource(
-            self.snapshot_name.resolve(
+            self.backup_name.resolve(
                 self.snapshot_type, options.name_template, options.when, self.host_info),
             options.when,
             self._name,

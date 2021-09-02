@@ -23,6 +23,7 @@ URL_MATCH_CORE_API = "^/core/api.*$"
 URL_MATCH_START_ADDON = "^/addons/.*/start$"
 URL_MATCH_STOP_ADDON = "^/addons/.*/stop$"
 URL_MATCH_ADDON_INFO = "^/addons/.*/info$"
+URL_MATCH_SELF_OPTIONS = "^/addons/self/options$"
 
 URL_MATCH_SNAPSHOT = "^/snapshots.*$"
 URL_MATCH_BACKUPS = "^/backups.*$"
@@ -59,10 +60,9 @@ class SimulatedSupervisor(BaseServer):
 
     def defaultOptions(self):
         return {
-            "max_snapshots_in_hassio": 4,
-            "max_snapshots_in_google_drive": 4,
-            "days_between_snapshots": 3,
-            "use_ssl": False
+            "max_backups_in_ha": 4,
+            "max_backups_in_google_drive": 4,
+            "days_between_backups": 3
         }
 
     def routes(self):
@@ -87,7 +87,7 @@ class SimulatedSupervisor(BaseServer):
             get('/supervisor/info', self._supervisorInfo),
             get('/supervisor/logs', self._supervisorLogs),
             get('/core/logs', self._coreLogs),
-            get('/debug/insert/snapshot', self._debug_insert_snapshot),
+            get('/debug/insert/backup', self._debug_insert_snapshot),
 
             get('/backups', self._getBackups),
             delete('/backups/{slug}/remove', self._deleteSnapshot),
@@ -382,7 +382,7 @@ class SimulatedSupervisor(BaseServer):
     async def _debug_insert_snapshot(self, request: Request) -> bool:
         days_back = int(request.query.get("days"))
         date = self._time.now() - timedelta(days=days_back)
-        name = date.strftime("Full Snapshot %Y-%m-%d %H:%M-%S")
+        name = date.strftime("Full Backup %Y-%m-%d %H:%M-%S")
         wait = int(request.query.get("wait", 0))
         slug = await self._internalNewSnapshot(request, {'name': name, 'wait': wait}, date=date, verify_header=False)
         return self._formatDataResponse({'slug': slug})

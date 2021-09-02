@@ -12,7 +12,7 @@ from backup.util import AsyncHttpGetter, GlobalInfo, Estimator, DataCache, KEY_L
 from ..config import Config, Setting, CreateOptions, Startable
 from ..const import SOURCE_HA
 from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
-from ..exceptions import (LogicError, SnapshotInProgress,
+from ..exceptions import (LogicError, BackupInProgress,
                           UploadFailed, ensureKey)
 from .harequests import HaRequests
 from .password import Password
@@ -20,7 +20,7 @@ from .snapshotname import SnapshotName
 from ..time import Time
 from ..logger import getLogger, StandardLogger
 from backup.const import FOLDERS
-from .addon_stopper import AddonStopper
+from .addon_stopper import LOGGER, AddonStopper
 
 logger: StandardLogger = getLogger(__name__)
 
@@ -70,7 +70,7 @@ class PendingSnapshot(AbstractSnapshot):
         self._completed_slug = slug
 
     def setPendingUnknown(self):
-        self._name = "Pending Snapshot"
+        self._name = "Pending Backup"
         self._snapshotType = "unknown"
         self._protected = False
         self._pending_subverted = True
@@ -95,7 +95,7 @@ class PendingSnapshot(AbstractSnapshot):
         if self.isFailed():
             raise self._exception
         if self._pending_subverted:
-            raise SnapshotInProgress()
+            raise BackupInProgress()
 
     def isStale(self):
         if self._pending_subverted:
@@ -168,7 +168,7 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
         return "Home Assistant"
 
     def maxCount(self) -> None:
-        return self.config.get(Setting.MAX_SNAPSHOTS_IN_HASSIO)
+        return self.config.get(Setting.MAX_BACKUPS_IN_HA)
 
     def enabled(self) -> bool:
         return True
@@ -182,7 +182,7 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
 
         # Set a default name if it was unspecified
         if options.name_template is None or len(options.name_template) == 0:
-            options.name_template = self.config.get(Setting.SNAPSHOT_NAME)
+            options.name_template = self.config.get(Setting.BACKUP_NAME)
 
         # Build the snapshot request json, get type, etc
         request, type_name, protected = self._buildSnapshotInfo(
@@ -193,7 +193,7 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
             if self.pending_snapshot:
                 if not self.pending_snapshot.isFailed() and not self.pending_snapshot.isComplete():
                     logger.info("A snapshot was already in progress")
-                    raise SnapshotInProgress()
+                    raise BackupInProgress()
 
             # try to stop addons
             await self.stopper.stopAddons(self.self_info['slug'])
@@ -203,7 +203,7 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
                 type_name, protected, options, request, self.config, self.time)
             logger.info("Requesting a new snapshot")
             self._pending_snapshot_task = asyncio.create_task(self._requestAsync(
-                self.pending_snapshot), name="Pending Snapshot Requester")
+                self.pending_snapshot), name="Pending Backup Requester")
             await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
             # set up the pending snapshot info
             pending = self._data_cache.snapshot(KEY_PENDING)
@@ -368,6 +368,13 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
             self.super_info = await self.harequests.supervisorInfo()
             self.config.update(
                 ensureKey("options", self.self_info, "addon metdata"))
+            if self.config.mustSaveUpgradeChanges():
+                LOGGER.info("The configuration format has changed in this version of the addon and your configuration will be automatically updated")
+                options = {}
+                for option in self.config.getAllConfig().keys():
+                    options[option.value] = self.config.get(option)
+                await self.harequests.updateConfig(options)
+                self.config.persistedChanges()
 
             self._info.ha_port = ensureKey(
                 "port", self.ha_info, "Home Assistant metadata")
@@ -429,7 +436,7 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
         item: HASnapshot = snapshot.getSource(self.name())
         if not item:
             raise LogicError(
-                "Requested to do something with a snapshot from Home Assistant, but the snapshot has no Home Assistant source")
+                "Requested to do something with a backup from Home Assistant, but the backup has no Home Assistant source")
         return item
 
     def _killPending(self):
@@ -445,17 +452,17 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
         try:
             result = await asyncio.wait_for(self.harequests.createSnapshot(pending._request_info), timeout=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS))
             slug = ensureKey(
-                "slug", result, "supervisor's create snapshot response")
+                "slug", result, "supervisor's create backup response")
             pending.complete(slug)
             self.config.setRetained(
                 slug, pending.getOptions().retain_sources.get(self.name(), False))
-            logger.info("Snapshot finished")
+            logger.info("Backup finished")
         except Exception as e:
             if self._isHttp400(e):
-                logger.warning("A snapshot was already in progress")
+                logger.warning("A backup was already in progress")
                 pending.setPendingUnknown()
             else:
-                logger.error("Snapshot failed:")
+                logger.error("Backup failed:")
                 logger.printException(e)
                 pending.failed(e, self.time.now())
         finally:

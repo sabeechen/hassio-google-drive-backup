@@ -15,8 +15,8 @@ from ..logger import getLogger
 logger = getLogger(__name__)
 
 NOTIFICATION_TITLE = "Home Assistant Google Drive Backup is Having Trouble"
-NOTIFICATION_DESC_LINK = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page]({0}) for details."
-NOTIFICATION_DESC_STATIC = "The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on status page for details."
+NOTIFICATION_DESC_LINK = "The add-on is having trouble making backups and needs attention.  Please visit the add-on [status page]({0}) for details."
+NOTIFICATION_DESC_STATIC = "The add-on is having trouble making backups and needs attention.  Please visit the add-on status page for details."
 
 MAX_BACKOFF = 60 * 5  # 5 minutes
 FIRST_BACKOFF = 60  # 1 minute
@@ -49,11 +49,11 @@ class HaUpdater(Worker):
 
     async def update(self):
         try:
-            if self._config.get(Setting.ENABLE_SNAPSHOT_STALE_SENSOR):
+            if self._config.get(Setting.ENABLE_BACKUP_STALE_SENSOR):
                 await self._requests.updateSnapshotStaleSensor('on' if self._stale() else 'off')
-            if self._config.get(Setting.ENABLE_SNAPSHOT_STATE_SENSOR):
+            if self._config.get(Setting.ENABLE_BACKUP_STATE_SENSOR):
                 await self._maybeSendSnapshotUpdate()
-            if self._config.get(Setting.NOTIFY_FOR_STALE_SNAPSHOTS):
+            if self._config.get(Setting.NOTIFY_FOR_STALE_BACKUPS):
                 if self._stale() and not self._notified:
                     if self._info.url is None or len(self._info.url) == 0:
                         message = NOTIFICATION_DESC_STATIC

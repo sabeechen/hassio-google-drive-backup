@@ -19,8 +19,8 @@ from yarl import URL
 logger = getLogger(__name__)
 
 NOTIFICATION_ID = "backup_broken"
-EVENT_SNAPSHOT_START = "snapshot_started"
-EVENT_SNAPSHOT_END = "snapshot_ended"
+EVENT_SNAPSHOT_START = "backup_started"
+EVENT_SNAPSHOT_END = "backup_ended"
 
 VERSION_BACKUP_PATH = Version.parse("2021.8")
 
@@ -260,15 +260,15 @@ class HaRequests():
 
     async def eventSnapshotStart(self, name, time):
         await self._sendEvent(EVENT_SNAPSHOT_START, {
-            'snapshot_name': name,
-            'snapshot_time': str(time)
+            'backup_name': name,
+            'backup_time': str(time)
         })
 
     async def eventSnapshotEnd(self, name, time, completed):
         await self._sendEvent(EVENT_SNAPSHOT_END, {
             'completed': completed,
-            'snapshot_name': name,
-            'snapshot_time': str(time)
+            'backup_name': name,
+            'backup_time': str(time)
         })
 
     async def _sendEvent(self, event_name: str, data: Dict[str, str]) -> None:

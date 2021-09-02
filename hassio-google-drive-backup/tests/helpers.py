@@ -92,7 +92,7 @@ def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, includ
     }
     stream = BytesIO()
     tar = tarfile.open(fileobj=stream, mode="w")
-    add(tar, "snapshot.json", BytesIO(json.dumps(snapshot_info).encode()))
+    add(tar, "backup.json", BytesIO(json.dumps(snapshot_info).encode()))
     add(tar, "padding.dat", getTestStream(padSize))
     tar.close()
     stream.seek(0)
@@ -109,7 +109,7 @@ def add(tar, name, stream):
 
 def parseSnapshotInfo(stream: BytesIO):
     with tarfile.open(fileobj=stream, mode="r") as tar:
-        info = tar.getmember("snapshot.json")
+        info = tar.getmember("backup.json")
         with tar.extractfile(info) as f:
             snapshot_data = json.load(f)
             snapshot_data['size'] = float(

@@ -6,7 +6,7 @@ from injector import inject, singleton
 
 from .backupscheme import GenerationalScheme, OldestScheme, DeleteAfterUploadScheme
 from backup.config import Config, Setting, CreateOptions
-from backup.exceptions import DeleteMutlipleSnapshotsError, SimulatedError
+from backup.exceptions import DeleteMutlipleBackupsError, SimulatedError
 from backup.util import GlobalInfo, Estimator, DataCache
 from .snapshots import AbstractSnapshot, Snapshot
 from .dummysnapshot import DummySnapshot
@@ -122,14 +122,14 @@ class Model():
 
     def _nextSnapshot(self, now: datetime, last_snapshot: Optional[datetime]) -> Optional[datetime]:
         timeofDay = self.getTimeOfDay()
-        if self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS) <= 0:
+        if self.config.get(Setting.DAYS_BETWEEN_BACKUPS) <= 0:
             next = None
         elif self.dest.needsConfiguration():
             next = None
         elif not last_snapshot:
             next = now - timedelta(minutes=1)
         elif not timeofDay:
-            next = last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS))
+            next = last_snapshot + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_BACKUPS))
         else:
             newest_local: datetime = self.time.toLocal(last_snapshot)
             time_that_day_local = datetime(newest_local.year, newest_local.month,
@@ -140,7 +140,7 @@ class Model():
             else:
                 # return the next snapshot after the delta
                 next = self.time.toUtc(
-                    time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_SNAPSHOTS)))
+                    time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_BACKUPS)))
 
         # Don't snapshot X minutes after startup, since that can put an unreasonable amount of strain on
         # system just booting up.
@@ -178,9 +178,9 @@ class Model():
         self._handleSnapshotDetails()
         next_snapshot = self.nextSnapshot(now)
         if next_snapshot and now >= next_snapshot and self.source.enabled() and not self.dest.needsConfiguration():
-            if self.config.get(Setting.DELETE_BEFORE_NEW_SNAPSHOT):
+            if self.config.get(Setting.DELETE_BEFORE_NEW_BACKUP):
                 await self._purge(self.source, pre_purge=True)
-            await self.createSnapshot(CreateOptions(now, self.config.get(Setting.SNAPSHOT_NAME)))
+            await self.createSnapshot(CreateOptions(now, self.config.get(Setting.BACKUP_NAME)))
             await self._purge(self.source)
             self._handleSnapshotDetails()
 
@@ -199,7 +199,7 @@ class Model():
                 proposed = list(self.snapshots.values())
                 proposed.append(dummy)
                 if self._nextPurge(self.dest, proposed) != dummy:
-                    if self.config.get(Setting.DELETE_BEFORE_NEW_SNAPSHOT):
+                    if self.config.get(Setting.DELETE_BEFORE_NEW_BACKUP):
                         await self._purge(self.dest, pre_purge=True)
                     upload.addSource(await self.dest.save(upload, await self.source.read(upload)))
                     await self._purge(self.dest)
@@ -243,7 +243,7 @@ class Model():
         return purges
 
     def _parseTimeOfDay(self) -> Optional[Tuple[int, int]]:
-        from_config = self.config.get(Setting.SNAPSHOT_TIME_OF_DAY)
+        from_config = self.config.get(Setting.BACKUP_TIME_OF_DAY)
         if len(from_config) == 0:
             return None
         parts = from_config.split(":")
@@ -322,7 +322,7 @@ class Model():
             if len(purge) <= 0:
                 return
             if len(purge) > 1 and (self.config.get(Setting.CONFIRM_MULTIPLE_DELETES) and not self.info.isPermitMultipleDeletes()):
-                raise DeleteMutlipleSnapshotsError(self._getPurgeStats())
+                raise DeleteMutlipleBackupsError(self._getPurgeStats())
             await self.deleteSnapshot(purge[0], source)
 
     def _getPurgeStats(self):

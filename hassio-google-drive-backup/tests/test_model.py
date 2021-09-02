@@ -4,7 +4,7 @@ import pytest
 from dateutil.tz import gettz
 
 from backup.config import Config, Setting, CreateOptions
-from backup.exceptions import DeleteMutlipleSnapshotsError
+from backup.exceptions import DeleteMutlipleBackupsError
 from backup.util import GlobalInfo, DataCache
 from backup.model import Model, SnapshotSource
 from .faketime import FakeTime
@@ -43,43 +43,43 @@ def createConfig() -> Config:
 def test_timeOfDay(estimator, model: Model) -> None:
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '00:00')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '00:00')
     model.reinitialize()
     assert model.getTimeOfDay() == (0, 0)
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '23:59')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '23:59')
     model.reinitialize()
     assert model.getTimeOfDay() == (23, 59)
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:59')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '24:59')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:60')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '24:60')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '-1:60')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '-1:60')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:-1')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '24:-1')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, 'boop:60')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, 'boop:60')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:boop')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '24:boop')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '24:10:22')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '24:10:22')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
-    model.config.override(Setting.SNAPSHOT_TIME_OF_DAY, '10')
+    model.config.override(Setting.BACKUP_TIME_OF_DAY, '10')
     model.reinitialize()
     assert model.getTimeOfDay() is None
 
@@ -89,13 +89,13 @@ def test_next_time(estimator, data_cache):
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
     time.setNow(now)
     info = GlobalInfo(time)
-    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 0)
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_BACKUPS, 0)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator, data_cache)
     assert model._nextSnapshot(now=now, last_snapshot=None) is None
     assert model._nextSnapshot(now=now, last_snapshot=now) is None
 
-    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator, data_cache)
     assert model._nextSnapshot(
@@ -113,8 +113,8 @@ def test_next_time_of_day(estimator, data_cache):
     now: datetime = datetime(1985, 12, 6, 1, 0, 0).astimezone(timezone.utc)
     time.setNow(now)
     info = GlobalInfo(time)
-    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
-        Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_BACKUPS, 1).override(
+        Setting.BACKUP_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator, data_cache)
 
@@ -137,8 +137,8 @@ def test_next_time_of_day_drift(estimator, data_cache):
     time.setNow(now)
     info = GlobalInfo(time)
 
-    config: Config = createConfig().override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1).override(
-        Setting.SNAPSHOT_TIME_OF_DAY, '08:00')
+    config: Config = createConfig().override(Setting.DAYS_BETWEEN_BACKUPS, 1).override(
+        Setting.BACKUP_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator, data_cache)
 
@@ -302,7 +302,7 @@ async def test_new_upload_with_delete(time, model, source, dest, simple_config):
 
     # configure only one to be kept in both places
     simple_config.config.update({
-        "days_between_snapshots": 1
+        "days_between_backups": 1
     })
     model.reinitialize()
     await model.sync(now)
@@ -329,7 +329,7 @@ async def test_new_upload_no_delete(time, model, source, dest, simple_config):
 
     # configure keeping two in both places
     simple_config.config.update({
-        "days_between_snapshots": 1
+        "days_between_backups": 1
     })
     model.reinitialize()
     await model.sync(now)
@@ -356,7 +356,7 @@ async def test_multiple_deletes_allowed(time, model, source, dest, simple_config
 
     # configure keeping 1
     simple_config.config.update({
-        "max_snapshots_in_google_drive": 1,
+        "max_backups_in_google_drive": 1,
     })
     model.reinitialize()
     await model.sync(now)
@@ -383,7 +383,7 @@ async def test_confirm_multiple_deletes(time, model, source, dest, simple_config
     source.insert("old", now - timedelta(days=1), "old")
     source.insert("older", now - timedelta(days=2), "older")
 
-    with pytest.raises(DeleteMutlipleSnapshotsError) as thrown:
+    with pytest.raises(DeleteMutlipleBackupsError) as thrown:
         await model.sync(now)
 
     thrown.value.data() == {
@@ -445,7 +445,7 @@ async def test_dont_delete_purgable(time, model, source, dest, simple_config):
 
     # configure only one to be kept in both places
     simple_config.config.update({
-        "days_between_snapshots": 1
+        "days_between_backups": 1
     })
     model.reinitialize()
     await model.sync(now)
@@ -473,7 +473,7 @@ async def test_generational_delete(time, model, dest, source, simple_config):
 
     # configure only one to be kept in both places
     simple_config.config.update({
-        "days_between_snapshots": 1,
+        "days_between_backups": 1,
         "generational_weeks": 1,
         "generational_days": 2
     })
@@ -592,7 +592,7 @@ async def test_delete_after_upload_multiple_deletes(time: FakeTime, model: Model
     source.reset()
 
     # Deleteing multiple snapshots should still fail with DELETE_AFTER_UPLOAD:True
-    with pytest.raises(DeleteMutlipleSnapshotsError):
+    with pytest.raises(DeleteMutlipleBackupsError):
         await model.sync(time.now())
 
     # But the snapshot should still get backed up
@@ -690,7 +690,7 @@ async def test_delete_after_upload_with_no_snapshots(source: HelperTestSource, d
     source.insert("newer", time.now(), slug="newer")
     source.reset()
 
-    with pytest.raises(DeleteMutlipleSnapshotsError):
+    with pytest.raises(DeleteMutlipleBackupsError):
         await model.sync(time.now())
 
     simple_config.override(Setting.CONFIRM_MULTIPLE_DELETES, False)
@@ -720,7 +720,7 @@ async def test_purge_before_upload(source: HelperTestSource, dest: HelperTestSou
     source.assertThat(current=2)
     dest.assertThat(current=2)
 
-    simple_config.override(Setting.DELETE_BEFORE_NEW_SNAPSHOT, True)
+    simple_config.override(Setting.DELETE_BEFORE_NEW_BACKUP, True)
     # Trying to sync should delete the snapshot before syncing and then fail to create a new one.
     with pytest.raises(IntentionalFailure):
         await model.sync(time.now())
@@ -760,12 +760,12 @@ async def test_generational_empty(time, model: Model, dest, source, simple_confi
     now = time.now()
 
     simple_config.config.update({
-        "days_between_snapshots": 1,
+        "days_between_backups": 1,
         "generational_weeks": 1,
         "generational_days": 2
     })
 
-    simple_config.override(Setting.DAYS_BETWEEN_SNAPSHOTS, 1)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
 
     model.reinitialize()
     assert len(model.snapshots) == 0

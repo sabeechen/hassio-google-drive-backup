@@ -4,7 +4,7 @@ from ..logger import getLogger
 
 logger = getLogger(__name__)
 
-SNAPSHOT_NAME_KEYS = {
+BACKUP_NAME_KEYS = {
     "{type}": lambda snapshot_type, now_local, host_info: snapshot_type,
     "{year}": lambda snapshot_type, now_local, host_info: now_local.strftime("%Y"),
     "{year_short}": lambda snapshot_type, now_local, host_info: now_local.strftime("%y"),
@@ -33,7 +33,7 @@ SNAPSHOT_NAME_KEYS = {
 
 class SnapshotName():
     def resolve(self, snapshot_type: str, template: str, now_local: datetime, host_info) -> str:
-        for key in SNAPSHOT_NAME_KEYS:
-            template = template.replace(key, SNAPSHOT_NAME_KEYS[key](
+        for key in BACKUP_NAME_KEYS:
+            template = template.replace(key, BACKUP_NAME_KEYS[key](
                 snapshot_type, now_local, host_info))
         return template

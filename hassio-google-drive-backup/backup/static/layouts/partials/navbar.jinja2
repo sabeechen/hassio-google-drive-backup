@@ -3,9 +3,7 @@
 {% if coordEnabled %}
 {% include 'layouts/partials/modals/snapshot/delete.jinja2' %}
 {% include 'layouts/partials/modals/snapshot/new.jinja2' %}
-{% include 'layouts/partials/modals/snapshot/retain.jinja2' %}
 {% include 'layouts/partials/modals/snapshot/upload.jinja2' %}
-{% include 'layouts/partials/modals/snapshot/restore.jinja2' %}
 {% include 'layouts/partials/modals/snapshot/details.jinja2' %}
 {% endif %}
 
@@ -19,10 +17,8 @@
 <script type="text/javascript">
   $(document).ready(function () {
     $('#deletemodal').modal();
-    $('#snapshotmodal').modal();
-    $('#retainmodal').modal();
+    $('#backupmodal').modal();
     $('#uploadmodal').modal();
-    $('#restoremodal').modal();
     $('#details_modal').modal();
   });
 </script>
@@ -51,8 +47,8 @@
 <ul id="{{ id }}" class="dropdown-content">
   {% if coordEnabled %}
     <li>
-      <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
-        <i class="material-icons left">add</i>Snapshot Now
+      <a onclick="newBackupClick(); return false;" style="cursor: pointer">
+        <i class="material-icons left">add</i>Backup Now
       </a>
     </li>
     {% if showOpenDriveLink %}
@@ -60,7 +56,7 @@
       <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
     </li>
     {% endif %}
-    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
+    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
     <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   {% endif %}
   <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
@@ -109,13 +105,13 @@
   <li><a href="log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
   {% if coordEnabled %}
     <li>
-      <a onclick="newSnapshotClick(); return false;" style="cursor: pointer">
-        <i class="material-icons left">add</i>Snapshot Now</a>
+      <a onclick="newBackupClick(); return false;" style="cursor: pointer">
+        <i class="material-icons left">add</i>Backup Now</a>
     </li>
     {% if showOpenDriveLink %}
       <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
     {% endif %}
-    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Snapshots</a></li>
+    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
     <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   {% endif %}
   <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
@@ -125,7 +121,7 @@
 
 {% if coordEnabled %}
 <div class="fixed-action-btn">
-  <a onclick="newSnapshotClick(); return false;" class="btn-floating btn-large tooltipped" data-position="left" data-tooltip="Snapshot Now">
+  <a onclick="newBackupClick(); return false;" class="btn-floating btn-large tooltipped" data-position="left" data-tooltip="Backup Now">
     <i class="large material-icons">add</i>
   </a>
 </div>

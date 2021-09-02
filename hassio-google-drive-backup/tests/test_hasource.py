@@ -7,15 +7,15 @@ from aiohttp.client_exceptions import ClientResponseError
 
 from backup.config import Config, Setting, CreateOptions, Version
 from backup.const import SOURCE_HA
-from backup.exceptions import (HomeAssistantDeleteError, SnapshotInProgress,
-                               SnapshotPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError)
+from backup.exceptions import (HomeAssistantDeleteError, BackupInProgress,
+                               BackupPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError)
 from backup.util import GlobalInfo, DataCache, KEY_CREATED, KEY_LAST_SEEN, KEY_NAME
 from backup.ha import HaSource, PendingSnapshot, EVENT_SNAPSHOT_END, EVENT_SNAPSHOT_START, HASnapshot, Password, AddonStopper
 from backup.model import DummySnapshot
 from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
 from .helpers import all_addons, all_folders, createSnapshotTar, getTestStream
-from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD, URL_MATCH_BACKUPS, URL_MATCH_SNAPSHOT
+from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_SELF_OPTIONS, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_SNAPSHOT_FULL, URL_MATCH_SNAPSHOT_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_SNAPSHOT_DOWNLOAD, URL_MATCH_BACKUPS, URL_MATCH_SNAPSHOT
 from dev.request_interceptor import RequestInterceptor
 from backup.model import Model
 from backup.time import Time
@@ -127,17 +127,17 @@ async def test_pending_snapshot_nowait(ha: HaSource, time: Time, supervisor: Sim
     # ignroe events for now
     assert supervisor.getEvents() == [
         (EVENT_SNAPSHOT_START, {
-            'snapshot_name': snapshot_immediate.name(),
-            'snapshot_time': str(snapshot_immediate.date())})]
+            'backup_name': snapshot_immediate.name(),
+            'backup_time': str(snapshot_immediate.date())})]
     ha.snapshot_thread.join()
     assert supervisor.getEvents() == [
         (EVENT_SNAPSHOT_START, {
-            'snapshot_name': snapshot_immediate.name(),
-            'snapshot_time': str(snapshot_immediate.date())}),
+            'backup_name': snapshot_immediate.name(),
+            'backup_time': str(snapshot_immediate.date())}),
         (EVENT_SNAPSHOT_END, {
             'completed': True,
-            'snapshot_name': snapshot_immediate.name(),
-            'snapshot_time': str(snapshot_immediate.date())})]
+            'backup_name': snapshot_immediate.name(),
+            'backup_time': str(snapshot_immediate.date())})]
 
 
 @pytest.mark.asyncio
@@ -147,14 +147,14 @@ async def test_pending_snapshot_already_in_progress(ha, time, config: Config, su
 
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
     await supervisor.toggleBlockSnapshot()
-    with pytest.raises(SnapshotInProgress):
+    with pytest.raises(BackupInProgress):
         await ha.create(CreateOptions(time.now(), "Test Name"))
     snapshots = list((await ha.get()).values())
     assert len(snapshots) == 2
     snapshot = snapshots[1]
 
     assert isinstance(snapshot, PendingSnapshot)
-    assert snapshot.name() == "Pending Snapshot"
+    assert snapshot.name() == "Pending Backup"
     assert snapshot.slug() == "pending"
     assert not snapshot.uploadable()
     assert snapshot.snapshotType() == "unknown"
@@ -162,7 +162,7 @@ async def test_pending_snapshot_already_in_progress(ha, time, config: Config, su
     assert snapshot.date() == time.now()
     assert not snapshot.protected()
 
-    with pytest.raises(SnapshotInProgress):
+    with pytest.raises(BackupInProgress):
         await ha.create(CreateOptions(time.now(), "Test Name"))
 
 
@@ -201,28 +201,28 @@ async def test_partial_snapshot(ha, time, server, config: Config):
 
 
 @pytest.mark.asyncio
-async def test_snapshot_password(ha: HaSource, config: Config, time):
+async def test_backup_password(ha: HaSource, config: Config, time):
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
     snapshot: HASnapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert not snapshot.protected()
 
-    config.override(Setting.SNAPSHOT_PASSWORD, 'test')
+    config.override(Setting.BACKUP_PASSWORD, 'test')
     snapshot = await ha.create(CreateOptions(time.now(), "Test Name"))
     assert snapshot.protected()
 
-    config.override(Setting.SNAPSHOT_PASSWORD, 'test')
+    config.override(Setting.BACKUP_PASSWORD, 'test')
     assert Password(ha.config).resolve() == 'test'
 
-    config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
+    config.override(Setting.BACKUP_PASSWORD, '!secret for_unit_tests')
     assert Password(ha.config).resolve() == 'password value'
 
-    config.override(Setting.SNAPSHOT_PASSWORD, '!secret bad_key')
-    with pytest.raises(SnapshotPasswordKeyInvalid):
+    config.override(Setting.BACKUP_PASSWORD, '!secret bad_key')
+    with pytest.raises(BackupPasswordKeyInvalid):
         Password(config).resolve()
 
     config.override(Setting.SECRETS_FILE_PATH, "/bad/file/path")
-    config.override(Setting.SNAPSHOT_PASSWORD, '!secret for_unit_tests')
-    with pytest.raises(SnapshotPasswordKeyInvalid):
+    config.override(Setting.BACKUP_PASSWORD, '!secret for_unit_tests')
+    with pytest.raises(BackupPasswordKeyInvalid):
         Password(ha.config).resolve()
 
 
@@ -261,7 +261,7 @@ async def assertName(ha: HaSource, time, template: str, expected: str):
 @pytest.mark.asyncio
 async def test_default_name(time: FakeTime, ha, server):
     snapshot = await ha.create(CreateOptions(time.now(), ""))
-    assert snapshot.name() == "Full Snapshot 1985-12-06 00:00:00"
+    assert snapshot.name() == "Full Backup 1985-12-06 00:00:00"
 
 
 @pytest.mark.asyncio
@@ -295,12 +295,12 @@ async def test_pending_snapshot_timeout_external(time, config, ha: HaSource, sup
     # now configure a snapshto to start outside of the addon
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
     await supervisor.toggleBlockSnapshot()
-    with pytest.raises(SnapshotInProgress):
+    with pytest.raises(BackupInProgress):
         await ha.create(CreateOptions(time.now(), "Ignored"))
     snapshot_immediate = (await ha.get())['pending']
     await supervisor.toggleBlockSnapshot()
     assert isinstance(snapshot_immediate, PendingSnapshot)
-    assert snapshot_immediate.name() == "Pending Snapshot"
+    assert snapshot_immediate.name() == "Pending Backup"
     assert ha.check()
     assert not ha.check()
     assert ha.pending_snapshot is snapshot_immediate
@@ -316,12 +316,12 @@ async def test_pending_snapshot_replaces_original(time, ha: HaSource, config: Co
     # now configure a snapshto to start outside of the addon
     config.override(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS, 100)
     await supervisor.toggleBlockSnapshot()
-    with pytest.raises(SnapshotInProgress):
+    with pytest.raises(BackupInProgress):
         await ha.create(CreateOptions(time.now(), "Ignored"))
     snapshot_immediate = (await ha.get())['pending']
     await supervisor.toggleBlockSnapshot()
     assert isinstance(snapshot_immediate, PendingSnapshot)
-    assert snapshot_immediate.name() == "Pending Snapshot"
+    assert snapshot_immediate.name() == "Pending Backup"
     assert ha.check()
     assert ha.pending_snapshot is snapshot_immediate
     assert await ha.get() == {snapshot_immediate.slug(): snapshot_immediate}
@@ -628,7 +628,7 @@ async def test_ingore_self_when_stopping(ha: HaSource, time, interceptor: Reques
 
 @pytest.mark.asyncio
 async def test_dont_purge_pending_snapshot(ha: HaSource, time, config: Config, supervisor: SimulatedSupervisor, model: Model, interceptor):
-    config.override(Setting.MAX_SNAPSHOTS_IN_HASSIO, 4)
+    config.override(Setting.MAX_BACKUPS_IN_HA, 4)
     await ha.create(CreateOptions(time.now(), "Test Name 1"))
     await ha.create(CreateOptions(time.now(), "Test Name 2"))
     await ha.create(CreateOptions(time.now(), "Test Name 3"))
@@ -744,3 +744,136 @@ async def test_supervisor_host(ha: HaSource, supervisor: SimulatedSupervisor, in
 
     os.environ['SUPERVISOR_TOKEN'] = "test"
     assert ha.harequests.getSupervisorURL() == URL("http://supervisor")
+
+
+@pytest.mark.asyncio
+async def test_upgrade_default_config(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, server_url):
+    """Verify that converting the original default config optiosn works as expected"""
+
+    # overwrite the addon options with old values
+    supervisor._options = {
+        Setting.MAX_SNAPSHOTS_IN_HASSIO.value: 4,
+        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE.value: 4,
+        Setting.DAYS_BETWEEN_SNAPSHOTS.value: 3,
+        Setting.USE_SSL.value: False,
+    }
+
+    await ha.init()
+
+    assert not config.mustSaveUpgradeChanges()
+    assert interceptor.urlWasCalled(URL_MATCH_SELF_OPTIONS)
+
+    # Verify the config was upgraded
+    assert supervisor._options == {
+        Setting.MAX_BACKUPS_IN_HA.value: 4,
+        Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE.value: 4,
+        Setting.DAYS_BETWEEN_BACKUPS.value: 3,
+        Setting.CALL_BACKUP_SNAPSHOT.value: True,
+    }
+
+
+@pytest.mark.asyncio
+async def test_upgrade_all_config(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, server_url):
+    """Verify that converting all upgradeable config optiosn works as expected"""
+
+    # overwrite the addon options with old values
+    supervisor._options = {
+        Setting.MAX_SNAPSHOTS_IN_HASSIO.value: 1,
+        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE.value: 2,
+        Setting.DAYS_BETWEEN_SNAPSHOTS.value: 5,
+        Setting.IGNORE_OTHER_SNAPSHOTS.value: True,
+        Setting.IGNORE_UPGRADE_SNAPSHOTS.value: True,
+        Setting.SNAPSHOT_TIME_OF_DAY.value: "01:11",
+        Setting.DELETE_BEFORE_NEW_SNAPSHOT.value: True,
+        Setting.SNAPSHOT_NAME.value: "test",
+        Setting.SPECIFY_SNAPSHOT_FOLDER.value: True,
+        Setting.NOTIFY_FOR_STALE_SNAPSHOTS.value: False,
+        Setting.ENABLE_SNAPSHOT_STALE_SENSOR.value: False,
+        Setting.ENABLE_SNAPSHOT_STATE_SENSOR.value: False,
+        Setting.SNAPSHOT_PASSWORD.value: "test password",
+    }
+
+    await ha.init()
+    assert not config.mustSaveUpgradeChanges()
+    assert interceptor.urlWasCalled(URL_MATCH_SELF_OPTIONS)
+
+    # Verify the config was upgraded
+    assert supervisor._options == {
+        Setting.MAX_BACKUPS_IN_HA.value: 1,
+        Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE.value: 2,
+        Setting.DAYS_BETWEEN_BACKUPS.value: 5,
+        Setting.IGNORE_OTHER_BACKUPS.value: True,
+        Setting.IGNORE_UPGRADE_BACKUPS.value: True,
+        Setting.BACKUP_TIME_OF_DAY.value: "01:11",
+        Setting.DELETE_BEFORE_NEW_BACKUP.value: True,
+        Setting.BACKUP_NAME.value: "test",
+        Setting.SPECIFY_BACKUP_FOLDER.value: True,
+        Setting.NOTIFY_FOR_STALE_BACKUPS.value: False,
+        Setting.ENABLE_BACKUP_STALE_SENSOR.value: False,
+        Setting.ENABLE_BACKUP_STATE_SENSOR.value: False,
+        Setting.BACKUP_PASSWORD.value: "test password",
+        Setting.CALL_BACKUP_SNAPSHOT.value: True,
+    }
+
+    interceptor.clear()
+
+    await ha.init()
+    assert not interceptor.urlWasCalled(URL_MATCH_SELF_OPTIONS)
+
+
+@pytest.mark.asyncio
+async def test_upgrade_some_config(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, server_url):
+    """Verify that converting a mix of upgradeable and not upgradeable config works"""
+
+    # overwrite the addon options with old values
+    supervisor._options = {
+        Setting.MAX_SNAPSHOTS_IN_HASSIO.value: 4,
+        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE.value: 4,
+        Setting.DAYS_BETWEEN_SNAPSHOTS.value: 3,
+        Setting.SNAPSHOT_TIME_OF_DAY.value: "01:11",
+        Setting.EXCLUDE_ADDONS.value: "test",
+        Setting.USE_SSL.value: False,
+    }
+
+    await ha.init()
+
+    assert not config.mustSaveUpgradeChanges()
+    assert interceptor.urlWasCalled(URL_MATCH_SELF_OPTIONS)
+
+    # Verify the config was upgraded
+    assert supervisor._options == {
+        Setting.MAX_BACKUPS_IN_HA.value: 4,
+        Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE.value: 4,
+        Setting.DAYS_BETWEEN_BACKUPS.value: 3,
+        Setting.EXCLUDE_ADDONS.value: "test",
+        Setting.BACKUP_TIME_OF_DAY.value: "01:11",
+        Setting.CALL_BACKUP_SNAPSHOT.value: True,
+    }
+
+
+@pytest.mark.asyncio
+async def test_upgrade_no_config(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, server_url):
+    """Verifies that config not in need of an upgrade doesn't get upgraded"""
+
+    # overwrite the addon options with old values
+    supervisor._options = {
+        Setting.MAX_BACKUPS_IN_HA.value: 4,
+        Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE.value: 4,
+        Setting.DAYS_BETWEEN_BACKUPS.value: 3,
+        Setting.BACKUP_TIME_OF_DAY.value: "01:11",
+        Setting.EXCLUDE_ADDONS.value: "test"
+    }
+
+    await ha.init()
+
+    assert not config.mustSaveUpgradeChanges()
+    assert not interceptor.urlWasCalled(URL_MATCH_SELF_OPTIONS)
+
+    # Verify the config was upgraded
+    assert supervisor._options == {
+        Setting.MAX_BACKUPS_IN_HA.value: 4,
+        Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE.value: 4,
+        Setting.DAYS_BETWEEN_BACKUPS.value: 3,
+        Setting.BACKUP_TIME_OF_DAY.value: "01:11",
+        Setting.EXCLUDE_ADDONS.value: "test",
+    }

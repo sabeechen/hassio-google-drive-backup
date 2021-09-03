@@ -16,13 +16,15 @@ KEY_LAST_SEEN = "last_seen"
 KEY_NAME = "name"
 KEY_LAST_VERSION = "last_verison"
 KEY_UPGRADES = "upgrades"
+KEY_FLAGS = "flags"
 
 CACHE_EXPIRATION_DAYS = 30
 
 
 @unique
 class UpgradeFlags(Enum):
-    DONT_IGNORE_LEGACY_SNAPSHOTS = "include_legacy_snapshots",
+    NOTIFIED_ABOUT_BACKUP_RENAME = "notified_backup_rename"
+    TESTING_FLAG = "testing_flag"
 
 
 @singleton
@@ -59,9 +61,6 @@ class DataCache:
             self._data[KEY_LAST_VERSION] = str(self.currentVersion)
             self.makeDirty()
             self.saveIfDirty()
-
-        if self.previousVersion == Version.default() and self.currentVersion > Version.parse("0.103"):
-            self._flags.add(UpgradeFlags.DONT_IGNORE_LEGACY_SNAPSHOTS)
 
     def save(self, data=None):
         if data is None:
@@ -106,7 +105,13 @@ class DataCache:
         return Version.parse(VERSION)
 
     def checkFlag(self, flag: UpgradeFlags):
-        return flag in self._flags
+        return flag.value in self._data.get(KEY_FLAGS, [])
+
+    def addFlag(self, flag: UpgradeFlags):
+        all_flags = set(self._data.get(KEY_FLAGS, []))
+        all_flags.add(flag.value)
+        self._data[KEY_FLAGS] = list(all_flags)
+        self.makeDirty()
 
     def getUpgradeTime(self, version: Version):
         for upgrade in self._data[KEY_UPGRADES]:

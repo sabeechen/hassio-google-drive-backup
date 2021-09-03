@@ -14,7 +14,7 @@ from ..model import HABackup, Backup
 from ..logger import getLogger
 from ..util import DataCache
 from backup.time import Time
-from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME, NECESSARY_OLD_SUPERVISOR_URL
+from backup.const import NECESSARY_OLD_BACKUP_NAME, NECESSARY_OLD_BACKUP_PLURAL_NAME, NECESSARY_OLD_SUPERVISOR_URL
 from yarl import URL
 
 logger = getLogger(__name__)
@@ -279,14 +279,25 @@ class HaRequests():
         await self._postHaData("services/persistent_notification/dismiss", data)
 
     async def updateBackupStaleSensor(self, state: bool) -> None:
-        data: Dict[str, Any] = {
-            "state": state,
-            "attributes": {
-                "friendly_name": "Snapshots Stale",
-                "device_class": "problem"
+        
+        if self.config.get(Setting.CALL_BACKUP_SNAPSHOT):
+            data: Dict[str, Any] = {
+                "state": state,
+                "attributes": {
+                    "friendly_name": "Snapshots Stale",
+                    "device_class": "problem"
+                }
             }
-        }
-        await self._postHaData("states/binary_sensor.snapshots_stale", data)
+            await self._postHaData("states/binary_sensor." + NECESSARY_OLD_BACKUP_PLURAL_NAME + "_stale", data)
+        else:
+            data: Dict[str, Any] = {
+                "state": state,
+                "attributes": {
+                    "friendly_name": "Backups Stale",
+                    "device_class": "problem"
+                }
+            }
+            await self._postHaData("states/binary_sensor.backups_stale", data)
 
     @supervisor_call
     async def updateConfig(self, config) -> None:
@@ -298,21 +309,3 @@ class HaRequests():
 
     async def updateEntity(self, entity, data):
         await self._postHaData("states/" + entity, data)
-
-    async def updateBackupsSensor(self, state: str, backups: List[Backup]) -> None:
-        last = "Never"
-        if len(backups) > 0:
-            last = max(backups, key=lambda s: s.date()).date().isoformat()
-
-        data: Dict[str, Any] = {
-            "state": state,
-            "attributes": {
-                "friendly_name": "Snapshot State",
-                "last_snapshot": last,  # type: ignore
-                "snapshots_in_google_drive": len(list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, backups))),
-                "snapshots_in_hassio": len(list(filter(lambda s: s.getSource(SOURCE_HA), backups))),
-                "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date().isoformat()), "state": s.status()}, backups))
-            }
-        }
-
-        await self._postHaData("states/sensor.snapshot_backup", data)

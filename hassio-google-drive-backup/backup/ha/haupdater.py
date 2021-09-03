@@ -24,8 +24,8 @@ FIRST_BACKOFF = 60  # 1 minute
 # Wait 5 minutes before logging
 NOTIFY_DELAY = 60 * 5  # 5 minute
 
-STALE_ENTITY_NAME = "sensor.snapshots_stale"
-BACKUP_ENTITY_NAME = "sensor.snapshot_backup"
+OLD_BACKUP_ENTITY_NAME = "sensor.snapshot_backup"
+BACKUP_ENTITY_NAME = "sensor.backup_state"
 
 REASSURING_MESSAGE = "Unable to reach Home Assistant (HTTP {0}).  This is normal if Home Assistant is restarting.  You will probably see some errors in the supervisor logs until it comes back online."
 
@@ -86,7 +86,10 @@ class HaUpdater(Worker):
     async def _maybeSendBackupUpdate(self):
         update = self._buildBackupUpdate()
         if update != self._last_backup_update or self._time.now() > self.last_backup_update_time + timedelta(hours=1):
-            await self._requests.updateEntity(BACKUP_ENTITY_NAME, update)
+            if self._config.get(Setting.CALL_BACKUP_SNAPSHOT):
+                await self._requests.updateEntity(OLD_BACKUP_ENTITY_NAME, update)
+            else:
+                await self._requests.updateEntity(BACKUP_ENTITY_NAME, update)
             self._last_backup_update = update
             self.last_backup_update_time = self._time.now()
 
@@ -118,16 +121,35 @@ class HaUpdater(Worker):
             }
         ha_backups = list(filter(lambda s: s.getSource(SOURCE_HA) is not None, backups))
         drive_backups = list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, backups))
-        return {
-            "state": self._state(),
-            "attributes": {
-                "friendly_name": "Snapshot State",
-                "last_snapshot": last,  # type: ignore
-                "snapshots_in_google_drive": len(drive_backups),
-                "snapshots_in_hassio": len(ha_backups),
-                "snapshots_in_home_assistant": len(ha_backups),
-                "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_backups))),
-                "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
-                "snapshots": list(map(makeBackupData, backups))
+
+        last_uploaded = "Never"
+        if len(drive_backups) > 0:
+            last_uploaded = max(drive_backups, key=lambda s: s.date()).date().isoformat()
+        if self._config.get(Setting.CALL_BACKUP_SNAPSHOT):
+            return {
+                "state": self._state(),
+                "attributes": {
+                    "friendly_name": "Snapshot State",
+                    "last_snapshot": last,  # type: ignore
+                    "snapshots_in_google_drive": len(drive_backups),
+                    "snapshots_in_hassio": len(ha_backups),
+                    "snapshots_in_home_assistant": len(ha_backups),
+                    "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_backups))),
+                    "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
+                    "snapshots": list(map(makeBackupData, backups))
+                }
             }
+        else:
+            return {
+                "state": self._state(),
+                "attributes": {
+                    "friendly_name": "Backup State",
+                    "last_backup": last,  # type: ignore
+                    "last_uploaded": last_uploaded,
+                    "backups_in_google_drive": len(drive_backups),
+                    "backups_in_home_assistant": len(ha_backups),
+                    "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_backups))),
+                    "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
+                    "backups": list(map(makeBackupData, backups))
+                }
         }

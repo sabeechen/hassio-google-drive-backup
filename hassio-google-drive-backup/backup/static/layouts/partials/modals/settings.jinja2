@@ -489,10 +489,9 @@
         <div class="row">
           <div class="col s12">
             <label>
-              <span style="font-size: 15px">Networking Options</span>
+              <span style="font-size: 15px">Uncommon Options</span>
               <br />
-              <span class="helper-text">Configure timeouts and other options about how the add-on reaches Google
-                Drive</span>
+              <span class="helper-text">Most people don't need these options, but you might.</span>
             </label>
           </div>
         </div>
@@ -560,6 +559,19 @@
                 '1 hour', '30 minutes', '1 hour, 30 minutes, 10 seconds',
                 etc.</span>
             </div>
+          </div>
+          <div class="col s11 offset-s1">
+            <label>
+              <input type="checkbox" id="call_backup_snapshot" name="call_backup_snapshot"
+                class="filled-in checkbox-ha" />
+              <span>Use old sensor names/values with "snapshot" instead of "backup"</span>
+              <br />
+              <span class="helper-text">When checked, the addon's state and staleness sensors will be
+                published as binary_sensor.snapshots_stale and sensor.snapshot_backup and their 
+                attributes will reference "snapshots" instead of "backups".  <a target="_blank" rel="noreferrer"
+                href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/BACKUP_AND_SNAPSHOT.md">
+                See here</a> for a detailed explanation of why you might want this.</span>
+            </label>
           </div>
         </div>
       </form>

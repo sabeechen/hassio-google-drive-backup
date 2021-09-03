@@ -296,8 +296,7 @@ async def test_update_backups_old_names(updater: HaUpdater, server, backup, time
     assert updater._state() == "backed_up"
     verifyEntity(supervisor, "binary_sensor.snapshots_stale",
                  "off", {"friendly_name": "Snapshots Stale",
-                         "device_class": "problem"
-                    })
+                         "device_class": "problem"})
     date = '1985-12-06T05:00:00+00:00'
     verifyEntity(supervisor, "sensor.snapshot_backup", "backed_up", {
         'friendly_name': 'Snapshot State',

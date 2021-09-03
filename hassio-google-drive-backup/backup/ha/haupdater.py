@@ -43,6 +43,7 @@ class HaUpdater(Worker):
         self._notified = False
         self._backoff = Backoff(max=MAX_BACKOFF, base=FIRST_BACKOFF)
         self._first_error = None
+        self._trigger_once = False
 
         self._last_backup_update = None
         self.last_backup_update_time = time.now() - timedelta(days=1)
@@ -66,6 +67,7 @@ class HaUpdater(Worker):
                     self._notified = False
             self._backoff.reset()
             self._first_error = None
+            self._trigger_once = False
         except ClientResponseError as e:
             if self._first_error is None:
                 self._first_error = self._time.now()
@@ -85,7 +87,7 @@ class HaUpdater(Worker):
 
     async def _maybeSendBackupUpdate(self):
         update = self._buildBackupUpdate()
-        if update != self._last_backup_update or self._time.now() > self.last_backup_update_time + timedelta(hours=1):
+        if self._trigger_once or update != self._last_backup_update or self._time.now() > self.last_backup_update_time + timedelta(hours=1):
             if self._config.get(Setting.CALL_BACKUP_SNAPSHOT):
                 await self._requests.updateEntity(OLD_BACKUP_ENTITY_NAME, update)
             else:
@@ -105,6 +107,9 @@ class HaUpdater(Worker):
             return "error"
         else:
             return "waiting" if self._info._first_sync else "backed_up"
+
+    def triggerRefresh(self):
+        self._trigger_once = True
 
     def _buildBackupUpdate(self):
         backups = list(filter(lambda s: not s.ignore(), self._coordinator.backups()))
@@ -152,4 +157,4 @@ class HaUpdater(Worker):
                     "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
                     "backups": list(map(makeBackupData, backups))
                 }
-        }
+            }

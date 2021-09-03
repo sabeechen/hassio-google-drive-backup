@@ -12,7 +12,7 @@ import base64
 from aiohttp import BasicAuth
 from aiohttp.client import ClientSession
 
-from backup.util import AsyncHttpGetter, GlobalInfo, File
+from backup.util import AsyncHttpGetter, GlobalInfo, File, DataCache, UpgradeFlags
 from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
@@ -22,7 +22,7 @@ from backup.creds import Creds
 from backup.model import Coordinator, Backup
 from backup.drive import DriveSource, FolderFinder
 from backup.drive.drivesource import FOLDER_MIME_TYPE, DriveRequests
-from backup.ha import HaSource
+from backup.ha import HaSource, HaUpdater
 from backup.config import VERSION
 from .faketime import FakeTime
 from .helpers import compareStreams
@@ -981,3 +981,58 @@ async def test_check_ignored_backup_notification(reader: ReaderHelper, time: Fak
     await reader.postjson("ackignorecheck") == {'message': "Acknowledged."}
     status = await reader.getjson("getstatus")
     assert not status["notify_check_ignored"]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_to_backup_upgrade_use_new_values(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource, data_cache: DataCache, updater: HaUpdater):
+    """ Test the path where a user upgrades from the addon before the backup rename and then chooses to use the new names"""
+    status = await reader.getjson("getstatus")
+    assert not status["warn_backup_upgrade"]
+
+    # simulate upgrading config
+    supervisor._options = {
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA.value: 7
+    }
+    await coord.sync()
+    assert Setting.CALL_BACKUP_SNAPSHOT.value in supervisor._options
+    assert config.get(Setting.CALL_BACKUP_SNAPSHOT)
+
+    status = await reader.getjson("getstatus")
+    assert status["warn_backup_upgrade"]
+    assert not data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
+    assert not updater._trigger_once
+
+    # simulate user clicking the button to use new names
+    assert await reader.getjson("callbackupsnapshot?switch=true") == {'message': 'Configuration updated'}
+    assert data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
+    assert not config.get(Setting.CALL_BACKUP_SNAPSHOT)
+    status = await reader.getjson("getstatus")
+    assert not status["warn_backup_upgrade"]
+    assert updater._trigger_once
+
+
+@pytest.mark.asyncio
+async def test_snapshot_to_backup_upgrade_use_old_values(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource, data_cache: DataCache, updater: HaUpdater):
+    """ Test the path where a user upgrades from the addon before the backup rename and then chooses to use the old names"""
+    status = await reader.getjson("getstatus")
+    assert not status["warn_backup_upgrade"]
+
+    # simulate upgrading config
+    supervisor._options = {
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA.value: 7
+    }
+    await coord.sync()
+    assert Setting.CALL_BACKUP_SNAPSHOT.value in supervisor._options
+    assert config.get(Setting.CALL_BACKUP_SNAPSHOT)
+
+    status = await reader.getjson("getstatus")
+    assert status["warn_backup_upgrade"]
+    assert not data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
+    assert not updater._trigger_once
+
+    # simulate user clicking the button to use new names
+    assert await reader.getjson("callbackupsnapshot?switch=false") == {'message': 'Configuration updated'}
+    assert data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
+    status = await reader.getjson("getstatus")
+    assert not status["warn_backup_upgrade"]
+    assert config.get(Setting.CALL_BACKUP_SNAPSHOT)

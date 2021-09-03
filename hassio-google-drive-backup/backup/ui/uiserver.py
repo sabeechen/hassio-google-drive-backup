@@ -16,8 +16,8 @@ from backup.config import Config, Setting, CreateOptions, BoolValidator, Startab
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Backup, AbstractBackup
 from backup.exceptions import KnownError, ensureKey
-from backup.util import GlobalInfo, Estimator, File, DataCache
-from backup.ha import HaSource, PendingBackup, BACKUP_NAME_KEYS, HaRequests
+from backup.util import GlobalInfo, Estimator, File, DataCache, UpgradeFlags
+from backup.ha import HaSource, PendingBackup, BACKUP_NAME_KEYS, HaRequests, HaUpdater
 from backup.ha import Password
 from backup.time import Time
 from backup.worker import Trigger
@@ -43,7 +43,9 @@ class UiServer(Trigger, Startable):
     @inject
     def __init__(self, debug: Debug, coord: Coordinator, ha_source: HaSource, harequests: HaRequests,
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
-                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger], debug_worker: DebugWorker, folder_finder: FolderFinder, data_cache: DataCache):
+                 session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger],
+                 debug_worker: DebugWorker, folder_finder: FolderFinder, data_cache: DataCache,
+                 haupdater: HaUpdater):
         super().__init__()
         # Currently running server tasks
         self.runners = []
@@ -68,6 +70,7 @@ class UiServer(Trigger, Startable):
         self.folder_finder = folder_finder
         self.ignore_other_turned_on = False
         self._data_cache = data_cache
+        self._haupdater = haupdater
 
     def name(self):
         return "UI Server"
@@ -166,6 +169,7 @@ class UiServer(Trigger, Startable):
         upgrade_date = self._data_cache.getUpgradeTime(VERSION_CREATION_TRACKING)
         ignored = len(list(filter(lambda s: s.date() < upgrade_date, filter(Backup.ignore, self._coord.backups()))))
         status["notify_check_ignored"] = ignored > 0 and self.ignore_other_turned_on
+        status["warn_backup_upgrade"] = self.config.get(Setting.CALL_BACKUP_SNAPSHOT) and not self._data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -418,6 +422,17 @@ class UiServer(Trigger, Startable):
         await self._updateConfiguration(validated)
         return web.json_response({'message': 'Configuration updated'})
 
+    async def callbackupsnapshot(self, request: Request):
+        switch = BoolValidator.strToBool(request.query.get("switch", False))
+
+        if switch:
+            validated = self.config.validateUpdate({Setting.CALL_BACKUP_SNAPSHOT: False})
+            await self._updateConfiguration(validated)
+            self._data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
+        self._data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
+        self._data_cache.saveIfDirty()
+        return web.json_response({'message': 'Configuration updated'})
+
     async def ignorestartupcooldown(self, request: Request):
         self._coord.ignoreStartupDelay()
         return await self.sync(request)
@@ -500,7 +515,7 @@ class UiServer(Trigger, Startable):
 
         if not old_ignore_others_option and self.config.get(Setting.IGNORE_OTHER_BACKUPS):
             self.ignore_other_turned_on = True
-
+        self._haupdater.triggerRefresh()
         if self.config.get(Setting.SPECIFY_BACKUP_FOLDER) and backup_folder_id is not None and len(backup_folder_id):
             await self.folder_finder.save(backup_folder_id)
         if trigger:
@@ -636,6 +651,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self._debug.getTasks)
         self._addRoute(app, self.makeanissue)
         self._addRoute(app, self.ignorestartupcooldown)
+        self._addRoute(app, self.callbackupsnapshot)
         self._addRoute(app, self.ignore)
         self._addRoute(app, self.ackignorecheck)
 

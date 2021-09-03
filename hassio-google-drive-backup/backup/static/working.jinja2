@@ -123,6 +123,34 @@
             <a target="_blank" class="btn-flat" onClick="errorReports('false');"><i class="material-icons">close</i>No</a>
           </div>
         </div>
+
+        <div class="card default-hidden question-card s12" id="backup_upgrade_card">
+          <div class="card-content">
+            <span class="card-title">
+              <i class="material-icons">info_outline</i>
+              <span>'Snapshots' have been renamed to 'Backups'</span>
+            </span>
+            <p>In August 2021 <a href="https://www.home-assistant.io/blog/2021/08/24/supervisor-update/" target="_blank">the Home Assistant 
+              team announced</a> that 'snapshots' will be called 'backups' moving forward.  This addon exposes a
+              binary sensor to indicate if snapshots are stale and a another sensor that publishes details about backups.  Both of the sensors
+              used 'snapshot' in their names and values, so they had to be changed to match the new language.  In the spirit of "not breaking 
+              your stuff" the addon will only start using the new names and values if you tell it to, just in case you have automations or UI 
+              using the old sensor names/values.
+              <ul class="browser-default">
+                <li>If you don't have any automations based on these sensors, you can just click 'Use the new names and values'.</li>
+                <li>If you do, you can either dismiss this message or update your automations/UI to use the new names and values.</li>
+                <li>You can look at <a target="_blank" rel="noreferrer"
+                  href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/BACKUP_AND_SNAPSHOT.md">this document</a> to see exactly how the sensors have changed.</li>
+                <li>You can change this later in the <a href="#!" onclick="loadSettings()"><i class="material-icons inline-icon">settings</i>add-on
+                  settings</a> if you choose.  Look for it under "Uncommon Options"</li>
+              </ul>
+            </p>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="btn-flat" onClick="callBackupSnapshot('true');"><i class="material-icons">check</i>Use the new names and values</a>
+            <a target="_blank" class="btn-flat" onClick="callBackupSnapshot('false');"><i class="material-icons">close</i>Keep them as-is</a>
+          </div>
+        </div>
         
         <div class="card default-hidden question-card" id="ingress_upgrade_card">
           <div class="card-content">

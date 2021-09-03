@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientResponseError, ClientConnectorError
@@ -8,13 +8,12 @@ from asyncio.exceptions import TimeoutError
 
 from ..util import AsyncHttpGetter
 from ..config import Config, Setting, Version
-from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError
-from ..model import HABackup, Backup
+from ..model import HABackup
 from ..logger import getLogger
 from ..util import DataCache
 from backup.time import Time
-from backup.const import NECESSARY_OLD_BACKUP_NAME, NECESSARY_OLD_BACKUP_PLURAL_NAME, NECESSARY_OLD_SUPERVISOR_URL
+from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME, NECESSARY_OLD_SUPERVISOR_URL
 from yarl import URL
 
 logger = getLogger(__name__)
@@ -279,7 +278,6 @@ class HaRequests():
         await self._postHaData("services/persistent_notification/dismiss", data)
 
     async def updateBackupStaleSensor(self, state: bool) -> None:
-        
         if self.config.get(Setting.CALL_BACKUP_SNAPSHOT):
             data: Dict[str, Any] = {
                 "state": state,

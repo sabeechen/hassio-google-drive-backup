@@ -125,10 +125,18 @@ function exposeServer(expose) {
   }, null, "Saving setting...");
 }
 
+function callBackupSnapshot(doSwitch) {
+  var url = "callbackupsnapshot?switch=" + doSwitch;
+  postJson(url, {}, function (data) {
+    $('#backup_upgrade_card').fadeOut(500);
+    refreshstats();
+  }, null, "Saving...");
+}
+
 function ackCheckIgnoredBackups() {
   postJson("ackignorecheck", {}, function (data) {
     $('#ignore_helper_card').fadeOut(500);
-  }, null, "Acknowledging..");
+  }, null, "Acknowledging...");
   
 }
 
@@ -691,6 +699,8 @@ function processStatusUpdate(data) {
     question_card = "ingress_upgrade_card";
   } else if (data.ask_error_reports && !found) {
     question_card = "error_reports_card";
+  } else if (data.warn_backup_upgrade && !found) {
+    question_card = "backup_upgrade_card";
   }
 
   $('.question-card').each(function (i) {

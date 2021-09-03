@@ -49,7 +49,6 @@ async def test_version_upgrades(time: Time, injector: Injector, config: Config) 
     upgrade_time = time.now()
     assert cache.previousVersion == Version.default()
     assert cache.currentVersion == Version.parse(VERSION)
-    assert cache.checkFlag(UpgradeFlags.DONT_IGNORE_LEGACY_SNAPSHOTS)
 
     assert os.path.exists(config.get(Setting.DATA_CACHE_FILE_PATH))
     with open(config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
@@ -65,7 +64,6 @@ async def test_version_upgrades(time: Time, injector: Injector, config: Config) 
     cache = DataCache(config, time)
     assert cache.previousVersion == Version.parse(VERSION)
     assert cache.currentVersion == Version.parse(VERSION)
-    assert not cache.checkFlag(UpgradeFlags.DONT_IGNORE_LEGACY_SNAPSHOTS)
     assert os.path.exists(config.get(Setting.DATA_CACHE_FILE_PATH))
 
     with open(config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
@@ -116,3 +114,18 @@ async def test_version_upgrades(time: Time, injector: Injector, config: Config) 
 
     # degenerate case, should never happen but a sensible value needs to be returned
     assert cache.getUpgradeTime(Version.parse("201")) == time.now()
+
+
+@pytest.mark.asyncio
+async def test_flag(config: Config, time: Time):
+    cache = DataCache(config, time)
+    assert not cache.checkFlag(UpgradeFlags.TESTING_FLAG)
+    assert not cache.dirty
+
+    cache.addFlag(UpgradeFlags.TESTING_FLAG)
+    assert cache.dirty
+    assert cache.checkFlag(UpgradeFlags.TESTING_FLAG)
+    cache.saveIfDirty()
+
+    cache = DataCache(config, time)
+    assert cache.checkFlag(UpgradeFlags.TESTING_FLAG)

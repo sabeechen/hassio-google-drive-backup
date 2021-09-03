@@ -14,10 +14,10 @@ from injector import ClassAssistedBuilder, inject, singleton
 
 from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, Version, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
-from backup.model import Coordinator, Snapshot, AbstractSnapshot
+from backup.model import Coordinator, Backup, AbstractBackup
 from backup.exceptions import KnownError, ensureKey
 from backup.util import GlobalInfo, Estimator, File, DataCache
-from backup.ha import HaSource, PendingSnapshot, BACKUP_NAME_KEYS, HaRequests
+from backup.ha import HaSource, PendingBackup, BACKUP_NAME_KEYS, HaRequests
 from backup.ha import Password
 from backup.time import Time
 from backup.worker import Trigger
@@ -89,8 +89,8 @@ class UiServer(Trigger, Startable):
         status: Dict[Any, Any] = {}
         status['folder_id'] = self.folder_finder.getCachedFolder()
         status['snapshots'] = []
-        snapshots = self._coord.snapshots()
-        for backup in snapshots:
+        backups = self._coord.backups()
+        for backup in backups:
             status['snapshots'].append(self.getBackupDetails(backup))
         status['ha_url_base'] = self._ha_source.getHomeAssistantUrl()
         status['restore_backup_path'] = "hassio/backups"
@@ -98,7 +98,7 @@ class UiServer(Trigger, Startable):
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = False
         status['cred_version'] = self._global_info.credVersion
-        next = self._coord.nextSnapshotTime()
+        next = self._coord.nextBackupTime()
         if next is None:
             status['next_backup_text'] = "Disabled"
             status['next_backup_machine'] = ""
@@ -115,7 +115,7 @@ class UiServer(Trigger, Startable):
             status['next_backup_machine'] = self._time.asRfc3339String(next)
             status['next_backup_detail'] = self._time.toLocal(
                 next).strftime("%c")
-        not_ignored = list(filter(lambda s: not s.ignore(), self._coord.snapshots()))
+        not_ignored = list(filter(lambda s: not s.ignore(), self._coord.backups()))
         if len(not_ignored) > 0:
             latest = not_ignored[len(not_ignored) - 1].date()
             status['last_backup_text'] = self._time.formatDelta(latest)
@@ -162,20 +162,20 @@ class UiServer(Trigger, Startable):
 
         # Indicate the user should be notified for a specific situation where:
         #  - They recently turned on "IGNORE_OTHER_BACKUPS"
-        #  - They have ignored snapshots created before upgrading to v0.104.0 or higher.
+        #  - They have ignored backups created before upgrading to v0.104.0 or higher.
         upgrade_date = self._data_cache.getUpgradeTime(VERSION_CREATION_TRACKING)
-        ignored = len(list(filter(lambda s: s.date() < upgrade_date, filter(Snapshot.ignore, self._coord.snapshots()))))
+        ignored = len(list(filter(lambda s: s.date() < upgrade_date, filter(Backup.ignore, self._coord.backups()))))
         status["notify_check_ignored"] = ignored > 0 and self.ignore_other_turned_on
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
         return web.Response(body="bootstrap_update_data = {0};".format(json.dumps(await self.buildStatusInfo(), indent=4)), content_type="text/javascript")
 
-    def getBackupDetails(self, backup: Snapshot):
+    def getBackupDetails(self, backup: Backup):
         ha = backup.getSource(SOURCE_HA)
         sources = []
         for source_key in backup.sources:
-            source: AbstractSnapshot = backup.sources[source_key]
+            source: AbstractBackup = backup.sources[source_key]
             sources.append({
                 'name': source.name(),
                 'key': source_key,
@@ -193,9 +193,9 @@ class UiServer(Trigger, Startable):
             'status': backup.status(),
             'date': self._time.toLocal(backup.date()).strftime("%c"),
             'createdAt': self._time.formatDelta(backup.date()),
-            'isPending': ha is not None and type(ha) is PendingSnapshot,
+            'isPending': ha is not None and type(ha) is PendingBackup,
             'protected': backup.protected(),
-            'type': backup.snapshotType(),
+            'type': backup.backupType(),
             'folders': backup.details().get("folders", []),
             'addons': self.formatAddons(backup.details()),
             'sources': sources,
@@ -208,14 +208,14 @@ class UiServer(Trigger, Startable):
             'timestamp': backup.date().timestamp(),
         }
 
-    def formatAddons(self, snapshot_data):
+    def formatAddons(self, backup_data):
         addons = []
-        for addon in snapshot_data.get("addons", []):
+        for addon in backup_data.get("addons", []):
             addons.append({
                 'name': addon.get('name', "Unknown"),
                 'slug': addon.get("slug", "unknown"),
                 'version': addon.get("version", ""),
-                # The supervisor stores snapshot size in MB
+                # The supervisor stores backup size in MB
                 'size': self._estimator.asSizeString(float(addon.get("size", 0)) * 1024 * 1024),
             })
         return addons
@@ -259,32 +259,32 @@ class UiServer(Trigger, Startable):
             SOURCE_GOOGLE_DRIVE: retain_drive,
             SOURCE_HA: retain_ha
         })
-        snapshot = await self._coord.startSnapshot(options)
-        return web.json_response({"message": "Requested backup '{0}'".format(snapshot.name())})
+        backup = await self._coord.startBackup(options)
+        return web.json_response({"message": "Requested backup '{0}'".format(backup.name())})
 
     async def deleteSnapshot(self, request: Request):
         data = await request.json()
         # Check to make sure the slug is valid.
-        self._coord.getSnapshot(data['slug'])
+        self._coord.getBackup(data['slug'])
         await self._coord.delete(data['sources'], data['slug'])
         return web.json_response({"message": "Deleted from {0} place(s)".format(len(data['sources']))})
 
     async def ignore(self, request: Request):
         data = await request.json()
         # Check to make sure the slug is valid.
-        snapshot = self._coord.getSnapshot(data['slug'])
+        backup = self._coord.getBackup(data['slug'])
         await self._coord.ignore(data['slug'], data['ignore'])
         await self.startSync(request)
         if data['ignore']:
-            return web.json_response({"message": "'{0}' will be ignored.".format(snapshot.name())})
+            return web.json_response({"message": "'{0}' will be ignored.".format(backup.name())})
         else:
-            return web.json_response({"message": "'{0}' will be included.".format(snapshot.name())})
+            return web.json_response({"message": "'{0}' will be included.".format(backup.name())})
 
     async def retain(self, request: Request):
         data = await request.json()
         slug = data['slug']
 
-        self._coord.getSnapshot(slug)
+        self._coord.getBackup(slug)
         await self._coord.retain(data['sources'], slug)
         return web.json_response({'message': "Updated the backup's settings"})
 
@@ -369,7 +369,7 @@ class UiServer(Trigger, Startable):
             raise HTTPSeeOther(redirect)
 
     async def changefolder(self, request: Request) -> None:
-        # update config to specify snapshot folder
+        # update config to specify backup folder
         await self._updateConfiguration(self.config.validateUpdate({Setting.SPECIFY_BACKUP_FOLDER: True}))
 
         id = request.query.get("id", None)
@@ -471,7 +471,7 @@ class UiServer(Trigger, Startable):
         data = await request.json()
         update = ensureKey("config", data, "the configuration update request")
 
-        # validate the snapshot password
+        # validate the backup password
         Password(self.config.getConfigFor(update)).resolve()
 
         validated, needUpdate = self.config.validate(update)
@@ -512,7 +512,7 @@ class UiServer(Trigger, Startable):
 
     async def upload(self, request: Request):
         slug = request.query.get("slug", "")
-        await self._coord.uploadSnapshot(slug)
+        await self._coord.uploadBackups(slug)
         return web.json_response({'message': "Backup uploaded to Home Assistant"})
 
     async def redirect(self, request, url):
@@ -536,13 +536,13 @@ class UiServer(Trigger, Startable):
 
     async def download(self, request: Request):
         slug = request.query.get("slug", "")
-        snapshot = self._coord.getSnapshot(slug)
+        backup = self._coord.getBackup(slug)
         stream = await self._coord.download(slug)
         await stream.setup()
         resp = web.StreamResponse()
         resp.content_type = 'application/tar'
         resp.headers['Content-Disposition'] = 'attachment; filename="{}.tar"'.format(
-            snapshot.name())
+            backup.name())
         resp.headers['Content-Length'] = str(stream.size())
 
         await resp.prepare(request)

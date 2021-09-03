@@ -10,17 +10,18 @@ from ..util import AsyncHttpGetter
 from ..config import Config, Setting, Version
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError
-from ..model import HASnapshot, Snapshot
+from ..model import HABackup, Backup
 from ..logger import getLogger
 from ..util import DataCache
 from backup.time import Time
+from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME, NECESSARY_OLD_SUPERVISOR_URL
 from yarl import URL
 
 logger = getLogger(__name__)
 
 NOTIFICATION_ID = "backup_broken"
-EVENT_SNAPSHOT_START = "backup_started"
-EVENT_SNAPSHOT_END = "backup_ended"
+EVENT_BACKUP_START = "backup_started"
+EVENT_BACKUP_END = "backup_ended"
 
 VERSION_BACKUP_PATH = Version.parse("2021.8")
 
@@ -53,7 +54,6 @@ class HaRequests():
         self._data_cache = data_cache
 
         # default the supervisor versio to using the "most featured" when it can't be parsed.
-        # TODO: remove when we no longer support the "snapshot" query path
         self._super_version = VERSION_BACKUP_PATH
 
     def getSupervisorURL(self) -> URL:
@@ -62,22 +62,20 @@ class HaRequests():
         if 'SUPERVISOR_TOKEN' in os.environ:
             return URL("http://supervisor")
         else:
-            # TODO: remove when we no longer support the "snapshot" query path
-            return URL("http://hassio")
+            return URL(NECESSARY_OLD_SUPERVISOR_URL)
 
-    def _getSnapshotPath(self):
+    def _getBackupPath(self):
         if not self._super_version or self._super_version >= VERSION_BACKUP_PATH:
             return "backups"
-        # TODO: remove when we no longer support the "snapshot" query path
-        return "snapshots"
+        return NECESSARY_OLD_BACKUP_PLURAL_NAME
 
     @supervisor_call
-    async def createSnapshot(self, info):
+    async def createBackup(self, info):
         if 'folders' in info or 'addons' in info:
-            url = self.getSupervisorURL().with_path("{0}/new/partial".format(self._getSnapshotPath()))
+            url = self.getSupervisorURL().with_path("{0}/new/partial".format(self._getBackupPath()))
         else:
-            url = self.getSupervisorURL().with_path("{0}/new/full".format(self._getSnapshotPath()))
-        return await self._postHassioData(url, info, timeout=ClientTimeout(total=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS)))
+            url = self.getSupervisorURL().with_path("{0}/new/full".format(self._getBackupPath()))
+        return await self._postHassioData(url, info, timeout=ClientTimeout(total=self.config.get(Setting.PENDING_BACKUP_TIMEOUT_SECONDS)))
 
     @supervisor_call
     async def auth(self, user: str, password: str) -> None:
@@ -85,12 +83,12 @@ class HaRequests():
 
     @supervisor_call
     async def upload(self, stream):
-        url = self.getSupervisorURL().with_path("{0}/new/upload".format(self._getSnapshotPath()))
+        url = self.getSupervisorURL().with_path("{0}/new/upload".format(self._getBackupPath()))
         return await self._postHassioData(url, data=stream)
 
     @supervisor_call
     async def delete(self, slug) -> None:
-        delete_url = self.getSupervisorURL().with_path("{1}/{0}/remove".format(slug, self._getSnapshotPath()))
+        delete_url = self.getSupervisorURL().with_path("{1}/{0}/remove".format(slug, self._getBackupPath()))
         if slug in self.cache:
             del self.cache[slug]
         try:
@@ -111,17 +109,17 @@ class HaRequests():
         await self._postHassioData(url, {})
 
     @supervisor_call
-    async def snapshot(self, slug):
+    async def backup(self, slug):
         if slug in self.cache:
             info = self.cache[slug]
         else:
-            info = await self._getHassioData(self.getSupervisorURL().with_path("{1}/{0}/info".format(slug, self._getSnapshotPath())))
+            info = await self._getHassioData(self.getSupervisorURL().with_path("{1}/{0}/info".format(slug, self._getBackupPath())))
             self.cache[slug] = info
-        return HASnapshot(info, self._data_cache, self.config, self.config.isRetained(slug))
+        return HABackup(info, self._data_cache, self.config, self.config.isRetained(slug))
 
     @supervisor_call
-    async def snapshots(self):
-        return await self._getHassioData(self.getSupervisorURL().with_path(self._getSnapshotPath()))
+    async def backups(self):
+        return await self._getHassioData(self.getSupervisorURL().with_path(self._getBackupPath()))
 
     @supervisor_call
     async def haInfo(self):
@@ -144,8 +142,8 @@ class HaRequests():
         return await self._getHassioData(self.getSupervisorURL().with_path("info"))
 
     @supervisor_call
-    async def refreshSnapshots(self):
-        url = self.getSupervisorURL().with_path("{0}/reload".format(self._getSnapshotPath()))
+    async def refreshBackups(self):
+        url = self.getSupervisorURL().with_path("{0}/reload".format(self._getBackupPath()))
         return await self._postHassioData(url)
 
     @supervisor_call
@@ -160,7 +158,7 @@ class HaRequests():
 
     @supervisor_call
     async def restore(self, slug: str, password: str = None) -> None:
-        url = self.getSupervisorURL().with_path("{1}/{0}/restore/full".format(slug, self._getSnapshotPath()))
+        url = self.getSupervisorURL().with_path("{1}/{0}/restore/full".format(slug, self._getBackupPath()))
         if password:
             await self._postHassioData(url, {'password': password})
         else:
@@ -168,7 +166,7 @@ class HaRequests():
 
     @supervisor_call
     async def download(self, slug) -> AsyncHttpGetter:
-        url = self.getSupervisorURL().with_path("{1}/{0}/download".format(slug, self._getSnapshotPath()))
+        url = self.getSupervisorURL().with_path("{1}/{0}/download".format(slug, self._getBackupPath()))
         ret = AsyncHttpGetter(url,
                               self._getHassioHeaders(),
                               self.session,
@@ -258,14 +256,14 @@ class HaRequests():
         }
         await self._postHaData("services/persistent_notification/create", data)
 
-    async def eventSnapshotStart(self, name, time):
-        await self._sendEvent(EVENT_SNAPSHOT_START, {
+    async def eventBackupStart(self, name, time):
+        await self._sendEvent(EVENT_BACKUP_START, {
             'backup_name': name,
             'backup_time': str(time)
         })
 
-    async def eventSnapshotEnd(self, name, time, completed):
-        await self._sendEvent(EVENT_SNAPSHOT_END, {
+    async def eventBackupEnd(self, name, time, completed):
+        await self._sendEvent(EVENT_BACKUP_END, {
             'completed': completed,
             'backup_name': name,
             'backup_time': str(time)
@@ -280,7 +278,7 @@ class HaRequests():
         }
         await self._postHaData("services/persistent_notification/dismiss", data)
 
-    async def updateSnapshotStaleSensor(self, state: bool) -> None:
+    async def updateBackupStaleSensor(self, state: bool) -> None:
         data: Dict[str, Any] = {
             "state": state,
             "attributes": {
@@ -301,19 +299,19 @@ class HaRequests():
     async def updateEntity(self, entity, data):
         await self._postHaData("states/" + entity, data)
 
-    async def updateSnapshotsSensor(self, state: str, snapshots: List[Snapshot]) -> None:
+    async def updateBackupsSensor(self, state: str, backups: List[Backup]) -> None:
         last = "Never"
-        if len(snapshots) > 0:
-            last = max(snapshots, key=lambda s: s.date()).date().isoformat()
+        if len(backups) > 0:
+            last = max(backups, key=lambda s: s.date()).date().isoformat()
 
         data: Dict[str, Any] = {
             "state": state,
             "attributes": {
                 "friendly_name": "Snapshot State",
                 "last_snapshot": last,  # type: ignore
-                "snapshots_in_google_drive": len(list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, snapshots))),
-                "snapshots_in_hassio": len(list(filter(lambda s: s.getSource(SOURCE_HA), snapshots))),
-                "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date().isoformat()), "state": s.status()}, snapshots))
+                "snapshots_in_google_drive": len(list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, backups))),
+                "snapshots_in_hassio": len(list(filter(lambda s: s.getSource(SOURCE_HA), backups))),
+                "snapshots": list(map(lambda s: {"name": s.name(), "date": str(s.date().isoformat()), "state": s.status()}, backups))
             }
         }
 

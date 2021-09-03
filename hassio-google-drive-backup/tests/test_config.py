@@ -169,7 +169,7 @@ def test_from_environment():
 def test_config_upgrade():
     # Test specifying one value
     config = Config()
-    config.update({Setting.SNAPSHOT_TIME_OF_DAY: "00:01"})
+    config.update({Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "00:01"})
     assert (config.getAllConfig(), False) == defaultAnd({
         Setting.BACKUP_TIME_OF_DAY: "00:01",
         Setting.CALL_BACKUP_SNAPSHOT: True
@@ -179,9 +179,9 @@ def test_config_upgrade():
     # Test specifying multiple values
     config = Config()
     config.update({
-        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: 21,
-        Setting.MAX_SNAPSHOTS_IN_HASSIO: 20,
-        Setting.SNAPSHOT_PASSWORD: "boop"
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE: 21,
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 20,
+        Setting.DEPRECATED_BACKUP_PASSWORD: "boop"
     })
     assert config.getAllConfig() == defaultAnd({
         Setting.MAX_BACKUPS_IN_HA: 20,
@@ -202,7 +202,7 @@ def test_config_upgrade():
     # Test specifying both
     config = Config()
     config.update({
-        Setting.SNAPSHOT_TIME_OF_DAY: "00:01",
+        Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "00:01",
         Setting.EXCLUDE_ADDONS: "test"
     })
     assert config.getAllConfig() == defaultAnd({

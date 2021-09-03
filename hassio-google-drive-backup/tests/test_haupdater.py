@@ -1,4 +1,4 @@
-from backup.model.snapshots import Snapshot
+from backup.model.snapshots import Backup
 import pytest
 
 from backup.util import GlobalInfo
@@ -112,7 +112,7 @@ async def test_failure_backoff_other(updater: HaUpdater, server, time: FakeTime,
 
 
 @pytest.mark.asyncio
-async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime, supervisor: SimulatedSupervisor):
+async def test_update_backups(updater: HaUpdater, server, time: FakeTime, supervisor: SimulatedSupervisor):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
@@ -131,7 +131,7 @@ async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime, supe
 
 
 @pytest.mark.asyncio
-async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime, snapshot, supervisor: SimulatedSupervisor):
+async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, backup, supervisor: SimulatedSupervisor):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "backed_up"
@@ -143,16 +143,16 @@ async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime,
         'last_snapshot': date,
         'snapshots': [{
             'date': date,
-            'name': snapshot.name(),
-            'size': snapshot.sizeString(),
-            'state': snapshot.status()
+            'name': backup.name(),
+            'size': backup.sizeString(),
+            'state': backup.status()
         }
         ],
         'snapshots_in_google_drive': 1,
         'snapshots_in_hassio': 1,
         'snapshots_in_home_assistant': 1,
-        'size_in_home_assistant': Estimator.asSizeString(snapshot.size()),
-        'size_in_google_drive': Estimator.asSizeString(snapshot.size())
+        'size_in_home_assistant': Estimator.asSizeString(backup.size()),
+        'size_in_google_drive': Estimator.asSizeString(backup.size())
     })
 
 
@@ -252,7 +252,7 @@ async def test_failure_logging(updater: HaUpdater, server, time: FakeTime, inter
 
 
 @pytest.mark.asyncio
-async def test_publish_retries(updater: HaUpdater, server: SimulationServer, time: FakeTime, snapshot, drive, supervisor: SimulatedSupervisor):
+async def test_publish_retries(updater: HaUpdater, server: SimulationServer, time: FakeTime, backup, drive, supervisor: SimulatedSupervisor):
     await updater.update()
     assert supervisor.getEntity("sensor.snapshot_backup") is not None
 
@@ -269,23 +269,23 @@ async def test_publish_retries(updater: HaUpdater, server: SimulationServer, tim
     assert supervisor.getEntity("sensor.snapshot_backup") is not None
 
     supervisor.clearEntities()
-    await drive.delete(snapshot)
+    await drive.delete(backup)
     await updater.update()
     assert supervisor.getEntity("sensor.snapshot_backup") is not None
 
 
 @pytest.mark.asyncio
-async def test_ignored_snapshots(updater: HaUpdater, time: FakeTime, server: SimulationServer, snapshot: Snapshot, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
+async def test_ignored_backups(updater: HaUpdater, time: FakeTime, server: SimulationServer, backup: Backup, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
     config.override(Setting.IGNORE_OTHER_BACKUPS, True)
     time.advance(hours=1)
-    await supervisor.createSnapshot({'name': "test_snapshot"}, date=time.now())
+    await supervisor.createBackup({'name': "test_snapshot"}, date=time.now())
     await coord.sync()
     await updater.update()
     state = supervisor.getAttributes("sensor.snapshot_backup")
     assert state["snapshots_in_google_drive"] == 1
     assert state["snapshots_in_home_assistant"] == 1
     assert len(state["snapshots"]) == 1
-    assert state['last_snapshot'] == snapshot.date().isoformat()
+    assert state['last_snapshot'] == backup.date().isoformat()
 
 
 def verifyEntity(backend: SimulatedSupervisor, name, state, attributes):

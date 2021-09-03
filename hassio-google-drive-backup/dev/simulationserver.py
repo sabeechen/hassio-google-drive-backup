@@ -57,11 +57,11 @@ class SimulationServer(BaseServer):
                 return True
         return False
 
-    def blockSnapshots(self):
-        self.block_snapshots = True
+    def blockBackups(self):
+        self.block_backups = True
 
-    def unBlockSnapshots(self):
-        self.block_snapshots = False
+    def unBlockBackups(self):
+        self.block_backups = False
 
     async def uploadfile(self, request: Request):
         name: str = str(request.query.get("name", "test"))

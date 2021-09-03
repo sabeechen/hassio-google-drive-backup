@@ -31,7 +31,7 @@ class AddonStopper(Worker):
         self.must_start = set()
         self.must_enable_watchdog = set()
         self.stop_start_check_time = time.now()
-        self.snapshotting = False
+        self._backing_up = False
         self.allow_run = False
         self.lock = Lock()
 
@@ -52,12 +52,12 @@ class AddonStopper(Worker):
                 self.must_start.add(slug)
             self.allow_run = True
 
-    def isSnapshotting(self, snapshotting):
-        self.snapshotting = snapshotting
+    def isBackingUp(self, backingUp):
+        self._backing_up = backingUp
 
     async def stopAddons(self, self_slug):
         async with self.lock:
-            self.snapshotting = True
+            self._backing_up = True
             for slug in self.config.get(Setting.STOP_ADDONS).split(','):
                 if slug == self_slug or len(slug) == 0:
                     # Don't ask the supervisor to stop yourself.  That would be BAD.
@@ -86,13 +86,13 @@ class AddonStopper(Worker):
             self._save()
 
     async def startAddons(self):
-        self.snapshotting = False
+        self._backing_up = False
         self.stop_start_check_time = self.time.now() + CHECK_DURATION
         await self.check()
 
     async def check(self):
         async with self.lock:
-            if self.snapshotting:
+            if self._backing_up:
                 return
             if not self.allow_run:
                 return

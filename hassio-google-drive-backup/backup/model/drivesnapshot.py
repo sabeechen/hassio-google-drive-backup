@@ -1,4 +1,4 @@
-from .snapshots import AbstractSnapshot
+from .snapshots import AbstractBackup
 from typing import Any, Dict
 
 from ..const import SOURCE_GOOGLE_DRIVE
@@ -16,13 +16,13 @@ PROP_TYPE = "type"
 PROP_VERSION = "version"
 PROP_PROTECTED = "protected"
 PROP_RETAINED = "retained"
-DRIVE_KEY_TEXT = "Google Drive's snapshot metadata"
+DRIVE_KEY_TEXT = "Google Drive's backup metadata"
 
 
-class DriveSnapshot(AbstractSnapshot):
+class DriveBackup(AbstractBackup):
 
     """
-    Represents a Home Assistant snapshot stored on Google Drive
+    Represents a Home Assistant backup stored on Google Drive
     """
 
     def __init__(self, data: Dict[Any, Any]):
@@ -39,7 +39,7 @@ class DriveSnapshot(AbstractSnapshot):
                 ensureKey(PROP_KEY_DATE, props, DRIVE_KEY_TEXT)),
             size=int(ensureKey("size", data, DRIVE_KEY_TEXT)),
             source=SOURCE_GOOGLE_DRIVE,
-            snapshotType=props.get(PROP_TYPE, "?"),
+            backupType=props.get(PROP_TYPE, "?"),
             version=props.get(PROP_VERSION, None),
             protected=BoolValidator.strToBool(props.get(PROP_PROTECTED, "?")),
             retained=retained,

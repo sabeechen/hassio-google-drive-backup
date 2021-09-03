@@ -246,14 +246,14 @@ class DriveRequests():
             initial = await self.retryRequest("POST", URL_START_UPLOAD, headers=headers, json=metadata)
             async with initial:
                 # Google returns a url in the header "Location", which is where subsequent requests to upload
-                # the snapshot's bytes should be sent.  Logic below handles uploading the file bytes in chunks.
+                # the backup's bytes should be sent.  Logic below handles uploading the file bytes in chunks.
                 location = ensureKey(
                     'Location', initial.headers, "Google Drive's Upload headers")
                 self.last_attempt_count = 0
                 stream.position(0)
 
         # Keep track of the location in case the upload fails and we want to resume where we left off.
-        # "metadata" is a durable fingerprint that uniquely identifies a snapshot, so we can use it to identify a
+        # "metadata" is a durable fingerprint that uniquely identifies a backup, so we can use it to identify a
         # resumable partial upload in future retrys.
         self.last_attempt_location = location
         self.last_attempt_metadata = metadata

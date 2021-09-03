@@ -33,6 +33,10 @@ ERROR_LOW_SPACE = "low_space"
 LOG_IN_TO_DRIVE = "log_in_to_drive"
 SUPERVISOR_PERMISSION = "supervisor_permission"
 
+NECESSARY_OLD_BACKUP_NAME = "snapshot"
+NECESSARY_OLD_BACKUP_PLURAL_NAME = "snapshots"
+NECESSARY_OLD_SUPERVISOR_URL = "http://hassio"
+
 DRIVE_FOLDER_URL_FORMAT = "https://drive.google.com/drive/u/0/folders/{0}"
 GITHUB_ISSUE_URL = "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title={title}&assignee=sabeechen&body={body}"
 GITHUB_BUG_TEMPLATE = """

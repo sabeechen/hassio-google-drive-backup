@@ -11,29 +11,29 @@ from injector import inject, singleton
 from backup.util import AsyncHttpGetter, GlobalInfo, Estimator, DataCache, KEY_LAST_SEEN, KEY_PENDING, KEY_NAME, KEY_CREATED, KEY_I_MADE_THIS, KEY_IGNORE
 from ..config import Config, Setting, CreateOptions, Startable
 from ..const import SOURCE_HA
-from ..model import SnapshotSource, AbstractSnapshot, HASnapshot, Snapshot
+from ..model import BackupSource, AbstractBackup, HABackup, Backup
 from ..exceptions import (LogicError, BackupInProgress,
                           UploadFailed, ensureKey)
 from .harequests import HaRequests
 from .password import Password
-from .snapshotname import SnapshotName
+from .snapshotname import BackupName
 from ..time import Time
 from ..logger import getLogger, StandardLogger
-from backup.const import FOLDERS
+from backup.const import FOLDERS, NECESSARY_OLD_BACKUP_PLURAL_NAME
 from .addon_stopper import LOGGER, AddonStopper
 
 logger: StandardLogger = getLogger(__name__)
 
 
-class PendingSnapshot(AbstractSnapshot):
-    def __init__(self, snapshotType, protected, options: CreateOptions, request_info, config, time):
+class PendingBackup(AbstractBackup):
+    def __init__(self, backupType, protected, options: CreateOptions, request_info, config, time):
         super().__init__(
             name=request_info['name'],
             slug="pending",
             date=options.when,
             size="pending",
             source=SOURCE_HA,
-            snapshotType=snapshotType,
+            backupType=backupType,
             version="",
             protected=protected,
             retained=False,
@@ -71,7 +71,7 @@ class PendingSnapshot(AbstractSnapshot):
 
     def setPendingUnknown(self):
         self._name = "Pending Backup"
-        self._snapshotType = "unknown"
+        self._backupType = "unknown"
         self._protected = False
         self._pending_subverted = True
 
@@ -100,13 +100,13 @@ class PendingSnapshot(AbstractSnapshot):
     def isStale(self):
         if self._pending_subverted:
             delta = timedelta(seconds=self._config.get(
-                Setting.SNAPSHOT_STALE_SECONDS))
+                Setting.BACKUP_STALE_SECONDS))
             if self._time.now() > self.startTime() + delta:
                 return True
         if not self.isFailed():
             return False
         delta = timedelta(seconds=self._config.get(
-            Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS))
+            Setting.FAILED_BACKUP_TIMEOUT_SECONDS))
         staleTime = self.getFailureTime() + delta
         return self._time.now() >= staleTime
 
@@ -115,7 +115,7 @@ class PendingSnapshot(AbstractSnapshot):
 
 
 @singleton
-class HaSource(SnapshotSource[HASnapshot], Startable):
+class HaSource(BackupSource[HABackup], Startable):
     """
     Stores logic for interacting with the supervisor add-on API
     """
@@ -124,9 +124,9 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
         super().__init__()
         self.config: Config = config
         self._data_cache = data_cache
-        self.snapshot_thread: Thread = None
-        self.pending_snapshot_error: Optional[Exception] = None
-        self.pending_snapshot_slug: Optional[str] = None
+        self.backup_thread: Thread = None
+        self.pending_backup_error: Optional[Exception] = None
+        self.pending_backup_slug: Optional[str] = None
         self.self_info = None
         self.host_info = None
         self.ha_info = None
@@ -143,17 +143,17 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
         self.estimator = estimator
         self._addons = {}
 
-        # This lock should be used for _ANYTHING_ that interacts with self._pending_snapshot
-        self._pending_snapshot_lock = asyncio.Lock()
-        self.pending_snapshot: Optional[PendingSnapshot] = None
-        self._pending_snapshot_task = None
+        # This lock should be used for _ANYTHING_ that interacts with self._pending_backup
+        self._pending_backup_lock = asyncio.Lock()
+        self.pending_backup: Optional[PendingBackup] = None
+        self._pending_backup_task = None
         self._initialized = False
 
     def isInitialized(self):
         return self._initialized
 
     def check(self) -> bool:
-        pending = self.pending_snapshot
+        pending = self.pending_backup
         if pending and pending.isStale():
             self.trigger()
         return super().check()
@@ -176,50 +176,50 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
     def freeSpace(self):
         return self.estimator.getBytesFree()
 
-    async def create(self, options: CreateOptions) -> HASnapshot:
-        # Make sure instance info is up-to-date, for the snapshot name
+    async def create(self, options: CreateOptions) -> HABackup:
+        # Make sure instance info is up-to-date, for the backup name
         await self._refreshInfo()
 
         # Set a default name if it was unspecified
         if options.name_template is None or len(options.name_template) == 0:
             options.name_template = self.config.get(Setting.BACKUP_NAME)
 
-        # Build the snapshot request json, get type, etc
-        request, type_name, protected = self._buildSnapshotInfo(
+        # Build the backup request json, get type, etc
+        request, type_name, protected = self._buildBackupInfo(
             options)
 
-        async with self._pending_snapshot_lock:
-            # Check if a snapshot is already in progress
-            if self.pending_snapshot:
-                if not self.pending_snapshot.isFailed() and not self.pending_snapshot.isComplete():
-                    logger.info("A snapshot was already in progress")
+        async with self._pending_backup_lock:
+            # Check if a backup is already in progress
+            if self.pending_backup:
+                if not self.pending_backup.isFailed() and not self.pending_backup.isComplete():
+                    logger.info("A backup was already in progress")
                     raise BackupInProgress()
 
             # try to stop addons
             await self.stopper.stopAddons(self.self_info['slug'])
 
-            # Create the snapshot palceholder object
-            self.pending_snapshot = PendingSnapshot(
+            # Create the backup palceholder object
+            self.pending_backup = PendingBackup(
                 type_name, protected, options, request, self.config, self.time)
-            logger.info("Requesting a new snapshot")
-            self._pending_snapshot_task = asyncio.create_task(self._requestAsync(
-                self.pending_snapshot), name="Pending Backup Requester")
-            await asyncio.wait({self._pending_snapshot_task}, timeout=self.config.get(Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS))
-            # set up the pending snapshot info
-            pending = self._data_cache.snapshot(KEY_PENDING)
+            logger.info("Requesting a new backup")
+            self._pending_backup_task = asyncio.create_task(self._requestAsync(
+                self.pending_backup), name="Pending Backup Requester")
+            await asyncio.wait({self._pending_backup_task}, timeout=self.config.get(Setting.NEW_BACKUP_TIMEOUT_SECONDS))
+            # set up the pending backup info
+            pending = self._data_cache.backup(KEY_PENDING)
             pending[KEY_NAME] = request['name']
             pending[KEY_CREATED] = options.when.isoformat()
             pending[KEY_LAST_SEEN] = self.time.now().isoformat()
             self._data_cache.makeDirty()
-            self.pending_snapshot.raiseIfNeeded()
-            if self.pending_snapshot.isComplete():
-                # It completed while we waited, so just query the new snapshot
-                ret = await self.harequests.snapshot(self.pending_snapshot.createdSlug())
+            self.pending_backup.raiseIfNeeded()
+            if self.pending_backup.isComplete():
+                # It completed while we waited, so just query the new backup
+                ret = await self.harequests.backup(self.pending_backup.createdSlug())
                 self.setDataCacheInfo(ret)
-                self._data_cache.snapshot(ret.slug())[KEY_I_MADE_THIS] = True
+                self._data_cache.backup(ret.slug())[KEY_I_MADE_THIS] = True
                 return ret
             else:
-                return self.pending_snapshot
+                return self.pending_backup
 
     def _isHttp400(self, e):
         if isinstance(e, ClientResponseError):
@@ -233,125 +233,124 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
             pass
 
     async def stop(self):
-        if self._pending_snapshot_task:
-            self._pending_snapshot_task.cancel()
-            await asyncio.wait([self._pending_snapshot_task])
+        if self._pending_backup_task:
+            self._pending_backup_task.cancel()
+            await asyncio.wait([self._pending_backup_task])
 
-    async def get(self) -> Dict[str, HASnapshot]:
+    async def get(self) -> Dict[str, HABackup]:
         if not self._initialized:
             await self.init()
         else:
-            # Always ensure the supervisor version is fresh
-            # TODO: remove when we no longer support the "snapshot" query path
+            # Always ensure the supervisor version is fresh before makign any other requests
             self.super_info = await self.harequests.supervisorInfo()
         slugs = set()
         retained = []
-        snapshots: Dict[str, HASnapshot] = {}
-        query = await self.harequests.snapshots()
+        backups: Dict[str, HABackup] = {}
+        query = await self.harequests.backups()
 
         # Different supervisor version use different names for the list of backups
         backup_list = []
-        if 'snapshots' in query:
-            backup_list = query['snapshots']
+        if NECESSARY_OLD_BACKUP_PLURAL_NAME in query:
+            backup_list = query[NECESSARY_OLD_BACKUP_PLURAL_NAME]
         if 'backups' in query:
             backup_list = query['backups']
 
-        for snapshot in backup_list:
-            slug = snapshot['slug']
+        for backup in backup_list:
+            slug = backup['slug']
             slugs.add(slug)
-            item = await self.harequests.snapshot(slug)
+            item = await self.harequests.backup(slug)
             if slug in self.pending_options:
                 item.setOptions(self.pending_options[slug])
-            snapshots[slug] = item
+            backups[slug] = item
             if item.retained():
                 retained.append(item.slug())
             self.setDataCacheInfo(item)
-        if self.pending_snapshot:
-            async with self._pending_snapshot_lock:
-                if self.pending_snapshot:
-                    if self.pending_snapshot.isStale():
-                        # The snapshot is stale, so just let it die.
+        if self.pending_backup:
+            async with self._pending_backup_lock:
+                if self.pending_backup:
+                    if self.pending_backup.isStale():
+                        # The backup is stale, so just let it die.
                         self._killPending()
-                    elif self.pending_snapshot.isComplete() and self.pending_snapshot.createdSlug() in snapshots:
-                        # Copy over options if we got the requested snapshot.
-                        snapshots[self.pending_snapshot.createdSlug()].setOptions(
-                            self.pending_snapshot.getOptions())
+                    elif self.pending_backup.isComplete() and self.pending_backup.createdSlug() in backups:
+                        # Copy over options if we got the requested backup.
+                        backups[self.pending_backup.createdSlug()].setOptions(
+                            self.pending_backup.getOptions())
                         self._killPending()
                     elif self.last_slugs.symmetric_difference(slugs).intersection(slugs):
-                        # New snapshot added, ignore pending snapshot.
+                        # New backup added, ignore pending backup.
                         self._killPending()
-            if self.pending_snapshot:
-                snapshots[self.pending_snapshot.slug()] = self.pending_snapshot
+            if self.pending_backup:
+                backups[self.pending_backup.slug()] = self.pending_backup
         for slug in retained:
             if not self.config.isRetained(slug):
                 self.config.setRetained(slug, False)
         self.last_slugs = slugs
-        return snapshots
+        return backups
 
-    def setDataCacheInfo(self, snapshot: HASnapshot):
-        if snapshot.slug() not in self._data_cache.snapshots:
-            # its a new snapshot, so we need to create a record for it
-            pending = self._data_cache.snapshots.get(KEY_PENDING, {})
+    def setDataCacheInfo(self, backup: HABackup):
+        if backup.slug() not in self._data_cache.backups:
+            # its a new backup, so we need to create a record for it
+            pending = self._data_cache.backups.get(KEY_PENDING, {})
             pending_created = self.time.parse(pending.get(KEY_CREATED, self.time.now().isoformat()))
 
-            # If the snapshot has the same name as the one we created and it was created within a day
+            # If the backup has the same name as the one we created and it was created within a day
             # of the requested time, then assume the addon created it.
-            self_created = snapshot.name() == pending.get(KEY_NAME, None) and abs((pending_created - snapshot.date()).total_seconds()) < timedelta(days=1).total_seconds()
+            self_created = backup.name() == pending.get(KEY_NAME, None) and abs((pending_created - backup.date()).total_seconds()) < timedelta(days=1).total_seconds()
 
-            stored_snapshot = self._data_cache.snapshot(snapshot.slug())
-            stored_snapshot[KEY_I_MADE_THIS] = self_created
-            stored_snapshot[KEY_CREATED] = snapshot.date().isoformat()
-            stored_snapshot[KEY_NAME] = snapshot.name()
+            stored_backup = self._data_cache.backup(backup.slug())
+            stored_backup[KEY_I_MADE_THIS] = self_created
+            stored_backup[KEY_CREATED] = backup.date().isoformat()
+            stored_backup[KEY_NAME] = backup.name()
             if self_created:
-                # Remove the pending snapshot info from the cache so it doesn't get reused.
-                del self._data_cache.snapshots[KEY_PENDING]
+                # Remove the pending backup info from the cache so it doesn't get reused.
+                del self._data_cache.backups[KEY_PENDING]
         # bump the last seen time
-        self._data_cache.snapshot(snapshot.slug())[KEY_LAST_SEEN] = self.time.now().isoformat()
+        self._data_cache.backup(backup.slug())[KEY_LAST_SEEN] = self.time.now().isoformat()
         self._data_cache.makeDirty()
 
-    async def delete(self, snapshot: Snapshot):
-        slug = self._validateSnapshot(snapshot).slug()
-        logger.info("Deleting '{0}' from Home Assistant".format(snapshot.name()))
+    async def delete(self, backup: Backup):
+        slug = self._validateBackup(backup).slug()
+        logger.info("Deleting '{0}' from Home Assistant".format(backup.name()))
         await self.harequests.delete(slug)
-        snapshot.removeSource(self.name())
+        backup.removeSource(self.name())
 
-    async def ignore(self, snapshot: Snapshot, ignore: bool):
-        slug = self._validateSnapshot(snapshot).slug()
-        logger.info("Updating ignore settings for '{0}'".format(snapshot.name()))
-        self._data_cache.snapshot(slug)[KEY_IGNORE] = ignore
+    async def ignore(self, backup: Backup, ignore: bool):
+        slug = self._validateBackup(backup).slug()
+        logger.info("Updating ignore settings for '{0}'".format(backup.name()))
+        self._data_cache.backup(slug)[KEY_IGNORE] = ignore
         self._data_cache.makeDirty()
 
-    async def save(self, snapshot: Snapshot, source: AsyncHttpGetter) -> HASnapshot:
-        logger.info("Downloading '{0}'".format(snapshot.name()))
+    async def save(self, backup: Backup, source: AsyncHttpGetter) -> HABackup:
+        logger.info("Downloading '{0}'".format(backup.name()))
         self._info.upload(0)
         resp = None
         try:
-            snapshot.overrideStatus("Loading {0}%", source)
-            snapshot.setUploadSource(self.title(), source)
+            backup.overrideStatus("Loading {0}%", source)
+            backup.setUploadSource(self.title(), source)
             async with source:
                 with aiohttp.MultipartWriter('mixed') as mpwriter:
                     mpwriter.append(source, {'CONTENT-TYPE': 'application/tar'})
                     resp = await self.harequests.upload(mpwriter)
-            snapshot.clearStatus()
-            snapshot.clearUploadSource()
+            backup.clearStatus()
+            backup.clearUploadSource()
         except Exception as e:
             logger.printException(e)
-            snapshot.overrideStatus("Failed!")
-            snapshot.uploadFailure(logger.formatException(e))
-        if resp and 'slug' in resp and resp['slug'] == snapshot.slug():
-            self.config.setRetained(snapshot.slug(), True)
-            return await self.harequests.snapshot(snapshot.slug())
+            backup.overrideStatus("Failed!")
+            backup.uploadFailure(logger.formatException(e))
+        if resp and 'slug' in resp and resp['slug'] == backup.slug():
+            self.config.setRetained(backup.slug(), True)
+            return await self.harequests.backup(backup.slug())
         else:
             raise UploadFailed()
 
-    async def read(self, snapshot: Snapshot) -> IOBase:
-        item = self._validateSnapshot(snapshot)
+    async def read(self, backup: Backup) -> IOBase:
+        item = self._validateBackup(backup)
         return await self.harequests.download(item.slug())
 
-    async def retain(self, snapshot: Snapshot, retain: bool) -> None:
-        item: HASnapshot = self._validateSnapshot(snapshot)
+    async def retain(self, backup: Backup, retain: bool) -> None:
+        item: HABackup = self._validateBackup(backup)
         item._retained = retain
-        self.config.setRetained(snapshot.slug(), retain)
+        self.config.setRetained(backup.slug(), retain)
 
     async def init(self):
         await self._refreshInfo()
@@ -432,25 +431,25 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
             protocol = "http://"
         return "".join([protocol, "{host}:", str(self._info.ha_port), "/"])
 
-    def _validateSnapshot(self, snapshot) -> HASnapshot:
-        item: HASnapshot = snapshot.getSource(self.name())
+    def _validateBackup(self, backup) -> HABackup:
+        item: HABackup = backup.getSource(self.name())
         if not item:
             raise LogicError(
                 "Requested to do something with a backup from Home Assistant, but the backup has no Home Assistant source")
         return item
 
     def _killPending(self):
-        self.pending_snapshot = None
-        if self._pending_snapshot_task and not self._pending_snapshot_task.done():
-            self._pending_snapshot_task.cancel()
+        self.pending_backup = None
+        if self._pending_backup_task and not self._pending_backup_task.done():
+            self._pending_backup_task.cancel()
 
     def postSync(self):
         self.stopper.allowRun()
-        self.stopper.isSnapshotting(self.pending_snapshot is not None)
+        self.stopper.isBackingUp(self.pending_backup is not None)
 
-    async def _requestAsync(self, pending: PendingSnapshot, start=[]) -> None:
+    async def _requestAsync(self, pending: PendingBackup, start=[]) -> None:
         try:
-            result = await asyncio.wait_for(self.harequests.createSnapshot(pending._request_info), timeout=self.config.get(Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS))
+            result = await asyncio.wait_for(self.harequests.createBackup(pending._request_info), timeout=self.config.get(Setting.PENDING_BACKUP_TIMEOUT_SECONDS))
             slug = ensureKey(
                 "slug", result, "supervisor's create backup response")
             pending.complete(slug)
@@ -469,7 +468,7 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
             await self.stopper.startAddons()
             self.trigger()
 
-    def _buildSnapshotInfo(self, options: CreateOptions):
+    def _buildBackupInfo(self, options: CreateOptions):
         addons: List[str] = []
         for addon in self.super_info.get('addons', {}):
             addons.append(addon['slug'])
@@ -496,7 +495,7 @@ class HaSource(SnapshotSource[HASnapshot], Startable):
         password = Password(self.config).resolve()
         if password:
             request_info['password'] = password
-        name = SnapshotName().resolve(type_name, options.name_template,
+        name = BackupName().resolve(type_name, options.name_template,
                                       self.time.toLocal(options.when), self.host_info)
         request_info['name'] = name
         return request_info, type_name, protected

@@ -11,9 +11,9 @@ from backup.time import Time
 @pytest.mark.asyncio
 async def test_read_and_write(config: Config, time: Time) -> None:
     cache = DataCache(config, time)
-    assert len(cache.snapshots) == 0
+    assert len(cache.backups) == 0
 
-    cache.snapshot("test")[KEY_CREATED] = time.now().isoformat()
+    cache.backup("test")[KEY_CREATED] = time.now().isoformat()
     assert not cache._dirty
     cache.makeDirty()
     assert cache._dirty
@@ -21,24 +21,24 @@ async def test_read_and_write(config: Config, time: Time) -> None:
     assert not cache._dirty
 
     cache = DataCache(config, time)
-    assert cache.snapshot("test")[KEY_CREATED] == time.now().isoformat()
+    assert cache.backup("test")[KEY_CREATED] == time.now().isoformat()
     assert not cache._dirty
 
 
 @pytest.mark.asyncio
-async def test_snapshot_expiration(config: Config, time: Time) -> None:
+async def test_backup_expiration(config: Config, time: Time) -> None:
     cache = DataCache(config, time)
-    assert len(cache.snapshots) == 0
+    assert len(cache.backups) == 0
 
-    cache.snapshot("new")[KEY_LAST_SEEN] = time.now().isoformat()
-    cache.snapshot("old")[KEY_LAST_SEEN] = (
+    cache.backup("new")[KEY_LAST_SEEN] = time.now().isoformat()
+    cache.backup("old")[KEY_LAST_SEEN] = (
         time.now() - timedelta(days=CACHE_EXPIRATION_DAYS + 1)) .isoformat()
     cache.makeDirty()
     cache.saveIfDirty()
 
-    assert len(cache.snapshots) == 1
-    assert "new" in cache.snapshots
-    assert "old" not in cache.snapshots
+    assert len(cache.backups) == 1
+    assert "new" in cache.backups
+    assert "old" not in cache.backups
 
 
 @pytest.mark.asyncio

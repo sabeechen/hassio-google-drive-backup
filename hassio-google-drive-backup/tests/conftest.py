@@ -160,7 +160,7 @@ async def generate_config(server_url: URL, ports, cleandir):
         Setting.BACKUP_DIRECTORY_PATH: cleandir,
         Setting.PORT: ports.ui,
         Setting.INGRESS_PORT: ports.ingress,
-        Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 0,
+        Setting.BACKUP_STARTUP_DELAY_MINUTES: 0,
     })
 
 
@@ -238,10 +238,10 @@ async def session(injector):
 
 
 @pytest.fixture
-async def snapshot(coord, source, dest):
+async def backup(coord, source, dest):
     await coord.sync()
-    assert len(coord.snapshots()) == 1
-    return coord.snapshots()[0]
+    assert len(coord.backups()) == 1
+    return coord.backups()[0]
 
 
 @pytest.fixture

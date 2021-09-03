@@ -147,9 +147,9 @@ class FolderFinder():
 
     async def _verify(self, id):
         if self.drivebackend.isCustomCreds():
-            # If the user is using custom creds and specifying the snapshot folder, then chances are the
+            # If the user is using custom creds and specifying the backup folder, then chances are the
             # app doesn't have permission to access the parent folder directly.  Ironically, we can still
-            # query for children and add/remove snapshots.  Not a huge deal, just
+            # query for children and add/remove backups.  Not a huge deal, just
             # means we can't verify the folder still exists, isn't trashed, etc.  Just let it be valid
             # and handle potential errors elsewhere.
             return True

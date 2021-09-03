@@ -28,7 +28,7 @@ async def test_no_stop_config(supervisor: SimulatedSupervisor, addon_stopper: Ad
     slug = "test_slug_1"
     supervisor.installAddon(slug, "Test decription")
     addon_stopper.allowRun()
-    addon_stopper.isSnapshotting(False)
+    addon_stopper.isBackingUp(False)
     assert supervisor.addon(slug)["state"] == "started"
     await addon_stopper.stopAddons("ignore")
     assert supervisor.addon(slug)["state"] == "started"
@@ -60,7 +60,7 @@ async def test_load_addons_on_boot(supervisor: SimulatedSupervisor, addon_stoppe
 
 
 @pytest.mark.asyncio
-async def test_do_nothing_while_snapshotting(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config, interceptor: RequestInterceptor) -> None:
+async def test_do_nothing_while_backing_up(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config, interceptor: RequestInterceptor) -> None:
     slug1 = "test_slug_1"
     supervisor.installAddon(slug1, "Test decription")
     slug2 = "test_slug_2"
@@ -69,7 +69,7 @@ async def test_do_nothing_while_snapshotting(supervisor: SimulatedSupervisor, ad
 
     await addon_stopper.start(False)
     addon_stopper.allowRun()
-    addon_stopper.isSnapshotting(True)
+    addon_stopper.isBackingUp(True)
     assert addon_stopper.must_start == {slug1, slug2}
 
     await addon_stopper.check()

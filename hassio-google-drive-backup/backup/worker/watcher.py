@@ -67,7 +67,7 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
         logger.debug("Backup directory created event")
 
     def on_deleted(self, event):
-        # Always trigger on delete, most likely a snapshot was deleted
+        # Always trigger on delete, most likely a backup was deleted
         self.trigger()
         logger.debug("Backup directory deleted event")
 

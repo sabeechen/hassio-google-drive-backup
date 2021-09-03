@@ -61,15 +61,15 @@ def skipForRoot():
         pytest.skip("This test can't be run as root")
 
 
-def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:
-    snapshot_type = "full"
+def createBackupTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:
+    backup_type = "full"
     if included_folders is not None:
         folders = included_folders.copy()
     else:
         folders = all_folders.copy()
 
     if included_addons is not None:
-        snapshot_type = "partial"
+        backup_type = "partial"
         addons = []
         for addon in all_addons:
             if addon['slug'] in included_addons:
@@ -77,11 +77,11 @@ def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, includ
     else:
         addons = all_addons.copy()
 
-    snapshot_info = {
+    backup_info = {
         "slug": slug,
         "name": name,
         "date": date.isoformat(),
-        "type": snapshot_type,
+        "type": backup_type,
         "protected": password is not None,
         "homeassistant": "0.92.2",
         "folders": folders,
@@ -92,7 +92,7 @@ def createSnapshotTar(slug: str, name: str, date: datetime, padSize: int, includ
     }
     stream = BytesIO()
     tar = tarfile.open(fileobj=stream, mode="w")
-    add(tar, "backup.json", BytesIO(json.dumps(snapshot_info).encode()))
+    add(tar, "backup.json", BytesIO(json.dumps(backup_info).encode()))
     add(tar, "padding.dat", getTestStream(padSize))
     tar.close()
     stream.seek(0)
@@ -107,15 +107,15 @@ def add(tar, name, stream):
     tar.addfile(info, stream)
 
 
-def parseSnapshotInfo(stream: BytesIO):
+def parseBackupInfo(stream: BytesIO):
     with tarfile.open(fileobj=stream, mode="r") as tar:
         info = tar.getmember("backup.json")
         with tar.extractfile(info) as f:
-            snapshot_data = json.load(f)
-            snapshot_data['size'] = float(
+            backup_data = json.load(f)
+            backup_data['size'] = float(
                 round(len(stream.getbuffer()) / 1024.0 / 1024.0, 2))
-            snapshot_data['version'] = 'dev'
-            return snapshot_data
+            backup_data['version'] = 'dev'
+            return backup_data
 
 
 def getTestStream(size: int):
@@ -182,10 +182,10 @@ class HelperTestSource(SimulatedSource):
             raise IntentionalFailure()
         return await super().create(options)
 
-    async def save(self, snapshot, bytes: IOBase = None):
+    async def save(self, backup, bytes: IOBase = None):
         if not self.allow_save:
             raise IntentionalFailure()
-        return await super().save(snapshot, bytes=bytes)
+        return await super().save(backup, bytes=bytes)
 
 
 @singleton

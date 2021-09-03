@@ -14,7 +14,7 @@ from backup.worker import Trigger
 from backup.logger import getLogger
 from backup.creds.creds import Creds
 from .model import Model
-from .snapshots import AbstractSnapshot, Snapshot, SOURCE_HA
+from .snapshots import AbstractBackup, Backup, SOURCE_HA
 
 logger = getLogger(__name__)
 
@@ -40,14 +40,14 @@ class Coordinator(Trigger):
         self._sync_start = Event()
         self._sync_wait = Event()
         self._sync_wait.set()
-        self._global_info.triggerSnapshotCooldown(timedelta(minutes=self._config.get(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES)))
+        self._global_info.triggerBackupCooldown(timedelta(minutes=self._config.get(Setting.BACKUP_STARTUP_DELAY_MINUTES)))
         self.trigger()
 
     def saveCreds(self, creds: Creds):
         if not self._model.dest.enabled():
             # Since this is the first time saving credentials (eg the addon was just enabled).  Hold off on
-            # automatic snapshots for a few minutes to give the user a little while to figure out whats going on.
-            self._global_info.triggerSnapshotCooldown(timedelta(minutes=self._config.get(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES)))
+            # automatic backups for a few minutes to give the user a little while to figure out whats going on.
+            self._global_info.triggerBackupCooldown(timedelta(minutes=self._config.get(Setting.BACKUP_STARTUP_DELAY_MINUTES)))
 
         self._model.dest.saveCreds(creds)
         self._global_info.credsSaved()
@@ -106,14 +106,14 @@ class Coordinator(Trigger):
             else:
                 scheduled += timedelta(seconds=self._config.get(
                     Setting.MAX_SYNC_INTERVAL_SECONDS))
-            next_backup = self.nextSnapshotTime()
+            next_backup = self.nextBackupTime()
             if next_backup is None:
                 return scheduled
             else:
-                return min(self.nextSnapshotTime(), scheduled)
+                return min(self.nextBackupTime(), scheduled)
 
-    def nextSnapshotTime(self):
-        return self._buildModel().nextSnapshot(self._time.now())
+    def nextBackupTime(self):
+        return self._buildModel().nextBackup(self._time.now())
 
     def buildBackupMetrics(self):
         info = {}
@@ -134,14 +134,14 @@ class Coordinator(Trigger):
             size = 0
             ignored_size = 0
             latest = None
-            for snapshot in self.snapshots():
-                data: AbstractSnapshot = snapshot.getSource(source)
+            for backup in self.backups():
+                data: AbstractBackup = backup.getSource(source)
                 if data is None:
                     continue
-                if data.ignore() and snapshot.ignore():
+                if data.ignore() and backup.ignore():
                     source_info['ignored'] += 1
-                if snapshot.ignore():
-                    ignored_size += snapshot.size()
+                if backup.ignore():
+                    ignored_size += backup.size()
                     continue
                 source_info['snapshots'] += 1
                 if data.retained():
@@ -211,56 +211,56 @@ class Coordinator(Trigger):
 
         logger.info("I'll try again {0}".format(text))
 
-    def snapshots(self) -> List[Snapshot]:
-        ret = list(self._model.snapshots.values())
+    def backups(self) -> List[Backup]:
+        ret = list(self._model.backups.values())
         ret.sort(key=lambda s: s.date())
         return ret
 
-    async def uploadSnapshot(self, slug):
-        await self._withSoftLock(lambda: self._uploadSnapshot(slug))
+    async def uploadBackups(self, slug):
+        await self._withSoftLock(lambda: self._uploadBackup(slug))
 
-    async def _uploadSnapshot(self, slug):
-        snapshot = self._ensureSnapshot(self._model.dest.name(), slug)
-        snapshot_dest = snapshot.getSource(self._model.dest.name())
-        snapshot_source = snapshot.getSource(self._model.source.name())
-        if snapshot_source:
+    async def _uploadBackup(self, slug):
+        backup = self._ensureBackup(self._model.dest.name(), slug)
+        backup_dest = backup.getSource(self._model.dest.name())
+        backup_source = backup.getSource(self._model.source.name())
+        if backup_source:
             raise LogicError("This backup already exists in Home Assistant")
-        if not snapshot_dest:
+        if not backup_dest:
             # Unreachable?
             raise LogicError("This backup isn't in Google Drive")
-        created = await self._model.source.save(snapshot, await self._model.dest.read(snapshot))
-        snapshot.addSource(created)
+        created = await self._model.source.save(backup, await self._model.dest.read(backup))
+        backup.addSource(created)
         self._updateFreshness()
 
-    async def startSnapshot(self, options: CreateOptions):
-        return await self._withSoftLock(lambda: self._startSnapshot(options))
+    async def startBackup(self, options: CreateOptions):
+        return await self._withSoftLock(lambda: self._startBackup(options))
 
-    async def _startSnapshot(self, options: CreateOptions):
+    async def _startBackup(self, options: CreateOptions):
         self._estimator.refresh()
-        self._estimator.checkSpace(self.snapshots())
+        self._estimator.checkSpace(self.backups())
         created = await self._buildModel().source.create(options)
-        snapshot = Snapshot(created)
-        self._model.snapshots[snapshot.slug()] = snapshot
+        backup = Backup(created)
+        self._model.backups[backup.slug()] = backup
         self._updateFreshness()
         self._estimator.refresh()
-        return snapshot
+        return backup
 
-    def getSnapshot(self, slug):
-        return self._ensureSnapshot(None, slug)
+    def getBackup(self, slug):
+        return self._ensureBackup(None, slug)
 
     async def download(self, slug):
-        snapshot = self._ensureSnapshot(None, slug)
+        backup = self._ensureBackup(None, slug)
         for source in self._sources.values():
             if not source.enabled():
                 continue
-            if snapshot.getSource(source.name()):
-                return await source.read(snapshot)
+            if backup.getSource(source.name()):
+                return await source.read(backup)
         raise NoBackup()
 
     async def retain(self, sources: Dict[str, bool], slug: str):
         for source in sources:
-            snapshot = self._ensureSnapshot(source, slug)
-            await self._ensureSource(source).retain(snapshot, sources[source])
+            backup = self._ensureBackup(source, slug)
+            await self._ensureSource(source).retain(backup, sources[source])
         self._updateFreshness()
 
     async def delete(self, sources, slug):
@@ -271,27 +271,27 @@ class Coordinator(Trigger):
 
     async def _delete(self, sources, slug):
         for source in sources:
-            snapshot = self._ensureSnapshot(source, slug)
-            await self._ensureSource(source).delete(snapshot)
-            if snapshot.isDeleted():
-                del self._model.snapshots[slug]
+            backup = self._ensureBackup(source, slug)
+            await self._ensureSource(source).delete(backup)
+            if backup.isDeleted():
+                del self._model.backups[slug]
         self._updateFreshness()
 
     async def _ignore(self, slug: str, ignore: bool):
-        snapshot = self._ensureSnapshot(SOURCE_HA, slug)
-        await self._ensureSource(SOURCE_HA).ignore(snapshot, ignore)
+        backup = self._ensureBackup(SOURCE_HA, slug)
+        await self._ensureSource(SOURCE_HA).ignore(backup, ignore)
 
-    def _ensureSnapshot(self, source: str = None, slug=None) -> Snapshot:
-        snapshot = self._buildModel().snapshots.get(slug)
-        if not snapshot:
+    def _ensureBackup(self, source: str = None, slug=None) -> Backup:
+        backup = self._buildModel().backups.get(slug)
+        if not backup:
             raise NoBackup()
         if not source:
-            return snapshot
+            return backup
         if not source:
-            return snapshot
-        if not snapshot.getSource(source):
+            return backup
+        if not backup.getSource(source):
             raise NoBackup()
-        return snapshot
+        return backup
 
     def _ensureSource(self, source):
         ret = self._sources.get(source)
@@ -305,10 +305,10 @@ class Coordinator(Trigger):
 
     def _updateFreshness(self):
         purges = self._buildModel().getNextPurges()
-        for snapshot in self._model.snapshots.values():
+        for backup in self._model.backups.values():
             for source in purges:
-                if snapshot.getSource(source):
-                    snapshot.updatePurge(source, snapshot == purges[source])
+                if backup.getSource(source):
+                    backup.updatePurge(source, backup == purges[source])
 
     async def _withSoftLock(self, callable):
         with self._lock:

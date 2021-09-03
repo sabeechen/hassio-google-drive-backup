@@ -6,8 +6,8 @@ from pytest import raises
 
 from backup.config import Config, Setting, CreateOptions
 from backup.exceptions import LogicError, LowSpaceError, NoBackup, PleaseWait, UserCancelledError
-from backup.util import GlobalInfo
-from backup.model import Coordinator, Model, Snapshot
+from backup.util import GlobalInfo, DataCache
+from backup.model import Coordinator, Model, Backup
 from .conftest import FsFaker
 from .faketime import FakeTime
 from .helpers import HelperTestSource, skipForWindows
@@ -26,12 +26,12 @@ def dest():
 @pytest.fixture
 def simple_config():
     config = Config()
-    config.override(Setting.SNAPSHOT_STARTUP_DELAY_MINUTES, 0)
+    config.override(Setting.BACKUP_STARTUP_DELAY_MINUTES, 0)
     return config
 
 
 @pytest.fixture
-def model(source, dest, time, simple_config, global_info, estimator, data_cache):
+def model(source, dest, time, simple_config, global_info, estimator, data_cache: DataCache):
     return Model(simple_config, time, source, dest, global_info, estimator, data_cache)
 
 
@@ -54,7 +54,7 @@ async def test_sync(coord: Coordinator, global_info: GlobalInfo, time: FakeTime)
     assert global_info._syncs == 1
     assert global_info._successes == 1
     assert global_info._last_sync_start == time.now()
-    assert len(coord.snapshots()) == 1
+    assert len(coord.backups()) == 1
 
 
 @pytest.mark.asyncio
@@ -71,9 +71,9 @@ async def test_blocking(coord: Coordinator):
     with raises(PleaseWait):
         await coord.sync()
     with raises(PleaseWait):
-        await coord.uploadSnapshot(None)
+        await coord.uploadBackups(None)
     with raises(PleaseWait):
-        await coord.startSnapshot(None)
+        await coord.startBackup(None)
     event_end.set()
 
 
@@ -83,13 +83,13 @@ async def sleepHelper(event_start: asyncio.Event, event_end: asyncio.Event):
 
 
 @pytest.mark.asyncio
-async def test_new_snapshot(coord: Coordinator, time: FakeTime, source, dest):
-    await coord.startSnapshot(CreateOptions(time.now(), "Test Name"))
-    snapshots = coord.snapshots()
-    assert len(snapshots) == 1
-    assert snapshots[0].name() == "Test Name"
-    assert snapshots[0].getSource(source.name()) is not None
-    assert snapshots[0].getSource(dest.name()) is None
+async def test_new_backup(coord: Coordinator, time: FakeTime, source, dest):
+    await coord.startBackup(CreateOptions(time.now(), "Test Name"))
+    backups = coord.backups()
+    assert len(backups) == 1
+    assert backups[0].name() == "Test Name"
+    assert backups[0].getSource(source.name()) is not None
+    assert backups[0].getSource(dest.name()) is None
 
 
 @pytest.mark.asyncio
@@ -114,61 +114,61 @@ def doRaise(error):
 
 
 @pytest.mark.asyncio
-async def test_delete(coord: Coordinator, snapshot, source, dest):
-    assert snapshot.getSource(source.name()) is not None
-    assert snapshot.getSource(dest.name()) is not None
-    await coord.delete([source.name()], snapshot.slug())
-    assert len(coord.snapshots()) == 1
-    assert snapshot.getSource(source.name()) is None
-    assert snapshot.getSource(dest.name()) is not None
-    await coord.delete([dest.name()], snapshot.slug())
-    assert snapshot.getSource(source.name()) is None
-    assert snapshot.getSource(dest.name()) is None
-    assert snapshot.isDeleted()
-    assert len(coord.snapshots()) == 0
+async def test_delete(coord: Coordinator, backup, source, dest):
+    assert backup.getSource(source.name()) is not None
+    assert backup.getSource(dest.name()) is not None
+    await coord.delete([source.name()], backup.slug())
+    assert len(coord.backups()) == 1
+    assert backup.getSource(source.name()) is None
+    assert backup.getSource(dest.name()) is not None
+    await coord.delete([dest.name()], backup.slug())
+    assert backup.getSource(source.name()) is None
+    assert backup.getSource(dest.name()) is None
+    assert backup.isDeleted()
+    assert len(coord.backups()) == 0
 
     await coord.sync()
-    assert len(coord.snapshots()) == 1
-    await coord.delete([source.name(), dest.name()], coord.snapshots()[0].slug())
-    assert len(coord.snapshots()) == 0
+    assert len(coord.backups()) == 1
+    await coord.delete([source.name(), dest.name()], coord.backups()[0].slug())
+    assert len(coord.backups()) == 0
 
 
 @pytest.mark.asyncio
-async def test_delete_errors(coord: Coordinator, source, dest, snapshot):
+async def test_delete_errors(coord: Coordinator, source, dest, backup):
     with raises(NoBackup):
         await coord.delete([source.name()], "badslug")
     bad_source = HelperTestSource("bad")
     with raises(NoBackup):
-        await coord.delete([bad_source.name()], snapshot.slug())
+        await coord.delete([bad_source.name()], backup.slug())
 
 
 @pytest.mark.asyncio
-async def test_retain(coord: Coordinator, source, dest, snapshot):
-    assert not snapshot.getSource(source.name()).retained()
-    assert not snapshot.getSource(dest.name()).retained()
+async def test_retain(coord: Coordinator, source, dest, backup):
+    assert not backup.getSource(source.name()).retained()
+    assert not backup.getSource(dest.name()).retained()
     await coord.retain({
         source.name(): True,
         dest.name(): True
-    }, snapshot.slug())
-    assert snapshot.getSource(source.name()).retained()
-    assert snapshot.getSource(dest.name()).retained()
+    }, backup.slug())
+    assert backup.getSource(source.name()).retained()
+    assert backup.getSource(dest.name()).retained()
 
 
 @pytest.mark.asyncio
-async def test_retain_errors(coord: Coordinator, source, dest, snapshot):
+async def test_retain_errors(coord: Coordinator, source, dest, backup):
     with raises(NoBackup):
         await coord.retain({source.name(): True}, "badslug")
     bad_source = HelperTestSource("bad")
     with raises(NoBackup):
-        await coord.delete({bad_source.name(): True}, snapshot.slug())
+        await coord.delete({bad_source.name(): True}, backup.slug())
 
 
 @pytest.mark.asyncio
-async def test_freshness(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, snapshot: Snapshot, time: FakeTime):
+async def test_freshness(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, backup: Backup, time: FakeTime):
     source.setMax(2)
     dest.setMax(2)
     await coord.sync()
-    assert snapshot.getPurges() == {
+    assert backup.getPurges() == {
         source.name(): False,
         dest.name(): False
     }
@@ -176,21 +176,21 @@ async def test_freshness(coord: Coordinator, source: HelperTestSource, dest: Hel
     source.setMax(1)
     dest.setMax(1)
     await coord.sync()
-    assert snapshot.getPurges() == {
+    assert backup.getPurges() == {
         source.name(): True,
         dest.name(): True
     }
 
     dest.setMax(0)
     await coord.sync()
-    assert snapshot.getPurges() == {
+    assert backup.getPurges() == {
         source.name(): True,
         dest.name(): False
     }
 
     source.setMax(0)
     await coord.sync()
-    assert snapshot.getPurges() == {
+    assert backup.getPurges() == {
         source.name(): False,
         dest.name(): False
     }
@@ -199,12 +199,12 @@ async def test_freshness(coord: Coordinator, source: HelperTestSource, dest: Hel
     dest.setMax(2)
     time.advance(days=7)
     await coord.sync()
-    assert len(coord.snapshots()) == 2
-    assert snapshot.getPurges() == {
+    assert len(coord.backups()) == 2
+    assert backup.getPurges() == {
         source.name(): True,
         dest.name(): True
     }
-    assert coord.snapshots()[1].getPurges() == {
+    assert coord.backups()[1].getPurges() == {
         source.name(): False,
         dest.name(): False
     }
@@ -212,67 +212,67 @@ async def test_freshness(coord: Coordinator, source: HelperTestSource, dest: Hel
     # should refresh on delete
     source.setMax(1)
     dest.setMax(1)
-    await coord.delete([source.name()], snapshot.slug())
-    assert coord.snapshots()[0].getPurges() == {
+    await coord.delete([source.name()], backup.slug())
+    assert coord.backups()[0].getPurges() == {
         dest.name(): True
     }
-    assert coord.snapshots()[1].getPurges() == {
+    assert coord.backups()[1].getPurges() == {
         source.name(): True,
         dest.name(): False
     }
 
     # should update on retain
-    await coord.retain({dest.name(): True}, snapshot.slug())
-    assert coord.snapshots()[0].getPurges() == {
+    await coord.retain({dest.name(): True}, backup.slug())
+    assert coord.backups()[0].getPurges() == {
         dest.name(): False
     }
-    assert coord.snapshots()[1].getPurges() == {
+    assert coord.backups()[1].getPurges() == {
         source.name(): True,
         dest.name(): True
     }
 
     # should update on upload
-    await coord.uploadSnapshot(coord.snapshots()[0].slug())
-    assert coord.snapshots()[0].getPurges() == {
+    await coord.uploadBackups(coord.backups()[0].slug())
+    assert coord.backups()[0].getPurges() == {
         dest.name(): False,
         source.name(): True
     }
-    assert coord.snapshots()[1].getPurges() == {
+    assert coord.backups()[1].getPurges() == {
         source.name(): False,
         dest.name(): True
     }
 
 
 @pytest.mark.asyncio
-async def test_upload(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, snapshot):
-    await coord.delete([source.name()], snapshot.slug())
-    assert snapshot.getSource(source.name()) is None
-    await coord.uploadSnapshot(snapshot.slug())
-    assert snapshot.getSource(source.name()) is not None
+async def test_upload(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, backup):
+    await coord.delete([source.name()], backup.slug())
+    assert backup.getSource(source.name()) is None
+    await coord.uploadBackups(backup.slug())
+    assert backup.getSource(source.name()) is not None
 
     with raises(LogicError):
-        await coord.uploadSnapshot(snapshot.slug())
+        await coord.uploadBackups(backup.slug())
 
     with raises(NoBackup):
-        await coord.uploadSnapshot("bad slug")
+        await coord.uploadBackups("bad slug")
 
-    await coord.delete([dest.name()], snapshot.slug())
+    await coord.delete([dest.name()], backup.slug())
     with raises(NoBackup):
-        await coord.uploadSnapshot(snapshot.slug())
+        await coord.uploadBackups(backup.slug())
 
 
 @pytest.mark.asyncio
-async def test_download(coord: Coordinator, source, dest, snapshot):
-    await coord.download(snapshot.slug())
-    await coord.delete([source.name()], snapshot.slug())
-    await coord.download(snapshot.slug())
+async def test_download(coord: Coordinator, source, dest, backup):
+    await coord.download(backup.slug())
+    await coord.delete([source.name()], backup.slug())
+    await coord.download(backup.slug())
 
     with raises(NoBackup):
         await coord.download("bad slug")
 
 
 @pytest.mark.asyncio
-async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, snapshot, time: FakeTime, simple_config: Config):
+async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, backup, time: FakeTime, simple_config: Config):
     assert coord.check()
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)
@@ -302,7 +302,7 @@ async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
     assert not coord.check()
 
-    # if the next snapshot is less that 6 hours from the last one, that that shoudl be when we sync
+    # if the next backup is less that 6 hours from the last one, that that shoudl be when we sync
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1.0 / 24.0)
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=1)
     assert not coord.check()
@@ -317,11 +317,11 @@ def test_save_creds(coord: Coordinator, source, dest):
 
 
 @pytest.mark.asyncio
-async def test_check_size_new_snapshot(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker):
+async def test_check_size_new_backup(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time, fs: FsFaker):
     skipForWindows()
     fs.setFreeBytes(0)
     with raises(LowSpaceError):
-        await coord.startSnapshot(CreateOptions(time.now(), "Test Name"))
+        await coord.startBackup(CreateOptions(time.now(), "Test Name"))
 
 
 @pytest.mark.asyncio
@@ -329,24 +329,24 @@ async def test_check_size_sync(coord: Coordinator, source: HelperTestSource, des
     skipForWindows()
     fs.setFreeBytes(0)
     await coord.sync()
-    assert len(coord.snapshots()) == 0
+    assert len(coord.backups()) == 0
     assert global_info._last_error is not None
 
     await coord.sync()
-    assert len(coord.snapshots()) == 0
+    assert len(coord.backups()) == 0
     assert global_info._last_error is not None
 
     # Verify it resets the global size skip check, but gets through once
     global_info.setSkipSpaceCheckOnce(True)
     await coord.sync()
-    assert len(coord.snapshots()) == 1
+    assert len(coord.backups()) == 1
     assert global_info._last_error is None
     assert not global_info.isSkipSpaceCheckOnce()
 
-    # Next attempt to snapshot shoudl fail again.
+    # Next attempt to backup shoudl fail again.
     time.advance(days=7)
     await coord.sync()
-    assert len(coord.snapshots()) == 1
+    assert len(coord.backups()) == 1
     assert global_info._last_error is not None
 
 
@@ -386,7 +386,7 @@ async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Mod
     coord.reset()
     await coord.sync()
     assert not coord.check()
-    assert coord.nextSnapshotTime() == time.local(2020, 3, 17, 12)
+    assert coord.nextBackupTime() == time.local(2020, 3, 17, 12)
 
     time.setNow(time.local(2020, 3, 17, 11, 59))
     await coord.sync()
@@ -398,13 +398,13 @@ async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Mod
 @pytest.mark.asyncio
 async def test_disabled_at_install(coord: Coordinator, dest, time):
     """
-    Verifies that at install time, if some snapshots are already present the
+    Verifies that at install time, if some backups are already present the
     addon doesn't try to sync over and over when drive is disabled.  This was
     a problem at one point.
     """
     dest.setEnabled(True)
     await coord.sync()
-    assert len(coord.snapshots()) == 1
+    assert len(coord.backups()) == 1
 
     dest.setEnabled(False)
     time.advance(days=5)
@@ -419,13 +419,13 @@ async def test_only_source_configured(coord: Coordinator, dest: HelperTestSource
     dest.setEnabled(False)
     dest.setNeedsConfiguration(False)
     await coord.sync()
-    assert len(coord.snapshots()) == 1
+    assert len(coord.backups()) == 1
 
 
 @pytest.mark.asyncio
-async def test_schedule_snapshot_next_sync_attempt(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, snapshot, time: FakeTime, simple_config: Config):
+async def test_schedule_backup_next_sync_attempt(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, backup, time: FakeTime, simple_config: Config):
     """
-    Next snapshot is before max sync interval is reached
+    Next backup is before max sync interval is reached
     """
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
@@ -441,14 +441,14 @@ async def test_schedule_snapshot_next_sync_attempt(coord: Coordinator, model, so
     model.reinitialize()
     coord.reset()
     await coord.sync()
-    assert coord.nextSnapshotTime() == time.local(2020, 3, 17, 3, 23)
-    assert coord.nextSnapshotTime() == coord.nextSyncAttempt()
+    assert coord.nextBackupTime() == time.local(2020, 3, 17, 3, 23)
+    assert coord.nextBackupTime() == coord.nextSyncAttempt()
 
 
 @pytest.mark.asyncio
-async def test_max_sync_interval_next_sync_attempt(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, snapshot, time: FakeTime, simple_config: Config):
+async def test_max_sync_interval_next_sync_attempt(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, backup, time: FakeTime, simple_config: Config):
     """
-    Next snapshot is after max sync interval is reached
+    Next backup is after max sync interval is reached
     """
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
@@ -464,4 +464,4 @@ async def test_max_sync_interval_next_sync_attempt(coord: Coordinator, model, so
     coord.reset()
     await coord.sync()
     assert coord.nextSyncAttempt() == time.local(2020, 3, 17, 2, 29)
-    assert coord.nextSnapshotTime() > coord.nextSyncAttempt()
+    assert coord.nextBackupTime() > coord.nextSyncAttempt()

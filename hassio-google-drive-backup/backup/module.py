@@ -9,7 +9,7 @@ from typing import List
 from backup.config import Config, Startable, Setting
 from backup.drive import DriveSource
 from backup.ha import HaSource, HaUpdater, AddonStopper
-from backup.model import SnapshotDestination, SnapshotSource, Scyncer
+from backup.model import BackupDestination, BackupSource, Scyncer
 from backup.util import Resolver
 from backup.model import Coordinator
 from backup.worker import Trigger, Watcher
@@ -35,12 +35,12 @@ class BaseModule(Module):
 
     @provider
     @singleton
-    def getDrive(self, drive: DriveSource) -> SnapshotDestination:
+    def getDrive(self, drive: DriveSource) -> BackupDestination:
         return drive
 
     @provider
     @singleton
-    def getHa(self, ha: HaSource) -> SnapshotSource:
+    def getHa(self, ha: HaSource) -> BackupSource:
         return ha
 
     @multiprovider

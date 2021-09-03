@@ -29,24 +29,9 @@ class Setting(Enum):
     ENABLE_BACKUP_STALE_SENSOR = "enable_backup_stale_sensor"
     ENABLE_BACKUP_STATE_SENSOR = "enable_backup_state_sensor"
     BACKUP_PASSWORD = "backup_password"
-
-    # Old, deprecated settings
-    MAX_SNAPSHOTS_IN_HASSIO = "max_snapshots_in_hassio"
-    MAX_SNAPSHOTS_IN_GOOGLE_DRIVE = "max_snapshots_in_google_drive"
-    DAYS_BETWEEN_SNAPSHOTS = "days_between_snapshots"
-    IGNORE_OTHER_SNAPSHOTS = "ignore_other_snapshots"
-    IGNORE_UPGRADE_SNAPSHOTS = "ignore_upgrade_snapshots"
-    SNAPSHOT_NAME = "snapshot_name"
-    SNAPSHOT_TIME_OF_DAY = "snapshot_time_of_day"
-    SNAPSHOT_PASSWORD = "snapshot_password"
-    SPECIFY_SNAPSHOT_FOLDER = "specify_snapshot_folder"
-    DELETE_BEFORE_NEW_SNAPSHOT = "delete_before_new_snapshot"
-    NOTIFY_FOR_STALE_SNAPSHOTS = "notify_for_stale_snapshots"
-    ENABLE_SNAPSHOT_STALE_SENSOR = "enable_snapshot_stale_sensor"
-    ENABLE_SNAPSHOT_STATE_SENSOR = "enable_snapshot_state_sensor"
     CALL_BACKUP_SNAPSHOT = "call_backup_snapshot"
 
-    # Basic snapshot settings
+    # Basic backup settings
     WARN_FOR_LOW_SPACE = "warn_for_low_space"
     LOW_SPACE_THRESHOLD = "low_space_threshold"
     DELETE_AFTER_UPLOAD = "delete_after_upload"
@@ -61,7 +46,7 @@ class Setting(Enum):
     GENERATIONAL_DAY_OF_YEAR = "generational_day_of_year"
     GENERATIONAL_DELETE_EARLY = "generational_delete_early"
 
-    # Partial snapshots
+    # Partial backups
     EXCLUDE_FOLDERS = "exclude_folders"
     EXCLUDE_ADDONS = "exclude_addons"
 
@@ -123,17 +108,32 @@ class Setting(Enum):
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
-    SNAPSHOT_STALE_SECONDS = "snapshot_stale_seconds"
-    PENDING_SNAPSHOT_TIMEOUT_SECONDS = "pending_snapshot_timeout_seconds"
-    FAILED_SNAPSHOT_TIMEOUT_SECONDS = "failed_snapshot_timeout_seconds"
-    NEW_SNAPSHOT_TIMEOUT_SECONDS = "new_snapshot_timeout_seconds"
+    BACKUP_STALE_SECONDS = "backup_stale_seconds"
+    PENDING_BACKUP_TIMEOUT_SECONDS = "pending_backup_timeout_seconds"
+    FAILED_BACKUP_TIMEOUT_SECONDS = "failed_backup_timeout_seconds"
+    NEW_BACKUP_TIMEOUT_SECONDS = "new_backup_timeout_seconds"
     DOWNLOAD_TIMEOUT_SECONDS = "download_timeout_seconds"
     DEFAULT_CHUNK_SIZE = "default_chunk_size"
     DEBUGGER_PORT = "debugger_port"
     SERVER_PROJECT_ID = "server_project_id"
     LOG_LEVEL = "log_level"
     CONSOLE_LOG_LEVEL = "console_log_level"
-    SNAPSHOT_STARTUP_DELAY_MINUTES = "snapshot_startup_delay_minutes"
+    BACKUP_STARTUP_DELAY_MINUTES = "backup_startup_delay_minutes"
+
+    # Old, deprecated settings
+    DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
+    DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE = "max_snapshots_in_google_drive"
+    DEPRECATED_DAYS_BETWEEN_BACKUPS = "days_between_snapshots"
+    DEPRECTAED_IGNORE_OTHER_BACKUPS = "ignore_other_snapshots"
+    DEPRECTAED_IGNORE_UPGRADE_BACKUPS = "ignore_upgrade_snapshots"
+    DEPRECTAED_BACKUP_NAME = "snapshot_name"
+    DEPRECTAED_BACKUP_TIME_OF_DAY = "snapshot_time_of_day"
+    DEPRECATED_BACKUP_PASSWORD = "snapshot_password"
+    DEPRECTAED_SPECIFY_BACKUP_FOLDER = "specify_snapshot_folder"
+    DEPRECTAED_DELETE_BEFORE_NEW_BACKUP = "delete_before_new_snapshot"
+    DEPRECTAED_NOTIFY_FOR_STALE_BACKUPS = "notify_for_stale_snapshots"
+    DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR = "enable_snapshot_stale_sensor"
+    DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR = "enable_snapshot_state_sensor"
 
     def default(self):
         if "staging" in VERSION and self in _STAGING_DEFAULTS:
@@ -162,20 +162,20 @@ _DEFAULTS = {
     Setting.ENABLE_BACKUP_STATE_SENSOR: True,
     Setting.BACKUP_PASSWORD: "",
 
-    # Basic snapshot settings
-    Setting.MAX_SNAPSHOTS_IN_HASSIO: 4,
-    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: 4,
-    Setting.DAYS_BETWEEN_SNAPSHOTS: 3,
-    Setting.IGNORE_OTHER_SNAPSHOTS: False,
-    Setting.IGNORE_UPGRADE_SNAPSHOTS: False,
-    Setting.SNAPSHOT_TIME_OF_DAY: "",
-    Setting.SNAPSHOT_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
-    Setting.SNAPSHOT_PASSWORD: "",
-    Setting.SPECIFY_SNAPSHOT_FOLDER: False,
+    # Basic backup settings
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 4,
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE: 4,
+    Setting.DEPRECATED_DAYS_BETWEEN_BACKUPS: 3,
+    Setting.DEPRECTAED_IGNORE_OTHER_BACKUPS: False,
+    Setting.DEPRECTAED_IGNORE_UPGRADE_BACKUPS: False,
+    Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "",
+    Setting.DEPRECTAED_BACKUP_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
+    Setting.DEPRECATED_BACKUP_PASSWORD: "",
+    Setting.DEPRECTAED_SPECIFY_BACKUP_FOLDER: False,
     Setting.WARN_FOR_LOW_SPACE: True,
     Setting.LOW_SPACE_THRESHOLD: 1024 * 1024 * 1024,
     Setting.DELETE_AFTER_UPLOAD: False,
-    Setting.DELETE_BEFORE_NEW_SNAPSHOT: False,
+    Setting.DEPRECTAED_DELETE_BEFORE_NEW_BACKUP: False,
     Setting.CALL_BACKUP_SNAPSHOT: False,
 
     # Generational backup settings
@@ -188,7 +188,7 @@ _DEFAULTS = {
     Setting.GENERATIONAL_DAY_OF_YEAR: 1,
     Setting.GENERATIONAL_DELETE_EARLY: False,
 
-    # Partial snapshot settings
+    # Partial backup settings
     Setting.EXCLUDE_FOLDERS: "",
     Setting.EXCLUDE_ADDONS: "",
 
@@ -205,9 +205,9 @@ _DEFAULTS = {
     Setting.PORT: 1627,
 
     # Add-on options
-    Setting.NOTIFY_FOR_STALE_SNAPSHOTS: True,
-    Setting.ENABLE_SNAPSHOT_STALE_SENSOR: True,
-    Setting.ENABLE_SNAPSHOT_STATE_SENSOR: True,
+    Setting.DEPRECTAED_NOTIFY_FOR_STALE_BACKUPS: True,
+    Setting.DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR: True,
+    Setting.DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR: True,
     Setting.SEND_ERROR_REPORTS: False,
     Setting.VERBOSE: False,
     Setting.CONFIRM_MULTIPLE_DELETES: True,
@@ -249,10 +249,10 @@ _DEFAULTS = {
     Setting.DATA_CACHE_FILE_PATH: '/data/data_cache.json',
 
     # Various timeouts and intervals
-    Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,
-    Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS: 60 * 60 * 5,
-    Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: 60 * 15,
-    Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: 5,
+    Setting.BACKUP_STALE_SECONDS: 60 * 60 * 3,
+    Setting.PENDING_BACKUP_TIMEOUT_SECONDS: 60 * 60 * 5,
+    Setting.FAILED_BACKUP_TIMEOUT_SECONDS: 60 * 15,
+    Setting.NEW_BACKUP_TIMEOUT_SECONDS: 5,
     Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60,
     Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "",
@@ -263,7 +263,7 @@ _DEFAULTS = {
     Setting.SERVER_PROJECT_ID: "",
     Setting.LOG_LEVEL: 'DEBUG',
     Setting.CONSOLE_LOG_LEVEL: 'INFO',
-    Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 10
+    Setting.BACKUP_STARTUP_DELAY_MINUTES: 10
 }
 
 _STAGING_DEFAULTS = {
@@ -286,20 +286,20 @@ _CONFIG = {
     Setting.ENABLE_BACKUP_STATE_SENSOR: "bool?",
     Setting.BACKUP_PASSWORD: "str?",
 
-    # Basic snapshot settings
-    Setting.MAX_SNAPSHOTS_IN_HASSIO: "int(0,)?",
-    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: "int(0,)?",
-    Setting.DAYS_BETWEEN_SNAPSHOTS: "float(0,)?",
-    Setting.IGNORE_OTHER_SNAPSHOTS: "bool?",
-    Setting.IGNORE_UPGRADE_SNAPSHOTS: "bool?",
-    Setting.SNAPSHOT_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
-    Setting.SNAPSHOT_NAME: "str?",
-    Setting.SNAPSHOT_PASSWORD: "str?",
-    Setting.SPECIFY_SNAPSHOT_FOLDER: "bool?",
+    # Basic backup settings
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: "int(0,)?",
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE: "int(0,)?",
+    Setting.DEPRECATED_DAYS_BETWEEN_BACKUPS: "float(0,)?",
+    Setting.DEPRECTAED_IGNORE_OTHER_BACKUPS: "bool?",
+    Setting.DEPRECTAED_IGNORE_UPGRADE_BACKUPS: "bool?",
+    Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
+    Setting.DEPRECTAED_BACKUP_NAME: "str?",
+    Setting.DEPRECATED_BACKUP_PASSWORD: "str?",
+    Setting.DEPRECTAED_SPECIFY_BACKUP_FOLDER: "bool?",
     Setting.WARN_FOR_LOW_SPACE: "bool?",
     Setting.LOW_SPACE_THRESHOLD: "int(0,)?",
     Setting.DELETE_AFTER_UPLOAD: "bool?",
-    Setting.DELETE_BEFORE_NEW_SNAPSHOT: "bool?",
+    Setting.DEPRECTAED_DELETE_BEFORE_NEW_BACKUP: "bool?",
     Setting.CALL_BACKUP_SNAPSHOT: "bool?",
 
     # Generational backup settings
@@ -312,7 +312,7 @@ _CONFIG = {
     Setting.GENERATIONAL_DAY_OF_YEAR: "int(1,365)?",
     Setting.GENERATIONAL_DELETE_EARLY: "bool?",
 
-    # Partial snapshot settings
+    # Partial backup settings
     Setting.EXCLUDE_FOLDERS: "str?",
     Setting.EXCLUDE_ADDONS: "str?",
 
@@ -329,9 +329,9 @@ _CONFIG = {
     Setting.PORT: "int(0,)?",
 
     # Add-on options
-    Setting.NOTIFY_FOR_STALE_SNAPSHOTS: "bool?",
-    Setting.ENABLE_SNAPSHOT_STALE_SENSOR: "bool?",
-    Setting.ENABLE_SNAPSHOT_STATE_SENSOR: "bool?",
+    Setting.DEPRECTAED_NOTIFY_FOR_STALE_BACKUPS: "bool?",
+    Setting.DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR: "bool?",
+    Setting.DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR: "bool?",
     Setting.SEND_ERROR_REPORTS: "bool?",
     Setting.VERBOSE: "bool?",
     Setting.CONFIRM_MULTIPLE_DELETES: "bool?",
@@ -373,10 +373,10 @@ _CONFIG = {
     Setting.DATA_CACHE_FILE_PATH: "str?",
 
     # Various timeouts and intervals
-    Setting.SNAPSHOT_STALE_SECONDS: "float(0,)?",
-    Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
-    Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
-    Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.BACKUP_STALE_SECONDS: "float(0,)?",
+    Setting.PENDING_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.FAILED_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.NEW_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
     Setting.MAX_SYNC_INTERVAL_SECONDS: "float(300,)?",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "str?",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "str?",
@@ -387,12 +387,12 @@ _CONFIG = {
     Setting.SERVER_PROJECT_ID: "str?",
     Setting.LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     Setting.CONSOLE_LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
-    Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: "float(0,)?"
+    Setting.BACKUP_STARTUP_DELAY_MINUTES: "float(0,)?"
 }
 
 PRIVATE = [
-    Setting.SNAPSHOT_PASSWORD,
-    Setting.SNAPSHOT_NAME,
+    Setting.DEPRECATED_BACKUP_PASSWORD,
+    Setting.DEPRECTAED_BACKUP_NAME,
     Setting.BACKUP_PASSWORD,
     Setting.BACKUP_NAME
 ]

@@ -3,19 +3,19 @@ from typing import Any, Dict
 from backup.const import SOURCE_HA
 from backup.exceptions import ensureKey
 from backup.time import Time
-from .snapshots import AbstractSnapshot
+from .snapshots import AbstractBackup
 from backup.logger import getLogger
 from backup.util import DataCache, KEY_I_MADE_THIS, KEY_IGNORE
 from backup.config import Config, Setting
 
 logger = getLogger(__name__)
 
-HA_KEY_TEXT = "Home Assistant's snapshot metadata"
+HA_KEY_TEXT = "Home Assistant's backup metadata"
 
 
-class HASnapshot(AbstractSnapshot):
+class HABackup(AbstractBackup):
     """
-    Represents a Home Assistant snapshot stored locally in Home Assistant
+    Represents a Home Assistant backup stored locally in Home Assistant
     """
 
     def __init__(self, data: Dict[str, Any], data_cache: DataCache, config: Config, retained=False):
@@ -25,7 +25,7 @@ class HASnapshot(AbstractSnapshot):
             date=Time.parse(ensureKey('date', data, HA_KEY_TEXT)),
             size=float(ensureKey("size", data, HA_KEY_TEXT)) * 1024 * 1024,
             source=SOURCE_HA,
-            snapshotType=ensureKey('type', data, HA_KEY_TEXT),
+            backupType=ensureKey('type', data, HA_KEY_TEXT),
             version=ensureKey('homeassistant', data, HA_KEY_TEXT),
             protected=ensureKey('protected', data, HA_KEY_TEXT),
             retained=retained,
@@ -35,10 +35,10 @@ class HASnapshot(AbstractSnapshot):
         self._config = config
 
     def madeByTheAddon(self):
-        return self._data_cache.snapshot(self.slug()).get(KEY_I_MADE_THIS, False)
+        return self._data_cache.backup(self.slug()).get(KEY_I_MADE_THIS, False)
 
     def ignore(self):
-        override = self._data_cache.snapshot(self.slug()).get(KEY_IGNORE, None)
+        override = self._data_cache.backup(self.slug()).get(KEY_IGNORE, None)
         if override is not None:
             return override
         if self.madeByTheAddon():

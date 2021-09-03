@@ -1,10 +1,10 @@
-from .snapshots import AbstractSnapshot
+from .snapshots import AbstractBackup
 from ..logger import getLogger
 
 logger = getLogger(__name__)
 
 
-class DummySnapshotSource(AbstractSnapshot):
+class DummyBackupSource(AbstractBackup):
     def __init__(self, name, date, source, slug, retain=False):
         super().__init__(
             name=name,
@@ -12,7 +12,7 @@ class DummySnapshotSource(AbstractSnapshot):
             date=date,
             size=0,
             source=source,
-            snapshotType="dummy",
+            backupType="dummy",
             version="dummy_version",
             protected=True,
             retained=retain,

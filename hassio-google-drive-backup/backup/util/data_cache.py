@@ -7,7 +7,7 @@ from typing import Dict
 import json
 import os
 
-KEY_SNPASHOTS = "snapshots"
+KEY_BACKUPS = "snapshots"
 KEY_I_MADE_THIS = "i_made_this"
 KEY_PENDING = "pending"
 KEY_CREATED = "created"
@@ -39,7 +39,7 @@ class DataCache:
 
     def _load(self):
         if not os.path.isfile(self._config.get(Setting.DATA_CACHE_FILE_PATH)):
-            self._data = {KEY_SNPASHOTS: {}}
+            self._data = {KEY_BACKUPS: {}}
         else:
             with open(self._config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
                 self._data = json.load(f)
@@ -78,23 +78,23 @@ class DataCache:
         return self._dirty
 
     @property
-    def snapshots(self) -> Dict[str, Dict[str, str]]:
-        if "snapshots" not in self._data:
-            self._data["snapshots"] = {}
-        return self._data["snapshots"]
+    def backups(self) -> Dict[str, Dict[str, str]]:
+        if KEY_BACKUPS not in self._data:
+            self._data[KEY_BACKUPS] = {}
+        return self._data[KEY_BACKUPS]
 
-    def snapshot(self, slug) -> Dict[str, str]:
-        if slug not in self.snapshots:
-            self.snapshots[slug] = {}
-        return self.snapshots[slug]
+    def backup(self, slug) -> Dict[str, str]:
+        if slug not in self.backups:
+            self.backups[slug] = {}
+        return self.backups[slug]
 
     def saveIfDirty(self):
         if self._dirty:
             # See if we need to remove any old entries
-            for slug in list(self.snapshots.keys()):
-                data = self.snapshots[slug].get(KEY_LAST_SEEN)
+            for slug in list(self.backups.keys()):
+                data = self.backups[slug].get(KEY_LAST_SEEN)
                 if data is not None and self._time.now() > self._time.parse(data) + timedelta(days=CACHE_EXPIRATION_DAYS):
-                    del self.snapshots[slug]
+                    del self.backups[slug]
             self.save()
 
     @property

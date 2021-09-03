@@ -1,7 +1,7 @@
 from .backups import AbstractBackup
 from typing import Any, Dict
 
-from ..const import SOURCE_GOOGLE_DRIVE
+from ..const import SOURCE_GOOGLE_DRIVE, NECESSARY_PROP_KEY_SLUG, NECESSARY_PROP_KEY_DATE, NECESSARY_PROP_KEY_NAME
 from ..exceptions import ensureKey
 from ..config import BoolValidator
 from ..time import Time
@@ -9,9 +9,6 @@ from ..logger import getLogger
 
 logger = getLogger(__name__)
 
-PROP_KEY_SLUG = "snapshot_slug"
-PROP_KEY_DATE = "snapshot_date"
-PROP_KEY_NAME = "snapshot_name"
 PROP_TYPE = "type"
 PROP_VERSION = "version"
 PROP_PROTECTED = "protected"
@@ -28,15 +25,15 @@ class DriveBackup(AbstractBackup):
     def __init__(self, data: Dict[Any, Any]):
         props = ensureKey('appProperties', data, DRIVE_KEY_TEXT)
         retained = BoolValidator.strToBool(props.get(PROP_RETAINED, "False"))
-        if PROP_KEY_NAME in props:
-            backup_name = ensureKey(PROP_KEY_NAME, props, DRIVE_KEY_TEXT)
+        if NECESSARY_PROP_KEY_NAME in props:
+            backup_name = ensureKey(NECESSARY_PROP_KEY_NAME, props, DRIVE_KEY_TEXT)
         else:
             backup_name = data['name'].replace(".tar", "")
         super().__init__(
             name=backup_name,
-            slug=ensureKey(PROP_KEY_SLUG, props, DRIVE_KEY_TEXT),
+            slug=ensureKey(NECESSARY_PROP_KEY_SLUG, props, DRIVE_KEY_TEXT),
             date=Time.parse(
-                ensureKey(PROP_KEY_DATE, props, DRIVE_KEY_TEXT)),
+                ensureKey(NECESSARY_PROP_KEY_DATE, props, DRIVE_KEY_TEXT)),
             size=int(ensureKey("size", data, DRIVE_KEY_TEXT)),
             source=SOURCE_GOOGLE_DRIVE,
             backupType=props.get(PROP_TYPE, "?"),

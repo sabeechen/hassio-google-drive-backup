@@ -1,7 +1,7 @@
 <div id="deletemodal" class="modal">
   <script type="text/javascript">
     function renderDeleteDialog(target) {
-      var backup = $(target).data('snapshot');
+      var backup = $(target).data('backup');
       var slug = backup['slug'];
       var sources = backup['sources'];
       let list = $('#delete_sources');

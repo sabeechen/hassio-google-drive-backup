@@ -1,13 +1,13 @@
 from datetime import timedelta
 from enum import Enum, unique
 from backup.config import Config, Setting, VERSION, Version
+from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME
 from injector import inject, singleton
 from ..time import Time
 from typing import Dict
 import json
 import os
 
-KEY_BACKUPS = "snapshots"
 KEY_I_MADE_THIS = "i_made_this"
 KEY_PENDING = "pending"
 KEY_CREATED = "created"
@@ -39,7 +39,7 @@ class DataCache:
 
     def _load(self):
         if not os.path.isfile(self._config.get(Setting.DATA_CACHE_FILE_PATH)):
-            self._data = {KEY_BACKUPS: {}}
+            self._data = {NECESSARY_OLD_BACKUP_PLURAL_NAME: {}}
         else:
             with open(self._config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
                 self._data = json.load(f)
@@ -79,9 +79,9 @@ class DataCache:
 
     @property
     def backups(self) -> Dict[str, Dict[str, str]]:
-        if KEY_BACKUPS not in self._data:
-            self._data[KEY_BACKUPS] = {}
-        return self._data[KEY_BACKUPS]
+        if NECESSARY_OLD_BACKUP_PLURAL_NAME not in self._data:
+            self._data[NECESSARY_OLD_BACKUP_PLURAL_NAME] = {}
+        return self._data[NECESSARY_OLD_BACKUP_PLURAL_NAME]
 
     def backup(self, slug) -> Dict[str, str]:
         if slug not in self.backups:

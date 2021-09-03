@@ -88,10 +88,10 @@ class UiServer(Trigger, Startable):
     async def buildStatusInfo(self):
         status: Dict[Any, Any] = {}
         status['folder_id'] = self.folder_finder.getCachedFolder()
-        status['snapshots'] = []
+        status['backups'] = []
         backups = self._coord.backups()
         for backup in backups:
-            status['snapshots'].append(self.getBackupDetails(backup))
+            status['backups'].append(self.getBackupDetails(backup))
         status['ha_url_base'] = self._ha_source.getHomeAssistantUrl()
         status['restore_backup_path'] = "hassio/backups"
         status['ask_error_reports'] = not self.config.isExplicit(
@@ -249,7 +249,7 @@ class UiServer(Trigger, Startable):
                 return web.json_response({'error': "Couldn't authorize with Google Drive, Google said:" + str(e)})
         raise HTTPBadRequest()
 
-    async def snapshot(self, request: Request) -> Any:
+    async def backup(self, request: Request) -> Any:
         custom_name = request.query.get("custom_name", None)
         retain_drive = BoolValidator.strToBool(
             request.query.get("retain_drive", False))
@@ -608,7 +608,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self.pp)
 
         self._addRoute(app, self.getstatus)
-        self._addRoute(app, self.snapshot)
+        self._addRoute(app, self.backup)
         self._addRoute(app, self.manualauth)
         self._addRoute(app, self.token)
 

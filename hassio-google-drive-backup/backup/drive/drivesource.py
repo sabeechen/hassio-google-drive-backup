@@ -12,9 +12,7 @@ from ..const import SOURCE_GOOGLE_DRIVE
 from ..exceptions import (BackupFolderInaccessible,
                           ExistingBackupFolderError,
                           GoogleDrivePermissionDenied, LogicError)
-from ..model.backups import (PROP_KEY_DATE, PROP_KEY_NAME, PROP_KEY_SLUG,
-                               PROP_PROTECTED, PROP_RETAINED, PROP_TYPE,
-                               PROP_VERSION)
+from ..model.backups import (PROP_PROTECTED, PROP_RETAINED, PROP_TYPE, PROP_VERSION)
 from ..time import Time
 from .driverequests import DriveRequests
 from .folderfinder import FolderFinder
@@ -22,7 +20,7 @@ from .thumbnail import THUMBNAIL_IMAGE
 from ..model import BackupDestination, DriveBackup, Backup
 from ..logger import getLogger
 from ..creds.creds import Creds
-from backup.const import NECESSARY_OLD_BACKUP_NAME, NECESSARY_OLD_BACKUP_PLURAL_NAME
+from backup.const import NECESSARY_OLD_BACKUP_NAME, NECESSARY_OLD_BACKUP_PLURAL_NAME, NECESSARY_PROP_KEY_SLUG, NECESSARY_PROP_KEY_DATE, NECESSARY_PROP_KEY_NAME
 
 logger = getLogger(__name__)
 
@@ -110,7 +108,7 @@ class DriveSource(BackupDestination):
         try:
             async for child in self.drivebackend.query("'{}' in parents".format(parent)):
                 properties = child.get('appProperties')
-                if properties and PROP_KEY_DATE in properties and PROP_KEY_SLUG in properties and not child['trashed']:
+                if properties and NECESSARY_PROP_KEY_DATE in properties and NECESSARY_PROP_KEY_SLUG in properties and not child['trashed']:
                     backup = DriveBackup(child)
                     backups[backup.slug()] = backup
         except ClientResponseError as e:
@@ -149,8 +147,8 @@ class DriveSource(BackupDestination):
             'parents': [parent_id],
             'description': 'A Home Assistant backup file uploaded by Home Assistant Google Drive Backup',
             'appProperties': {
-                PROP_KEY_SLUG: backup.slug(),
-                PROP_KEY_DATE: str(backup.date()),
+                NECESSARY_PROP_KEY_SLUG: backup.slug(),
+                NECESSARY_PROP_KEY_DATE: str(backup.date()),
                 PROP_TYPE: str(backup.backupType()),
                 PROP_VERSION: str(backup.version()),
                 PROP_PROTECTED: str(backup.protected()),
@@ -168,7 +166,7 @@ class DriveSource(BackupDestination):
         }
 
         if len(backup.name().encode()) < 100:
-            file_metadata['appProperties'][PROP_KEY_NAME] = str(backup.name())
+            file_metadata['appProperties'][NECESSARY_PROP_KEY_NAME] = str(backup.name())
 
         async with source:
             try:

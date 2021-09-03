@@ -68,12 +68,12 @@ function test(target) {
 }
 
 function downloadBackup(target) {
-  window.location.assign('download?slug=' + encodeURIComponent($(target).data('snapshot').slug));
+  window.location.assign('download?slug=' + encodeURIComponent($(target).data('backup').slug));
 }
 
 function uploadBackup(target) {
-  var slug = $(target).data('snapshot').slug;
-  var name = $(target).data('snapshot').name;
+  var slug = $(target).data('backup').slug;
+  var name = $(target).data('backup').name;
   $("#do_upload_button").attr("onClick", "doUpload('" + slug + "', '" + name + "')");
 }
 
@@ -386,7 +386,7 @@ function processSourcesUpdate(sources) {
     } else {
       $(".source_ignored_label", template).hide();
     }
-    $(".source_backup_count", template).html(source.snapshots + " (" + source.size + ")");
+    $(".source_backup_count", template).html(source.backups + " (" + source.size + ")");
 
     if (source.hasOwnProperty("free_space")) {
       $('.source_free_space_text', template).html(source.free_space + " remaining");
@@ -416,9 +416,9 @@ function processBackupsUpdate(data) {
 
   let regular_backups = [];
   let ignored_backups = [];
-  for (var key in data.snapshots) {
-    if (data.snapshots.hasOwnProperty(key)) {
-      backup = data.snapshots[key];
+  for (var key in data.backups) {
+    if (data.backups.hasOwnProperty(key)) {
+      backup = data.backups[key];
       if (backup.ignored) {
         ignored_backups.push(backup);
       } else {
@@ -566,7 +566,7 @@ function populateBackupDiv(backup_div, backups, icon) {
       }
 
       // Set up context
-      $("#backup_card" + backup.slug).data('snapshot', backup);
+      $("#backup_card" + backup.slug).data('backup', backup);
     }
   }
   // Remove the backup card if the backup was deleted.
@@ -782,7 +782,7 @@ function doNewBackup() {
   var drive = $("#retain_drive_one_off").prop('checked');
   var ha = $("#retain_ha_one_off").prop('checked');
   var name = $("#backup_name_one_off").val()
-  var url = "snapshot?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
+  var url = "backup?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
   postJson(url, {}, refreshstats, null, "Requesting backup (takes a few seconds)...");
   return false;
 }

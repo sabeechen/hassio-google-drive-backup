@@ -364,14 +364,14 @@
     }
 
     function showDetails(target) {
-      var backup = $(target).data('snapshot');
+      var backup = $(target).data('backup');
       if (backup.isPending) {
         return;
       }
 
       let modal = $('#details_modal');
       modal.data('slug', backup.slug);
-      modal.data('snapshot', backup);
+      modal.data('backup', backup);
       modal.data('details_shown', false);
       $(".detail-contents-card").addClass('default-hidden');
 
@@ -397,7 +397,7 @@
 
       cancelUploadHaClicked();
 
-      $("#download_link").data('snapshot', backup);
+      $("#download_link").data('backup', backup);
       M.Modal.getInstance(document.getElementById('details_modal')).open();
     }
 
@@ -423,7 +423,7 @@
 
     function doUpload() {
       let modal = $("#details_modal");
-      let backup = modal.data("snapshot")
+      let backup = modal.data("backup")
       message = "Uploading '" + backup.name + "'";
       url = "upload?slug=" + encodeURIComponent(backup.slug);
       $(".cancel-load-ha-button", modal).addClass('disabled');

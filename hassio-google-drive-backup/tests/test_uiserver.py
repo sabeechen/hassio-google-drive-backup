@@ -83,12 +83,12 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
     assert data['next_backup_text'] == "right now"
     assert data['backup_name_template'] == config.get(Setting.BACKUP_NAME)
     assert data['warn_ingress_upgrade'] is False
-    assert len(data['snapshots']) == 0
+    assert len(data['backups']) == 0
     assert data['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 0,
+        'backups': 0,
         'latest': None,
         'size': '0.0 B',
         'enabled': True,
@@ -102,7 +102,7 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'deletable': 0,
         'name': SOURCE_HA,
         'retained': 0,
-        'snapshots': 0,
+        'backups': 0,
         'latest': None,
         'size': '0.0 B',
         'enabled': True,
@@ -124,12 +124,12 @@ async def test_getstatus_sync(reader, config: Config, backup: Backup, time: Fake
     assert data['last_error'] is None
     assert data['last_backup_text'] != "Never"
     assert data['next_backup_text'] != "right now"
-    assert len(data['snapshots']) == 1
+    assert len(data['backups']) == 1
     assert data['sources'][SOURCE_GOOGLE_DRIVE] == {
         'deletable': 1,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 1,
+        'backups': 1,
         'latest': time.asRfc3339String(time.now()),
         'size': data['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
@@ -144,7 +144,7 @@ async def test_getstatus_sync(reader, config: Config, backup: Backup, time: Fake
         'deletable': 1,
         'name': SOURCE_HA,
         'retained': 0,
-        'snapshots': 1,
+        'backups': 1,
         'latest': time.asRfc3339String(time.now()),
         'size': data['sources'][SOURCE_HA]['size'],
         'enabled': True,
@@ -169,7 +169,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 1,
-        'snapshots': 1,
+        'backups': 1,
         'latest': time.asRfc3339String(backup.date()),
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
@@ -184,7 +184,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'deletable': 0,
         'name': SOURCE_HA,
         'retained': 1,
-        'snapshots': 1,
+        'backups': 1,
         'latest': time.asRfc3339String(backup.date()),
         'size': status['sources'][SOURCE_HA]['size'],
         'enabled': True,
@@ -202,7 +202,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'deletable': 1,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 1,
+        'backups': 1,
         'latest': time.asRfc3339String(backup.date()),
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
@@ -217,7 +217,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'deletable': 1,
         'name': SOURCE_HA,
         'retained': 0,
-        'snapshots': 1,
+        'backups': 1,
         'latest': time.asRfc3339String(backup.date()),
         'size': status['sources'][SOURCE_HA]['size'],
         'enabled': True,
@@ -239,7 +239,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'deletable': 0,
         'name': SOURCE_GOOGLE_DRIVE,
         'retained': 0,
-        'snapshots': 0,
+        'backups': 0,
         'latest': None,
         'size': status['sources'][SOURCE_GOOGLE_DRIVE]['size'],
         'enabled': True,
@@ -254,7 +254,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'deletable': 0,
         'name': SOURCE_HA,
         'retained': 1,
-        'snapshots': 1,
+        'backups': 1,
         'latest': time.asRfc3339String(backup.date()),
         'size': status['sources'][SOURCE_HA]['size'],
         'enabled': True,
@@ -269,9 +269,9 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
     # sync again, which should upoload the backup to Drive
     await coord.sync()
     status = await reader.getjson("getstatus")
-    assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
+    assert status['sources'][SOURCE_GOOGLE_DRIVE]['backups'] == 1
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 0
-    assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 1
+    assert status['sources'][SOURCE_GOOGLE_DRIVE]['backups'] == 1
 
 
 @pytest.mark.asyncio
@@ -281,7 +281,7 @@ async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, sessi
     assert len(coord.backups()) == 1
     assert status == await reader.getjson("getstatus")
     time.advance(days=7)
-    assert len((await reader.getjson("sync"))['snapshots']) == 2
+    assert len((await reader.getjson("sync"))['backups']) == 2
 
 
 @pytest.mark.asyncio
@@ -291,17 +291,17 @@ async def test_delete(reader: ReaderHelper, ui_server, backup):
     data = {"slug": "bad_slug", "sources": ["GoogleDrive"]}
     await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_BACKUP)
     status = await reader.getjson("getstatus")
-    assert len(status['snapshots']) == 1
+    assert len(status['backups']) == 1
     data["slug"] = slug
     assert await reader.getjson("deleteSnapshot", json=data) == {"message": "Deleted from 1 place(s)"}
     await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_BACKUP)
     status = await reader.getjson("getstatus")
-    assert len(status['snapshots']) == 1
-    assert status['sources'][SOURCE_GOOGLE_DRIVE]['snapshots'] == 0
+    assert len(status['backups']) == 1
+    assert status['sources'][SOURCE_GOOGLE_DRIVE]['backups'] == 0
     data["sources"] = ["HomeAssistant"]
     assert await reader.getjson("deleteSnapshot", json=data) == {"message": "Deleted from 1 place(s)"}
     status = await reader.getjson("getstatus")
-    assert len(status['snapshots']) == 0
+    assert len(status['backups']) == 0
     data["sources"] = []
     await reader.assertError("deleteSnapshot", json=data, error_type=ERROR_NO_BACKUP)
 
@@ -309,42 +309,42 @@ async def test_delete(reader: ReaderHelper, ui_server, backup):
 @pytest.mark.asyncio
 async def test_backup_now(reader, ui_server, time: FakeTime, backup: Backup, coord: Coordinator):
     assert len(coord.backups()) == 1
-    assert (await reader.getjson("getstatus"))["snapshots"][0]["date"] == time.toLocal(time.now()).strftime("%c")
+    assert (await reader.getjson("getstatus"))["backups"][0]["date"] == time.toLocal(time.now()).strftime("%c")
 
     time.advance(hours=1)
-    assert await reader.getjson("snapshot?custom_name=TestName&retain_drive=False&retain_ha=False") == {
+    assert await reader.getjson("backup?custom_name=TestName&retain_drive=False&retain_ha=False") == {
         'message': "Requested backup 'TestName'"
     }
     status = await reader.getjson('getstatus')
-    assert len(status["snapshots"]) == 2
-    assert status["snapshots"][1]["date"] == time.toLocal(time.now()).strftime("%c")
-    assert status["snapshots"][1]["name"] == "TestName"
-    assert status["snapshots"][1]['sources'][0]['retained'] is False
-    assert len(status["snapshots"][1]['sources']) == 1
+    assert len(status["backups"]) == 2
+    assert status["backups"][1]["date"] == time.toLocal(time.now()).strftime("%c")
+    assert status["backups"][1]["name"] == "TestName"
+    assert status["backups"][1]['sources'][0]['retained'] is False
+    assert len(status["backups"][1]['sources']) == 1
 
     time.advance(hours=1)
-    assert await reader.getjson("snapshot?custom_name=TestName2&retain_drive=True&retain_ha=False") == {
+    assert await reader.getjson("backup?custom_name=TestName2&retain_drive=True&retain_ha=False") == {
         'message': "Requested backup 'TestName2'"
     }
     await coord.sync()
     status = await reader.getjson('getstatus')
-    assert len(status["snapshots"]) == 3
-    assert status["snapshots"][2]["date"] == time.toLocal(time.now()).strftime("%c")
-    assert status["snapshots"][2]["name"] == "TestName2"
-    assert status["snapshots"][2]['sources'][0]['retained'] is False
-    assert status["snapshots"][2]['sources'][1]['retained'] is True
+    assert len(status["backups"]) == 3
+    assert status["backups"][2]["date"] == time.toLocal(time.now()).strftime("%c")
+    assert status["backups"][2]["name"] == "TestName2"
+    assert status["backups"][2]['sources'][0]['retained'] is False
+    assert status["backups"][2]['sources'][1]['retained'] is True
 
     time.advance(hours=1)
-    assert await reader.getjson("snapshot?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
+    assert await reader.getjson("backup?custom_name=TestName3&retain_drive=False&retain_ha=True") == {
         'message': "Requested backup 'TestName3'"
     }
     await coord.sync()
     status = await reader.getjson('getstatus')
-    assert len(status["snapshots"]) == 4
-    assert status["snapshots"][3]['sources'][0]['retained'] is True
-    assert status["snapshots"][3]['sources'][1]['retained'] is False
-    assert status["snapshots"][3]["date"] == time.toLocal(time.now()).strftime("%c")
-    assert status["snapshots"][3]["name"] == "TestName3"
+    assert len(status["backups"]) == 4
+    assert status["backups"][3]['sources'][0]['retained'] is True
+    assert status["backups"][3]['sources'][1]['retained'] is False
+    assert status["backups"][3]["date"] == time.toLocal(time.now()).strftime("%c")
+    assert status["backups"][3]["name"] == "TestName3"
 
 
 @pytest.mark.asyncio
@@ -430,7 +430,7 @@ async def test_update_error_reports_false(reader, ui_server, config: Config, sup
 @pytest.mark.asyncio
 async def test_drive_cred_generation(reader: ReaderHelper, ui_server: UiServer, backup, config: Config, global_info: GlobalInfo, session: ClientSession, google):
     status = await reader.getjson("getstatus")
-    assert len(status["snapshots"]) == 1
+    assert len(status["backups"]) == 1
     assert global_info.credVersion == 0
     # Invalidate the drive creds, sync, then verify we see an error
     google.expireCreds()
@@ -473,7 +473,7 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
 
     # verify we have 3 backups an the multiple delete error
     status = await reader.getjson("sync")
-    assert len(status['snapshots']) == 3
+    assert len(status['backups']) == 3
     assert status["last_error"]["error_type"] == ERROR_MULTIPLE_DELETES
     assert status["last_error"]["data"] == {
         SOURCE_GOOGLE_DRIVE: 0,
@@ -489,19 +489,19 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
     # backup, verify the deletes go through
     status = await reader.getjson("sync")
     assert status["last_error"] is None
-    assert len(status["snapshots"]) == 1
+    assert len(status["backups"]) == 1
 
     # create another backup, verify we delete the one
     await ha.create(CreateOptions(time.now(), "Name1"))
     status = await reader.getjson("sync")
-    assert len(status['snapshots']) == 1
+    assert len(status['backups']) == 1
     assert status["last_error"] is None
 
     # create two mroe backups, verify we see the error again
     await ha.create(CreateOptions(time.now(), "Name1"))
     await ha.create(CreateOptions(time.now(), "Name2"))
     status = await reader.getjson("sync")
-    assert len(status['snapshots']) == 3
+    assert len(status['backups']) == 3
     assert status["last_error"]["error_type"] == ERROR_MULTIPLE_DELETES
     assert status["last_error"]["data"] == {
         SOURCE_GOOGLE_DRIVE: 0,
@@ -962,8 +962,8 @@ async def test_check_ignored_backup_notification(reader: ReaderHelper, time: Fak
     await coord.waitForSyncToFinish()
 
     status = await reader.getjson("getstatus")
-    assert status["snapshots"][0]["ignored"]
-    assert not status["snapshots"][1]["ignored"]
+    assert status["backups"][0]["ignored"]
+    assert not status["backups"][1]["ignored"]
     assert not status["notify_check_ignored"]
 
     # Create an ignored backup from "before" the addon was upgraded to v0.104.0
@@ -972,9 +972,9 @@ async def test_check_ignored_backup_notification(reader: ReaderHelper, time: Fak
 
     # The UI should nofify about checking ignored backups
     status = await reader.getjson("getstatus")
-    assert status["snapshots"][0]["ignored"]
-    assert status["snapshots"][1]["ignored"]
-    assert not status["snapshots"][2]["ignored"]
+    assert status["backups"][0]["ignored"]
+    assert status["backups"][1]["ignored"]
+    assert not status["backups"][2]["ignored"]
     assert status["notify_check_ignored"]
 
     # Acknowledge the notification

@@ -120,7 +120,7 @@ class Coordinator(Trigger):
         for source in self._sources:
             source_class = self._sources[source]
             source_info = {
-                'snapshots': 0,
+                'backups': 0,
                 'retained': 0,
                 'deletable': 0,
                 'name': source,
@@ -143,7 +143,7 @@ class Coordinator(Trigger):
                 if backup.ignore():
                     ignored_size += backup.size()
                     continue
-                source_info['snapshots'] += 1
+                source_info['backups'] += 1
                 if data.retained():
                     source_info['retained'] += 1
                 else:

@@ -245,7 +245,7 @@
         document.getElementById("authenticate-button").href = auth_url.toString();
 
         if (!data.firstSync) {
-          backups = data.sources.HomeAssistant.snapshots;
+          backups = data.sources.HomeAssistant.backups;
           hasBackups = backups > 0;
           maxConfigured = data.sources.HomeAssistant.max;
           toDelete = Math.max(0, hasBackups - data.sources.HomeAssistant.max);

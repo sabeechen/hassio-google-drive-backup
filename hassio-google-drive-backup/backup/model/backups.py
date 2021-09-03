@@ -9,9 +9,6 @@ from ..logger import getLogger
 
 logger = getLogger(__name__)
 
-PROP_KEY_SLUG = "snapshot_slug"
-PROP_KEY_DATE = "snapshot_date"
-PROP_KEY_NAME = "snapshot_name"
 PROP_TYPE = "type"
 PROP_VERSION = "version"
 PROP_PROTECTED = "protected"

@@ -8,8 +8,8 @@ from .backupscheme import GenerationalScheme, OldestScheme, DeleteAfterUploadSch
 from backup.config import Config, Setting, CreateOptions
 from backup.exceptions import DeleteMutlipleBackupsError, SimulatedError
 from backup.util import GlobalInfo, Estimator, DataCache
-from .snapshots import AbstractBackup, Backup
-from .dummysnapshot import DummyBackup
+from .backups import AbstractBackup, Backup
+from .dummybackup import DummyBackup
 from backup.time import Time
 from backup.worker import Trigger
 from backup.logger import getLogger

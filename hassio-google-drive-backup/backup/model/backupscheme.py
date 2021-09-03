@@ -3,7 +3,7 @@ from calendar import monthrange
 from datetime import datetime, timedelta
 from typing import List, Optional, Sequence, Set
 
-from .snapshots import Backup
+from .backups import Backup
 from backup.util import RangeLookup
 from ..time import Time
 from ..config import GenConfig

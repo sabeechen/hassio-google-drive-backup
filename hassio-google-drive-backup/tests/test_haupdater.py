@@ -1,4 +1,4 @@
-from backup.model.snapshots import Backup
+from backup.model.backups import Backup
 import pytest
 
 from backup.util import GlobalInfo

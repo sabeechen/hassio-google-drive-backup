@@ -3,9 +3,9 @@ from .backupscheme import GenerationalScheme, OldestScheme, GenConfig, BackupSch
 from .coordinator import Coordinator
 from .model import BackupSource, BackupDestination, Model
 from .syncer import Scyncer
-from .snapshots import AbstractBackup, Backup
-from .drivesnapshot import DriveBackup
-from .dummysnapshot import DummyBackup
-from .dummysnapshotsource import DummyBackupSource
-from .hasnapshot import HABackup
+from .backups import AbstractBackup, Backup
+from .drivebackup import DriveBackup
+from .dummybackup import DummyBackup
+from .dummybackupsource import DummyBackupSource
+from .habackup import HABackup
 from .simulatedsource import SimulatedSource

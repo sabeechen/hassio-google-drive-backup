@@ -16,7 +16,7 @@ from ..exceptions import (LogicError, BackupInProgress,
                           UploadFailed, ensureKey)
 from .harequests import HaRequests
 from .password import Password
-from .snapshotname import BackupName
+from .backupname import BackupName
 from ..time import Time
 from ..logger import getLogger, StandardLogger
 from backup.const import FOLDERS, NECESSARY_OLD_BACKUP_PLURAL_NAME

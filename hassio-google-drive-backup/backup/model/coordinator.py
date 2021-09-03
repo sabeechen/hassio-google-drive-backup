@@ -14,7 +14,7 @@ from backup.worker import Trigger
 from backup.logger import getLogger
 from backup.creds.creds import Creds
 from .model import Model
-from .snapshots import AbstractBackup, Backup, SOURCE_HA
+from .backups import AbstractBackup, Backup, SOURCE_HA
 
 logger = getLogger(__name__)
 

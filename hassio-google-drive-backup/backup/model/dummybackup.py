@@ -1,5 +1,5 @@
-from .snapshots import Backup
-from .dummysnapshotsource import DummyBackupSource
+from .backups import Backup
+from .dummybackupsource import DummyBackupSource
 from ..logger import getLogger
 
 logger = getLogger(__name__)

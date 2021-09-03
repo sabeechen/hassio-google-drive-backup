@@ -1,6 +1,6 @@
 from .model import CreateOptions, BackupDestination
-from .snapshots import Backup
-from .dummysnapshotsource import DummyBackupSource
+from .backups import Backup
+from .dummybackupsource import DummyBackupSource
 from typing import Dict
 from io import IOBase
 from ..ha import BackupName

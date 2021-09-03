@@ -1,4 +1,4 @@
-from .snapshots import AbstractBackup
+from .backups import AbstractBackup
 from ..logger import getLogger
 
 logger = getLogger(__name__)

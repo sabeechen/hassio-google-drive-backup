@@ -1,4 +1,4 @@
-from .snapshots import AbstractBackup
+from .backups import AbstractBackup
 from typing import Any, Dict
 
 from ..const import SOURCE_GOOGLE_DRIVE

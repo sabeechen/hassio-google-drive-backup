@@ -12,7 +12,7 @@ from ..const import SOURCE_GOOGLE_DRIVE
 from ..exceptions import (BackupFolderInaccessible,
                           ExistingBackupFolderError,
                           GoogleDrivePermissionDenied, LogicError)
-from ..model.snapshots import (PROP_KEY_DATE, PROP_KEY_NAME, PROP_KEY_SLUG,
+from ..model.backups import (PROP_KEY_DATE, PROP_KEY_NAME, PROP_KEY_SLUG,
                                PROP_PROTECTED, PROP_RETAINED, PROP_TYPE,
                                PROP_VERSION)
 from ..time import Time
@@ -22,6 +22,7 @@ from .thumbnail import THUMBNAIL_IMAGE
 from ..model import BackupDestination, DriveBackup, Backup
 from ..logger import getLogger
 from ..creds.creds import Creds
+from backup.const import NECESSARY_OLD_BACKUP_NAME, NECESSARY_OLD_BACKUP_PLURAL_NAME
 
 logger = getLogger(__name__)
 
@@ -156,7 +157,7 @@ class DriveSource(BackupDestination):
                 PROP_RETAINED: str(retain)
             },
             'contentHints': {
-                'indexableText': 'Home Assistant hassio snapshot backup home assistant',
+                'indexableText': 'Home Assistant hassio ' + NECESSARY_OLD_BACKUP_NAME + ' ' + NECESSARY_OLD_BACKUP_PLURAL_NAME + ' backup backups home assistant',
                 'thumbnail': {
                     'image': THUMBNAIL_IMAGE,
                     'mimeType': THUMBNAIL_MIME_TYPE

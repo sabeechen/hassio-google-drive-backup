@@ -3,7 +3,7 @@ from typing import Any, Dict
 from backup.const import SOURCE_HA
 from backup.exceptions import ensureKey
 from backup.time import Time
-from .snapshots import AbstractBackup
+from .backups import AbstractBackup
 from backup.logger import getLogger
 from backup.util import DataCache, KEY_I_MADE_THIS, KEY_IGNORE
 from backup.config import Config, Setting

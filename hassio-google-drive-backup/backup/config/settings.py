@@ -343,8 +343,8 @@ _CONFIG = {
     Setting.ENABLE_DRIVE_UPLOAD: "bool?",
 
     # Theme Settings
-    Setting.BACKGROUND_COLOR: "match(#[0-9ABCDEFabcdef]{6})?",
-    Setting.ACCENT_COLOR: "match(#[0-9ABCDEFabcdef]{6})?",
+    Setting.BACKGROUND_COLOR: "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
+    Setting.ACCENT_COLOR: "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
 
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "match(^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})(,[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})*$)?",

@@ -2,7 +2,7 @@ import os
 from pytest import raises
 
 from backup.model import GenConfig
-from backup.config import Config, Setting, UPGRADE_OPTIONS
+from backup.config import Config, Setting
 from backup.exceptions import InvalidConfigurationValue
 
 
@@ -211,6 +211,14 @@ def test_config_upgrade():
         Setting.CALL_BACKUP_SNAPSHOT: True
     })[0]
     assert config.mustSaveUpgradeChanges()
+
+
+def test_empty_colors():
+    # Test specifying one value
+    config = Config()
+    config.update({Setting.BACKGROUND_COLOR: "", Setting.ACCENT_COLOR: ""})
+    assert config.get(Setting.BACKGROUND_COLOR) == Setting.BACKGROUND_COLOR.default()
+    assert config.get(Setting.ACCENT_COLOR) == Setting.ACCENT_COLOR.default()
 
 
 def getGenConfig(update):

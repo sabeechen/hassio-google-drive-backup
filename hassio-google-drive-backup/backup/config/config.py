@@ -55,6 +55,11 @@ UPGRADE_OPTIONS = {
     Setting.DEPRECATED_BACKUP_PASSWORD: Setting.BACKUP_PASSWORD
 }
 
+EMPTY_IS_DEFAULT = {
+    Setting.ACCENT_COLOR,
+    Setting.BACKGROUND_COLOR,
+}
+
 
 class GenConfig():
     def __init__(self, days=0, weeks=0, months=0, years=0, day_of_week='mon', day_of_month=1, day_of_year=1, aggressive=False):
@@ -155,6 +160,8 @@ class Config():
             value = setting.validator().validate(new_config[key])
             if setting in UPGRADE_OPTIONS:
                 upgraded = True
+            if isinstance(value, str) and len(value) == 0 and setting in EMPTY_IS_DEFAULT:
+                value = setting.default()
             if value is not None and (setting in KEEP_DEFAULT or value != setting.default()):
                 if setting in UPGRADE_OPTIONS and UPGRADE_OPTIONS[setting] not in new_config:
                     upgraded = True

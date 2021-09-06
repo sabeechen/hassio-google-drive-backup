@@ -1,4 +1,3 @@
-from time import sleep
 import pytest
 
 from dev.simulationserver import SimulationServer, RequestInterceptor

@@ -354,11 +354,11 @@ class CredRefreshGoogleError(KnownError):
 
 
 class CredRefreshMyError(KnownError):
-    def __init__(self, reason=None):
+    def __init__(self, reason: str = None):
         self.reason = reason
 
     def message(self):
-        return "Cloudn't refresh Google Drive credentials because: {}".format(self.reason)
+        return "Couldn't refresh Google Drive credentials because: {}".format(self.reason)
 
     def code(self):
         return "token_refresh_my_error"

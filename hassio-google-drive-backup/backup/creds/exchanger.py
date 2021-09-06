@@ -111,19 +111,31 @@ class Exchanger():
             KEY_CLIENT_ID: creds.id,
             KEY_REFRESH_TOKEN: creds.refresh_token,
         }
-
-        for url in self.config.getTokenServers("/drive/refresh"):
+        token_paths = self.config.getTokenServers("/drive/refresh")
+        last_error = None
+        for url in token_paths:
             try:
                 headers = {
                     'addon_version': VERSION,
                     'client': self.config.clientIdentifier()
                 }
-                async with self.session.post(str(url), headers=headers, json=data, timeout=ClientTimeout(total=10)) as resp:
+                async with self.session.post(str(url), headers=headers, json=data, timeout=ClientTimeout(total=self.config.get(Setting.EXCHANGER_TIMEOUT_SECONDS))) as resp:
                     if resp.status < 400:
-                        self.config.setPreferredTokenHost(url.host)
                         return Creds.load(self.time, await resp.json())
                     elif resp.status == 503:
-                        raise CredRefreshGoogleError((await resp.json())["error"])
+                        json = {}
+                        try:
+                            json = await resp.json()
+                        except BaseException:
+                            pass
+                        if "error" in json:
+                            if "invalid_grant" in json["error"]:
+                                raise GoogleCredentialsExpired()
+                            else:
+                                # Record the error, but still try other hosts
+                                last_error = CredRefreshGoogleError(json["error"])
+                        else:
+                            last_error = CredRefreshMyError("HTTP 503 from " + url.host)
                     elif resp.status == 401:
                         raise GoogleCredentialsExpired()
                     else:
@@ -133,11 +145,18 @@ class Exchanger():
                             extra = ""
                         raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
             except ClientConnectorError:
-                logger.warning("Unable to communicate with " + str(url) + ", trying alternate servers...")
+                logger.warning("Unable to reach " + str(url.host) + ", trying alternate server(s)...")
+                last_error = "Couldn't communicate with " + url.host
             except asyncio.exceptions.TimeoutError:
-                # TODO: Add tests for this exception
-                logger.warning("Timed out communicating with " + str(url) + ", trying alternate servers...")
-        raise CredRefreshMyError("Unable to connect to https://habackup.io")
+                logger.warning("Timed out communicating with " + str(url.host) + ", trying alternate server(s)...")
+                last_error = "Timed out communicating with " + url.host
+        logger.error("Unable to refresh credentials with Google Drive")
+        if isinstance(last_error, str):
+            raise CredRefreshMyError(last_error)
+        elif isinstance(last_error, Exception):
+            raise last_error
+        else:
+            raise Exception("Unexpected error type: " + str(last_error))
 
     def refreshCredentials(self, refresh_token):
         return Creds(self.time, id=self._client_id, expiration=None, access_token=None, refresh_token=refresh_token, secret=self._client_secret)

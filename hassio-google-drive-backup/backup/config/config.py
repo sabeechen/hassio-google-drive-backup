@@ -31,7 +31,7 @@ SERVER_OPTIONS = {
 
 NON_UI_SETTING = {
     Setting.SUPERVISOR_URL,
-    Setting.TOKEN_SERVER_HOST,
+    Setting.TOKEN_SERVER_HOSTS,
     Setting.DRIVE_AUTHORIZE_URL,
     Setting.DEFAULT_DRIVE_CLIENT_ID,
     Setting.NEW_BACKUP_TIMEOUT_SECONDS,
@@ -125,7 +125,6 @@ class Config():
 
         # Tracks when hosts have been seen to be offline to retry on different hosts.
         self._commFailure = {}
-        self._preferredTokenHost = None
 
     def getConfigFor(self, options):
         new_config = Config()
@@ -284,17 +283,7 @@ class Config():
         return _VALIDATORS[setting].formatForUi(self.get(setting))
 
     def getTokenServers(self, path: str = "") -> List[URL]:
-        return list(map(lambda s: URL(s).with_path(path), self.get(Setting.TOKEN_SERVER_HOST).split(",")))
-
-    def setPreferredTokenHost(self, host: str):
-        self._preferredTokenHost = host
-
-    def getPreferredTokenUrl(self, path: str):
-        hosts = self.getTokenServers(path)
-        for host in hosts:
-            if host.host == self._preferredTokenHost:
-                return host
-        return hosts[0]
+        return list(map(lambda s: URL(s).with_path(path), self.get(Setting.TOKEN_SERVER_HOSTS).split(",")))
 
     def mustSaveUpgradeChanges(self):
         return self._config_was_upgraded

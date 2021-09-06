@@ -95,7 +95,8 @@ class Setting(Enum):
     DATA_CACHE_FILE_PATH = "data_cache_file_path"
 
     # endpoints
-    TOKEN_SERVER_HOST = "token_server_host"
+    AUTHORIZATION_HOST = "authorization_host"
+    TOKEN_SERVER_HOSTS = "token_server_hosts"
     SUPERVISOR_URL = "supervisor_url"
     DRIVE_URL = "drive_url"
     SUPERVISOR_TOKEN = "hassio_header"
@@ -119,6 +120,7 @@ class Setting(Enum):
     LOG_LEVEL = "log_level"
     CONSOLE_LOG_LEVEL = "console_log_level"
     BACKUP_STARTUP_DELAY_MINUTES = "backup_startup_delay_minutes"
+    EXCHANGER_TIMEOUT_SECONDS = "exchanger_timeout_seconds"
 
     # Old, deprecated settings
     DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
@@ -226,7 +228,8 @@ _DEFAULTS = {
     Setting.GOOGLE_DRIVE_PAGE_SIZE: 100,
 
     # Remote endpoints
-    Setting.TOKEN_SERVER_HOST: "https://habackup.io,https://reliable.habackup.io",
+    Setting.AUTHORIZATION_HOST: "https://habackup.io",
+    Setting.TOKEN_SERVER_HOSTS: "https://token1.habackup.io,https://habackup.io",
     Setting.SUPERVISOR_URL: "",
     Setting.SUPERVISOR_TOKEN: "",
     Setting.DRIVE_URL: "https://www.googleapis.com",
@@ -263,11 +266,13 @@ _DEFAULTS = {
     Setting.SERVER_PROJECT_ID: "",
     Setting.LOG_LEVEL: 'DEBUG',
     Setting.CONSOLE_LOG_LEVEL: 'INFO',
-    Setting.BACKUP_STARTUP_DELAY_MINUTES: 10
+    Setting.BACKUP_STARTUP_DELAY_MINUTES: 10,
+    Setting.EXCHANGER_TIMEOUT_SECONDS: 10
 }
 
 _STAGING_DEFAULTS = {
-    Setting.TOKEN_SERVER_HOST: "https://dev.habackup.io,https://reliable.dev.habackup.io",
+    Setting.AUTHORIZATION_HOST: "https://dev.habackup.io",
+    Setting.TOKEN_SERVER_HOSTS: "https://token1.dev.habackup.io,https://dev.habackup.io",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com",
 }
 
@@ -350,7 +355,8 @@ _CONFIG = {
     Setting.GOOGLE_DRIVE_PAGE_SIZE: "int(1,)?",
 
     # Remote endpoints
-    Setting.TOKEN_SERVER_HOST: "str?",
+    Setting.AUTHORIZATION_HOST: "url?",
+    Setting.TOKEN_SERVER_HOSTS: "str?",
     Setting.SUPERVISOR_URL: "url?",
     Setting.SUPERVISOR_TOKEN: "str?",
     Setting.DRIVE_URL: "url?",
@@ -387,7 +393,8 @@ _CONFIG = {
     Setting.SERVER_PROJECT_ID: "str?",
     Setting.LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     Setting.CONSOLE_LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
-    Setting.BACKUP_STARTUP_DELAY_MINUTES: "float(0,)?"
+    Setting.BACKUP_STARTUP_DELAY_MINUTES: "float(0,)?",
+    Setting.EXCHANGER_TIMEOUT_SECONDS: "float(0,)?"
 }
 
 PRIVATE = [

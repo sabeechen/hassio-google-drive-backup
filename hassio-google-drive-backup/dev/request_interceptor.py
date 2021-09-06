@@ -1,14 +1,14 @@
-
 import re
 from aiohttp.web import Request, Response
 from asyncio import Event, sleep
+from aiohttp.web_response import json_response
 from injector import singleton, inject
 
 
 class UrlMatch():
-    def __init__(self, url, attempts=None, status=None, response="", wait=False, sleep=None):
+    def __init__(self, url, fail_after=None, status=None, response=None, wait=False, sleep=None, fail_for=None):
         self.url: str = url
-        self.attempts: int = attempts
+        self.fail_after: int = fail_after
         self.status: int = status
         self.wait_event: Event = Event()
         self.trigger_event: Event = Event()
@@ -17,6 +17,8 @@ class UrlMatch():
         self.trigger_event.clear()
         self.wait_event.clear()
         self.sleep = sleep
+        self.response = response
+        self.fail_for = fail_for
 
     def isMatch(self, request):
         return re.match(self.url, request.url.path)
@@ -30,7 +32,10 @@ class UrlMatch():
     async def _doAction(self, request: Request):
         if self.status is not None:
             await self._readAll(request)
-            return Response(status=self.status, text=self.response)
+            if self.response:
+                return json_response(self.response, status=self.status)
+            else:
+                return Response(status=self.status)
         elif self.wait:
             self.trigger_event.set()
             await self.wait_event.wait()
@@ -38,10 +43,16 @@ class UrlMatch():
             await sleep(self.sleep)
 
     async def called(self, request: Request):
-        if self.attempts is None or self.attempts <= 0:
+        if self.fail_after is None or self.fail_after <= 0:
+            if self.fail_for is not None and self.fail_for > 0:
+                self.fail_for -= 1
+                return await self._doAction(request)
+            elif self.fail_for is not None:
+                return None
+
             return await self._doAction(request)
-        elif self.attempts is not None:
-            self.attempts -= 1
+        elif self.fail_after is not None:
+            self.fail_after -= 1
 
     async def _readAll(self, request: Request):
         data = bytearray()
@@ -61,8 +72,8 @@ class RequestInterceptor:
         self._matchers = []
         self._history = []
 
-    def setError(self, url, status, attempts=None):
-        matcher = UrlMatch(url, attempts, status)
+    def setError(self, url, status, fail_after=None, fail_for=None, response=None):
+        matcher = UrlMatch(url, fail_after, status, response, fail_for=fail_for)
         self._matchers.append(matcher)
 
     def clear(self):
@@ -74,17 +85,18 @@ class RequestInterceptor:
         self._matchers.append(matcher)
         return matcher
 
-    def setSleep(self, url, attempts=None, sleep=None):
-        matcher = UrlMatch(url, attempts, sleep=sleep)
+    def setSleep(self, url, attempts=None, sleep=None, wait_for=None):
+        matcher = UrlMatch(url, attempts, sleep=sleep, fail_for=wait_for)
         self._matchers.append(matcher)
         return matcher
 
     async def checkUrl(self, request):
+        ret = None
         self.record(request)
         for match in self._matchers:
             if match.isMatch(request):
-                return await match.called(request)
-        return None
+                ret = await match.called(request)
+        return ret
 
     def record(self, request: Request):
         record = str(request.url.path)

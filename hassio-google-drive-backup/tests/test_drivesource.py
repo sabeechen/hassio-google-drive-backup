@@ -195,7 +195,7 @@ async def test_upload_session_expired(drive, time, backup_helper, interceptor: R
 @pytest.mark.asyncio
 async def test_upload_resume(drive: DriveSource, time, backup_helper: BackupHelper, google: SimulatedGoogle, interceptor: RequestInterceptor):
     from_backup, data = await backup_helper.createFile()
-    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, attempts=1, status=500)
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, fail_after=1, status=500)
 
     # Upload, which will fail
     with pytest.raises(GoogleInternalError):
@@ -264,7 +264,7 @@ async def test_drive_timeout(drive, config, time: FakeTime):
 async def test_resume_upload_attempts_exhausted(drive: DriveSource, time, backup_helper, interceptor: RequestInterceptor, google: SimulatedGoogle):
     # Allow an upload to update one chunk and then fail.
     from_backup, data = await backup_helper.createFile()
-    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, attempts=1, status=500)
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, fail_after=1, status=500)
     with pytest.raises(GoogleInternalError):
         await drive.save(from_backup, data)
     assert google.chunks == [BASE_CHUNK_SIZE]
@@ -791,12 +791,12 @@ async def test_cred_refresh_upgrade_default_client(drive: DriveSource, server: S
 
 @pytest.mark.asyncio
 async def test_cant_reach_refresh_server(drive: DriveSource, server: SimulationServer, config: Config, time):
-    config.override(Setting.TOKEN_SERVER_HOST, "http://lkasdpoiwehjhcty.com")
+    config.override(Setting.TOKEN_SERVER_HOSTS, "http://lkasdpoiwehjhcty.com")
     drive.drivebackend.creds._secret = None
     time.advanceDay()
     with pytest.raises(CredRefreshMyError) as error:
         await drive.get()
-    assert error.value.data() == {"reason": "Unable to connect to https://habackup.io"}
+    assert error.value.data() == {"reason": "Couldn't communicate with lkasdpoiwehjhcty.com"}
 
 
 @pytest.mark.asyncio

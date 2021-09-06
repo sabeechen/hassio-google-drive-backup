@@ -27,6 +27,7 @@ from backup.debugworker import DebugWorker
 from backup.drive import FolderFinder
 from backup.const import FOLDERS
 from .debug import Debug
+from yarl import URL
 
 logger = getLogger(__name__)
 
@@ -143,12 +144,12 @@ class UiServer(Trigger, Startable):
         status["backup_name_template"] = self.config.get(
             Setting.BACKUP_NAME)
         status['sources'] = self._coord.buildBackupMetrics()
-        status['authenticate_url'] = str(self.config.getPreferredTokenUrl("/drive/authorize"))
-        choose_url = self.config.getPreferredTokenUrl('/drive/picker').with_query({
+        status['authenticate_url'] = str(URL(self.config.get(Setting.AUTHORIZATION_HOST)).with_path("/drive/authorize"))
+        choose_url = str(URL(self.config.get(Setting.AUTHORIZATION_HOST)).with_path('/drive/picker').with_query({
             "bg": self.config.get(Setting.BACKGROUND_COLOR),
             "ac": self.config.get(Setting.ACCENT_COLOR),
             "version": VERSION
-        })
+        }))
         status['choose_folder_url'] = str(choose_url)
         status['dns_info'] = self._global_info.getDnsInfo()
         status['enable_drive_upload'] = self.config.get(

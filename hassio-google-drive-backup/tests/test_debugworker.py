@@ -112,44 +112,6 @@ async def test_send_clear(time, debug_worker: DebugWorker, config: Config, globa
 
 
 @pytest.mark.asyncio
-async def test_update_health_check(time, debug_worker: DebugWorker, config: Config, server, server_url):
-    assert config._preferredTokenHost is None
-
-    # Simulate work
-    await debug_worker.doWork()
-
-    # And then success
-    assert config._preferredTokenHost == server_url.host
-    assert debug_worker._health is not None
-
-
-@pytest.mark.asyncio
-async def test_update_health_single_bad_host(server_url, time, debug_worker: DebugWorker, config: Config, server):
-    config.override(Setting.TOKEN_SERVER_HOST, "https://this.goes.nowhere.info," + str(server_url))
-    assert config._preferredTokenHost is None
-
-    # Simulate work
-    await debug_worker.doWork()
-
-    # And then success
-    assert config._preferredTokenHost == server_url.host
-    assert debug_worker._health is not None
-
-
-@pytest.mark.asyncio
-async def test_update_health_all_bad_hosts(server_url, time, debug_worker: DebugWorker, config: Config, server):
-    config.override(Setting.TOKEN_SERVER_HOST, "https://this.goes.nowhere.info,http://badhost.name")
-    assert config._preferredTokenHost is None
-
-    # Simulate work
-    await debug_worker.doWork()
-
-    # And then success
-    assert config._preferredTokenHost is None
-    assert debug_worker._health is None
-
-
-@pytest.mark.asyncio
 async def test_health_check_timing_success(server_url, time: FakeTime, debug_worker: DebugWorker, config: Config, server: SimulationServer):
     # Only do successfull checks once a day
     await debug_worker.doWork()

@@ -131,7 +131,8 @@ class SimServerModule(BaseModule):
     def getConfig(self) -> Config:
         return Config.withOverrides({
             Setting.DRIVE_AUTHORIZE_URL: str(self._base_url.with_path("o/oauth2/v2/auth")),
-            Setting.TOKEN_SERVER_HOST: str(self._base_url),
+            Setting.AUTHORIZATION_HOST: str(self._base_url),
+            Setting.TOKEN_SERVER_HOSTS: str(self._base_url),
             Setting.DRIVE_TOKEN_URL: str(self._base_url.with_path("token")),
             Setting.DRIVE_REFRESH_URL: str(self._base_url.with_path("oauth2/v4/token")),
             Setting.INGRESS_PORT: 56152

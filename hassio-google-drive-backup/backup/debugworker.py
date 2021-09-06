@@ -14,6 +14,7 @@ from backup.worker import Worker
 from backup.logger import getLogger, getHistory
 from backup.ha import HaRequests, HaSource
 from backup.model import Coordinator
+from yarl import URL
 
 logger = getLogger(__name__)
 ERROR_LOG_LENGTH = 30
@@ -51,7 +52,6 @@ class DebugWorker(Worker):
             try:
                 await self.maybeSendErrorReport()
             except Exception:
-                # just eat the error
                 pass
 
     # Once per day, query the health endpoint of the token server to see who is up.
@@ -63,12 +63,12 @@ class DebugWorker(Worker):
             'addon_version': VERSION
         }
         self._last_server_check = self.time.now()
-        for url in self.config.getTokenServers("/health"):
+        for host in self.config.getTokenServers():
+            url = host.with_path("/health")
             try:
                 async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=10)) as resp:
                     resp.raise_for_status()
                     self._health = await resp.json()
-                    self.config.setPreferredTokenHost(url.host)
                     self._last_server_refresh = timedelta(days=1)
                     return
             except:  # noqa: E722
@@ -76,7 +76,6 @@ class DebugWorker(Worker):
                 pass
 
         # no good token host could be found, so reset it to the default and check again sooner.
-        self.config.setPreferredTokenHost(None)
         self._last_server_refresh = timedelta(minutes=1)
 
     async def maybeSendErrorReport(self):
@@ -98,7 +97,8 @@ class DebugWorker(Worker):
                 'client': self.config.clientIdentifier(),
                 'addon_version': VERSION
             }
-            async with self.session.post(self.config.getPreferredTokenUrl('/logerror'), headers=headers, json=package):
+            url = URL(self.config.get(Setting.AUTHORIZATION_HOST)).with_path("/logerror")
+            async with self.session.post(url, headers=headers, json=package):
                 pass
 
     async def updateDns(self):

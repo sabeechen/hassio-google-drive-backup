@@ -14,9 +14,24 @@ class TracingSession(aiohttp.ClientSession):
         self.trace_config.on_request_exception.append(self.trace_request_exception)
         self.trace_config.on_response_chunk_received.append(self.trace_chunk_recv)
         self.trace_config.on_request_chunk_sent.append(self.trace_chunk_sent)
+        self._record = False
+        self._records = []
         super().__init__(**kwargs, trace_configs=[self.trace_config])
 
+    @property
+    def record(self) -> bool:
+        return self._record
+
+    @record.setter
+    def record(self, value: bool):
+        self._record = value
+
+    def clearRecord(self):
+        self._records = []
+
     async def _request(self, method, url, **kwargs):
+        if self.record:
+            self._records.append({'method': method, 'url': url, 'other_args': kwargs})
         resp = await super()._request(method, url, **kwargs, trace_request_ctx="{0} {1}".format(method, url))
         logger.trace("Initial response data: %s %s", resp.method, resp.url)
         logger.trace("  headers:")

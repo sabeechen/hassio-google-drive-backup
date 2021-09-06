@@ -438,7 +438,7 @@ async def test_drive_cred_generation(reader: ReaderHelper, ui_server: UiServer, 
     assert status["last_error"]["error_type"] == ERROR_CREDS_EXPIRED
 
     # simulate the user going through the Drive authentication workflow
-    auth_url = config.getPreferredTokenUrl("/drive/authorize").with_query({
+    auth_url = URL(status['authenticate_url']).with_query({
         "redirectbacktoken": reader.getUrl(True) + "token",
         "version": VERSION,
         "return": reader.getUrl(True)

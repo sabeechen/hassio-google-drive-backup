@@ -142,7 +142,8 @@ async def generate_config(server_url: URL, ports, cleandir):
     return Config.withOverrides({
         Setting.DRIVE_URL: str(server_url),
         Setting.SUPERVISOR_URL: str(server_url) + "/",
-        Setting.TOKEN_SERVER_HOST: str(server_url),
+        Setting.AUTHORIZATION_HOST: str(server_url),
+        Setting.TOKEN_SERVER_HOSTS: str(server_url),
         Setting.DRIVE_REFRESH_URL: str(server_url.with_path("/oauth2/v4/token")),
         Setting.DRIVE_AUTHORIZE_URL: str(server_url.with_path("/o/oauth2/v2/auth")),
         Setting.DRIVE_TOKEN_URL: str(server_url.with_path("/token")),

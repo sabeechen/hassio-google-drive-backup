@@ -277,8 +277,8 @@ _STAGING_DEFAULTS = {
 }
 
 _CONFIG = {
-    Setting.MAX_BACKUPS_IN_HA: "int(0,)",
-    Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: "int(0,)",
+    Setting.MAX_BACKUPS_IN_HA: "int(0,)?",
+    Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: "int(0,)?",
     Setting.DAYS_BETWEEN_BACKUPS: "float(0,)?",
     Setting.IGNORE_OTHER_BACKUPS: "bool?",
     Setting.IGNORE_UPGRADE_BACKUPS: "bool?",

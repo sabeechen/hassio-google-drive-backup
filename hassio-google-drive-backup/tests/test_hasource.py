@@ -877,3 +877,15 @@ async def test_upgrade_no_config(ha: HaSource, supervisor: SimulatedSupervisor, 
         Setting.BACKUP_TIME_OF_DAY.value: "01:11",
         Setting.EXCLUDE_ADDONS.value: "test",
     }
+
+
+@pytest.mark.asyncio
+async def test_old_delete_path(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, time: FakeTime):
+    supervisor._super_version = Version(2020, 8)
+    await ha.get()
+    backup: HABackup = await ha.create(CreateOptions(time.now(), "Test Name"))
+    full = DummyBackup(backup.name(), backup.date(),
+                       backup.size(), backup.slug(), "dummy")
+    full.addSource(backup)
+    await ha.delete(full)
+    assert interceptor.urlWasCalled("/snapshots/{0}/remove".format(backup.slug()))

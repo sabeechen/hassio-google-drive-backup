@@ -16,7 +16,7 @@ from typing import Any, Dict
 from tests.helpers import all_addons, createBackupTar, parseBackupInfo
 
 URL_MATCH_BACKUP_FULL = "^/backups/new/full$"
-URL_MATCH_BACKUP_DELETE = "^/backups/.*/remove$"
+URL_MATCH_BACKUP_DELETE = "^/backups/.*$"
 URL_MATCH_BACKUP_DOWNLOAD = "^/backups/.*/download$"
 URL_MATCH_MISC_INFO = "^/info$"
 URL_MATCH_CORE_API = "^/core/api.*$"
@@ -90,7 +90,7 @@ class SimulatedSupervisor(BaseServer):
             get('/debug/insert/backup', self._debug_insert_backup),
 
             get('/backups', self._getBackups),
-            delete('/backups/{slug}/remove', self._deletebackup),
+            delete('/backups/{slug}', self._deletebackup),
             post('/backups/new/upload', self._uploadbackup),
             post('/backups/new/partial', self._newbackup),
             post('/backups/new/full', self._newbackup),
@@ -100,7 +100,7 @@ class SimulatedSupervisor(BaseServer):
 
             # TODO: remove once the api path is fully deprecated
             get('/snapshots', self._getSnapshots),
-            delete('/snapshots/{slug}/remove', self._deletebackup),
+            post('/snapshots/{slug}/remove', self._deletebackup),
             post('/snapshots/new/upload', self._uploadbackup),
             post('/snapshots/new/partial', self._newbackup),
             post('/snapshots/new/full', self._newbackup),

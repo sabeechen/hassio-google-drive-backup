@@ -64,9 +64,12 @@ class HaRequests():
             return URL(NECESSARY_OLD_SUPERVISOR_URL)
 
     def _getBackupPath(self):
-        if not self._super_version or self._super_version >= VERSION_BACKUP_PATH:
+        if self.supportsBackupPaths():
             return "backups"
         return NECESSARY_OLD_BACKUP_PLURAL_NAME
+
+    def supportsBackupPaths(self):
+        return not self._super_version or self._super_version >= VERSION_BACKUP_PATH
 
     @supervisor_call
     async def createBackup(self, info):
@@ -87,11 +90,15 @@ class HaRequests():
 
     @supervisor_call
     async def delete(self, slug) -> None:
-        delete_url = self.getSupervisorURL().with_path("{1}/{0}/remove".format(slug, self._getBackupPath()))
         if slug in self.cache:
             del self.cache[slug]
         try:
-            await self._sendHassioData("delete", delete_url, {})
+            if self.supportsBackupPaths():
+                delete_url = self.getSupervisorURL().with_path("{1}/{0}".format(slug, self._getBackupPath()))
+                await self._sendHassioData("delete", delete_url, {})
+            else:
+                delete_url = self.getSupervisorURL().with_path("{1}/{0}/remove".format(slug, self._getBackupPath()))
+                await self._sendHassioData("post", delete_url, {})
         except ClientResponseError as e:
             if e.status == 400:
                 raise HomeAssistantDeleteError()

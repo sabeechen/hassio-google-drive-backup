@@ -1,6 +1,6 @@
 # Home Assistant Add-on: Google Drive Backup
 
-A complete and easy way to back up your Home Assistant snapshots to Google Drive.
+A complete and easy way to upload your Home Assistant backups to Google Drive.
 
 ## About
 
@@ -15,12 +15,12 @@ Quickly set up a backup strategy without much fuss. It doesn't require much fami
 
 ### Features
 
-- Creates snapshots on a configurable schedule.
-- Uploads snapshot to Drive, even the ones it didn't create.
-- Clean up old snapshots in Home Assistant and Google Drive, so you don't run out of space.
-- Restore from a fresh install or recover quickly from disaster by uploading your snapshots directly from Google Drive.
+- Creates backups on a configurable schedule.
+- Uploads backups to Drive, even the ones it didn't create.
+- Clean up old backups in Home Assistant and Google Drive, so you don't run out of space.
+- Restore from a fresh install or recover quickly from disaster by uploading your backups directly from Google Drive.
 - Integrates with Home Assistant Notifications, and provides sensors you can trigger off of.
-- Notifies you when something goes wrong with your snapshots.
+- Notifies you when something goes wrong with your backups.
 - Super easy installation and configuration.
 - Privacy-centric design philosophy.
 - Comprehensive documentation.

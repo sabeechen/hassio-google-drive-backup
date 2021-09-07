@@ -3,7 +3,7 @@ from calendar import monthrange
 from datetime import datetime, timedelta
 from typing import List, Optional, Sequence, Set
 
-from .snapshots import Snapshot
+from .backups import Backup
 from backup.util import RangeLookup
 from ..time import Time
 from ..config import GenConfig
@@ -16,12 +16,12 @@ class BackupScheme(ABC):
         pass
 
     @abstractmethod
-    def getOldest(self, snapshots: Sequence[Snapshot]) -> Optional[Snapshot]:
+    def getOldest(self, backups: Sequence[Backup]) -> Optional[Backup]:
         pass
 
-    def handleNaming(self, snapshots: Sequence[Snapshot]) -> None:
-        for snapshot in snapshots:
-            snapshot.setStatusDetail(None)
+    def handleNaming(self, backups: Sequence[Backup]) -> None:
+        for backup in backups:
+            backup.setStatusDetail(None)
 
 
 class DeleteAfterUploadScheme(BackupScheme):
@@ -29,19 +29,19 @@ class DeleteAfterUploadScheme(BackupScheme):
         self.source = source
         self.destinations = destinations
 
-    def getOldest(self, snapshots: Snapshot):
+    def getOldest(self, backups: Backup):
         consider = []
-        for snapshot in snapshots:
+        for backup in backups:
             uploaded = True
-            if snapshot.getSource(self.source) is None:
+            if backup.getSource(self.source) is None:
                 # No source, so ignore it
                 uploaded = False
             for destination in self.destinations:
-                if snapshot.getSource(destination) is None:
+                if backup.getSource(destination) is None:
                     # its not in destination, so ignore it
                     uploaded = False
             if uploaded:
-                consider.append(snapshot)
+                consider.append(backup)
 
         # Delete the oldest first
         return OldestScheme().getOldest(consider)
@@ -51,14 +51,14 @@ class OldestScheme(BackupScheme):
     def __init__(self, count=0):
         self.count = count
 
-    def getOldest(self, snapshots: Sequence[Snapshot]) -> Optional[Snapshot]:
-        if len(snapshots) <= self.count:
+    def getOldest(self, backups: Sequence[Backup]) -> Optional[Backup]:
+        if len(backups) <= self.count:
             return None
-        return min(snapshots, default=None, key=lambda s: s.date())
+        return min(backups, default=None, key=lambda s: s.date())
 
-    def handleNaming(self, snapshots: Sequence[Snapshot]) -> None:
-        for snapshot in snapshots:
-            snapshot.setStatusDetail(None)
+    def handleNaming(self, backups: Sequence[Backup]) -> None:
+        for backup in backups:
+            backup.setStatusDetail(None)
 
 
 class Partition(object):
@@ -70,16 +70,16 @@ class Partition(object):
         self.details = details
         self.selected = None
 
-    def select(self, snapshots: List[Snapshot]) -> Optional[Snapshot]:
-        options = list(RangeLookup(snapshots, lambda s: s.date()).matches(self.start, self.end - timedelta(milliseconds=1)))
+    def select(self, backups: List[Backup]) -> Optional[Backup]:
+        options = list(RangeLookup(backups, lambda s: s.date()).matches(self.start, self.end - timedelta(milliseconds=1)))
 
         searcher = lambda s: self.day(s.date()) == self.day(self.prefer)
 
         preferred = list(filter(searcher, options))
         if len(preferred) > 0:
-            self.selected = max(preferred, default=None, key=Snapshot.date)
+            self.selected = max(preferred, default=None, key=Backup.date)
         else:
-            self.selected = min(options, default=None, key=Snapshot.date)
+            self.selected = min(options, default=None, key=Backup.date)
         return self.selected
 
     def day(self, date: datetime):
@@ -97,8 +97,8 @@ class GenerationalScheme(BackupScheme):
         self.time: Time = time
         self.config = config
 
-    def _buildPartitions(self, snapshots):
-        snapshots: List[Snapshot] = list(snapshots)
+    def _buildPartitions(self, backups):
+        backups: List[Backup] = list(backups)
 
         # build the list of dates we should partition by
         day_of_week = 3
@@ -114,7 +114,7 @@ class GenerationalScheme(BackupScheme):
         if self.config.day_of_week in lookup:
             day_of_week = lookup[self.config.day_of_week]
 
-        last = self.time.toLocal(snapshots[len(snapshots) - 1].date())
+        last = self.time.toLocal(backups[len(backups) - 1].date())
         lookups: List[Partition] = []
         currentDay = self.day(last)
         for x in range(0, self.config.days):
@@ -152,28 +152,28 @@ class GenerationalScheme(BackupScheme):
                 start, end, start + timedelta(days=self.config.day_of_year - 1), self.time,
                 "{0} ({1} of {2} years)".format(start.strftime("%Y"), x + 1, self.config.years)))
 
-        # Keep track of which snapshots are being saved for which time period.
+        # Keep track of which backups are being saved for which time period.
         for lookup in lookups:
-            lookup.select(snapshots)
+            lookup.select(backups)
         return lookups
 
-    def getOldest(self, snapshots: Sequence[Snapshot]) -> Optional[Snapshot]:
-        if len(snapshots) == 0:
+    def getOldest(self, backups: Sequence[Backup]) -> Optional[Backup]:
+        if len(backups) == 0:
             return None
 
-        sorted = list(snapshots)
+        sorted = list(backups)
         sorted.sort(key=lambda s: s.date())
 
         partitions = self._buildPartitions(sorted)
-        keepers: Set[Snapshot] = set()
+        keepers: Set[Backup] = set()
         for part in partitions:
             if part.selected is not None:
                 keepers.add(part.selected)
 
         extras = []
-        for snapshot in sorted:
-            if snapshot not in keepers:
-                extras.append(snapshot)
+        for backup in sorted:
+            if backup not in keepers:
+                extras.append(backup)
 
         if self.config.aggressive and len(extras) > 0:
             return extras[0]
@@ -186,11 +186,13 @@ class GenerationalScheme(BackupScheme):
             # no non-keep is invalid, so delete the oldest keeper
             return min(keepers, default=None, key=lambda s: s.date())
 
-    def handleNaming(self, snapshots: Sequence[Snapshot]) -> None:
-        sorted = list(snapshots)
+    def handleNaming(self, backups: Sequence[Backup]) -> None:
+        if len(backups) == 0:
+            return
+        sorted = list(backups)
         sorted.sort(key=lambda s: s.date())
-        for snapshot in sorted:
-            snapshot.setStatusDetail(None)
+        for backup in sorted:
+            backup.setStatusDetail(None)
         for part in self._buildPartitions(sorted):
             if part.selected is not None:
                 if part.selected.getStatusDetail() is None:

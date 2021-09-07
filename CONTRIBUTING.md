@@ -23,6 +23,10 @@ The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whom 
  - Releases of the addon are made as-needed for bug fixes and new features.  If you've made a signifigant change to the addon, you can expect me to communicate to you when you can expect to see it released.  Important fixes will often demand an out-of-schedule rushed release.
 ## Setting up a Development Environment
 
+### Easy: Using the Dev Container
+If the you open the repository folder in Visual Studio code with docker installed, it will notice that it provides a devcontainer configuration and ask you to open it.  This is the easiest method to use, sets up all the necessary plugins and dependencies, and its how I (the primary maintainer of the project) develop the addon.
+
+### Harder but also works: Manual Setup
 1. Install [Visual Studio Code](https://code.visualstudio.com/)
 2. Install [Python 3.8](https://www.python.org/downloads/) for your platform.
 3. Install a git client. I like [GitHub Desktop](https://desktop.github.com/)
@@ -34,7 +38,7 @@ The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whom 
 6. <kbd>File</kbd> > <kbd>Open Folder</kbd> to open the cloned repository folder.
 7. Open the terminal (`Ctrl` + `Shift` + <code>`</code>) and install the Python packages required for development:
    ```
-   > python3.8 -m pip install -r hassio-google-drive-backup/dev/requirements-dev.txt
+   > python3.8 -m pip install -r .devcontainer/requirements-dev.txt
    ```
    That should set you up!
 
@@ -53,14 +57,14 @@ To try out changes locally during development, I've written a server that simula
 
 To give it a shot, open up Visual Studio's "Run" Dialog and start up `Run Mock Backend Server`. Then also run one of these options:
 
-- `Run Addons (Dev Backends)` - This starts up the addon web server and connects it to the simulated Home Assistant, Supervisor, and Google Drive. All of the functionality of the addon is supported (creating/deleting snapshot, authenticating with Google drive, etc.).
+- `Run Addons (Dev Backends)` - This starts up the addon web server and connects it to the simulated Home Assistant, Supervisor, and Google Drive. All of the functionality of the addon is supported (creating/deleting backups, authenticating with Google drive, etc.).
 - `Run Addons (Dev Drive)` - This should be unused by contributors, as its only used for testing prior to a release by @sabeechen.
 - `Run Addons (Real Drive)` - This uses a simulated Home Assistant and Supervisor, but connects to the real Google Drive. You'll have to use a real Google account to work with this configuration.
 
 ## The Staging Addon
 Any submissions made to the dev branch (including PR's) get automatically built and deployed to a staging version of the addon.  You can install this by adding the repository [https://github.com/sabeechen/hgdb-dev-staging](https://github.com/sabeechen/hgdb-dev-staging) to your home assistant machine.  This addon is identical to what will be released with the next version of the addon but:
- - It is a separate "App" in Google's perspective, so it can't see any snapshots created by the "Production" addon.
- - Its not reocmmended to run it along side the "Production" addon on the same machine (it see's the same snapshots).
+ - It is a separate "App" in Google's perspective, so it can't see any backups created by the "Production" addon.
+ - Its not reocmmended to run it along side the "Production" addon on the same machine (it see's the same backups).
  - It talks to [https://dev.habackup.io](https://dev.habackup.io) instead of [https://habackup.io](https://habackup.io) to authenticate with Google Drive.
  - If you submit code to the dev branch, you should see an update to the addon show up in Home Assistant ~25 minutes later.
  - It is the "bleeding edge" of changes, so it might have bugs.  Be warned!

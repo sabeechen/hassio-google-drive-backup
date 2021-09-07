@@ -1,18 +1,18 @@
-from .model import CreateOptions, SnapshotDestination
-from .snapshots import Snapshot
-from .dummysnapshotsource import DummySnapshotSource
+from .model import CreateOptions, BackupDestination
+from .backups import Backup
+from .dummybackupsource import DummyBackupSource
 from typing import Dict
 from io import IOBase
-from ..ha import SnapshotName
+from ..ha import BackupName
 from ..logger import getLogger
 
 logger = getLogger(__name__)
 
 
-class SimulatedSource(SnapshotDestination):
+class SimulatedSource(BackupDestination):
     def __init__(self, name):
         self._name = name
-        self.current: Dict[str, DummySnapshotSource] = {}
+        self.current: Dict[str, DummyBackupSource] = {}
         self.saved = []
         self.deleted = []
         self.created = []
@@ -20,9 +20,9 @@ class SimulatedSource(SnapshotDestination):
         self._upload = True
         self.index = 0
         self.max = 0
-        self.snapshot_name = SnapshotName()
+        self.backup_name = BackupName()
         self.host_info = {}
-        self.snapshot_type = "Full"
+        self.backup_type = "Full"
         self.working = False
         self.needConfig = None
 
@@ -61,13 +61,13 @@ class SimulatedSource(SnapshotDestination):
     def insert(self, name, date, slug=None, retain=False):
         if slug is None:
             slug = name
-        new_snapshot = DummySnapshotSource(
+        new_backup = DummyBackupSource(
             name,
             date,
             self._name,
             slug)
-        self.current[new_snapshot.slug()] = new_snapshot
-        return new_snapshot
+        self.current[new_backup.slug()] = new_backup
+        return new_backup
 
     def name(self) -> str:
         return self._name
@@ -76,50 +76,50 @@ class SimulatedSource(SnapshotDestination):
         return self._enabled
 
     def nameSetup(self, type, host_info):
-        self.snapshot_type = type
+        self.backup_type = type
         self.host_info = host_info
 
-    async def create(self, options: CreateOptions) -> DummySnapshotSource:
+    async def create(self, options: CreateOptions) -> DummyBackupSource:
         assert self.enabled
-        new_snapshot = DummySnapshotSource(
-            self.snapshot_name.resolve(
-                self.snapshot_type, options.name_template, options.when, self.host_info),
+        new_backup = DummyBackupSource(
+            self.backup_name.resolve(
+                self.backup_type, options.name_template, options.when, self.host_info),
             options.when,
             self._name,
             "{0}slug{1}".format(self._name, self.index))
         self.index += 1
-        self.current[new_snapshot.slug()] = new_snapshot
-        self.created.append(new_snapshot)
-        return new_snapshot
+        self.current[new_backup.slug()] = new_backup
+        self.created.append(new_backup)
+        return new_backup
 
-    async def get(self) -> Dict[str, DummySnapshotSource]:
+    async def get(self) -> Dict[str, DummyBackupSource]:
         assert self.enabled
         return self.current
 
-    async def delete(self, snapshot: Snapshot):
+    async def delete(self, backup: Backup):
         assert self.enabled
-        assert snapshot.getSource(self._name) is not None
-        assert snapshot.getSource(self._name).source() is self._name
-        assert snapshot.slug() in self.current
-        slug = snapshot.slug()
-        self.deleted.append(snapshot.getSource(self._name))
-        snapshot.removeSource(self._name)
+        assert backup.getSource(self._name) is not None
+        assert backup.getSource(self._name).source() is self._name
+        assert backup.slug() in self.current
+        slug = backup.slug()
+        self.deleted.append(backup.getSource(self._name))
+        backup.removeSource(self._name)
         del self.current[slug]
 
-    async def save(self, snapshot: Snapshot, bytes: IOBase = None) -> DummySnapshotSource:
+    async def save(self, backup: Backup, bytes: IOBase = None) -> DummyBackupSource:
         assert self.enabled
-        assert snapshot.slug() not in self.current
-        new_snapshot = DummySnapshotSource(
-            snapshot.name(), snapshot.date(), self._name, snapshot.slug())
-        snapshot.addSource(new_snapshot)
-        self.current[new_snapshot.slug()] = new_snapshot
-        self.saved.append(new_snapshot)
-        return new_snapshot
+        assert backup.slug() not in self.current
+        new_backup = DummyBackupSource(
+            backup.name(), backup.date(), self._name, backup.slug())
+        backup.addSource(new_backup)
+        self.current[new_backup.slug()] = new_backup
+        self.saved.append(new_backup)
+        return new_backup
 
-    async def read(self, snapshot: DummySnapshotSource) -> IOBase:
+    async def read(self, backup: DummyBackupSource) -> IOBase:
         assert self.enabled
         return None
 
-    async def retain(self, snapshot: DummySnapshotSource, retain: bool) -> None:
+    async def retain(self, backup: DummyBackupSource, retain: bool) -> None:
         assert self.enabled
-        snapshot.getSource(self.name()).setRetained(retain)
+        backup.getSource(self.name()).setRetained(retain)

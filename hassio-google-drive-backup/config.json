@@ -1,8 +1,8 @@
 {
   "name": "Home Assistant Google Drive Backup",
-  "version": "0.104.3",
+  "version": "0.105.1",
   "slug": "hassio_google_drive_backup",
-  "description": "Automatically back up Home Assistant snapshots to Google Drive",
+  "description": "Automatically manage backups between Home Assistant and Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
   "url": "https://github.com/sabeechen/hassio-google-drive-backup",
   "homeassistant_api": true,
@@ -11,30 +11,31 @@
   "auth_api": true,
   "ingress": true,
   "panel_icon": "mdi:cloud",
-  "panel_title": "Snapshots",
+  "panel_title": "Backups",
   "map": ["ssl", "backup:rw", "config"],
   "options": {
-    "max_snapshots_in_hassio": 4,
-    "max_snapshots_in_google_drive": 4,
-    "days_between_snapshots": 3
+    "max_backups_in_ha": 4,
+    "max_backups_in_google_drive": 4,
+    "days_between_backups": 3
   },
   "schema": {
-    "max_snapshots_in_hassio": "int(0,)",
-    "max_snapshots_in_google_drive": "int(0,)",
-    "days_between_snapshots": "float(0,)?",
-    "ignore_other_snapshots": "bool?",
-    "ignore_upgrade_snapshots": "bool?",
+    "max_backups_in_ha": "int(0,)?",
+    "max_backups_in_google_drive": "int(0,)?",
+    "days_between_backups": "float(0,)?",
+    "ignore_other_backups": "bool?",
+    "ignore_upgrade_backups": "bool?",
 
     "delete_after_upload": "bool?",
+    "delete_before_new_backup": "bool?",
     "verbose": "bool?",
     "use_ssl": "bool?",
     "certfile": "str?",
     "keyfile": "str?",
     "require_login": "bool?",
 
-    "snapshot_name": "str?",
-    "snapshot_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
-    "specify_snapshot_folder": "bool?",
+    "backup_name": "str?",
+    "backup_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
+    "specify_backup_folder": "bool?",
     "warn_for_low_space": "bool?",
 
     "generational_days": "int(0,)?",
@@ -46,11 +47,11 @@
     "generational_day_of_week": "list(mon|tue|wed|thu|fri|sat|sun)?",
     "generational_delete_early": "bool?",
 
-    "notify_for_stale_snapshots": "bool?",
-    "enable_snapshot_stale_sensor": "bool?",
-    "enable_snapshot_state_sensor": "bool?",
+    "notify_for_stale_backups": "bool?",
+    "enable_backup_stale_sensor": "bool?",
+    "enable_backup_state_sensor": "bool?",
     "send_error_reports": "bool?",
-    "snapshot_password": "str?",
+    "backup_password": "str?",
     "exclude_folders": "str?",
     "exclude_addons": "str?",
     "stop_addons": "str?",
@@ -63,21 +64,36 @@
     "google_drive_timeout_seconds": "float(1,)?",
     "alternate_dns_servers": "match(^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})(,[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})*$)?",
     "enable_drive_upload": "bool?",
+    "call_backup_snapshot": "bool?",
 
-    "background_color": "match(#[0-9ABCDEFabcdef]{6})?",
-    "accent_color": "match(#[0-9ABCDEFabcdef]{6})?",
+    "background_color": "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
+    "accent_color": "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
 
     "max_sync_interval_seconds": "float(300,)?",
     "port": "int(0,)?",
     "debugger_port": "int(100,)?",
     "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
-    "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?"
+    "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
+
+    "max_snapshots_in_hassio": "int(0,)?",
+    "max_snapshots_in_google_drive": "int(0,)?",
+    "days_between_snapshots": "float(0,)?",
+    "ignore_other_snapshots": "bool?",
+    "ignore_upgrade_snapshots": "bool?",
+    "delete_before_new_snapshot": "bool?",
+    "snapshot_name": "str?",
+    "snapshot_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
+    "specify_snapshot_folder": "bool?",
+    "notify_for_stale_snapshots": "bool?",
+    "enable_snapshot_stale_sensor": "bool?",
+    "enable_snapshot_state_sensor": "bool?",
+    "snapshot_password": "str?" 
   },
   "ports": {
     "1627/tcp": 1627
   },
   "ports_description": {
-    "1627/tcp": "Direct access to the add-on without Ingress"
+    "1627/tcp": "Direct access to the add-on without ingress.  Must be enabled in the settings, see 'expose_extra_server'."
   },
   "image": "sabeechen/hassio-google-drive-backup-{arch}"
 }

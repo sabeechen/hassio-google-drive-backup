@@ -4,11 +4,11 @@ SOURCE_HA = "HomeAssistant"
 
 ERROR_PLEASE_WAIT = "please_wait"
 ERROR_NOT_UPLOADABLE = "not_uploadable"
-ERROR_NO_SNAPSHOT = "invalid_slug"
+ERROR_NO_BACKUP = "invalid_slug"
 ERROR_CREDS_EXPIRED = "creds_bad"
 ERROR_UPLOAD_FAILED = "upload_failed"
 ERROR_BAD_PASSWORD_KEY = "password_key_invalid"
-ERROR_SNAPSHOT_IN_PROGRESS = "snapshot_in_progress"
+ERROR_BACKUP_IN_PROGRESS = "backup_in_progress"
 ERROR_PROTOCOL = "protocol_error"
 ERROR_LOGIC = "logic_error"
 ERROR_INVALID_CONFIG = "illegal_config"
@@ -32,6 +32,15 @@ ERROR_BACKUP_FOLDER_INACCESSIBLE = "backup_folder_inaccessible"
 ERROR_LOW_SPACE = "low_space"
 LOG_IN_TO_DRIVE = "log_in_to_drive"
 SUPERVISOR_PERMISSION = "supervisor_permission"
+
+# these keys are necessary because they use the name "snapshot" in non-user-visible
+# places persisted outside the codebase.  They can't be changed without an upgrade path.
+NECESSARY_OLD_BACKUP_NAME = "snapshot"
+NECESSARY_OLD_BACKUP_PLURAL_NAME = "snapshots"
+NECESSARY_OLD_SUPERVISOR_URL = "http://hassio"
+NECESSARY_PROP_KEY_SLUG = "snapshot_slug"
+NECESSARY_PROP_KEY_DATE = "snapshot_date"
+NECESSARY_PROP_KEY_NAME = "snapshot_name"
 
 DRIVE_FOLDER_URL_FORMAT = "https://drive.google.com/drive/u/0/folders/{0}"
 GITHUB_ISSUE_URL = "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title={title}&assignee=sabeechen&body={body}"
@@ -57,9 +66,9 @@ If you have anything else that could help explain what happened, click "Markdown
  ```
  {error}
  ```
- Snapshots:
+ Backups:
  ```
- {snapshots}
+ {backups}
  ```
  ###### Config:
  ```

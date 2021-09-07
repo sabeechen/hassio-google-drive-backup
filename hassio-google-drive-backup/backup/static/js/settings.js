@@ -44,17 +44,17 @@ function revertColors() {
   window.setColors(background, accent);
 }
 
-function snapshotNameExample() {
-  $("#snapshot_example").html(exampleSnapshotName("Full", $("#snapshot_name").val()));
+function backupNameExample() {
+  $("#backup_example").html(exampleBackupName("Full", $("#backup_name").val()));
 }
 
-function snapshotNameOneOffExample() {
-  $("#snapshot_name_example_one_off").html(exampleSnapshotName("Full", $("#snapshot_name_one_off").val()));
+function backupNameOneOffExample() {
+  $("#backup_name_example_one_off").html(exampleBackupName("Full", $("#backup_name_one_off").val()));
 }
 
 function checkForSecret() {
-  var password = $("#snapshot_password");
-  var password2 = $("#snapshot_password_reenter");
+  var password = $("#backup_password");
+  var password2 = $("#backup_password_reenter");
   var block = $("#password_renter_block");
   var new_password = password.val();
   var old_password = password.data('old_password');
@@ -140,7 +140,7 @@ function handleSettingsDialog(data) {
     stop_addons = config.stop_addons.split(",");
   }
 
-  setInputValue("partial_snapshots", config.exclude_folders.length > 0 || exclude_addons.length > 0);
+  setInputValue("partial_backups", config.exclude_folders.length > 0 || exclude_addons.length > 0);
   setInputValue("stop_addons", stop_addons.length > 0);
 
   // Set the state of excluded and stopped addons.
@@ -193,33 +193,33 @@ function handleSettingsDialog(data) {
   M.updateTextFields();
   $("#use_ssl").trigger("change");
   $("#generational_enabled").trigger("change");
-  $("#partial_snapshots").trigger("change");
+  $("#partial_backups").trigger("change");
   $("#expose_extra_server").trigger("change");
   settingsChanged = false;
-  snapshotNameExample();
+  backupNameExample();
 
-  // Configure the visibility/link of the "current snapshot folder" help text and button.
-  if (data.snapshot_folder && data.snapshot_folder.length > 0) {
+  // Configure the visibility/link of the "current backup folder" help text and button.
+  if (data.backup_folder && data.backup_folder.length > 0) {
     $("#current_folder_span").show()
-    $('#current_folder_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.snapshot_folder);
+    $('#current_folder_link').attr("href", "https://drive.google.com/drive/u/0/folders/" + data.backup_folder);
   } else {
     $("#current_folder_span").hide();
   }
 
-  if (config.specify_snapshot_folder && last_data && last_data.sources.GoogleDrive.enabled) {
+  if (config.specify_backup_folder && last_data && last_data.sources.GoogleDrive.enabled) {
     $("#choose_folder_controls").show();
   } else {
     $("#choose_folder_controls").hide();
   }
 
-  setInputValue("settings_specify_folder_id", data.snapshot_folder);
+  setInputValue("settings_specify_folder_id", data.backup_folder);
 
-  if (config.hasOwnProperty("snapshot_password")) {
-    $("#snapshot_password").data("old_password", config.snapshot_password);
+  if (config.hasOwnProperty("backup_password")) {
+    $("#backup_password").data("old_password", config.backup_password);
   } else {
-    $("#snapshot_password").data("old_password", "");
+    $("#backup_password").data("old_password", "");
   }
-  $("#snapshot_password_reenter").val("");
+  $("#backup_password_reenter").val("");
   updateColorSelector($("#background_color"), Color.parse(config.background_color));
   updateColorSelector($("#accent_color"), Color.parse(config.accent_color));
   checkForSecret();
@@ -232,7 +232,7 @@ function handleSettingsDialog(data) {
 }
 
 function chooseFolderChanged() {
-  if ($("#specify_snapshot_folder").is(':checked') && last_data && last_data.sources.GoogleDrive.enabled) {
+  if ($("#specify_backup_folder").is(':checked') && last_data && last_data.sources.GoogleDrive.enabled) {
     $("#choose_folder_controls").show();
   } else {
     $("#choose_folder_controls").hide();
@@ -247,7 +247,7 @@ function saveSettings() {
   }
 
   if (!checkForSecret()) {
-    showSettingError({message: "New snapshots passwords don't match"})
+    showSettingError({message: "New backup passwords don't match"})
     return;
   }
   toast("Saving...")
@@ -276,7 +276,7 @@ function saveSettings() {
   excluded_addons = ""
   excluded_folders = ""
   stop_addons = ""
-  if ($("#partial_snapshots").prop('checked')) {
+  if ($("#partial_backups").prop('checked')) {
     $(".settings_folder_checkbox").each(function () {
       if (!$(this).is(":checked")) {
         excluded_folders = excluded_folders + $(this).data("slug") + ",";
@@ -310,7 +310,7 @@ function saveSettings() {
   config.accent_color = $("#accent_color").html();
 
   modal = M.Modal.getInstance(document.getElementById("settings_modal"))
-  postJson("saveconfig", {"config": config, "snapshot_folder": $("#settings_specify_folder_id").val()}, closeSettings, showSettingError); 
+  postJson("saveconfig", {"config": config, "backup_folder": $("#settings_specify_folder_id").val()}, closeSettings, showSettingError); 
 }
 
 function closeSettings(){

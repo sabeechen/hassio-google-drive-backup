@@ -43,7 +43,7 @@ class GlobalInfo():
         self.url = ""
         self.debug = {}
         self.lock = Lock()
-        self.snapshot_cooldown_time = time.now()
+        self.backup_cooldown_time = time.now()
 
     def ignoreErrorsForNow(self):
         return self._ignore_errors_for_now
@@ -114,8 +114,8 @@ class GlobalInfo():
     def setSkipSpaceCheckOnce(self, val):
         self._skip_space_check_once = val
 
-    def triggerSnapshotCooldown(self, delay: timedelta):
-        self.snapshot_cooldown_time = self._time.now() + delay
+    def triggerBackupCooldown(self, delay: timedelta):
+        self.backup_cooldown_time = self._time.now() + delay
 
-    def snapshotCooldownTime(self):
-        return self.snapshot_cooldown_time
+    def backupCooldownTime(self):
+        return self.backup_cooldown_time

@@ -18,3 +18,4 @@ hassio-google-drive-backup/dev/data/retained.json
 junit/test-results.xml
 .coverage
 coverage.xml
+hassio-google-drive-backup/dev/data/data_cache.json

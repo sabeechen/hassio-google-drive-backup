@@ -20,9 +20,10 @@ class Worker(Startable):
         self._last_error = None
         self._interval = interval
         self._task = None
+        self._should_stop = False
 
     async def work(self):
-        while True:
+        while not self._should_stop:
             try:
                 await self._method()
             except StopWorkException:
@@ -37,10 +38,12 @@ class Worker(Startable):
             await self._time.sleepAsync(self._interval)
 
     async def start(self):
+        self._should_stop = False
         self._task = asyncio.create_task(self.work(), name=self._name)
         return self._task
 
     async def stop(self):
+        self._should_stop = True
         if self._task is not None:
             self._task.cancel()
             await asyncio.wait([self._task])

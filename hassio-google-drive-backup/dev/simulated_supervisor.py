@@ -4,25 +4,29 @@ from datetime import timedelta
 import random
 import io
 
-from backup.config import Config
+from backup.config import Config, Version
 from backup.time import Time
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, get,
-                         json_response, post, FileResponse)
+                         json_response, post, delete, FileResponse)
 from injector import inject, singleton
 from .base_server import BaseServer
 from .ports import Ports
 from typing import Any, Dict
-from tests.helpers import all_addons, createSnapshotTar, parseSnapshotInfo
+from tests.helpers import all_addons, createBackupTar, parseBackupInfo
 
-URL_MATCH_SNAPSHOT_FULL = "^/snapshots/new/full$"
-URL_MATCH_SNAPSHOT_DELETE = "^/snapshots/.*/remove$"
-URL_MATCH_SNAPSHOT_DOWNLOAD = "^/snapshots/.*/download$"
+URL_MATCH_BACKUP_FULL = "^/backups/new/full$"
+URL_MATCH_BACKUP_DELETE = "^/backups/.*$"
+URL_MATCH_BACKUP_DOWNLOAD = "^/backups/.*/download$"
 URL_MATCH_MISC_INFO = "^/info$"
 URL_MATCH_CORE_API = "^/core/api.*$"
 URL_MATCH_START_ADDON = "^/addons/.*/start$"
 URL_MATCH_STOP_ADDON = "^/addons/.*/stop$"
 URL_MATCH_ADDON_INFO = "^/addons/.*/info$"
+URL_MATCH_SELF_OPTIONS = "^/addons/self/options$"
+
+URL_MATCH_SNAPSHOT = "^/snapshots.*$"
+URL_MATCH_BACKUPS = "^/backups.*$"
 
 
 @singleton
@@ -33,21 +37,22 @@ class SimulatedSupervisor(BaseServer):
         self._time = time
         self._ports = ports
         self._auth_token = "test_header"
-        self._snapshots: Dict[str, Any] = {}
-        self._snapshot_data: Dict[str, bytearray] = {}
-        self._snapshot_lock = asyncio.Lock()
-        self._snapshot_inner_lock = asyncio.Lock()
+        self._backups: Dict[str, Any] = {}
+        self._backup_data: Dict[str, bytearray] = {}
+        self._backup_lock = asyncio.Lock()
+        self._backup_inner_lock = asyncio.Lock()
         self._entities = {}
         self._events = []
         self._attributes = {}
         self._notification = None
-        self._min_snapshot_size = 1024 * 1024 * 5
-        self._max_snapshot_size = 1024 * 1024 * 5
+        self._min_backup_size = 1024 * 1024 * 5
+        self._max_backup_size = 1024 * 1024 * 5
         self._addon_slug = "self_slug"
         self._options = self.defaultOptions()
         self._username = "user"
         self._password = "pass"
         self._addons = all_addons.copy()
+        self._super_version = Version(2021, 8)
 
         self.installAddon(self._addon_slug, "Home Assistant Google drive Backup")
         self.installAddon("42", "The answer")
@@ -55,10 +60,9 @@ class SimulatedSupervisor(BaseServer):
 
     def defaultOptions(self):
         return {
-            "max_snapshots_in_hassio": 4,
-            "max_snapshots_in_google_drive": 4,
-            "days_between_snapshots": 3,
-            "use_ssl": False
+            "max_backups_in_ha": 4,
+            "max_backups_in_google_drive": 4,
+            "days_between_backups": 3
         }
 
     def routes(self):
@@ -73,24 +77,36 @@ class SimulatedSupervisor(BaseServer):
             get('/info', self._miscInfo),
             get('/addons/self/info', self._selfInfo),
             get('/addons/{slug}/info', self._addonInfo),
-            get('/snapshots/{slug}/download', self._snapshotDownload),
-            get('/snapshots/{slug}/info', self._snapshotDetail),
+
             post('/addons/{slug}/start', self._startAddon),
             post('/addons/{slug}/stop', self._stopAddon),
             get('/addons/{slug}/logo', self._logoAddon),
             get('/addons/{slug}/icon', self._logoAddon),
-            post('/snapshots/{slug}/remove', self._deleteSnapshot),
-            post('/snapshots/new/upload', self._uploadSnapshot),
-            get('/snapshots/new/upload', self._uploadSnapshot),
-            post('/snapshots/new/partial', self._newSnapshot),
-            post('/snapshots/new/full', self._newSnapshot),
-            get('/snapshots/new/full', self._newSnapshot),
+
             get('/core/info', self._coreInfo),
             get('/supervisor/info', self._supervisorInfo),
             get('/supervisor/logs', self._supervisorLogs),
             get('/core/logs', self._coreLogs),
+            get('/debug/insert/backup', self._debug_insert_backup),
+
+            get('/backups', self._getBackups),
+            delete('/backups/{slug}', self._deletebackup),
+            post('/backups/new/upload', self._uploadbackup),
+            post('/backups/new/partial', self._newbackup),
+            post('/backups/new/full', self._newbackup),
+            get('/backups/new/full', self._newbackup),
+            get('/backups/{slug}/download', self._backupDownload),
+            get('/backups/{slug}/info', self._backupDetail),
+
+            # TODO: remove once the api path is fully deprecated
             get('/snapshots', self._getSnapshots),
-            get('/debug/insert/snapshot', self._debug_insert_snapshot)
+            post('/snapshots/{slug}/remove', self._deletebackup),
+            post('/snapshots/new/upload', self._uploadbackup),
+            post('/snapshots/new/partial', self._newbackup),
+            post('/snapshots/new/full', self._newbackup),
+            get('/snapshots/new/full', self._newbackup),
+            get('/snapshots/{slug}/download', self._backupDownload),
+            get('/snapshots/{slug}/info', self._backupDetail),
         ]
 
     def getEvents(self):
@@ -120,22 +136,24 @@ class SimulatedSupervisor(BaseServer):
     def _formatDataResponse(self, data: Any) -> str:
         return json_response({'result': 'ok', 'data': data})
 
-    async def toggleBlockSnapshot(self):
-        if self._snapshot_lock.locked():
-            self._snapshot_lock.release()
+    async def toggleBlockBackup(self):
+        if self._backup_lock.locked():
+            self._backup_lock.release()
         else:
-            await self._snapshot_lock.acquire()
+            await self._backup_lock.acquire()
 
     async def _verifyHeader(self, request) -> bool:
-        if request.headers.get("X-Supervisor-Token", None) == self._auth_token:
-            return
         if request.headers.get("Authorization", None) == "Bearer " + self._auth_token:
             return
         raise HTTPUnauthorized()
 
     async def _getSnapshots(self, request: Request):
         await self._verifyHeader(request)
-        return self._formatDataResponse({'snapshots': list(self._snapshots.values())})
+        return self._formatDataResponse({'snapshots': list(self._backups.values())})
+
+    async def _getBackups(self, request: Request):
+        await self._verifyHeader(request)
+        return self._formatDataResponse({'backups': list(self._backups.values())})
 
     async def _stopAddon(self, request: Request):
         await self._verifyHeader(request)
@@ -177,7 +195,8 @@ class SimulatedSupervisor(BaseServer):
         await self._verifyHeader(request)
         return self._formatDataResponse(
             {
-                "addons": list(self._addons).copy()
+                "addons": list(self._addons).copy(),
+                'version': str(self._super_version)
             }
         )
 
@@ -208,38 +227,38 @@ class SimulatedSupervisor(BaseServer):
             }
         )
 
-    async def _internalNewSnapshot(self, request: Request, input_json, date=None, verify_header=True) -> Response:
-        async with self._snapshot_lock:
-            async with self._snapshot_inner_lock:
+    async def _internalNewBackup(self, request: Request, input_json, date=None, verify_header=True) -> Response:
+        async with self._backup_lock:
+            async with self._backup_inner_lock:
                 if 'wait' in input_json:
                     await sleep(input_json['wait'])
                 if verify_header:
                     await self._verifyHeader(request)
                 slug = self.generateId(8)
                 password = input_json.get('password', None)
-                data = createSnapshotTar(
+                data = createBackupTar(
                     slug,
                     input_json.get('name', "Default name"),
                     date=date or self._time.now(),
-                    padSize=int(random.uniform(self._min_snapshot_size, self._max_snapshot_size)),
+                    padSize=int(random.uniform(self._min_backup_size, self._max_backup_size)),
                     included_folders=input_json.get('folders', None),
                     included_addons=input_json.get('addons', None),
                     password=password)
-                snapshot_info = parseSnapshotInfo(data)
-                self._snapshots[slug] = snapshot_info
-                self._snapshot_data[slug] = bytearray(data.getbuffer())
+                backup_info = parseBackupInfo(data)
+                self._backups[slug] = backup_info
+                self._backup_data[slug] = bytearray(data.getbuffer())
                 return slug
 
-    async def createSnapshot(self, input_json, date=None):
-        return await self._internalNewSnapshot(None, input_json, date=date, verify_header=False)
+    async def createBackup(self, input_json, date=None):
+        return await self._internalNewBackup(None, input_json, date=date, verify_header=False)
 
-    async def _newSnapshot(self, request: Request):
-        if self._snapshot_lock.locked():
+    async def _newbackup(self, request: Request):
+        if self._backup_lock.locked():
             raise HTTPBadRequest()
         input_json = await request.json()
-        return self._formatDataResponse({"slug": await self._internalNewSnapshot(request, input_json)})
+        return self._formatDataResponse({"slug": await self._internalNewBackup(request, input_json)})
 
-    async def _uploadSnapshot(self, request: Request):
+    async def _uploadbackup(self, request: Request):
         await self._verifyHeader(request)
         try:
             reader = await request.multipart()
@@ -250,36 +269,36 @@ class SimulatedSupervisor(BaseServer):
                 if not chunk:
                     break
                 received_bytes.extend(chunk)
-            info = parseSnapshotInfo(io.BytesIO(received_bytes))
-            self._snapshots[info['slug']] = info
-            self._snapshot_data[info['slug']] = received_bytes
+            info = parseBackupInfo(io.BytesIO(received_bytes))
+            self._backups[info['slug']] = info
+            self._backup_data[info['slug']] = received_bytes
             return self._formatDataResponse({"slug": info['slug']})
         except Exception as e:
             print(str(e))
-            return self._formatErrorResponse("Bad snapshot")
+            return self._formatErrorResponse("Bad backup")
 
-    async def _deleteSnapshot(self, request: Request):
+    async def _deletebackup(self, request: Request):
         await self._verifyHeader(request)
         slug = request.match_info.get('slug')
-        if slug not in self._snapshots:
+        if slug not in self._backups:
             raise HTTPNotFound()
-        del self._snapshots[slug]
-        del self._snapshot_data[slug]
+        del self._backups[slug]
+        del self._backup_data[slug]
         return self._formatDataResponse("deleted")
 
-    async def _snapshotDetail(self, request: Request):
+    async def _backupDetail(self, request: Request):
         await self._verifyHeader(request)
         slug = request.match_info.get('slug')
-        if slug not in self._snapshots:
+        if slug not in self._backups:
             raise HTTPNotFound()
-        return self._formatDataResponse(self._snapshots[slug])
+        return self._formatDataResponse(self._backups[slug])
 
-    async def _snapshotDownload(self, request: Request):
+    async def _backupDownload(self, request: Request):
         await self._verifyHeader(request)
         slug = request.match_info.get('slug')
-        if slug not in self._snapshot_data:
+        if slug not in self._backup_data:
             raise HTTPNotFound()
-        return self.serve_bytes(request, self._snapshot_data[slug])
+        return self.serve_bytes(request, self._backup_data[slug])
 
     async def _selfInfo(self, request: Request):
         await self._verifyHeader(request)
@@ -360,10 +379,10 @@ class SimulatedSupervisor(BaseServer):
         self._notification = None
         return Response()
 
-    async def _debug_insert_snapshot(self, request: Request) -> bool:
+    async def _debug_insert_backup(self, request: Request) -> bool:
         days_back = int(request.query.get("days"))
         date = self._time.now() - timedelta(days=days_back)
-        name = date.strftime("Full Snapshot %Y-%m-%d %H:%M-%S")
+        name = date.strftime("Full Backup %Y-%m-%d %H:%M-%S")
         wait = int(request.query.get("wait", 0))
-        slug = await self._internalNewSnapshot(request, {'name': name, 'wait': wait}, date=date, verify_header=False)
+        slug = await self._internalNewBackup(request, {'name': name, 'wait': wait}, date=date, verify_header=False)
         return self._formatDataResponse({'slug': slug})

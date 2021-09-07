@@ -12,26 +12,26 @@ def test_validate_empty():
 
 
 def test_validate_int():
-    assert Config().validate({'max_snapshots_in_hassio': 5}) == defaultAnd(
-        {Setting.MAX_SNAPSHOTS_IN_HASSIO: 5})
-    assert Config().validate({'max_snapshots_in_hassio': 5.0}) == defaultAnd(
-        {Setting.MAX_SNAPSHOTS_IN_HASSIO: 5})
-    assert Config().validate({'max_snapshots_in_hassio': "5"}) == defaultAnd(
-        {Setting.MAX_SNAPSHOTS_IN_HASSIO: 5})
+    assert Config().validate({'max_backups_in_ha': 5}) == defaultAnd(
+        {Setting.MAX_BACKUPS_IN_HA: 5})
+    assert Config().validate({'max_backups_in_ha': 5.0}) == defaultAnd(
+        {Setting.MAX_BACKUPS_IN_HA: 5})
+    assert Config().validate({'max_backups_in_ha': "5"}) == defaultAnd(
+        {Setting.MAX_BACKUPS_IN_HA: 5})
 
     with raises(InvalidConfigurationValue):
-        Config().validate({'max_snapshots_in_hassio': -2})
+        Config().validate({'max_backups_in_ha': -2})
 
 
 def test_validate_float():
-    setting = Setting.DAYS_BETWEEN_SNAPSHOTS
+    setting = Setting.DAYS_BETWEEN_BACKUPS
     assert Config().validate({setting: 5}) == defaultAnd({setting: 5})
     assert Config().validate({setting.key(): 5}) == defaultAnd({setting: 5})
     assert Config().validate({setting: 5.0}) == defaultAnd({setting: 5})
     assert Config().validate({setting: "5"}) == defaultAnd({setting: 5})
 
     with raises(InvalidConfigurationValue):
-        Config().validate({'days_between_snapshots': -1})
+        Config().validate({'days_between_backups': -1})
 
 
 def test_validate_bool():
@@ -49,33 +49,33 @@ def test_validate_bool():
 
 
 def test_validate_string():
-    assert Config().validate({Setting.SNAPSHOT_NAME: True}) == defaultAnd({Setting.SNAPSHOT_NAME: "True"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: False}) == defaultAnd({Setting.SNAPSHOT_NAME: "False"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "true"}) == defaultAnd({Setting.SNAPSHOT_NAME: "true"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "false"}) == defaultAnd({Setting.SNAPSHOT_NAME: "false"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "1"}) == defaultAnd({Setting.SNAPSHOT_NAME: "1"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "0"}) == defaultAnd({Setting.SNAPSHOT_NAME: "0"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "yes"}) == defaultAnd({Setting.SNAPSHOT_NAME: "yes"})
-    assert Config().validate({Setting.SNAPSHOT_NAME: "no"}) == defaultAnd({Setting.SNAPSHOT_NAME: "no"})
+    assert Config().validate({Setting.BACKUP_NAME: True}) == defaultAnd({Setting.BACKUP_NAME: "True"})
+    assert Config().validate({Setting.BACKUP_NAME: False}) == defaultAnd({Setting.BACKUP_NAME: "False"})
+    assert Config().validate({Setting.BACKUP_NAME: "true"}) == defaultAnd({Setting.BACKUP_NAME: "true"})
+    assert Config().validate({Setting.BACKUP_NAME: "false"}) == defaultAnd({Setting.BACKUP_NAME: "false"})
+    assert Config().validate({Setting.BACKUP_NAME: "1"}) == defaultAnd({Setting.BACKUP_NAME: "1"})
+    assert Config().validate({Setting.BACKUP_NAME: "0"}) == defaultAnd({Setting.BACKUP_NAME: "0"})
+    assert Config().validate({Setting.BACKUP_NAME: "yes"}) == defaultAnd({Setting.BACKUP_NAME: "yes"})
+    assert Config().validate({Setting.BACKUP_NAME: "no"}) == defaultAnd({Setting.BACKUP_NAME: "no"})
 
 
 def test_validate_url():
-    assert Config().validate({Setting.HASSIO_URL: True}) == defaultAnd(
-        {Setting.HASSIO_URL: "True"})
-    assert Config().validate({Setting.HASSIO_URL: False}) == defaultAnd(
-        {Setting.HASSIO_URL: "False"})
-    assert Config().validate({Setting.HASSIO_URL: "true"}) == defaultAnd(
-        {Setting.HASSIO_URL: "true"})
-    assert Config().validate({Setting.HASSIO_URL: "false"}) == defaultAnd(
-        {Setting.HASSIO_URL: "false"})
-    assert Config().validate({Setting.HASSIO_URL: "1"}) == defaultAnd(
-        {Setting.HASSIO_URL: "1"})
-    assert Config().validate({Setting.HASSIO_URL: "0"}) == defaultAnd(
-        {Setting.HASSIO_URL: "0"})
-    assert Config().validate({Setting.HASSIO_URL: "yes"}) == defaultAnd(
-        {Setting.HASSIO_URL: "yes"})
-    assert Config().validate({Setting.HASSIO_URL: "no"}) == defaultAnd(
-        {Setting.HASSIO_URL: "no"})
+    assert Config().validate({Setting.SUPERVISOR_URL: True}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "True"})
+    assert Config().validate({Setting.SUPERVISOR_URL: False}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "False"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "true"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "true"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "false"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "false"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "1"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "1"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "0"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "0"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "yes"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "yes"})
+    assert Config().validate({Setting.SUPERVISOR_URL: "no"}) == defaultAnd(
+        {Setting.SUPERVISOR_URL: "no"})
 
 
 def test_validate_regex():
@@ -89,13 +89,12 @@ def test_validate_regex():
 
 def test_remove_ssl():
     assert Config().validate({Setting.USE_SSL: True}) == defaultAnd({Setting.USE_SSL: True})
-    assert Config().validate({Setting.USE_SSL: False}) == defaultAnd(
-        {Setting.USE_SSL: False})
+    assert Config().validate({Setting.USE_SSL: False}) == defaultAnd()
     assert Config().validate({
         Setting.USE_SSL: False,
         Setting.CERTFILE: "removed",
         Setting.KEYFILE: 'removed'
-    }) == defaultAnd({Setting.USE_SSL: False})
+    }) == defaultAnd()
     assert Config().validate({
         Setting.USE_SSL: True,
         Setting.CERTFILE: "kept",
@@ -122,18 +121,17 @@ def test_unrecognized_values_filter():
 
 def test_removes_defaults():
     assert Config().validate(
-        {Setting.SNAPSHOT_TIME_OF_DAY: ""}) == defaultAnd()
+        {Setting.BACKUP_TIME_OF_DAY: ""}) == defaultAnd()
 
 
 def defaultAnd(config={}):
     ret = {
-        Setting.DAYS_BETWEEN_SNAPSHOTS: 3,
-        Setting.MAX_SNAPSHOTS_IN_HASSIO: 4,
-        Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: 4,
-        Setting.USE_SSL: False
+        Setting.DAYS_BETWEEN_BACKUPS: 3,
+        Setting.MAX_BACKUPS_IN_HA: 4,
+        Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: 4
     }
     ret.update(config)
-    return ret
+    return (ret, False)
 
 
 def test_GenerationalConfig() -> None:
@@ -166,6 +164,61 @@ def test_from_environment():
 
     os.environ["port"] = str(1000)
     assert Config.fromEnvironment().get(Setting.PORT) == 1000
+
+
+def test_config_upgrade():
+    # Test specifying one value
+    config = Config()
+    config.update({Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "00:01"})
+    assert (config.getAllConfig(), False) == defaultAnd({
+        Setting.BACKUP_TIME_OF_DAY: "00:01",
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })
+    assert config.mustSaveUpgradeChanges()
+
+    # Test specifying multiple values
+    config = Config()
+    config.update({
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE: 21,
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 20,
+        Setting.DEPRECATED_BACKUP_PASSWORD: "boop"
+    })
+    assert config.getAllConfig() == defaultAnd({
+        Setting.MAX_BACKUPS_IN_HA: 20,
+        Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: 21,
+        Setting.BACKUP_PASSWORD: "boop",
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })[0]
+    assert config.mustSaveUpgradeChanges()
+
+    # test specifying value that don't get upgraded
+    config = Config()
+    config.update({Setting.EXCLUDE_ADDONS: "test"})
+    assert config.getAllConfig() == defaultAnd({
+        Setting.EXCLUDE_ADDONS: "test"
+    })[0]
+    assert not config.mustSaveUpgradeChanges()
+
+    # Test specifying both
+    config = Config()
+    config.update({
+        Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "00:01",
+        Setting.EXCLUDE_ADDONS: "test"
+    })
+    assert config.getAllConfig() == defaultAnd({
+        Setting.BACKUP_TIME_OF_DAY: "00:01",
+        Setting.EXCLUDE_ADDONS: "test",
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })[0]
+    assert config.mustSaveUpgradeChanges()
+
+
+def test_empty_colors():
+    # Test specifying one value
+    config = Config()
+    config.update({Setting.BACKGROUND_COLOR: "", Setting.ACCENT_COLOR: ""})
+    assert config.get(Setting.BACKGROUND_COLOR) == Setting.BACKGROUND_COLOR.default()
+    assert config.get(Setting.ACCENT_COLOR) == Setting.ACCENT_COLOR.default()
 
 
 def getGenConfig(update):

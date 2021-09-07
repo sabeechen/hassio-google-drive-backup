@@ -3,6 +3,7 @@ import os
 import os.path
 import uuid
 from typing import Any, Dict, List, Optional
+from yarl import URL
 
 from .settings import _LOOKUP, Setting, _VALIDATORS
 from ..logger import getLogger
@@ -10,10 +11,9 @@ from ..logger import getLogger
 logger = getLogger(__name__)
 
 ALWAYS_KEEP = {
-    Setting.DAYS_BETWEEN_SNAPSHOTS,
-    Setting.MAX_SNAPSHOTS_IN_HASSIO,
-    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE,
-    Setting.USE_SSL
+    Setting.DAYS_BETWEEN_BACKUPS,
+    Setting.MAX_BACKUPS_IN_HA,
+    Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE,
 }
 
 KEEP_DEFAULT = {
@@ -30,16 +30,34 @@ SERVER_OPTIONS = {
 }
 
 NON_UI_SETTING = {
-    Setting.HASSIO_URL,
-    Setting.AUTHENTICATE_URL,
+    Setting.SUPERVISOR_URL,
+    Setting.TOKEN_SERVER_HOSTS,
     Setting.DRIVE_AUTHORIZE_URL,
-    Setting.AUTHENTICATE_URL,
-    Setting.REFRESH_URL,
-    Setting.CHOOSE_FOLDER_URL,
     Setting.DEFAULT_DRIVE_CLIENT_ID,
-    Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS,
+    Setting.NEW_BACKUP_TIMEOUT_SECONDS,
     Setting.LOG_LEVEL,
     Setting.CONSOLE_LOG_LEVEL
+}
+
+UPGRADE_OPTIONS = {
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: Setting.MAX_BACKUPS_IN_HA,
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE: Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE,
+    Setting.DEPRECATED_DAYS_BETWEEN_BACKUPS: Setting.DAYS_BETWEEN_BACKUPS,
+    Setting.DEPRECTAED_IGNORE_OTHER_BACKUPS: Setting.IGNORE_OTHER_BACKUPS,
+    Setting.DEPRECTAED_IGNORE_UPGRADE_BACKUPS: Setting.IGNORE_UPGRADE_BACKUPS,
+    Setting.DEPRECTAED_DELETE_BEFORE_NEW_BACKUP: Setting.DELETE_BEFORE_NEW_BACKUP,
+    Setting.DEPRECTAED_BACKUP_NAME: Setting.BACKUP_NAME,
+    Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: Setting.BACKUP_TIME_OF_DAY,
+    Setting.DEPRECTAED_SPECIFY_BACKUP_FOLDER: Setting.SPECIFY_BACKUP_FOLDER,
+    Setting.DEPRECTAED_NOTIFY_FOR_STALE_BACKUPS: Setting.NOTIFY_FOR_STALE_BACKUPS,
+    Setting.DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR: Setting.ENABLE_BACKUP_STALE_SENSOR,
+    Setting.DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR: Setting.ENABLE_BACKUP_STATE_SENSOR,
+    Setting.DEPRECATED_BACKUP_PASSWORD: Setting.BACKUP_PASSWORD
+}
+
+EMPTY_IS_DEFAULT = {
+    Setting.ACCENT_COLOR,
+    Setting.BACKGROUND_COLOR,
 }
 
 
@@ -53,6 +71,7 @@ class GenConfig():
         self.day_of_month = day_of_month
         self.day_of_year = day_of_year
         self.aggressive = aggressive
+        self._config_was_upgraded = False
 
     def __eq__(self, other):
         """Overrides the default implementation"""
@@ -109,20 +128,25 @@ class Config():
         self.retained = self._loadRetained()
         self._gen_config_cache = self.getGenerationalConfig()
 
+        # Tracks when hosts have been seen to be offline to retry on different hosts.
+        self._commFailure = {}
+
     def getConfigFor(self, options):
         new_config = Config()
         new_config.overrides = self.overrides.copy()
-        new_config.update(self.validate(options))
+        new_config.update(options)
         return new_config
 
     def validateUpdate(self, additions):
         new_config = self.config.copy()
         new_config.update(additions)
-        return self.validate(new_config)
+        validated, upgraded = self.validate(new_config)
+        return validated
 
     def validate(self, new_config) -> Dict[str, Any]:
         final_config = {}
 
+        upgraded = False
         # validate each item
         for key in new_config:
             if type(key) == str:
@@ -134,12 +158,23 @@ class Config():
                 setting = key
 
             value = setting.validator().validate(new_config[key])
+            if setting in UPGRADE_OPTIONS:
+                upgraded = True
+            if isinstance(value, str) and len(value) == 0 and setting in EMPTY_IS_DEFAULT:
+                value = setting.default()
             if value is not None and (setting in KEEP_DEFAULT or value != setting.default()):
-                final_config[setting] = value
+                if setting in UPGRADE_OPTIONS and UPGRADE_OPTIONS[setting] not in new_config:
+                    upgraded = True
+                    final_config[UPGRADE_OPTIONS[setting]] = value
+                else:
+                    final_config[setting] = value
+
+        if upgraded:
+            final_config[Setting.CALL_BACKUP_SNAPSHOT] = True
 
         # add in non-ui settings
         for setting in NON_UI_SETTING:
-            if self.get(setting) != setting.default() and not (setting in new_config or setting.key in new_config):
+            if self.get(setting) != setting.default() and not (setting in new_config or setting.key in new_config) and setting not in self.overrides:
                 final_config[setting] = self.get(setting)
 
         # add defaults
@@ -152,10 +187,12 @@ class Config():
                 if key in final_config:
                     del final_config[key]
 
-        return final_config
+        return final_config, upgraded
 
     def update(self, new_config):
-        self.config = self.validate(new_config)
+        validated, upgraded = self.validate(new_config)
+        self._config_was_upgraded = upgraded
+        self.config = validated
         self._gen_config_cache = self.getGenerationalConfig()
         for sub in self._subscriptions:
             sub()
@@ -168,24 +205,6 @@ class Config():
 
     def subscribe(self, func):
         self._subscriptions.append(func)
-
-    def warnExposeIngressUpgrade(self):
-        return False
-
-    def warnIngress(self):
-        return False
-
-    def driveHost(self) -> str:
-        return self.get(Setting.DRIVE_URL)
-
-    def alternateDnsServers(self) -> str:
-        return str(self.config['alternate_dns_servers'])
-
-    def driveIpv4(self) -> str:
-        return str(self.config['drive_ipv4'])
-
-    def ignoreIpv6(self) -> bool:
-        return bool(self.config['ignore_ipv6_addresses'])
 
     def clientIdentifier(self) -> str:
         if self._clientIdentifier is None:
@@ -219,7 +238,7 @@ class Config():
             aggressive=self.get(Setting.GENERATIONAL_DELETE_EARLY)
         )
         if base.days <= 1:
-            # must always be >= 1, otherwise we'll just create and delete snapshots constantly.
+            # must always be >= 1, otherwise we'll just create and delete backups constantly.
             base.days = 1
         return base
 
@@ -229,7 +248,7 @@ class Config():
                 try:
                     return json.load(f)['retained']
                 except json.JSONDecodeError:
-                    logger.error("Unable to parse retained snapshot settings")
+                    logger.error("Unable to parse retained backup settings")
                     return []
         return []
 
@@ -254,7 +273,6 @@ class Config():
         return setting in self.config
 
     def override(self, setting: Setting, value):
-        self.config[setting] = value
         self.overrides[setting] = value
         return self
 
@@ -270,3 +288,15 @@ class Config():
 
     def getForUi(self, setting: Setting):
         return _VALIDATORS[setting].formatForUi(self.get(setting))
+
+    def getTokenServers(self, path: str = "") -> List[URL]:
+        return list(map(lambda s: URL(s).with_path(path), self.get(Setting.TOKEN_SERVER_HOSTS).split(",")))
+
+    def mustSaveUpgradeChanges(self):
+        return self._config_was_upgraded
+
+    def getAllConfig(self) -> Dict[Setting, Any]:
+        return self.config.copy()
+
+    def persistedChanges(self):
+        self._config_was_upgraded = False

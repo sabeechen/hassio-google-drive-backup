@@ -138,18 +138,16 @@ def event_loop():
 
 
 @pytest.fixture
-async def generate_config(server_url, ports, cleandir):
+async def generate_config(server_url: URL, ports, cleandir):
     return Config.withOverrides({
-        Setting.DRIVE_URL: server_url,
-        Setting.HASSIO_URL: server_url + "/",
-        Setting.HOME_ASSISTANT_URL: server_url + "/core/api/",
-        Setting.AUTHENTICATE_URL: server_url + "/drive/authorize",
-        Setting.DRIVE_REFRESH_URL: server_url + "/oauth2/v4/token",
-        Setting.DRIVE_AUTHORIZE_URL: server_url + "/o/oauth2/v2/auth",
-        Setting.DRIVE_TOKEN_URL: server_url + "/token",
-        Setting.REFRESH_URL: server_url + "/drive/refresh",
-        Setting.ERROR_REPORT_URL: server_url + "/logerror",
-        Setting.HASSIO_TOKEN: "test_header",
+        Setting.DRIVE_URL: str(server_url),
+        Setting.SUPERVISOR_URL: str(server_url) + "/",
+        Setting.AUTHORIZATION_HOST: str(server_url),
+        Setting.TOKEN_SERVER_HOSTS: str(server_url),
+        Setting.DRIVE_REFRESH_URL: str(server_url.with_path("/oauth2/v4/token")),
+        Setting.DRIVE_AUTHORIZE_URL: str(server_url.with_path("/o/oauth2/v2/auth")),
+        Setting.DRIVE_TOKEN_URL: str(server_url.with_path("/token")),
+        Setting.SUPERVISOR_TOKEN: "test_header",
         Setting.SECRETS_FILE_PATH: "secrets.yaml",
         Setting.CREDENTIALS_FILE_PATH: "credentials.dat",
         Setting.FOLDER_FILE_PATH: "folder.dat",
@@ -163,7 +161,7 @@ async def generate_config(server_url, ports, cleandir):
         Setting.BACKUP_DIRECTORY_PATH: cleandir,
         Setting.PORT: ports.ui,
         Setting.INGRESS_PORT: ports.ingress,
-        Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 0,
+        Setting.BACKUP_STARTUP_DELAY_MINUTES: 0,
     })
 
 
@@ -195,7 +193,7 @@ def reader(server, ui_server, session, ui_port, ingress_port):
 
 @pytest.fixture
 async def uploader(injector: Injector, server_url):
-    return injector.get(ClassAssistedBuilder[Uploader]).build(host=server_url)
+    return injector.get(ClassAssistedBuilder[Uploader]).build(host=str(server_url))
 
 
 @pytest.fixture
@@ -241,10 +239,10 @@ async def session(injector):
 
 
 @pytest.fixture
-async def snapshot(coord, source, dest):
+async def backup(coord, source, dest):
     await coord.sync()
-    assert len(coord.snapshots()) == 1
-    return coord.snapshots()[0]
+    assert len(coord.backups()) == 1
+    return coord.backups()[0]
 
 
 @pytest.fixture
@@ -277,7 +275,7 @@ async def global_info(injector):
 
 @pytest.fixture
 async def server_url(port):
-    return "http://localhost:" + str(port)
+    return URL("http://localhost:").with_port(port)
 
 
 @pytest.fixture

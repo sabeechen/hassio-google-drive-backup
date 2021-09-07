@@ -1,4 +1,3 @@
-authenticate_url: "https://dev.habackup.io/drive/authorize"
-refresh_url: "https://dev.habackup.io/drive/refresh"
-choose_folder_url: "https://dev.habackup.io/drive/picker"
+authorization_host: "https://dev.habackup.io"
+token_server_hosts: "https://token1.dev.habackup.io,https://dev.habackup.io"
 default_drive_client_id: "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com"

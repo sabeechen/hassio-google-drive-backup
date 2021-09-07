@@ -1,13 +1,13 @@
 from datetime import timedelta
 from enum import Enum, unique
 from backup.config import Config, Setting, VERSION, Version
+from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME
 from injector import inject, singleton
 from ..time import Time
 from typing import Dict
 import json
 import os
 
-KEY_SNPASHOTS = "snapshots"
 KEY_I_MADE_THIS = "i_made_this"
 KEY_PENDING = "pending"
 KEY_CREATED = "created"
@@ -16,13 +16,15 @@ KEY_LAST_SEEN = "last_seen"
 KEY_NAME = "name"
 KEY_LAST_VERSION = "last_verison"
 KEY_UPGRADES = "upgrades"
+KEY_FLAGS = "flags"
 
 CACHE_EXPIRATION_DAYS = 30
 
 
 @unique
 class UpgradeFlags(Enum):
-    DONT_IGNORE_LEGACY_SNAPSHOTS = "include_legacy_snapshots",
+    NOTIFIED_ABOUT_BACKUP_RENAME = "notified_backup_rename"
+    TESTING_FLAG = "testing_flag"
 
 
 @singleton
@@ -39,7 +41,7 @@ class DataCache:
 
     def _load(self):
         if not os.path.isfile(self._config.get(Setting.DATA_CACHE_FILE_PATH)):
-            self._data = {KEY_SNPASHOTS: {}}
+            self._data = {NECESSARY_OLD_BACKUP_PLURAL_NAME: {}}
         else:
             with open(self._config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
                 self._data = json.load(f)
@@ -60,9 +62,6 @@ class DataCache:
             self.makeDirty()
             self.saveIfDirty()
 
-        if self.previousVersion == Version.default() and self.currentVersion > Version.parse("0.103"):
-            self._flags.add(UpgradeFlags.DONT_IGNORE_LEGACY_SNAPSHOTS)
-
     def save(self, data=None):
         if data is None:
             data = self._data
@@ -78,23 +77,23 @@ class DataCache:
         return self._dirty
 
     @property
-    def snapshots(self) -> Dict[str, Dict[str, str]]:
-        if "snapshots" not in self._data:
-            self._data["snapshots"] = {}
-        return self._data["snapshots"]
+    def backups(self) -> Dict[str, Dict[str, str]]:
+        if NECESSARY_OLD_BACKUP_PLURAL_NAME not in self._data:
+            self._data[NECESSARY_OLD_BACKUP_PLURAL_NAME] = {}
+        return self._data[NECESSARY_OLD_BACKUP_PLURAL_NAME]
 
-    def snapshot(self, slug) -> Dict[str, str]:
-        if slug not in self.snapshots:
-            self.snapshots[slug] = {}
-        return self.snapshots[slug]
+    def backup(self, slug) -> Dict[str, str]:
+        if slug not in self.backups:
+            self.backups[slug] = {}
+        return self.backups[slug]
 
     def saveIfDirty(self):
         if self._dirty:
             # See if we need to remove any old entries
-            for slug in list(self.snapshots.keys()):
-                data = self.snapshots[slug].get(KEY_LAST_SEEN)
+            for slug in list(self.backups.keys()):
+                data = self.backups[slug].get(KEY_LAST_SEEN)
                 if data is not None and self._time.now() > self._time.parse(data) + timedelta(days=CACHE_EXPIRATION_DAYS):
-                    del self.snapshots[slug]
+                    del self.backups[slug]
             self.save()
 
     @property
@@ -106,7 +105,13 @@ class DataCache:
         return Version.parse(VERSION)
 
     def checkFlag(self, flag: UpgradeFlags):
-        return flag in self._flags
+        return flag.value in self._data.get(KEY_FLAGS, [])
+
+    def addFlag(self, flag: UpgradeFlags):
+        all_flags = set(self._data.get(KEY_FLAGS, []))
+        all_flags.add(flag.value)
+        self._data[KEY_FLAGS] = list(all_flags)
+        self.makeDirty()
 
     def getUpgradeTime(self, version: Version):
         for upgrade in self._data[KEY_UPGRADES]:

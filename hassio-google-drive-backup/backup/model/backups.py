@@ -9,20 +9,17 @@ from ..logger import getLogger
 
 logger = getLogger(__name__)
 
-PROP_KEY_SLUG = "snapshot_slug"
-PROP_KEY_DATE = "snapshot_date"
-PROP_KEY_NAME = "snapshot_name"
 PROP_TYPE = "type"
 PROP_VERSION = "version"
 PROP_PROTECTED = "protected"
 PROP_RETAINED = "retained"
 
-DRIVE_KEY_TEXT = "Google Drive's snapshot metadata"
-HA_KEY_TEXT = "Home Assistant's snapshot metadata"
+DRIVE_KEY_TEXT = "Google Drive's backup metadata"
+HA_KEY_TEXT = "Home Assistant's backup metadata"
 
 
-class AbstractSnapshot():
-    def __init__(self, name: str, slug: str, source: str, date: str, size: int, version: str, snapshotType: str, protected: bool, retained: bool = False, uploadable: bool = False, details={}):
+class AbstractBackup():
+    def __init__(self, name: str, slug: str, source: str, date: str, size: int, version: str, backupType: str, protected: bool, retained: bool = False, uploadable: bool = False, details={}):
         self._options = None
         self._name = name
         self._slug = slug
@@ -33,7 +30,7 @@ class AbstractSnapshot():
         self._uploadable = uploadable
         self._details = details
         self._version = version
-        self._snapshotType = snapshotType
+        self._backupType = backupType
         self._protected = protected
         self._ignore = False
 
@@ -70,8 +67,8 @@ class AbstractSnapshot():
     def version(self):
         return self._version
 
-    def snapshotType(self):
-        return self._snapshotType
+    def backupType(self):
+        return self._backupType
 
     def protected(self):
         return self._protected
@@ -104,14 +101,14 @@ class AbstractSnapshot():
         self._ignore = ignore
 
 
-class Snapshot(object):
+class Backup(object):
     """
-    Represents a Home Assistant snapshot stored on Google Drive, locally in
-    Home Assistant, or a pending snapshot we expect to see show up later
+    Represents a Home Assistant backup stored on Google Drive, locally in
+    Home Assistant, or a pending backup we expect to see show up later
     """
 
-    def __init__(self, snapshot: Optional[AbstractSnapshot] = None):
-        self.sources: Dict[str, AbstractSnapshot] = {}
+    def __init__(self, backup: Optional[AbstractBackup] = None):
+        self.sources: Dict[str, AbstractBackup] = {}
         self._purgeNext: Dict[str, bool] = {}
         self._options = None
         self._status_override = None
@@ -120,8 +117,8 @@ class Snapshot(object):
         self._upload_source = None
         self._upload_source_name = None
         self._upload_fail_info = None
-        if snapshot is not None:
-            self.addSource(snapshot)
+        if backup is not None:
+            self.addSource(backup)
 
     def setOptions(self, options):
         self._options = options
@@ -132,10 +129,10 @@ class Snapshot(object):
     def updatePurge(self, source: str, purge: bool):
         self._purgeNext[source] = purge
 
-    def addSource(self, snapshot: AbstractSnapshot):
-        self.sources[snapshot.source()] = snapshot
-        if snapshot.getOptions() and not self.getOptions():
-            self.setOptions(snapshot.getOptions())
+    def addSource(self, backup: AbstractBackup):
+        self.sources[backup.source()] = backup
+        if backup.getOptions() and not self.getOptions():
+            self.setOptions(backup.getOptions())
 
     def getStatusDetail(self):
         return self._state_detail
@@ -166,40 +163,40 @@ class Snapshot(object):
         return self.sources.get(source, None)
 
     def name(self):
-        for snapshot in self.sources.values():
-            return snapshot.name()
+        for backup in self.sources.values():
+            return backup.name()
         return "error"
 
     def slug(self) -> str:
-        for snapshot in self.sources.values():
-            return snapshot.slug()
+        for backup in self.sources.values():
+            return backup.slug()
         return "error"
 
     def size(self) -> int:
-        for snapshot in self.sources.values():
-            return snapshot.size()
+        for backup in self.sources.values():
+            return backup.size()
         return 0
 
     def sizeInt(self) -> int:
-        for snapshot in self.sources.values():
-            return snapshot.sizeInt()
+        for backup in self.sources.values():
+            return backup.sizeInt()
         return 0
 
-    def snapshotType(self) -> str:
-        for snapshot in self.sources.values():
-            return snapshot.snapshotType()
+    def backupType(self) -> str:
+        for backup in self.sources.values():
+            return backup.backupType()
         return "error"
 
     def version(self) -> str:
-        for snapshot in self.sources.values():
-            if snapshot.version() is not None:
-                return snapshot.version()
+        for backup in self.sources.values():
+            if backup.version() is not None:
+                return backup.version()
         return None
 
     def details(self):
-        for snapshot in self.sources.values():
-            if snapshot.details() is not None:
-                return snapshot.details()
+        for backup in self.sources.values():
+            if backup.details() is not None:
+                return backup.details()
         return {}
 
     def getUploadInfo(self, time):
@@ -218,19 +215,19 @@ class Snapshot(object):
         return ret
 
     def protected(self) -> bool:
-        for snapshot in self.sources.values():
-            return snapshot.protected()
+        for backup in self.sources.values():
+            return backup.protected()
         return False
 
     def ignore(self) -> bool:
-        for snapshot in self.sources.values():
-            if not snapshot.ignore():
+        for backup in self.sources.values():
+            if not backup.ignore():
                 return False
         return True
 
     def date(self) -> datetime:
-        for snapshot in self.sources.values():
-            return snapshot.date()
+        for backup in self.sources.values():
+            return backup.date()
         return datetime.now(tzutc())
 
     def sizeString(self) -> str:
@@ -244,8 +241,8 @@ class Snapshot(object):
         if self._status_override is not None:
             return self._status_override.format(*self._status_override_args)
 
-        for snapshot in self.sources.values():
-            status = snapshot.status()
+        for backup in self.sources.values():
+            status = backup.status()
             if status:
                 return status
 

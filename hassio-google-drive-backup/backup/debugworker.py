@@ -3,7 +3,7 @@ import socket
 import subprocess
 from datetime import datetime, timedelta
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from injector import inject, singleton
 
 from backup.config import Config, Setting, VERSION, _DEFAULTS, PRIVATE
@@ -14,6 +14,7 @@ from backup.worker import Worker
 from backup.logger import getLogger, getHistory
 from backup.ha import HaRequests, HaSource
 from backup.model import Coordinator
+from yarl import URL
 
 logger = getLogger(__name__)
 ERROR_LOG_LENGTH = 30
@@ -36,18 +37,46 @@ class DebugWorker(Worker):
 
         self.last_sent_error = None
         self.last_sent_error_time = None
+        self._health = None
         self.resolver = resolver
         self.session = session
+        self._last_server_check = None
+        self._last_server_refresh = timedelta(days=1)
 
     async def doWork(self):
         if not self.last_dns_update or self.time.now() > self.last_dns_update + timedelta(hours=12):
             await self.updateDns()
+        if not self._last_server_check or self.time.now() > self._last_server_check + self._last_server_refresh:
+            await self.updateHealthCheck()
         if self.config.get(Setting.SEND_ERROR_REPORTS):
             try:
                 await self.maybeSendErrorReport()
             except Exception:
-                # just eat the error
                 pass
+
+    # Once per day, query the health endpoint of the token server to see who is up.
+    # This checks for broadcast messages for all users and also finds which token
+    # servers are available.
+    async def updateHealthCheck(self):
+        headers = {
+            'client': self.config.clientIdentifier(),
+            'addon_version': VERSION
+        }
+        self._last_server_check = self.time.now()
+        for host in self.config.getTokenServers():
+            url = host.with_path("/health")
+            try:
+                async with self.session.get(url, headers=headers, timeout=ClientTimeout(total=10)) as resp:
+                    resp.raise_for_status()
+                    self._health = await resp.json()
+                    self._last_server_refresh = timedelta(days=1)
+                    return
+            except:  # noqa: E722
+                # ignore any error and just try a different endpoint
+                pass
+
+        # no good token host could be found, so reset it to the default and check again sooner.
+        self._last_server_refresh = timedelta(minutes=1)
 
     async def maybeSendErrorReport(self):
         error = self._info._last_error
@@ -68,7 +97,8 @@ class DebugWorker(Worker):
                 'client': self.config.clientIdentifier(),
                 'addon_version': VERSION
             }
-            async with self.session.post(self.config.get(Setting.ERROR_REPORT_URL), headers=headers, json=package):
+            url = URL(self.config.get(Setting.AUTHORIZATION_HOST)).with_path("/logerror")
+            async with self.session.post(url, headers=headers, json=package):
                 pass
 
     async def updateDns(self):
@@ -122,7 +152,7 @@ class DebugWorker(Worker):
             report["arch"] = "Uninitialized"
             report["timezone"] = "Uninitialized"
             report["ha_version"] = "Uninitialized"
-        report["snapshots"] = self.coord.buildSnapshotMetrics()
+        report["backups"] = self.coord.buildBackupMetrics()
         return report
 
     async def buildBugReportData(self, error):

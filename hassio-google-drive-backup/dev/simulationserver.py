@@ -57,11 +57,11 @@ class SimulationServer(BaseServer):
                 return True
         return False
 
-    def blockSnapshots(self):
-        self.block_snapshots = True
+    def blockBackups(self):
+        self.block_backups = True
 
-    def unBlockSnapshots(self):
-        self.block_snapshots = False
+    def unBlockBackups(self):
+        self.block_backups = False
 
     async def uploadfile(self, request: Request):
         name: str = str(request.query.get("name", "test"))
@@ -131,7 +131,8 @@ class SimServerModule(BaseModule):
     def getConfig(self) -> Config:
         return Config.withOverrides({
             Setting.DRIVE_AUTHORIZE_URL: str(self._base_url.with_path("o/oauth2/v2/auth")),
-            Setting.AUTHENTICATE_URL: str(self._base_url.with_path("drive/authorize")),
+            Setting.AUTHORIZATION_HOST: str(self._base_url),
+            Setting.TOKEN_SERVER_HOSTS: str(self._base_url),
             Setting.DRIVE_TOKEN_URL: str(self._base_url.with_path("token")),
             Setting.DRIVE_REFRESH_URL: str(self._base_url.with_path("oauth2/v4/token")),
             Setting.INGRESS_PORT: 56152

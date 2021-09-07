@@ -29,6 +29,19 @@ def test_parse():
 
 def test_parse_staging():
     assert Version.parse("1.0.staging.1") == Version(1, 0, 1)
-    assert Version.parse("1.0.staging.1").staging == True
+    assert Version.parse("1.0.staging.1").staging
     assert Version.parse("1.0.staging.1") > Version(1.0)
     assert Version.parse("1.2.3") == Version(1, 2, 3)
+
+
+def test_junk_strings():
+    assert Version.parse("1-.2.3.1") == Version(1, 2, 3, 1)
+    assert Version.parse("ignore-1.2.3.1") == Version(1, 2, 3, 1)
+    assert Version.parse("1.2.ignore.this.text.3.and...andhere.too.1") == Version(1, 2, 3, 1)
+
+
+def test_broken_versions():
+    assert Version.parse("") == Version.default()
+    assert Version.parse(".") == Version.default()
+    assert Version.parse("empty") == Version.default()
+    assert Version.parse("no.version.here") == Version.default()

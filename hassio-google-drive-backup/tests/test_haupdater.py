@@ -1,3 +1,4 @@
+from backup.model.backups import Backup
 import pytest
 
 from backup.util import GlobalInfo
@@ -12,10 +13,9 @@ from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_CORE_API
 from dev.request_interceptor import RequestInterceptor
 from backup.model import Coordinator
 from backup.config import Config, Setting
-from backup.time import Time
 
 STALE_ATTRIBUTES = {
-    "friendly_name": "Snapshots Stale",
+    "friendly_name": "Backups Stale",
     "device_class": "problem"
 }
 
@@ -35,15 +35,15 @@ async def test_init(updater: HaUpdater, global_info, supervisor: SimulatedSuperv
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
-    verifyEntity(supervisor, "binary_sensor.snapshots_stale",
+    verifyEntity(supervisor, "binary_sensor.backups_stale",
                  "off", STALE_ATTRIBUTES)
-    verifyEntity(supervisor, "sensor.snapshot_backup", "waiting", {
-        'friendly_name': 'Snapshot State',
-        'last_snapshot': 'Never',
-        'snapshots': [],
-        'snapshots_in_google_drive': 0,
-        'snapshots_in_hassio': 0,
-        'snapshots_in_home_assistant': 0,
+    verifyEntity(supervisor, "sensor.backup_state", "waiting", {
+        'friendly_name': 'Backup State',
+        'last_backup': 'Never',
+        'last_uploaded': 'Never',
+        'backups': [],
+        'backups_in_google_drive': 0,
+        'backups_in_home_assistant': 0,
         'size_in_google_drive': "0.0 B",
         'size_in_home_assistant': '0.0 B'
     })
@@ -70,7 +70,7 @@ async def test_init_failure(updater: HaUpdater, global_info: GlobalInfo, time: F
     assert updater._state() == "error"
     await updater.update()
     assert supervisor.getNotification() == {
-        'message': 'The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on status page for details.',
+        'message': 'The add-on is having trouble making backups and needs attention.  Please visit the add-on status page for details.',
         'title': 'Home Assistant Google Drive Backup is Having Trouble',
         'notification_id': 'backup_broken'
     }
@@ -112,47 +112,47 @@ async def test_failure_backoff_other(updater: HaUpdater, server, time: FakeTime,
 
 
 @pytest.mark.asyncio
-async def test_update_snapshots(updater: HaUpdater, server, time: FakeTime, supervisor: SimulatedSupervisor):
+async def test_update_backups(updater: HaUpdater, server, time: FakeTime, supervisor: SimulatedSupervisor):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
-    verifyEntity(supervisor, "binary_sensor.snapshots_stale",
+    verifyEntity(supervisor, "binary_sensor.backups_stale",
                  "off", STALE_ATTRIBUTES)
-    verifyEntity(supervisor, "sensor.snapshot_backup", "waiting", {
-        'friendly_name': 'Snapshot State',
-        'last_snapshot': 'Never',
-        'snapshots': [],
-        'snapshots_in_google_drive': 0,
-        'snapshots_in_hassio': 0,
-        'snapshots_in_home_assistant': 0,
+    verifyEntity(supervisor, "sensor.backup_state", "waiting", {
+        'friendly_name': 'Backup State',
+        'last_backup': 'Never',
+        'last_uploaded': 'Never',
+        'backups': [],
+        'backups_in_google_drive': 0,
+        'backups_in_home_assistant': 0,
         'size_in_home_assistant': "0.0 B",
         'size_in_google_drive': "0.0 B"
     })
 
 
 @pytest.mark.asyncio
-async def test_update_snapshots_sync(updater: HaUpdater, server, time: FakeTime, snapshot, supervisor: SimulatedSupervisor):
+async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, backup, supervisor: SimulatedSupervisor):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "backed_up"
-    verifyEntity(supervisor, "binary_sensor.snapshots_stale",
+    verifyEntity(supervisor, "binary_sensor.backups_stale",
                  "off", STALE_ATTRIBUTES)
     date = '1985-12-06T05:00:00+00:00'
-    verifyEntity(supervisor, "sensor.snapshot_backup", "backed_up", {
-        'friendly_name': 'Snapshot State',
-        'last_snapshot': date,
-        'snapshots': [{
+    verifyEntity(supervisor, "sensor.backup_state", "backed_up", {
+        'friendly_name': 'Backup State',
+        'last_backup': date,
+        'last_uploaded': date,
+        'backups': [{
             'date': date,
-            'name': snapshot.name(),
-            'size': snapshot.sizeString(),
-            'state': snapshot.status()
+            'name': backup.name(),
+            'size': backup.sizeString(),
+            'state': backup.status()
         }
         ],
-        'snapshots_in_google_drive': 1,
-        'snapshots_in_hassio': 1,
-        'snapshots_in_home_assistant': 1,
-        'size_in_home_assistant': Estimator.asSizeString(snapshot.size()),
-        'size_in_google_drive': Estimator.asSizeString(snapshot.size())
+        'backups_in_google_drive': 1,
+        'backups_in_home_assistant': 1,
+        'size_in_home_assistant': Estimator.asSizeString(backup.size()),
+        'size_in_google_drive': Estimator.asSizeString(backup.size())
     })
 
 
@@ -161,15 +161,15 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
-    verifyEntity(supervisor, "binary_sensor.snapshots_stale",
+    verifyEntity(supervisor, "binary_sensor.backups_stale",
                  "off", STALE_ATTRIBUTES)
-    verifyEntity(supervisor, "sensor.snapshot_backup", "waiting", {
-        'friendly_name': 'Snapshot State',
-        'last_snapshot': 'Never',
-        'snapshots': [],
-        'snapshots_in_google_drive': 0,
-        'snapshots_in_hassio': 0,
-        'snapshots_in_home_assistant': 0,
+    verifyEntity(supervisor, "sensor.backup_state", "waiting", {
+        'friendly_name': 'Backup State',
+        'last_backup': 'Never',
+        'last_uploaded': 'Never',
+        'backups': [],
+        'backups_in_google_drive': 0,
+        'backups_in_home_assistant': 0,
         'size_in_home_assistant': "0.0 B",
         'size_in_google_drive': "0.0 B"
     })
@@ -180,7 +180,7 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     time.advanceDay()
     await updater.update()
     assert supervisor.getNotification() == {
-        'message': 'The add-on is having trouble backing up your snapshots and needs attention.  Please visit the add-on [status page](http://localhost/test) for details.',
+        'message': 'The add-on is having trouble making backups and needs attention.  Please visit the add-on [status page](http://localhost/test) for details.',
         'title': 'Home Assistant Google Drive Backup is Having Trouble',
         'notification_id': 'backup_broken'
     }
@@ -252,38 +252,68 @@ async def test_failure_logging(updater: HaUpdater, server, time: FakeTime, inter
 
 
 @pytest.mark.asyncio
-async def test_publish_retries(updater: HaUpdater, server: SimulationServer, time: FakeTime, snapshot, drive, supervisor: SimulatedSupervisor):
+async def test_publish_retries(updater: HaUpdater, server: SimulationServer, time: FakeTime, backup, drive, supervisor: SimulatedSupervisor):
     await updater.update()
-    assert supervisor.getEntity("sensor.snapshot_backup") is not None
+    assert supervisor.getEntity("sensor.backup_state") is not None
 
     # Shoudlnt update after 59 minutes
     supervisor.clearEntities()
     time.advance(minutes=59)
     await updater.update()
-    assert supervisor.getEntity("sensor.snapshot_backup") is None
+    assert supervisor.getEntity("sensor.backup_state") is None
 
     # after that it should
     supervisor.clearEntities()
     time.advance(minutes=2)
     await updater.update()
-    assert supervisor.getEntity("sensor.snapshot_backup") is not None
+    assert supervisor.getEntity("sensor.backup_state") is not None
 
     supervisor.clearEntities()
-    await drive.delete(snapshot)
+    await drive.delete(backup)
     await updater.update()
-    assert supervisor.getEntity("sensor.snapshot_backup") is not None
+    assert supervisor.getEntity("sensor.backup_state") is not None
 
 
 @pytest.mark.asyncio
-async def test_ignored_snapshots(updater: HaUpdater, time: Time, server: SimulationServer, snapshot, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
-    config.override(Setting.IGNORE_OTHER_SNAPSHOTS, True)
-    await supervisor.createSnapshot({'name': "test_snapshot"}, date=time.now())
+async def test_ignored_backups(updater: HaUpdater, time: FakeTime, server: SimulationServer, backup: Backup, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
+    config.override(Setting.IGNORE_OTHER_BACKUPS, True)
+    time.advance(hours=1)
+    await supervisor.createBackup({'name': "test_backup"}, date=time.now())
     await coord.sync()
     await updater.update()
-    state = supervisor.getAttributes("sensor.snapshot_backup")
-    assert state["snapshots_in_google_drive"] == 1
-    assert state["snapshots_in_home_assistant"] == 1
-    assert len(state["snapshots"]) == 2
+    state = supervisor.getAttributes("sensor.backup_state")
+    assert state["backups_in_google_drive"] == 1
+    assert state["backups_in_home_assistant"] == 1
+    assert len(state["backups"]) == 1
+    assert state['last_backup'] == backup.date().isoformat()
+
+
+@pytest.mark.asyncio
+async def test_update_backups_old_names(updater: HaUpdater, server, backup, time: FakeTime, supervisor: SimulatedSupervisor, config: Config):
+    config.override(Setting.CALL_BACKUP_SNAPSHOT, True)
+    await updater.update()
+    assert not updater._stale()
+    assert updater._state() == "backed_up"
+    verifyEntity(supervisor, "binary_sensor.snapshots_stale",
+                 "off", {"friendly_name": "Snapshots Stale",
+                         "device_class": "problem"})
+    date = '1985-12-06T05:00:00+00:00'
+    verifyEntity(supervisor, "sensor.snapshot_backup", "backed_up", {
+        'friendly_name': 'Snapshot State',
+        'last_snapshot': date,
+        'snapshots': [{
+            'date': date,
+            'name': backup.name(),
+            'size': backup.sizeString(),
+            'state': backup.status()
+        }
+        ],
+        'snapshots_in_google_drive': 1,
+        'snapshots_in_home_assistant': 1,
+        'snapshots_in_hassio': 1,
+        'size_in_home_assistant': Estimator.asSizeString(backup.size()),
+        'size_in_google_drive': Estimator.asSizeString(backup.size())
+    })
 
 
 def verifyEntity(backend: SimulatedSupervisor, name, state, attributes):

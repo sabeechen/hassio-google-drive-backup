@@ -41,7 +41,7 @@ class Estimator():
         self._blockSize = stats.f_frsize
         return self
 
-    def checkSpace(self, snapshots):
+    def checkSpace(self, backups):
         if platform.system() == "Windows":
             # Unsupported on windows
             return
@@ -49,7 +49,7 @@ class Estimator():
             # Don't check, just go
             return
         try:
-            self._checkSpace(snapshots)
+            self._checkSpace(backups)
         except Exception as e:
             if isinstance(e, LowSpaceError):
                 raise e
@@ -57,12 +57,12 @@ class Estimator():
             logger.error(
                 "Encountered an error while trying to check disk space remaining: " + str(e))
 
-    def _checkSpace(self, snapshots):
-        # get the most recent snapshot size
+    def _checkSpace(self, backups):
+        # get the most recent backup size
         space_needed = self.config.get(Setting.LOW_SPACE_THRESHOLD)
-        snapshots.sort(key=lambda s: s.date(), reverse=True)
-        for snapshot in snapshots:
-            latest_size = snapshot.sizeInt()
+        backups.sort(key=lambda s: s.date(), reverse=True)
+        for backup in backups:
+            latest_size = backup.sizeInt()
             if latest_size > 1:
                 # Bump the size a little to estimate organic growth.
                 space_needed = latest_size * 1.1

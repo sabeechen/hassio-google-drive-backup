@@ -215,7 +215,7 @@ nav .brand-logo img {
   padding: 0 18px;
 }
 
-.snapshot-ui .archive-icon {
+.backup-ui .archive-icon {
   position: relative;
   margin-right: 18px;
 }
@@ -490,12 +490,12 @@ span.content-logo > i {
   line-height: 1.2;
 }
 
-.snapshot-card-icon {
+.backup-card-icon {
     vertical-align: -2px;
     font-size: 1rem;
 }
 
-.snapshot-help-icon {
+.backup-help-icon {
   vertical-align: 3px;
   display: inline;
   font-size: 0.75rem;

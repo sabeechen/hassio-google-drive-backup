@@ -16,16 +16,22 @@ logger = getLogger(__name__)
 
 @unique
 class Setting(Enum):
-    # Basic snapshot settings
-    MAX_SNAPSHOTS_IN_HASSIO = "max_snapshots_in_hassio"
-    MAX_SNAPSHOTS_IN_GOOGLE_DRIVE = "max_snapshots_in_google_drive"
-    DAYS_BETWEEN_SNAPSHOTS = "days_between_snapshots"
-    IGNORE_OTHER_SNAPSHOTS = "ignore_other_snapshots"
-    IGNORE_UPGRADE_SNAPSHOTS = "ignore_upgrade_snapshots"
-    SNAPSHOT_NAME = "snapshot_name"
-    SNAPSHOT_TIME_OF_DAY = "snapshot_time_of_day"
-    SNAPSHOT_PASSWORD = "snapshot_password"
-    SPECIFY_SNAPSHOT_FOLDER = "specify_snapshot_folder"
+    MAX_BACKUPS_IN_HA = "max_backups_in_ha"
+    MAX_BACKUPS_IN_GOOGLE_DRIVE = "max_backups_in_google_drive"
+    DAYS_BETWEEN_BACKUPS = "days_between_backups"
+    IGNORE_OTHER_BACKUPS = "ignore_other_backups"
+    IGNORE_UPGRADE_BACKUPS = "ignore_upgrade_backups"
+    DELETE_BEFORE_NEW_BACKUP = "delete_before_new_backup"
+    BACKUP_NAME = "backup_name"
+    BACKUP_TIME_OF_DAY = "backup_time_of_day"
+    SPECIFY_BACKUP_FOLDER = "specify_backup_folder"
+    NOTIFY_FOR_STALE_BACKUPS = "notify_for_stale_backups"
+    ENABLE_BACKUP_STALE_SENSOR = "enable_backup_stale_sensor"
+    ENABLE_BACKUP_STATE_SENSOR = "enable_backup_state_sensor"
+    BACKUP_PASSWORD = "backup_password"
+    CALL_BACKUP_SNAPSHOT = "call_backup_snapshot"
+
+    # Basic backup settings
     WARN_FOR_LOW_SPACE = "warn_for_low_space"
     LOW_SPACE_THRESHOLD = "low_space_threshold"
     DELETE_AFTER_UPLOAD = "delete_after_upload"
@@ -40,7 +46,7 @@ class Setting(Enum):
     GENERATIONAL_DAY_OF_YEAR = "generational_day_of_year"
     GENERATIONAL_DELETE_EARLY = "generational_delete_early"
 
-    # Partial snapshots
+    # Partial backups
     EXCLUDE_FOLDERS = "exclude_folders"
     EXCLUDE_ADDONS = "exclude_addons"
 
@@ -58,9 +64,6 @@ class Setting(Enum):
 
     # Add-on options
     VERBOSE = "verbose"
-    NOTIFY_FOR_STALE_SNAPSHOTS = "notify_for_stale_snapshots"
-    ENABLE_SNAPSHOT_STALE_SENSOR = "enable_snapshot_stale_sensor"
-    ENABLE_SNAPSHOT_STATE_SENSOR = "enable_snapshot_state_sensor"
     SEND_ERROR_REPORTS = "send_error_reports"
     CONFIRM_MULTIPLE_DELETES = "confirm_multiple_deletes"
     ENABLE_DRIVE_UPLOAD = "enable_drive_upload"
@@ -92,14 +95,11 @@ class Setting(Enum):
     DATA_CACHE_FILE_PATH = "data_cache_file_path"
 
     # endpoints
-    HASSIO_URL = "hassio_url"
+    AUTHORIZATION_HOST = "authorization_host"
+    TOKEN_SERVER_HOSTS = "token_server_hosts"
+    SUPERVISOR_URL = "supervisor_url"
     DRIVE_URL = "drive_url"
-    HOME_ASSISTANT_URL = "home_assistant_url"
-    HASSIO_TOKEN = "hassio_header"
-    AUTHENTICATE_URL = "authenticate_url"
-    REFRESH_URL = "refresh_url"
-    CHOOSE_FOLDER_URL = "choose_folder_url"
-    ERROR_REPORT_URL = "error_report_url"
+    SUPERVISOR_TOKEN = "hassio_header"
     DRIVE_HOST_NAME = "drive_host_name"
     DRIVE_REFRESH_URL = "drive_refresh_url"
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
@@ -109,17 +109,33 @@ class Setting(Enum):
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
-    SNAPSHOT_STALE_SECONDS = "snapshot_stale_seconds"
-    PENDING_SNAPSHOT_TIMEOUT_SECONDS = "pending_snapshot_timeout_seconds"
-    FAILED_SNAPSHOT_TIMEOUT_SECONDS = "failed_snapshot_timeout_seconds"
-    NEW_SNAPSHOT_TIMEOUT_SECONDS = "new_snapshot_timeout_seconds"
+    BACKUP_STALE_SECONDS = "backup_stale_seconds"
+    PENDING_BACKUP_TIMEOUT_SECONDS = "pending_backup_timeout_seconds"
+    FAILED_BACKUP_TIMEOUT_SECONDS = "failed_backup_timeout_seconds"
+    NEW_BACKUP_TIMEOUT_SECONDS = "new_backup_timeout_seconds"
     DOWNLOAD_TIMEOUT_SECONDS = "download_timeout_seconds"
     DEFAULT_CHUNK_SIZE = "default_chunk_size"
     DEBUGGER_PORT = "debugger_port"
     SERVER_PROJECT_ID = "server_project_id"
     LOG_LEVEL = "log_level"
     CONSOLE_LOG_LEVEL = "console_log_level"
-    SNAPSHOT_STARTUP_DELAY_MINUTES = "snapshot_startup_delay_minutes"
+    BACKUP_STARTUP_DELAY_MINUTES = "backup_startup_delay_minutes"
+    EXCHANGER_TIMEOUT_SECONDS = "exchanger_timeout_seconds"
+
+    # Old, deprecated settings
+    DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
+    DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE = "max_snapshots_in_google_drive"
+    DEPRECATED_DAYS_BETWEEN_BACKUPS = "days_between_snapshots"
+    DEPRECTAED_IGNORE_OTHER_BACKUPS = "ignore_other_snapshots"
+    DEPRECTAED_IGNORE_UPGRADE_BACKUPS = "ignore_upgrade_snapshots"
+    DEPRECTAED_BACKUP_NAME = "snapshot_name"
+    DEPRECTAED_BACKUP_TIME_OF_DAY = "snapshot_time_of_day"
+    DEPRECATED_BACKUP_PASSWORD = "snapshot_password"
+    DEPRECTAED_SPECIFY_BACKUP_FOLDER = "specify_snapshot_folder"
+    DEPRECTAED_DELETE_BEFORE_NEW_BACKUP = "delete_before_new_snapshot"
+    DEPRECTAED_NOTIFY_FOR_STALE_BACKUPS = "notify_for_stale_snapshots"
+    DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR = "enable_snapshot_stale_sensor"
+    DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR = "enable_snapshot_state_sensor"
 
     def default(self):
         if "staging" in VERSION and self in _STAGING_DEFAULTS:
@@ -134,19 +150,35 @@ class Setting(Enum):
 
 
 _DEFAULTS = {
-    # Basic snapshot settings
-    Setting.MAX_SNAPSHOTS_IN_HASSIO: 4,
-    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: 4,
-    Setting.DAYS_BETWEEN_SNAPSHOTS: 3,
-    Setting.IGNORE_OTHER_SNAPSHOTS: False,
-    Setting.IGNORE_UPGRADE_SNAPSHOTS: False,
-    Setting.SNAPSHOT_TIME_OF_DAY: "",
-    Setting.SNAPSHOT_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
-    Setting.SNAPSHOT_PASSWORD: "",
-    Setting.SPECIFY_SNAPSHOT_FOLDER: False,
+    Setting.MAX_BACKUPS_IN_HA: 4,
+    Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: 4,
+    Setting.DAYS_BETWEEN_BACKUPS: 3,
+    Setting.IGNORE_OTHER_BACKUPS: False,
+    Setting.IGNORE_UPGRADE_BACKUPS: False,
+    Setting.DELETE_BEFORE_NEW_BACKUP: False,
+    Setting.BACKUP_NAME: "{type} Backup {year}-{month}-{day} {hr24}:{min}:{sec}",
+    Setting.BACKUP_TIME_OF_DAY: "",
+    Setting.SPECIFY_BACKUP_FOLDER: False,
+    Setting.NOTIFY_FOR_STALE_BACKUPS: True,
+    Setting.ENABLE_BACKUP_STALE_SENSOR: True,
+    Setting.ENABLE_BACKUP_STATE_SENSOR: True,
+    Setting.BACKUP_PASSWORD: "",
+
+    # Basic backup settings
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 4,
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE: 4,
+    Setting.DEPRECATED_DAYS_BETWEEN_BACKUPS: 3,
+    Setting.DEPRECTAED_IGNORE_OTHER_BACKUPS: False,
+    Setting.DEPRECTAED_IGNORE_UPGRADE_BACKUPS: False,
+    Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "",
+    Setting.DEPRECTAED_BACKUP_NAME: "{type} Snapshot {year}-{month}-{day} {hr24}:{min}:{sec}",
+    Setting.DEPRECATED_BACKUP_PASSWORD: "",
+    Setting.DEPRECTAED_SPECIFY_BACKUP_FOLDER: False,
     Setting.WARN_FOR_LOW_SPACE: True,
     Setting.LOW_SPACE_THRESHOLD: 1024 * 1024 * 1024,
     Setting.DELETE_AFTER_UPLOAD: False,
+    Setting.DEPRECTAED_DELETE_BEFORE_NEW_BACKUP: False,
+    Setting.CALL_BACKUP_SNAPSHOT: False,
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: 0,
@@ -158,7 +190,7 @@ _DEFAULTS = {
     Setting.GENERATIONAL_DAY_OF_YEAR: 1,
     Setting.GENERATIONAL_DELETE_EARLY: False,
 
-    # Partial snapshot settings
+    # Partial backup settings
     Setting.EXCLUDE_FOLDERS: "",
     Setting.EXCLUDE_ADDONS: "",
 
@@ -175,9 +207,9 @@ _DEFAULTS = {
     Setting.PORT: 1627,
 
     # Add-on options
-    Setting.NOTIFY_FOR_STALE_SNAPSHOTS: True,
-    Setting.ENABLE_SNAPSHOT_STALE_SENSOR: True,
-    Setting.ENABLE_SNAPSHOT_STATE_SENSOR: True,
+    Setting.DEPRECTAED_NOTIFY_FOR_STALE_BACKUPS: True,
+    Setting.DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR: True,
+    Setting.DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR: True,
     Setting.SEND_ERROR_REPORTS: False,
     Setting.VERBOSE: False,
     Setting.CONFIRM_MULTIPLE_DELETES: True,
@@ -196,17 +228,14 @@ _DEFAULTS = {
     Setting.GOOGLE_DRIVE_PAGE_SIZE: 100,
 
     # Remote endpoints
-    Setting.HASSIO_URL: "http://hassio/",
-    Setting.HASSIO_TOKEN: "",
-    Setting.HOME_ASSISTANT_URL: "http://hassio/core/api/",
+    Setting.AUTHORIZATION_HOST: "https://habackup.io",
+    Setting.TOKEN_SERVER_HOSTS: "https://token1.habackup.io,https://habackup.io",
+    Setting.SUPERVISOR_URL: "",
+    Setting.SUPERVISOR_TOKEN: "",
     Setting.DRIVE_URL: "https://www.googleapis.com",
-    Setting.REFRESH_URL: "https://habackup.io/drive/refresh",
-    Setting.AUTHENTICATE_URL: "https://habackup.io/drive/authorize",
     Setting.DRIVE_REFRESH_URL: "https://www.googleapis.com/oauth2/v4/token",
     Setting.DRIVE_AUTHORIZE_URL: "https://accounts.google.com/o/oauth2/v2/auth",
     Setting.DRIVE_TOKEN_URL: "https://oauth2.googleapis.com/token",
-    Setting.CHOOSE_FOLDER_URL: "https://habackup.io/drive/picker",
-    Setting.ERROR_REPORT_URL: "https://habackup.io/logerror",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
     Setting.SAVE_DRIVE_CREDS_PATH: "token",
 
@@ -223,10 +252,10 @@ _DEFAULTS = {
     Setting.DATA_CACHE_FILE_PATH: '/data/data_cache.json',
 
     # Various timeouts and intervals
-    Setting.SNAPSHOT_STALE_SECONDS: 60 * 60 * 3,
-    Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS: 60 * 60 * 5,
-    Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: 60 * 15,
-    Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: 5,
+    Setting.BACKUP_STALE_SECONDS: 60 * 60 * 3,
+    Setting.PENDING_BACKUP_TIMEOUT_SECONDS: 60 * 60 * 5,
+    Setting.FAILED_BACKUP_TIMEOUT_SECONDS: 60 * 15,
+    Setting.NEW_BACKUP_TIMEOUT_SECONDS: 5,
     Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60,
     Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "",
@@ -237,31 +266,46 @@ _DEFAULTS = {
     Setting.SERVER_PROJECT_ID: "",
     Setting.LOG_LEVEL: 'DEBUG',
     Setting.CONSOLE_LOG_LEVEL: 'INFO',
-    Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: 10
+    Setting.BACKUP_STARTUP_DELAY_MINUTES: 10,
+    Setting.EXCHANGER_TIMEOUT_SECONDS: 10
 }
 
 _STAGING_DEFAULTS = {
-    Setting.AUTHENTICATE_URL: "https://dev.habackup.io/drive/authorize",
-    Setting.REFRESH_URL: "https://dev.habackup.io/drive/refresh",
-    Setting.CHOOSE_FOLDER_URL: "https://dev.habackup.io/drive/picker",
-    Setting.ERROR_REPORT_URL: "https://dev.habackup.io/logerror",
+    Setting.AUTHORIZATION_HOST: "https://dev.habackup.io",
+    Setting.TOKEN_SERVER_HOSTS: "https://token1.dev.habackup.io,https://dev.habackup.io",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "795575624694-jcdhoh1jr1ngccfsbi2f44arr4jupl79.apps.googleusercontent.com",
 }
 
 _CONFIG = {
-    # Basic snapshot settings
-    Setting.MAX_SNAPSHOTS_IN_HASSIO: "int(0,)",
-    Setting.MAX_SNAPSHOTS_IN_GOOGLE_DRIVE: "int(0,)",
-    Setting.DAYS_BETWEEN_SNAPSHOTS: "float(0,)?",
-    Setting.IGNORE_OTHER_SNAPSHOTS: "bool?",
-    Setting.IGNORE_UPGRADE_SNAPSHOTS: "bool?",
-    Setting.SNAPSHOT_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
-    Setting.SNAPSHOT_NAME: "str?",
-    Setting.SNAPSHOT_PASSWORD: "str?",
-    Setting.SPECIFY_SNAPSHOT_FOLDER: "bool?",
+    Setting.MAX_BACKUPS_IN_HA: "int(0,)?",
+    Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: "int(0,)?",
+    Setting.DAYS_BETWEEN_BACKUPS: "float(0,)?",
+    Setting.IGNORE_OTHER_BACKUPS: "bool?",
+    Setting.IGNORE_UPGRADE_BACKUPS: "bool?",
+    Setting.DELETE_BEFORE_NEW_BACKUP: "bool?",
+    Setting.BACKUP_NAME: "str?",
+    Setting.BACKUP_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
+    Setting.SPECIFY_BACKUP_FOLDER: "bool?",
+    Setting.NOTIFY_FOR_STALE_BACKUPS: "bool?",
+    Setting.ENABLE_BACKUP_STALE_SENSOR: "bool?",
+    Setting.ENABLE_BACKUP_STATE_SENSOR: "bool?",
+    Setting.BACKUP_PASSWORD: "str?",
+
+    # Basic backup settings
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: "int(0,)?",
+    Setting.DEPRECTAED_MAX_BACKUPS_IN_GOOGLE_DRIVE: "int(0,)?",
+    Setting.DEPRECATED_DAYS_BETWEEN_BACKUPS: "float(0,)?",
+    Setting.DEPRECTAED_IGNORE_OTHER_BACKUPS: "bool?",
+    Setting.DEPRECTAED_IGNORE_UPGRADE_BACKUPS: "bool?",
+    Setting.DEPRECTAED_BACKUP_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
+    Setting.DEPRECTAED_BACKUP_NAME: "str?",
+    Setting.DEPRECATED_BACKUP_PASSWORD: "str?",
+    Setting.DEPRECTAED_SPECIFY_BACKUP_FOLDER: "bool?",
     Setting.WARN_FOR_LOW_SPACE: "bool?",
     Setting.LOW_SPACE_THRESHOLD: "int(0,)?",
     Setting.DELETE_AFTER_UPLOAD: "bool?",
+    Setting.DEPRECTAED_DELETE_BEFORE_NEW_BACKUP: "bool?",
+    Setting.CALL_BACKUP_SNAPSHOT: "bool?",
 
     # Generational backup settings
     Setting.GENERATIONAL_DAYS: "int(0,)?",
@@ -273,7 +317,7 @@ _CONFIG = {
     Setting.GENERATIONAL_DAY_OF_YEAR: "int(1,365)?",
     Setting.GENERATIONAL_DELETE_EARLY: "bool?",
 
-    # Partial snapshot settings
+    # Partial backup settings
     Setting.EXCLUDE_FOLDERS: "str?",
     Setting.EXCLUDE_ADDONS: "str?",
 
@@ -290,17 +334,17 @@ _CONFIG = {
     Setting.PORT: "int(0,)?",
 
     # Add-on options
-    Setting.NOTIFY_FOR_STALE_SNAPSHOTS: "bool?",
-    Setting.ENABLE_SNAPSHOT_STALE_SENSOR: "bool?",
-    Setting.ENABLE_SNAPSHOT_STATE_SENSOR: "bool?",
+    Setting.DEPRECTAED_NOTIFY_FOR_STALE_BACKUPS: "bool?",
+    Setting.DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR: "bool?",
+    Setting.DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR: "bool?",
     Setting.SEND_ERROR_REPORTS: "bool?",
     Setting.VERBOSE: "bool?",
     Setting.CONFIRM_MULTIPLE_DELETES: "bool?",
     Setting.ENABLE_DRIVE_UPLOAD: "bool?",
 
     # Theme Settings
-    Setting.BACKGROUND_COLOR: "match(#[0-9ABCDEFabcdef]{6})?",
-    Setting.ACCENT_COLOR: "match(#[0-9ABCDEFabcdef]{6})?",
+    Setting.BACKGROUND_COLOR: "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
+    Setting.ACCENT_COLOR: "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
 
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "match(^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})(,[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})*$)?",
@@ -311,17 +355,14 @@ _CONFIG = {
     Setting.GOOGLE_DRIVE_PAGE_SIZE: "int(1,)?",
 
     # Remote endpoints
-    Setting.HASSIO_URL: "url?",
-    Setting.HASSIO_TOKEN: "str?",
-    Setting.HOME_ASSISTANT_URL: "url?",
+    Setting.AUTHORIZATION_HOST: "url?",
+    Setting.TOKEN_SERVER_HOSTS: "str?",
+    Setting.SUPERVISOR_URL: "url?",
+    Setting.SUPERVISOR_TOKEN: "str?",
     Setting.DRIVE_URL: "url?",
-    Setting.REFRESH_URL: "url?",
-    Setting.AUTHENTICATE_URL: "url?",
     Setting.DRIVE_REFRESH_URL: "url?",
     Setting.DRIVE_AUTHORIZE_URL: "url?",
     Setting.DRIVE_TOKEN_URL: "url?",
-    Setting.CHOOSE_FOLDER_URL: "url?",
-    Setting.ERROR_REPORT_URL: "url?",
     Setting.DRIVE_HOST_NAME: "str?",
     Setting.SAVE_DRIVE_CREDS_PATH: "str?",
 
@@ -338,10 +379,10 @@ _CONFIG = {
     Setting.DATA_CACHE_FILE_PATH: "str?",
 
     # Various timeouts and intervals
-    Setting.SNAPSHOT_STALE_SECONDS: "float(0,)?",
-    Setting.PENDING_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
-    Setting.FAILED_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
-    Setting.NEW_SNAPSHOT_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.BACKUP_STALE_SECONDS: "float(0,)?",
+    Setting.PENDING_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.FAILED_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.NEW_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
     Setting.MAX_SYNC_INTERVAL_SECONDS: "float(300,)?",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "str?",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "str?",
@@ -352,12 +393,15 @@ _CONFIG = {
     Setting.SERVER_PROJECT_ID: "str?",
     Setting.LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     Setting.CONSOLE_LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
-    Setting.SNAPSHOT_STARTUP_DELAY_MINUTES: "float(0,)?"
+    Setting.BACKUP_STARTUP_DELAY_MINUTES: "float(0,)?",
+    Setting.EXCHANGER_TIMEOUT_SECONDS: "float(0,)?"
 }
 
 PRIVATE = [
-    Setting.SNAPSHOT_PASSWORD,
-    Setting.SNAPSHOT_NAME
+    Setting.DEPRECATED_BACKUP_PASSWORD,
+    Setting.DEPRECTAED_BACKUP_NAME,
+    Setting.BACKUP_PASSWORD,
+    Setting.BACKUP_NAME
 ]
 
 _LOOKUP = {}

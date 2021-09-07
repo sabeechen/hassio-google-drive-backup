@@ -11,9 +11,9 @@ from backup.time import Time
 @pytest.mark.asyncio
 async def test_read_and_write(config: Config, time: Time) -> None:
     cache = DataCache(config, time)
-    assert len(cache.snapshots) == 0
+    assert len(cache.backups) == 0
 
-    cache.snapshot("test")[KEY_CREATED] = time.now().isoformat()
+    cache.backup("test")[KEY_CREATED] = time.now().isoformat()
     assert not cache._dirty
     cache.makeDirty()
     assert cache._dirty
@@ -21,24 +21,24 @@ async def test_read_and_write(config: Config, time: Time) -> None:
     assert not cache._dirty
 
     cache = DataCache(config, time)
-    assert cache.snapshot("test")[KEY_CREATED] == time.now().isoformat()
+    assert cache.backup("test")[KEY_CREATED] == time.now().isoformat()
     assert not cache._dirty
 
 
 @pytest.mark.asyncio
-async def test_snapshot_expiration(config: Config, time: Time) -> None:
+async def test_backup_expiration(config: Config, time: Time) -> None:
     cache = DataCache(config, time)
-    assert len(cache.snapshots) == 0
+    assert len(cache.backups) == 0
 
-    cache.snapshot("new")[KEY_LAST_SEEN] = time.now().isoformat()
-    cache.snapshot("old")[KEY_LAST_SEEN] = (
+    cache.backup("new")[KEY_LAST_SEEN] = time.now().isoformat()
+    cache.backup("old")[KEY_LAST_SEEN] = (
         time.now() - timedelta(days=CACHE_EXPIRATION_DAYS + 1)) .isoformat()
     cache.makeDirty()
     cache.saveIfDirty()
 
-    assert len(cache.snapshots) == 1
-    assert "new" in cache.snapshots
-    assert "old" not in cache.snapshots
+    assert len(cache.backups) == 1
+    assert "new" in cache.backups
+    assert "old" not in cache.backups
 
 
 @pytest.mark.asyncio
@@ -49,7 +49,6 @@ async def test_version_upgrades(time: Time, injector: Injector, config: Config) 
     upgrade_time = time.now()
     assert cache.previousVersion == Version.default()
     assert cache.currentVersion == Version.parse(VERSION)
-    assert cache.checkFlag(UpgradeFlags.DONT_IGNORE_LEGACY_SNAPSHOTS)
 
     assert os.path.exists(config.get(Setting.DATA_CACHE_FILE_PATH))
     with open(config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
@@ -65,7 +64,6 @@ async def test_version_upgrades(time: Time, injector: Injector, config: Config) 
     cache = DataCache(config, time)
     assert cache.previousVersion == Version.parse(VERSION)
     assert cache.currentVersion == Version.parse(VERSION)
-    assert not cache.checkFlag(UpgradeFlags.DONT_IGNORE_LEGACY_SNAPSHOTS)
     assert os.path.exists(config.get(Setting.DATA_CACHE_FILE_PATH))
 
     with open(config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
@@ -116,3 +114,18 @@ async def test_version_upgrades(time: Time, injector: Injector, config: Config) 
 
     # degenerate case, should never happen but a sensible value needs to be returned
     assert cache.getUpgradeTime(Version.parse("201")) == time.now()
+
+
+@pytest.mark.asyncio
+async def test_flag(config: Config, time: Time):
+    cache = DataCache(config, time)
+    assert not cache.checkFlag(UpgradeFlags.TESTING_FLAG)
+    assert not cache.dirty
+
+    cache.addFlag(UpgradeFlags.TESTING_FLAG)
+    assert cache.dirty
+    assert cache.checkFlag(UpgradeFlags.TESTING_FLAG)
+    cache.saveIfDirty()
+
+    cache = DataCache(config, time)
+    assert cache.checkFlag(UpgradeFlags.TESTING_FLAG)

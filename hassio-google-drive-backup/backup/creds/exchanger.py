@@ -143,7 +143,10 @@ class Exchanger():
                             extra = (await resp.json())["error"]
                         except BaseException:
                             extra = ""
-                        raise CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
+
+                        # this is likely due to misconfiguration
+                        logger.warning("Got {0}:{1} from {2}, trying alternate server(s)...".format(resp.status, extra, url.host))
+                        last_error = CredRefreshMyError("HTTP {} {}".format(resp.status, extra))
             except ClientConnectorError:
                 logger.warning("Unable to reach " + str(url.host) + ", trying alternate server(s)...")
                 last_error = "Couldn't communicate with " + url.host

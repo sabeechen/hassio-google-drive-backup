@@ -172,3 +172,15 @@ async def test_timeout_fall_through(time: Time, session: TracingSession, config:
     # Verify both hosts were checked
     session._records[0]['url'] == server_url.with_path("/drive/refresh")
     session._records[1]['url'] == server_url.with_path("/drive/refresh")
+
+
+@pytest.mark.asyncio
+async def test_anything_else_through(time: Time, session: TracingSession, config: Config, server: SimulationServer, drive_requests: DriveRequests, interceptor: RequestInterceptor, server_url: URL):
+    session.record = True
+    config.override(Setting.TOKEN_SERVER_HOSTS, str(server_url) + "," + str(server_url))
+    interceptor.setError("^/drive/refresh$", status=500, fail_for=1)
+    await drive_requests.exchanger.refresh(drive_requests.creds)
+
+    # Verify both hosts were checked
+    session._records[0]['url'] == server_url.with_path("/drive/refresh")
+    session._records[1]['url'] == server_url.with_path("/drive/refresh")

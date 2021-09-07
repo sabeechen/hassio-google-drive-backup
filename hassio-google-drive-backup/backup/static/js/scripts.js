@@ -482,7 +482,14 @@ function populateBackupDiv(backup_div, backups, icon) {
       }
 
       $("#size", template).html(backup['size']);
-      $("#type", template).html(backup['type'] === "full" ? "Full backup" : "Partial backup");
+      if (backup['type'].toLowerCase() == 'full') {
+        $("#type", template).html("Full backup");
+      } else if (backup['type'].toLowerCase() == 'partial') {
+        $("#type", template).html( "Partial backup");
+      } else {
+        $("#type", template).html('');
+      }
+      
       $("#createdAt", template).html(backup['createdAt']);
       $("#name", template).html(backup['name']);
       $("#name", template).attr('title', backup['name']);

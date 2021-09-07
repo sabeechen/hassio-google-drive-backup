@@ -496,6 +496,6 @@ class HaSource(BackupSource[HABackup], Startable):
         if password:
             request_info['password'] = password
         name = BackupName().resolve(type_name, options.name_template,
-                                      self.time.toLocal(options.when), self.host_info)
+                                    self.time.toLocal(options.when), self.host_info)
         request_info['name'] = name
         return request_info, type_name, protected

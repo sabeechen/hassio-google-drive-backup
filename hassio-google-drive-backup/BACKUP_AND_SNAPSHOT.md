@@ -46,9 +46,11 @@ snapshots:
 - name: Full Snapshot 2021-02-06 11:37:00
   date: '2021-02-06T18:37:00.916510+00:00'
   state: Backed Up
+  slug: DFG123
 - name: Full Snapshot 2021-02-07 11:00:00
   date: '2021-02-07T18:00:00.916510+00:00'
   state: Backed Up
+  slug: DFG124
 ```
 
 ## New Sensor Names/Values
@@ -92,9 +94,11 @@ backups:
 - name: Full Snapshot 2021-02-06 11:37:00
   date: '2021-02-06T18:37:00.916510+00:00
   state: Backed Up
+  slug: DFG123
 - name: Full Snapshot 2021-02-07 11:00:00
   date: '2021-02-07T18:00:00.916510+00:00'
   state: Backed Up
+  slug: DFG124
 ```
 
 ### What do the values mean?
@@ -112,7 +116,7 @@ It's attributes are:
 -  ```backups_in_home_ssistant``` The number of backups in Home Assistant.
 -  ```size_in_google_drive``` A string representation of the space used by backups in Google Drive.
 -  ```size_in_home_assistant``` A string representation of the space used by backups in Home Assistant.
--  ```backups``` The list of each snapshot in decending order of date.  Each snapshot includes its ```name```, ```date``` and ```state```.  ```state``` can be one of:
+-  ```backups``` The list of each snapshot in decending order of date.  Each snapshot includes its ```name```, ```date```, ```slug```, and ```state```.  ```state``` can be one of:
     - ```Backed Up``` if its in Home Assistant and Google Drive.
     - ```HA Only``` if its only in Home Assistant
     - ```Drive Only``` if its only in Google Drive

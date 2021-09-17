@@ -770,7 +770,6 @@ class UiServer(Trigger, Startable):
         return self.base_context()
 
     async def favicon(self, request: Request):
-        
         return web.FileResponse(abspath(join(__file__, "..", "..", "static", "images", "favicon.png")))
 
     @aiohttp_jinja2.template('index.jinja2')

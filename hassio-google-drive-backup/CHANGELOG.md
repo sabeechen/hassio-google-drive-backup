@@ -20,7 +20,7 @@ This version will automatically update your addon's configuration to reference "
 
 ### Dev/Cleanup
 * Configured a devcontainer for code contributions.
-* Moved generating Google's refresh tokens to a new domain, https://token1.habackup.io.
+* Moved generating Google's refresh tokens primarily to a new domain, https://token1.habackup.io, for cost and reliability reasons.
 
 ## [0.104.3 2021-4-28]
 ### Fixes

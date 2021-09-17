@@ -131,7 +131,7 @@ async def test_update_backups(updater: HaUpdater, server, time: FakeTime, superv
 
 
 @pytest.mark.asyncio
-async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, backup, supervisor: SimulatedSupervisor):
+async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, backup: Backup, supervisor: SimulatedSupervisor):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "backed_up"
@@ -146,7 +146,8 @@ async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, b
             'date': date,
             'name': backup.name(),
             'size': backup.sizeString(),
-            'state': backup.status()
+            'state': backup.status(),
+            'slug': backup.slug()
         }
         ],
         'backups_in_google_drive': 1,
@@ -289,7 +290,7 @@ async def test_ignored_backups(updater: HaUpdater, time: FakeTime, server: Simul
 
 
 @pytest.mark.asyncio
-async def test_update_backups_old_names(updater: HaUpdater, server, backup, time: FakeTime, supervisor: SimulatedSupervisor, config: Config):
+async def test_update_backups_old_names(updater: HaUpdater, server, backup: Backup, time: FakeTime, supervisor: SimulatedSupervisor, config: Config):
     config.override(Setting.CALL_BACKUP_SNAPSHOT, True)
     await updater.update()
     assert not updater._stale()
@@ -305,7 +306,8 @@ async def test_update_backups_old_names(updater: HaUpdater, server, backup, time
             'date': date,
             'name': backup.name(),
             'size': backup.sizeString(),
-            'state': backup.status()
+            'state': backup.status(),
+            'slug': backup.slug()
         }
         ],
         'snapshots_in_google_drive': 1,

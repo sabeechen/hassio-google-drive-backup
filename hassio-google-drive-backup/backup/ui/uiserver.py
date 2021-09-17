@@ -83,7 +83,7 @@ class UiServer(Trigger, Startable):
             'accentColor': self.config.get(Setting.ACCENT_COLOR),
             'coordEnabled': self._coord.enabled(),
             'save_drive_creds_path': self.config.get(Setting.SAVE_DRIVE_CREDS_PATH),
-            'bmc_logo_path': "static/images/bmc.svg"
+            'bmc_logo_path': "static/" + VERSION + "/images/bmc.svg"
         }
 
     async def getstatus(self, request) -> Dict[Any, Any]:
@@ -612,7 +612,7 @@ class UiServer(Trigger, Startable):
 
     def _addRoutes(self, app):
         app.add_routes(
-            [web.static('/static', abspath(join(__file__, "..", "..", "static")), append_version=True)])
+            [web.static('/static/' + VERSION, abspath(join(__file__, "..", "..", "static")), append_version=True)])
         app.add_routes([web.get('/', self.index)])
         app.add_routes([web.get('/index.html', self.index)])
         app.add_routes([web.get('/index', self.index)])
@@ -770,7 +770,7 @@ class UiServer(Trigger, Startable):
         return self.base_context()
 
     async def favicon(self, request: Request):
-        return web.FileResponse('hassio-google-drive-backup/backup/static/images/favicon.png')
+        return web.FileResponse(abspath(join(__file__, "..", "..", "static", "images", "favicon.png")))
 
     @aiohttp_jinja2.template('index.jinja2')
     async def reauthenticate(self, request: Request) -> Any:

@@ -163,10 +163,10 @@ class Config():
             if isinstance(value, str) and len(value) == 0 and setting in EMPTY_IS_DEFAULT:
                 value = setting.default()
             if value is not None and (setting in KEEP_DEFAULT or value != setting.default()):
-                if setting in UPGRADE_OPTIONS and UPGRADE_OPTIONS[setting] not in new_config:
+                if setting in UPGRADE_OPTIONS and (UPGRADE_OPTIONS[setting] not in new_config or new_config[UPGRADE_OPTIONS[setting]] == UPGRADE_OPTIONS[setting].default()):
                     upgraded = True
                     final_config[UPGRADE_OPTIONS[setting]] = value
-                else:
+                elif setting not in UPGRADE_OPTIONS:
                     final_config[setting] = value
 
         if upgraded:

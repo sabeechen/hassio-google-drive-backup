@@ -171,10 +171,10 @@ If you set '`days_between_backups: 0`', then the add-on won't try to create new 
 
 ### Can I give backups a different name?
 
-The config option `backup_name` can be changed to give backups a different name or with a date format of your choosing. The default is `{type} Backup {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes backups with a name like `Full Backup 2019-10-31 14:00:00`. Using the settings menu in the Web UI, you can see a preview of what a backup name will look like but you can also set it in the add-on's options. Below is the list of variables you can add to modify the name to your liking.
+The config option `backup_name` can be changed to give backups a different name or with a date format of your choosing. The default is `{type} Backup {year}-{month}-{day} {hr24}:{min}:{sec}`, which makes backups with a name like `Full Backup 2021-10-31 14:00:00`. Using the settings menu in the Web UI, you can see a preview of what a backup name will look like but you can also set it in the add-on's options. Below is the list of variables you can add to modify the name to your liking.
 
 - `{type}`: The type of backup, either 'Full' or 'Partial'
-- `{year}`: Year in 4 digit format (eg 2019)
+- `{year}`: Year in 4 digit format (eg 2021)
 - `{year_short}`: Year in 2 digit format (eg 19)
 - `{weekday}`: Long day of the week (eg Monday, ..., Sunday)
 - `{weekday_short}`: Short day of week (eg Mon, ... Sun)
@@ -191,7 +191,7 @@ The config option `backup_name` can be changed to give backups a different name 
 - `{version_ha}`, Home Assistant version string (eg 0.91.3)
 - `{version_hassos}`: HassOS version string (eg 0.2.15)
 - `{version_super}`: , Supervisor version string (eg 1.2.19)
-- `{date}`: Locale aware date (eg 2019/01/01).
+- `{date}`: Locale aware date (eg 2021/01/01).
 - `{time}`: Locale aware time (eg 02:03:04 am)
 - `{datetime}`: Locale-aware datetime string
 - `{isotime}`: Date and time in ISO format

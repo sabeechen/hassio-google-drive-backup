@@ -122,7 +122,8 @@ class HaUpdater(Worker):
                 "name": backup.name(),
                 "date": str(backup.date().isoformat()),
                 "state": backup.status(),
-                "size": backup.sizeString()
+                "size": backup.sizeString(),
+                "slug": backup.slug()
             }
         ha_backups = list(filter(lambda s: s.getSource(SOURCE_HA) is not None, backups))
         drive_backups = list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, backups))

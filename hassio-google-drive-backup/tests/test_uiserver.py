@@ -995,6 +995,7 @@ async def test_snapshot_to_backup_upgrade_use_new_values(reader: ReaderHelper, t
     }
     await coord.sync()
     assert Setting.CALL_BACKUP_SNAPSHOT.value in supervisor._options
+    assert Setting.DEPRECTAED_MAX_BACKUPS_IN_HA.value not in supervisor._options
     assert config.get(Setting.CALL_BACKUP_SNAPSHOT)
 
     status = await reader.getjson("getstatus")
@@ -1036,3 +1037,20 @@ async def test_snapshot_to_backup_upgrade_use_old_values(reader: ReaderHelper, t
     status = await reader.getjson("getstatus")
     assert not status["warn_backup_upgrade"]
     assert config.get(Setting.CALL_BACKUP_SNAPSHOT)
+
+
+@pytest.mark.asyncio
+async def test_snapshot_to_backup_upgrade_avoid_default_overwrite(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource, data_cache: DataCache, updater: HaUpdater):
+    """ Test the path where a user upgrades from the addon but a new value with a default value gets overwritten"""
+    status = await reader.getjson("getstatus")
+    assert not status["warn_backup_upgrade"]
+
+    # simulate upgrading config
+    supervisor._options = {
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA.value: 7,
+        Setting.MAX_BACKUPS_IN_HA.value: 4  # defuault, should get overridden
+    }
+    await coord.sync()
+    assert Setting.CALL_BACKUP_SNAPSHOT.value in supervisor._options
+    assert config.get(Setting.CALL_BACKUP_SNAPSHOT)
+    assert config.get(Setting.MAX_BACKUPS_IN_HA) == 7

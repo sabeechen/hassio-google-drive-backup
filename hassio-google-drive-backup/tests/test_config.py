@@ -213,6 +213,66 @@ def test_config_upgrade():
     assert config.mustSaveUpgradeChanges()
 
 
+def test_overwrite_on_upgrade():
+    config = Config()
+    config.update({
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 5,
+        Setting.MAX_BACKUPS_IN_HA: 6
+    })
+    assert (config.getAllConfig(), False) == defaultAnd({
+        Setting.MAX_BACKUPS_IN_HA: 6,
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })
+    assert config.mustSaveUpgradeChanges()
+
+    config = Config()
+    config.update({
+        Setting.MAX_BACKUPS_IN_HA: 6,
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 5
+    })
+    assert (config.getAllConfig(), False) == defaultAnd({
+        Setting.MAX_BACKUPS_IN_HA: 6,
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })
+    assert config.mustSaveUpgradeChanges()
+
+    config = Config()
+    config.update({
+        Setting.MAX_BACKUPS_IN_HA: 6,
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 4
+    })
+    assert (config.getAllConfig(), False) == defaultAnd({
+        Setting.MAX_BACKUPS_IN_HA: 6,
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })
+    assert config.mustSaveUpgradeChanges()
+
+
+def test_overwrite_on_upgrade_default_value():
+    # Test specifying one value
+    config = Config()
+    config.update({
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: Setting.MAX_BACKUPS_IN_HA.default() + 1,
+        Setting.MAX_BACKUPS_IN_HA: Setting.MAX_BACKUPS_IN_HA.default()
+    })
+    assert (config.getAllConfig(), False) == defaultAnd({
+        Setting.MAX_BACKUPS_IN_HA: Setting.MAX_BACKUPS_IN_HA.default() + 1,
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })
+    assert config.mustSaveUpgradeChanges()
+
+    config = Config()
+    config.update({
+        Setting.MAX_BACKUPS_IN_HA: Setting.MAX_BACKUPS_IN_HA.default(),
+        Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: Setting.MAX_BACKUPS_IN_HA.default() + 1
+    })
+    assert (config.getAllConfig(), False) == defaultAnd({
+        Setting.MAX_BACKUPS_IN_HA: Setting.MAX_BACKUPS_IN_HA.default() + 1,
+        Setting.CALL_BACKUP_SNAPSHOT: True
+    })
+    assert config.mustSaveUpgradeChanges()
+
+
 def test_empty_colors():
     # Test specifying one value
     config = Config()

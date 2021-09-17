@@ -1,9 +1,11 @@
 ## [0.105.2 2021-9-7]
 ### Fixes
-* Include addon version number in the path component of static resources in an attempt to resolve [issue #466](https://github.com/sabeechen/hassio-google-drive-backup/issues/466)
+* Include addon version number in the path component of static resources in an attempt to resolve [issue #466](https://github.com/sabeechen/hassio-google-drive-backup/issues/466).  Special thanks to [@stigvig](https://github.com/stigvig) and [@loomyr](https://github.com/loomyr) for helping me dig into this.
+* Prevent settings upgrade from ever overwriting config with default values.
+* Ensure duplicate config keys get replaced during config upgrades.
 
 ### New
-* Snapshot slug id is now included in the backup state sensor. 
+* Snapshot slug id is now included in the backup state sensor, thansk to a contribution from [@freginedevices](https://github.com/freginedevices)
 
 ## [0.105.1 2021-9-7]
 This version will automatically update your addon's configuration to reference "backups" in its configuration keys instead of "snapshots".  It will also, with your permission, start publishing its sensor values with the word "backup" instead of "snapshot".  Visit the addon Web-UI after updating for details. 

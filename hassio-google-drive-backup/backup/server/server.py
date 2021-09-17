@@ -40,7 +40,7 @@ class Server():
             'version': VERSION,
             'backgroundColor': request.query.get('bg', self.config.get(Setting.BACKGROUND_COLOR)),
             'accentColor': request.query.get('ac', self.config.get(Setting.ACCENT_COLOR)),
-            'bmc_logo_path': "/static/images/bmc.svg"
+            'bmc_logo_path': "/static/" + VERSION + "/images/bmc.svg"
         }
 
     async def authorize(self, request: Request):
@@ -178,8 +178,8 @@ class Server():
     def buildApp(self, app):
         path = abspath(join(__file__, "..", "..", "static"))
         app.add_routes([
-            static("/static", path, append_version=True),
-            static("/drive/static", path, append_version=True),
+            static("/static/" + VERSION, path, append_version=True),
+            static("/drive/static/" + VERSION, path, append_version=True),
             get("/drive/picker", self.picker),
             get("/", self.index),
             get("/drive/authorize", self.authorize),

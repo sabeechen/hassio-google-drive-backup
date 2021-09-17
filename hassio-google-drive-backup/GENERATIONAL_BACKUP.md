@@ -28,14 +28,14 @@ Figuring out date math in your head is hard, so it's useful to see a concrete ex
 "generational_years": 2
 "max_backups_in_google_drive": 8
 ```
-Imagine you've been running the add-on for 2 years now, diligently making a backup every day with no interruptions.  On 19 May 2019, you could expect your list of backups in Google Drive to look like this:
-- May 19, 2019 <-- 1st Daily backup
-- May 18, 2019 <-- 2nd Daily backup
-- May 13, 2019 <-- 1st Weekly backup
-- May 06, 2019 <-- 2nd Weekly backup
-- May 01, 2019 <-- 1st Monthly backup
-- April 01, 2019 <-- 2nd Monthly backup
-- January 01, 2019 <-- 1st Yearly backup
-- January 01, 2018 <-- 2nd Yearly backup
+Imagine you've been running the add-on for 2 years now, diligently making a backup every day with no interruptions.  On 19 May 2021, you could expect your list of backups in Google Drive to look like this:
+- May 19, 2021 <-- 1st Daily backup
+- May 18, 2021 <-- 2nd Daily backup
+- May 13, 2021 <-- 1st Weekly backup
+- May 06, 2021 <-- 2nd Weekly backup
+- May 01, 2021 <-- 1st Monthly backup
+- April 01, 2021 <-- 2nd Monthly backup
+- January 01, 2021 <-- 1st Yearly backup
+- January 01, 2020 <-- 2nd Yearly backup
 
 Note that sometimes a day might overlap more than one schedule.  For example, a backup on January 1st could satisfy the constraints for both a yearly and monthly backup.  In this case, the add-on will only delete older backups when it *must* to keep from exceeding `max_backups_in_ha` or `max_backups_in_google_drive`.  Thus, the most recent backup that would otherwise be deleted will be kept until space is needed somewhere else in the schedule.

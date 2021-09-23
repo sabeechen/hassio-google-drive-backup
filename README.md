@@ -27,6 +27,7 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
 
 [<img src="http://img.youtube.com/vi/GwmPPtBRdjQ/0.jpg" width="300"/>](http://www.youtube.com/watch?v=GwmPPtBRdjQ "Everything Smart Home")
 [<img src="http://img.youtube.com/vi/WcErD5PvIYw/0.jpg" width="300"/>](http://www.youtube.com/watch?v=WcErD5PvIYw "DrZzs")
+[<img src="http://img.youtube.com/vi/wUnvTwyDuNU/0.jpg" width="300"/>](https://youtu.be/wUnvTwyDuNU "KPeyanski")
 
 >This project requires financial support to make the Google Drive integration work, but it is free for you to use.  You can join those helping to keep the lights on at:
 >  

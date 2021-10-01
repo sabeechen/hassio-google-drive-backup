@@ -36,7 +36,7 @@ jobs:
         path: junit/test-results.xml
       if: ${{ always() }}
     - name: Publish Unit Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v1.19
+      uses: EnricoMi/publish-unit-test-result-action@v1.22
       if: always()
       with:
         files: junit/**/*.xml

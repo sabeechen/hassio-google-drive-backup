@@ -113,7 +113,7 @@ It's attributes are:
 - ```last_backup``` The UTC ISO-8601 date of the most recent backup in Home Assistant or Google Drive.
 -  ```last_upload``` The UTC ISO-8601 date of the most recent backup uploaded to Google Drive.
 -  ```backups_in_google_drive``` The number of backups in Google Drive.
--  ```backups_in_home_ssistant``` The number of backups in Home Assistant.
+-  ```backups_in_home_assistant``` The number of backups in Home Assistant.
 -  ```size_in_google_drive``` A string representation of the space used by backups in Google Drive.
 -  ```size_in_home_assistant``` A string representation of the space used by backups in Home Assistant.
 -  ```backups``` The list of each snapshot in decending order of date.  Each snapshot includes its ```name```, ```date```, ```slug```, and ```state```.  ```state``` can be one of:

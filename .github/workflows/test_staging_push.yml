@@ -15,13 +15,13 @@ jobs:
         python-version: '3.8'
   
     - name: Check out dev repo
-      uses: actions/checkout@v2.3.4
+      uses: actions/checkout@v2.3.5
       with:
         path: dev
         persist-credentials: false
     
     - name: Checkout Staging Repo
-      uses: actions/checkout@v2.3.4
+      uses: actions/checkout@v2.3.5
       with:
         path: staging
         repository: sabeechen/hgdb-dev-staging

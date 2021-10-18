@@ -19,11 +19,11 @@ jobs:
       with:
         python-version: '3.8'
     # Check out the current branch
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v2.3.5
       with:
         path: dev
     # Check out the staging barnch
-    - uses: actions/checkout@v2.3.4
+    - uses: actions/checkout@v2.3.5
       with:
         path: staging
         repository: sabeechen/hgdb-dev-staging

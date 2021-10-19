@@ -16,7 +16,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.5
 
       - name: Build image
         run: docker build -f hassio-google-drive-backup/Dockerfile-server --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}" hassio-google-drive-backup/.

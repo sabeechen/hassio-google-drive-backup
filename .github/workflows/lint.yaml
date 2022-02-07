@@ -8,6 +8,6 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v2.4.0
       - name: 🚀 Run Home Assistant Add-on Linter
-        uses: frenck/action-addon-linter@v2.4.1
+        uses: frenck/action-addon-linter@v2.6
         with:
           path: "./hassio-google-drive-backup"

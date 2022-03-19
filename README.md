@@ -119,8 +119,8 @@ If you have [android](https://github.com/Crewski/HANotify) or [iOS](https://www.
         to: 'on'
       condition: []
       action:
-      - data:
-        service: notify.android
+      - service: notify.android
+        data:
           title: Backups are Stale
           message: Please visit the 'Home Assistant Google Drive Backup ' add-on status page
             for details.

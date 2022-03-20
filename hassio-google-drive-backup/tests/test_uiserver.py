@@ -29,6 +29,8 @@ from .helpers import compareStreams
 from yarl import URL
 from dev.ports import Ports
 from dev.simulated_supervisor import SimulatedSupervisor
+from dev.simulationserver import SimulationServer
+from dev.simulated_google import SimulatedGoogle
 from bs4 import BeautifulSoup
 from .conftest import ReaderHelper
 
@@ -752,33 +754,61 @@ async def test_update_sync_interval(reader, ui_server, config: Config, superviso
 
 
 @pytest.mark.asyncio
-async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: Config, server, session, drive: DriveSource):
-    # get the auth url
-    req_path = "manualauth?client_id={}&client_secret={}".format(config.get(
-        Setting.DEFAULT_DRIVE_CLIENT_ID), config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET))
-    data = await reader.getjson(req_path)
-    assert "auth_url" in data
-
-    # request the auth code from "google"
-    async with session.get(data["auth_url"], allow_redirects=False) as resp:
-        code = (await resp.json())["code"]
-
+async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: Config, server: SimulationServer, session, drive: DriveSource):
+    periodic_check = await reader.getjson("checkManualAuth")
+    assert periodic_check['message'] == "No request for authorization is in progress."
     drive.saveCreds(None)
     assert not drive.enabled()
-    # Pass the auth code to generate creds
-    req_path = "manualauth?code={}".format(code)
-    assert await reader.getjson(req_path) == {
-        'auth_url': "index?fresh=true"
-    }
+
+    # get the auth url
+    req_path = URL("manualauth").with_query({
+        "client_id": server.google._custom_drive_client_id,
+        "client_secret": server.google._custom_drive_client_secret})
+    data = await reader.getjson(str(req_path))
+    assert "auth_url" in data
+    assert "code" in data
+    assert "expires" in data
+
+    periodic_check = await reader.getjson("checkManualAuth")
+    assert periodic_check['message'] == "Waiting for you to authorize the add-on."
+
+    # Authorize the device using the url and device code provided
+    authorize_url = URL(data["auth_url"]).with_query({"code": data['code']})
+    async with session.get(str(authorize_url), allow_redirects=False) as resp:
+        resp.raise_for_status()
+
+    # TODO: Wait for new credentials in a smarter way.
+    await asyncio.sleep(2)
 
     # verify creds are saved and drive is enabled
     assert drive.enabled()
 
-    # Now verify that bad creds fail predictably
-    req_path = "manualauth?code=bad_code"
-    assert await reader.getjson(req_path) == {
-        'error': 'Your Google Drive credentials have expired.  Please reauthorize with Google Drive through the Web UI.'
-    }
+
+@pytest.mark.asyncio
+async def test_manual_creds_failure(reader: ReaderHelper, ui_server: UiServer, config: Config, server: SimulationServer, session, drive: DriveSource):
+    drive.saveCreds(None)
+    assert not drive.enabled()
+
+    # Try with a bad client_id
+    req_path = URL("manualauth").with_query({
+        "client_id": "wrong_id",
+        "client_secret": server.google._custom_drive_client_secret})
+    data = await reader.getjson(str(req_path), status=500)
+    assert data["message"] == "Google responded with error status HTTP 401.  Please verify your credentials are set up correctly."
+
+    # Try with a bad client_secret
+    req_path = URL("manualauth").with_query({
+        "client_id": server.google._custom_drive_client_id,
+        "client_secret": "wrong_secret"})
+    data = await reader.getjson(str(req_path))
+
+    await asyncio.sleep(2)
+
+    periodic_check = await reader.getjson("checkManualAuth", status=500)
+    assert periodic_check['message'] == "Failed unexpectedly while trying to reach Google.  See the add-on logs for details."
+
+    # verify creds are saved and drive is enabled
+    assert not drive.enabled()
 
 
 @pytest.mark.asyncio
@@ -829,19 +859,26 @@ async def test_change_specify_folder_setting(reader: ReaderHelper, server, sessi
 
 
 @pytest.mark.asyncio
-async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, google, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
+async def test_change_specify_folder_setting_with_manual_creds(reader: ReaderHelper, google: SimulatedGoogle, session, coord: Coordinator, folder_finder: FolderFinder, drive: DriveSource, config):
     google.resetDriveAuth()
-    # Generate manual credentials
-    req_path = "manualauth?client_id={}&client_secret={}".format(
-        google._custom_drive_client_id, google._custom_drive_client_secret)
-    data = await reader.getjson(req_path)
-    assert "auth_url" in data
-    async with session.get(data["auth_url"], allow_redirects=False) as resp:
-        code = (await resp.json())["code"]
     drive.saveCreds(None)
     assert not drive.enabled()
-    req_path = "manualauth?code={}".format(code)
-    await reader.getjson(req_path)
+
+    # get the auth url
+    req_path = URL("manualauth").with_query({
+        "client_id": google._custom_drive_client_id,
+        "client_secret": google._custom_drive_client_secret})
+    data = await reader.getjson(str(req_path))
+
+    # Authorize the device using the url and device code provided
+    authorize_url = URL(data["auth_url"]).with_query({"code": data['code']})
+    async with session.get(str(authorize_url), allow_redirects=False) as resp:
+        resp.raise_for_status()
+
+    # TODO: wait for creds in a smarter way
+    await asyncio.sleep(2)
+
+    assert drive.enabled()
     assert drive.isCustomCreds()
 
     await coord.sync()

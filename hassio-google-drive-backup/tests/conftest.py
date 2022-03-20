@@ -15,7 +15,7 @@ from injector import (ClassAssistedBuilder, Injector, Module, inject, provider,
 from backup.config import Config, Setting
 from backup.model import Coordinator
 from dev.simulationserver import SimulationServer
-from backup.drive import DriveRequests, DriveSource, FolderFinder
+from backup.drive import DriveRequests, DriveSource, FolderFinder, AuthCodeQuery
 from backup.util import GlobalInfo, Estimator, Resolver, DataCache
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
@@ -147,6 +147,7 @@ async def generate_config(server_url: URL, ports, cleandir):
         Setting.DRIVE_REFRESH_URL: str(server_url.with_path("/oauth2/v4/token")),
         Setting.DRIVE_AUTHORIZE_URL: str(server_url.with_path("/o/oauth2/v2/auth")),
         Setting.DRIVE_TOKEN_URL: str(server_url.with_path("/token")),
+        Setting.DRIVE_DEVICE_CODE_URL: str(server_url.with_path("/device/code")),
         Setting.SUPERVISOR_TOKEN: "test_header",
         Setting.SECRETS_FILE_PATH: "secrets.yaml",
         Setting.CREDENTIALS_FILE_PATH: "credentials.dat",
@@ -256,6 +257,11 @@ async def fs(injector):
 @pytest.fixture
 async def estimator(injector, fs):
     return injector.get(Estimator)
+
+
+@pytest.fixture
+async def device_code(injector):
+    return injector.get(AuthCodeQuery)
 
 
 @pytest.fixture

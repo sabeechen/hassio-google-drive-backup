@@ -16,6 +16,7 @@
     "token_server_hosts": "http://localhost:56153",
     "drive_refresh_url": "http://localhost:56153/oauth2/v4/token",
     "drive_authorize_url": "http://localhost:56153/o/oauth2/v2/auth",
+    "drive_device_code_url": "http://localhost:56153/device/code",
     "drive_token_url": "http://localhost:56153/token",
     "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
     "log_level": "TRACE",

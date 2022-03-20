@@ -9,22 +9,22 @@ from os.path import abspath, join
 from typing import Any, Dict
 
 from aiohttp import BasicAuth, hdrs, web, ClientSession, ClientResponseError
-from aiohttp.web import HTTPBadRequest, HTTPException, Request, HTTPSeeOther, HTTPNotFound
-from injector import ClassAssistedBuilder, inject, singleton
+from aiohttp.web import HTTPException, Request, HTTPSeeOther, HTTPNotFound
+from injector import ClassAssistedBuilder, ProviderOf, inject, singleton
 
 from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, Version, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Backup, AbstractBackup
-from backup.exceptions import KnownError, ensureKey
+from backup.exceptions import KnownError, GoogleCredGenerateError, ensureKey
 from backup.util import GlobalInfo, Estimator, File, DataCache, UpgradeFlags
 from backup.ha import HaSource, PendingBackup, BACKUP_NAME_KEYS, HaRequests, HaUpdater
 from backup.ha import Password
 from backup.time import Time
 from backup.worker import Trigger
 from backup.logger import getLogger, getHistory, TraceLogger
-from backup.creds import Exchanger, MANUAL_CODE_REDIRECT_URI, Creds
+from backup.creds import Exchanger, Creds
 from backup.debugworker import DebugWorker
-from backup.drive import FolderFinder
+from backup.drive import FolderFinder, AuthCodeQuery
 from backup.const import FOLDERS
 from .debug import Debug
 from yarl import URL
@@ -46,13 +46,14 @@ class UiServer(Trigger, Startable):
                  time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator,
                  session: ClientSession, exchanger_builder: ClassAssistedBuilder[Exchanger],
                  debug_worker: DebugWorker, folder_finder: FolderFinder, data_cache: DataCache,
-                 haupdater: HaUpdater):
+                 haupdater: HaUpdater, custom_auth_provider: ProviderOf[AuthCodeQuery]):
         super().__init__()
         # Currently running server tasks
         self.runners = []
         self.exchanger_builder = exchanger_builder
         self._coord = coord
         self._time = time
+        self.custom_auth_provider = custom_auth_provider
         self.manual_exchanger: Exchanger = None
         self.config: Config = config
         self.auth_cache: Dict[str, Any] = {}
@@ -72,6 +73,9 @@ class UiServer(Trigger, Startable):
         self.ignore_other_turned_on = False
         self._data_cache = data_cache
         self._haupdater = haupdater
+        self._check_creds_loop: asyncio.Task = None
+        self._check_creds_error: Exception = None
+        self._device_code_authorizer: AuthCodeQuery = None
 
     def name(self):
         return "UI Server"
@@ -225,34 +229,49 @@ class UiServer(Trigger, Startable):
             })
         return addons
 
+    async def manualCredCheckLoop(self, auth: AuthCodeQuery):
+        try:
+            creds = await auth.waitForPermission()
+            self._coord.saveCreds(creds)
+        except asyncio.CancelledError:
+            # Cancelled, thats fine
+            pass
+        except Exception as e:
+            self._check_creds_error = e
+
+    async def checkManualAuth(self, request: Request):
+        if self._check_creds_error is not None:
+            raise self._check_creds_error
+        elif self._device_code_authorizer is not None:
+            return web.json_response({
+                'message': "Waiting for you to authorize the add-on.",
+                'auth_url': self._device_code_authorizer.verification_url,
+                'code': self._device_code_authorizer.user_code,
+                'expires': self._time.formatDelta(self._device_code_authorizer.expiration)
+            })
+        else:
+            return web.json_response({
+                'message': "No request for authorization is in progress."
+            })
+
     async def manualauth(self, request: Request) -> None:
         client_id = request.query.get("client_id", "")
-        code = request.query.get("code", "")
         client_secret = request.query.get("client_secret", "")
-        if client_id != "" and client_secret != "":
-            try:
-                # Redirect to the webpage that takes you to the google auth page.
-                self.manual_exchanger = self.exchanger_builder.build(
-                    client_id=client_id.strip(),
-                    client_secret=client_secret.strip(),
-                    redirect=MANUAL_CODE_REDIRECT_URI)
-                return web.json_response({
-                    'auth_url': await self.manual_exchanger.getAuthorizationUrl()
-                })
-            except Exception as e:
-                return web.json_response({
-                    'error': "Couldn't create authorization URL, Google said:" + str(e)
-                })
-        elif code != "":
-            try:
-                self._coord.saveCreds(await self.manual_exchanger.exchange(code))
-                self._global_info.setIngoreErrorsForNow(True)
-                return web.json_response({'auth_url': "index?fresh=true"})
-            except KnownError as e:
-                return web.json_response({'error': e.message()})
-            except Exception as e:
-                return web.json_response({'error': "Couldn't authorize with Google Drive, Google said:" + str(e)})
-        raise HTTPBadRequest()
+        if client_id == "" or client_secret == "":
+            raise GoogleCredGenerateError("Invalid information provided")
+
+        if self._check_creds_loop is not None and not self._check_creds_loop.done():
+            self._check_creds_loop.cancel()
+            await self._check_creds_loop
+        self._device_code_authorizer = self.custom_auth_provider.get()
+        await self._device_code_authorizer.requestCredentials(client_id, client_secret)
+        self._check_creds_error = None
+        self._check_creds_loop = asyncio.create_task(self.manualCredCheckLoop(self._device_code_authorizer))
+        return web.json_response({
+            'auth_url': self._device_code_authorizer.verification_url,
+            'code': self._device_code_authorizer.user_code,
+            'expires': self._time.formatDelta(self._device_code_authorizer.expiration),
+        })
 
     async def backup(self, request: Request) -> Any:
         custom_name = request.query.get("custom_name", None)
@@ -655,6 +674,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self.callbackupsnapshot)
         self._addRoute(app, self.ignore)
         self._addRoute(app, self.ackignorecheck)
+        self._addRoute(app, self.checkManualAuth)
 
     def _addRoute(self, app, method):
         app.add_routes([

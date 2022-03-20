@@ -134,6 +134,7 @@ class SimServerModule(BaseModule):
             Setting.AUTHORIZATION_HOST: str(self._base_url),
             Setting.TOKEN_SERVER_HOSTS: str(self._base_url),
             Setting.DRIVE_TOKEN_URL: str(self._base_url.with_path("token")),
+            Setting.DRIVE_DEVICE_CODE_URL: str(self._base_url.with_path("device/code")),
             Setting.DRIVE_REFRESH_URL: str(self._base_url.with_path("oauth2/v4/token")),
             Setting.INGRESS_PORT: 56152
         })

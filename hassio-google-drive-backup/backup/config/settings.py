@@ -103,6 +103,7 @@ class Setting(Enum):
     DRIVE_HOST_NAME = "drive_host_name"
     DRIVE_REFRESH_URL = "drive_refresh_url"
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
+    DRIVE_DEVICE_CODE_URL = "drive_device_code_url"
     DRIVE_TOKEN_URL = "drive_token_url"
     SAVE_DRIVE_CREDS_PATH = "save_drive_creds_path"
     STOP_ADDON_STATE_PATH = "stop_addon_state_path"
@@ -235,6 +236,7 @@ _DEFAULTS = {
     Setting.DRIVE_URL: "https://www.googleapis.com",
     Setting.DRIVE_REFRESH_URL: "https://www.googleapis.com/oauth2/v4/token",
     Setting.DRIVE_AUTHORIZE_URL: "https://accounts.google.com/o/oauth2/v2/auth",
+    Setting.DRIVE_DEVICE_CODE_URL: "https://oauth2.googleapis.com/device/code",
     Setting.DRIVE_TOKEN_URL: "https://oauth2.googleapis.com/token",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
     Setting.SAVE_DRIVE_CREDS_PATH: "token",
@@ -362,6 +364,7 @@ _CONFIG = {
     Setting.DRIVE_URL: "url?",
     Setting.DRIVE_REFRESH_URL: "url?",
     Setting.DRIVE_AUTHORIZE_URL: "url?",
+    Setting.DRIVE_DEVICE_CODE_URL: "url?",
     Setting.DRIVE_TOKEN_URL: "url?",
     Setting.DRIVE_HOST_NAME: "str?",
     Setting.SAVE_DRIVE_CREDS_PATH: "str?",

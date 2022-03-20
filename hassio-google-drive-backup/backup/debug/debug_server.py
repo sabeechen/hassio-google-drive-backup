@@ -13,10 +13,10 @@ class DebugServer(Startable):
 
     async def start(self):
         if self._config.get(Setting.DEBUGGER_PORT) is not None:
-            if 'ptvsd' not in sys.modules:
-                logger.error("Unable to start the debugger server because the ptvsd library is not installed")
+            if 'debugpy' not in sys.modules:
+                logger.error("Unable to start the debugger server because the debugpy library is not installed")
             else:
-                import ptvsd
+                import debugpy
                 port = self._config.get(Setting.DEBUGGER_PORT)
                 logger.info("Starting debugger on port {}".format(port))
-                ptvsd.enable_attach(('0.0.0.0', port))
+                debugpy.listen(("0.0.0.0", port))

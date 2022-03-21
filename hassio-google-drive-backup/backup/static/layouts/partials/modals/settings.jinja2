@@ -57,7 +57,7 @@
           <div class="col s12">
             <label>
               <input type="checkbox" name="ignore_other_backups" id="ignore_other_backups"
-                class="filled-in checkbox-ha" />
+                class="filled-in checkbox-ha" onchange="updateIgnoredBackupOptions()"/>
               <span>Ignore Other Backups</span>
               <br />
               <span class="helper-text">The addon will ignore any backups it didn't create.  
@@ -70,7 +70,7 @@
           <div class="col s12">
             <label>
               <input type="checkbox" name="ignore_upgrade_backups" id="ignore_upgrade_backups"
-                class="filled-in checkbox-ha" />
+                class="filled-in checkbox-ha" onchange="updateIgnoredBackupOptions()"/>
               <span>Ignore "Upgrade" Backups</span>
               <br />
               <span class="helper-text">The addon will ignore backups with only one addon or folder inside them.
@@ -78,6 +78,22 @@
                 Ignored backups will not count toward "Backups in Home Assistant", get deleted, 
                 or get uploaded to Google Drive up unless you manually tell the addon to do so.</span>
             </label>
+          </div>
+        </div>
+        <div class="col s11 offset-s1 row" id="ignored-backup-duration-block">
+          <div class="input-field col s11offset-s1">
+            <i class="material-icons prefix">delete_sweep</i>
+            <input type="text" id="delete_ignored_after_days" name="delete_ignored_after_days"
+              pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
+              class="validate" />
+            <label for="delete_ignored_after_days">Delete ignored snapshots after</label>
+            <span class="helper-text">
+              For any ignored snapshots, automatically delete them after this much time.  
+              Leave blank (the default) to never delete them. This can be any duration of
+              time expressed as days, hours, minutes, and seconds.  Be careful enabling this, 
+              you can see if you have any ignored backups by scrolling to the bottom of the
+              list of backups under this dialog. Examples:
+              '7 days', '36 hours', '1 hour, 30 minutes, 10 seconds', etc.</span>
           </div>
         </div>
         <div class="row">

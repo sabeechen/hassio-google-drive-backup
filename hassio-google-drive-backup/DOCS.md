@@ -10,7 +10,7 @@ _Note_: The configuration can be changed easily by starting the add-on and click
 The UI explains what each setting is and you don't need to modify anything before clicking `Start`.
 If you would still prefer to modify the settings in yaml, the options are detailed below.
 
-Add-on configuration example. Don't use this directly, the addon has a lot of configuration options that most users don't need:
+Add-on configuration example. Don't use this directly, the addon has a lot of configuration options that most users don't need or want:
 
 ```yaml
 # Keep 10 backups in Home Assistant
@@ -24,6 +24,9 @@ ignore_other_backups: True
 
 # Ignore backups that look like they were created by Home Assistant automatic backup option during upgrades
 ignore_upgrade_backups: True
+
+# Automatically delete "ignored" snapshots after this many days
+delete_ignored_after_days: 7
 
 # Take a backup every 3 days
 days_between_backups: 3

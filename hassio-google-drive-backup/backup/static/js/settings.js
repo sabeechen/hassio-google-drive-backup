@@ -228,6 +228,7 @@ function handleSettingsDialog(data) {
   showPallette($("#accent_color"));
 
   toggleSlide(document.querySelector('#stop_addons'), 'settings_stop_addons_details');
+  updateIgnoredBackupOptions();
   M.updateTextFields();
 }
 
@@ -238,6 +239,14 @@ function chooseFolderChanged() {
     $("#choose_folder_controls").hide();
   }
   M.updateTextFields();
+}
+
+function updateIgnoredBackupOptions() {
+  if ($("#ignore_upgrade_backups").prop('checked') || $("#ignore_other_backups").prop('checked')) {
+    $("#ignored-backup-duration-block").fadeIn();
+  } else {
+    $("#ignored-backup-duration-block").fadeOut();
+  }
 }
 
 function saveSettings() {

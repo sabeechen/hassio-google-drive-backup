@@ -20,6 +20,7 @@ from backup.util import GlobalInfo, Estimator, Resolver, DataCache
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
 from backup.model import Model
+from backup.model import DummyBackup
 from backup.time import Time
 from backup.module import BaseModule
 from backup.debugworker import DebugWorker
@@ -28,7 +29,7 @@ from backup.server import ErrorStore
 from backup.ha import AddonStopper
 from backup.ui import UiServer
 from .faketime import FakeTime
-from .helpers import Uploader
+from .helpers import Uploader, createBackupTar
 from dev.ports import Ports
 from dev.simulated_google import SimulatedGoogle
 from dev.request_interceptor import RequestInterceptor
@@ -380,3 +381,20 @@ async def debug_worker(injector):
 @pytest.fixture()
 async def folder_finder(injector):
     return injector.get(FolderFinder)
+
+
+class BackupHelper():
+    def __init__(self, uploader, time):
+        self.time = time
+        self.uploader = uploader
+
+    async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name"):
+        from_backup: DummyBackup = DummyBackup(
+            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug)
+        data = await self.uploader.upload(createBackupTar(slug, name, self.time.now(), size))
+        return from_backup, data
+
+
+@pytest.fixture
+def backup_helper(uploader, time):
+    return BackupHelper(uploader, time)

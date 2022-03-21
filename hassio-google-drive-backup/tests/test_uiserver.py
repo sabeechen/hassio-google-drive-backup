@@ -1094,9 +1094,14 @@ async def test_snapshot_to_backup_upgrade_avoid_default_overwrite(reader: Reader
 
 
 @pytest.mark.asyncio
-async def test_ha_upload(reader: ReaderHelper, backup: Backup, ui_server: UiServer, drive: DriveSource, ha: HaSource, session, time):
-    await ha.delete(backup)
+async def test_ha_upload(reader: ReaderHelper, backup_helper, ui_server: UiServer, drive: DriveSource, ha: HaSource, config: Config, model, time):
+    from_backup, data = await backup_helper.createFile()
+    backup = await drive.save(from_backup, data)
+
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    await model.sync(time.now())
     assert len(await ha.get()) == 0
+    assert len(await drive.get()) == 1
 
     reply = await reader.getjson(str(URL("upload").with_query({"slug": backup.slug()})))
     assert reply['message'] == "Uploading backup in the background"

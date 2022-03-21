@@ -1091,3 +1091,14 @@ async def test_snapshot_to_backup_upgrade_avoid_default_overwrite(reader: Reader
     assert Setting.CALL_BACKUP_SNAPSHOT.value in supervisor._options
     assert config.get(Setting.CALL_BACKUP_SNAPSHOT)
     assert config.get(Setting.MAX_BACKUPS_IN_HA) == 7
+
+
+@pytest.mark.asyncio
+async def test_ha_upload(reader: ReaderHelper, backup: Backup, ui_server: UiServer, drive: DriveSource, ha: HaSource, session, time):
+    await ha.delete(backup)
+    assert len(await ha.get()) == 0
+
+    reply = await reader.getjson(str(URL("upload").with_query({"slug": backup.slug()})))
+    assert reply['message'] == "Uploading backup in the background"
+    await ui_server.waitForUpload()
+    assert len(await ha.get()) == 1

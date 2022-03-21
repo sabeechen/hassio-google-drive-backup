@@ -76,6 +76,7 @@ class UiServer(Trigger, Startable):
         self._check_creds_loop: asyncio.Task = None
         self._check_creds_error: Exception = None
         self._device_code_authorizer: AuthCodeQuery = None
+        self._upload_event = asyncio.Event()
 
     def name(self):
         return "UI Server"
@@ -545,10 +546,17 @@ class UiServer(Trigger, Startable):
             'reload_page': self.config.get(Setting.ENABLE_DRIVE_UPLOAD) != old_drive_option
         }
 
+    async def waitForUpload(self):
+        await self._upload_event.wait()
+
+    async def _doUpload(self, slug):
+        await self._coord.uploadBackups(slug)
+        self._upload_event.set()
+
     async def upload(self, request: Request):
         slug = request.query.get("slug", "")
-        await self._coord.uploadBackups(slug)
-        return web.json_response({'message': "Backup uploaded to Home Assistant"})
+        asyncio.create_task(self._doUpload(slug))
+        return web.json_response({'message': "Uploading backup in the background"})
 
     async def redirect(self, request, url):
         context = {

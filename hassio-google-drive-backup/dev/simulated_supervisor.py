@@ -88,6 +88,7 @@ class SimulatedSupervisor(BaseServer):
             get('/supervisor/logs', self._supervisorLogs),
             get('/core/logs', self._coreLogs),
             get('/debug/insert/backup', self._debug_insert_backup),
+            get('/debug/info', self._debugInfo),
 
             get('/backups', self._getBackups),
             delete('/backups/{slug}', self._deletebackup),
@@ -307,6 +308,16 @@ class SimulatedSupervisor(BaseServer):
             'ingress_url': "fill me in later",
             "slug": self._addon_slug,
             "options": self._options
+        })
+
+    async def _debugInfo(self, request: Request):
+        return self._formatDataResponse({
+            "config": {
+                "   webui": "http://some/address",
+                'ingress_url': "fill me in later",
+                "slug": self._addon_slug,
+                "options": self._options
+            }
         })
 
     async def _miscInfo(self, request: Request):

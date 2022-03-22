@@ -1,3 +1,4 @@
+from datetime import timedelta
 from backup.model.backups import Backup
 import pytest
 
@@ -31,7 +32,7 @@ def dest():
 
 
 @pytest.mark.asyncio
-async def test_init(updater: HaUpdater, global_info, supervisor: SimulatedSupervisor, server):
+async def test_init(updater: HaUpdater, global_info, supervisor: SimulatedSupervisor, server, time: FakeTime):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "waiting"
@@ -40,6 +41,7 @@ async def test_init(updater: HaUpdater, global_info, supervisor: SimulatedSuperv
     verifyEntity(supervisor, "sensor.backup_state", "waiting", {
         'friendly_name': 'Backup State',
         'last_backup': 'Never',
+        'next_backup': (time.now() - timedelta(minutes=1)).isoformat(),
         'last_uploaded': 'Never',
         'backups': [],
         'backups_in_google_drive': 0,
@@ -121,6 +123,7 @@ async def test_update_backups(updater: HaUpdater, server, time: FakeTime, superv
     verifyEntity(supervisor, "sensor.backup_state", "waiting", {
         'friendly_name': 'Backup State',
         'last_backup': 'Never',
+        'next_backup': (time.now() - timedelta(minutes=1)).isoformat(),
         'last_uploaded': 'Never',
         'backups': [],
         'backups_in_google_drive': 0,
@@ -131,7 +134,28 @@ async def test_update_backups(updater: HaUpdater, server, time: FakeTime, superv
 
 
 @pytest.mark.asyncio
-async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, backup: Backup, supervisor: SimulatedSupervisor):
+async def test_update_backups_no_next_backup(updater: HaUpdater, server, time: FakeTime, supervisor: SimulatedSupervisor, config: Config):
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    await updater.update()
+    assert not updater._stale()
+    assert updater._state() == "waiting"
+    verifyEntity(supervisor, "binary_sensor.backups_stale",
+                 "off", STALE_ATTRIBUTES)
+    verifyEntity(supervisor, "sensor.backup_state", "waiting", {
+        'friendly_name': 'Backup State',
+        'last_backup': 'Never',
+        'next_backup': None,
+        'last_uploaded': 'Never',
+        'backups': [],
+        'backups_in_google_drive': 0,
+        'backups_in_home_assistant': 0,
+        'size_in_home_assistant': "0.0 B",
+        'size_in_google_drive': "0.0 B"
+    })
+
+
+@pytest.mark.asyncio
+async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, backup: Backup, supervisor: SimulatedSupervisor, config: Config):
     await updater.update()
     assert not updater._stale()
     assert updater._state() == "backed_up"
@@ -142,6 +166,7 @@ async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, b
         'friendly_name': 'Backup State',
         'last_backup': date,
         'last_uploaded': date,
+        'next_backup': (backup.date() + timedelta(days=config.get(Setting.DAYS_BETWEEN_BACKUPS))).isoformat(),
         'backups': [{
             'date': date,
             'name': backup.name(),
@@ -167,6 +192,7 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     verifyEntity(supervisor, "sensor.backup_state", "waiting", {
         'friendly_name': 'Backup State',
         'last_backup': 'Never',
+        'next_backup': (time.now() - timedelta(minutes=1)).isoformat(),
         'last_uploaded': 'Never',
         'backups': [],
         'backups_in_google_drive': 0,

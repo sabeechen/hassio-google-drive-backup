@@ -36,7 +36,6 @@ CREATE_FIELDS = SELECT_FIELDS
 URL_FILES = "/drive/v3/files/"
 URL_ABOUT = "/drive/v3/about"
 URL_START_UPLOAD = "/upload/drive/v3/files/?uploadType=resumable&supportsAllDrives=true"
-URL_AUTH = "/oauth2/v4/token"
 PAGE_SIZE = 100
 CHUNK_SIZE = 5 * 262144
 RANGE_RE = re.compile("^bytes=0-\\d+$")

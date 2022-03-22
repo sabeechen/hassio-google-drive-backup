@@ -20,7 +20,7 @@ aiofiles
 injector
 autopep8
 colorlog
-ptvsd
+debugpy
 google-cloud-logging
 google-cloud-firestore
 aiohttp-jinja2

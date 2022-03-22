@@ -25,6 +25,8 @@ URL_MATCH_UPLOAD = "^/upload/drive/v3/files/$"
 URL_MATCH_UPLOAD_PROGRESS = "^/upload/drive/v3/files/progress/.*$"
 URL_MATCH_CREATE = "^/upload/drive/v3/files/progress/.*$"
 URL_MATCH_FILE = "^/drive/v3/files/.*$"
+URL_MATCH_DEVICE_CODE = "^/device/code$"
+URL_MATCH_TOKEN = "^/token$"
 
 
 @singleton
@@ -55,6 +57,8 @@ class SimulatedGoogle(BaseServer):
         self._upload_chunk_trigger = Event()
         self._current_chunk = 1
         self._waitOnChunk = 0
+        self.device_auth_params = {}
+        self._device_code_accepted = None
 
     def setDriveSpaceAvailable(self, bytes_available):
         self.space_available = bytes_available
@@ -99,12 +103,72 @@ class SimulatedGoogle(BaseServer):
             get('/o/oauth2/v2/auth', self._oAuth2Authorize),
             get('/drive/customcreds', self._getCustomCred),
             get('/drive/v3/about', self._driveAbout),
+            post('/device/code', self._deviceCode),
+            get('/device', self._device),
+            get('/debug/google', self._debug),
             post('/token', self._driveToken),
         ]
+
+    async def _debug(self, request: Request):
+        return json_response({
+            "custom_drive_client_id": self._custom_drive_client_id,
+            "custom_drive_client_secret": self._custom_drive_client_secret,
+            "device_auth_params": self.device_auth_params
+        })
 
     async def _checkDriveHeaders(self, request: Request):
         if request.headers.get("Authorization", "") != "Bearer " + self._auth_token:
             raise HTTPUnauthorized()
+
+    async def _deviceCode(self, request: Request):
+        params = await request.post()
+        client_id = params['client_id']
+        scope = params['scope']
+        if client_id != self._custom_drive_client_id or scope != 'https://www.googleapis.com/auth/drive.file':
+            raise HTTPUnauthorized()
+
+        self.device_auth_params = {
+            'device_code': self.generateId(10),
+            'expires_in': 60,
+            'interval': 1,
+            'user_code': self.generateId(8),
+            'verification_url': str(URL("http://localhost").with_port(self._port).with_path("device"))
+        }
+        self._device_code_accepted = None
+        return json_response(self.device_auth_params)
+
+    async def _device(self, request: Request):
+        code = request.query.get('code')
+        if code:
+            if self.device_auth_params.get('user_code', "dfsdfsdfsdfs") == code:
+                body = "Accepted"
+                self._device_code_accepted = True
+                self.generateNewRefreshToken()
+                self.generateNewAccessToken()
+            else:
+                body = "Wrong code"
+        else:
+            body = """
+            <html>
+                <head>
+                    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+                    <meta content="utf-8" http-equiv="encoding">
+                    <title>Simulated Drive Device Authorization</title>
+                </head>
+                <body>
+                    <div>
+                        Enter the device code provided below
+                    </div>
+                    <form>
+                    <label for="code">Device Code:</label><br>
+                    <input type="text" value="Device Code" id="code" name="code">
+                    <input type="submit" value="Submit">
+                    </form>
+                </body>
+            </html>
+            """
+        resp = Response(body=body, content_type="text/html")
+        return resp
 
     async def _oAuth2Authorize(self, request: Request):
         query = request.query
@@ -137,14 +201,25 @@ class SimulatedGoogle(BaseServer):
 
     async def _driveToken(self, request: Request):
         data = await request.post()
-        if data.get('redirect_uri') not in ["http://localhost:{}/drive/authorize".format(self._port), 'urn:ietf:wg:oauth:2.0:oob']:
-            raise HTTPUnauthorized()
-        if data.get('grant_type') != 'authorization_code':
-            raise HTTPUnauthorized()
         if not self._checkClientIdandSecret(data.get('client_id'), data.get('client_secret')):
             raise HTTPUnauthorized()
-        if data.get('code') != self._drive_auth_code:
-            raise HTTPUnauthorized()
+        if data.get('grant_type') == 'authorization_code':
+            if data.get('redirect_uri') not in ["http://localhost:{}/drive/authorize".format(self._port), 'urn:ietf:wg:oauth:2.0:oob']:
+                raise HTTPUnauthorized()
+            if data.get('code') != self._drive_auth_code:
+                raise HTTPUnauthorized()
+        elif data.get('grant_type') == 'urn:ietf:params:oauth:grant-type:device_code':
+            if data.get('device_code') != self.device_auth_params['device_code']:
+                raise HTTPUnauthorized()
+            if self._device_code_accepted is None:
+                return json_response({
+                    "error": "authorization_pending",
+                    "error_description": "Precondition Required"
+                }, status=428)
+            elif self._device_code_accepted is False:
+                raise HTTPUnauthorized()
+        else:
+            raise HTTPBadRequest()
         self.generateNewRefreshToken()
         return json_response({
             'access_token': self._auth_token,
@@ -171,16 +246,28 @@ class SimulatedGoogle(BaseServer):
             raise HTTPUnauthorized()
         if params['refresh_token'] != self._refresh_token:
             raise HTTPUnauthorized()
-        if params['grant_type'] != 'refresh_token':
+        if params['grant_type'] == 'refresh_token':
+            self.generateNewAccessToken()
+            return json_response({
+                'access_token': self._auth_token,
+                'expires_in': 3600,
+                'token_type': 'doesn\'t matter'
+            })
+        elif params['grant_type'] == 'urn:ietf:params:oauth:grant-type:device_code':
+            if params['device_code'] != self.device_auth_params['device_code']:
+                raise HTTPUnauthorized()
+            if not self._device_code_accepted:
+                return json_response({
+                    "error": "authorization_pending",
+                    "error_description": "Precondition Required"
+                }, status=428)
+            return json_response({
+                'access_token': self._auth_token,
+                'expires_in': 3600,
+                'token_type': 'doesn\'t matter'
+            })
+        else:
             raise HTTPUnauthorized()
-
-        self.generateNewAccessToken()
-
-        return json_response({
-            'access_token': self._auth_token,
-            'expires_in': 3600,
-            'token_type': 'doesn\'t matter'
-        })
 
     def filter_fields(self, item: Dict[str, Any], fields) -> Dict[str, Any]:
         ret = {}

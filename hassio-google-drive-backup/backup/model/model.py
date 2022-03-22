@@ -175,6 +175,16 @@ class Model():
             if self.dest.enabled():
                 await self._purge(self.dest)
 
+        # Delete any "ignored" backups that have expired
+        if (self.config.get(Setting.IGNORE_OTHER_BACKUPS) or self.config.get(Setting.IGNORE_UPGRADE_BACKUPS)) and self.config.get(Setting.DELETE_IGNORED_AFTER_DAYS) > 0:
+            cutoff = now - timedelta(days=self.config.get(Setting.DELETE_IGNORED_AFTER_DAYS))
+            delete = []
+            for backup in self.backups.values():
+                if backup.ignore() and backup.date() < cutoff:
+                    delete.append(backup)
+            for backup in delete:
+                await self.deleteBackup(backup, self.source)
+
         self._handleBackupDetails()
         next_backup = self.nextBackup(now)
         if next_backup and now >= next_backup and self.source.enabled() and not self.dest.needsConfiguration():

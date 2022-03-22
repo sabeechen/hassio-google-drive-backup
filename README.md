@@ -35,7 +35,7 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
 >[<img src="images/patreon-button.svg" width=150/>](https://www.patreon.com/bePatron?u=4064183)
 
 ### Detailed Install Instructions
-1. Navigate in your Home Assistant frontend to <kbd>Supervisor</kbd> -> <kbd>Add-on Store</kbd>.
+1. Navigate in your Home Assistant frontend to <kbd>Configuration</kbd> -> <kbd>Add-ons, Backups & Supervisor</kbd> -> <kbd>Add-on Store (Bottom Right)</kbd>.
 
 2. Click the 3-dots menu at upper right <kbd>...</kbd> > <kbd>Repositories</kbd> and add this repository's URL: [https://github.com/sabeechen/hassio-google-drive-backup](https://github.com/sabeechen/hassio-google-drive-backup)
 

@@ -8,7 +8,7 @@ from .intvalidator import IntValidator
 from .regexvalidator import RegexValidator
 from .stringvalidator import StringValidator
 from .listvalidator import ListValidator
-from .durationassecondsvalidator import DurationAsSecondsValidator
+from .durationasstringvalidator import DurationAsStringValidator
 from ..logger import getLogger
 
 logger = getLogger(__name__)
@@ -21,6 +21,7 @@ class Setting(Enum):
     DAYS_BETWEEN_BACKUPS = "days_between_backups"
     IGNORE_OTHER_BACKUPS = "ignore_other_backups"
     IGNORE_UPGRADE_BACKUPS = "ignore_upgrade_backups"
+    DELETE_IGNORED_AFTER_DAYS = "delete_ignored_after_days"
     DELETE_BEFORE_NEW_BACKUP = "delete_before_new_backup"
     BACKUP_NAME = "backup_name"
     BACKUP_TIME_OF_DAY = "backup_time_of_day"
@@ -103,6 +104,7 @@ class Setting(Enum):
     DRIVE_HOST_NAME = "drive_host_name"
     DRIVE_REFRESH_URL = "drive_refresh_url"
     DRIVE_AUTHORIZE_URL = "drive_authorize_url"
+    DRIVE_DEVICE_CODE_URL = "drive_device_code_url"
     DRIVE_TOKEN_URL = "drive_token_url"
     SAVE_DRIVE_CREDS_PATH = "save_drive_creds_path"
     STOP_ADDON_STATE_PATH = "stop_addon_state_path"
@@ -155,6 +157,7 @@ _DEFAULTS = {
     Setting.DAYS_BETWEEN_BACKUPS: 3,
     Setting.IGNORE_OTHER_BACKUPS: False,
     Setting.IGNORE_UPGRADE_BACKUPS: False,
+    Setting.DELETE_IGNORED_AFTER_DAYS: 0,
     Setting.DELETE_BEFORE_NEW_BACKUP: False,
     Setting.BACKUP_NAME: "{type} Backup {year}-{month}-{day} {hr24}:{min}:{sec}",
     Setting.BACKUP_TIME_OF_DAY: "",
@@ -235,6 +238,7 @@ _DEFAULTS = {
     Setting.DRIVE_URL: "https://www.googleapis.com",
     Setting.DRIVE_REFRESH_URL: "https://www.googleapis.com/oauth2/v4/token",
     Setting.DRIVE_AUTHORIZE_URL: "https://accounts.google.com/o/oauth2/v2/auth",
+    Setting.DRIVE_DEVICE_CODE_URL: "https://oauth2.googleapis.com/device/code",
     Setting.DRIVE_TOKEN_URL: "https://oauth2.googleapis.com/token",
     Setting.DRIVE_HOST_NAME: "www.googleapis.com",
     Setting.SAVE_DRIVE_CREDS_PATH: "token",
@@ -282,6 +286,7 @@ _CONFIG = {
     Setting.DAYS_BETWEEN_BACKUPS: "float(0,)?",
     Setting.IGNORE_OTHER_BACKUPS: "bool?",
     Setting.IGNORE_UPGRADE_BACKUPS: "bool?",
+    Setting.DELETE_IGNORED_AFTER_DAYS: "float(0,)?",
     Setting.DELETE_BEFORE_NEW_BACKUP: "bool?",
     Setting.BACKUP_NAME: "str?",
     Setting.BACKUP_TIME_OF_DAY: "match(^[0-2]\\d:[0-5]\\d$)?",
@@ -362,6 +367,7 @@ _CONFIG = {
     Setting.DRIVE_URL: "url?",
     Setting.DRIVE_REFRESH_URL: "url?",
     Setting.DRIVE_AUTHORIZE_URL: "url?",
+    Setting.DRIVE_DEVICE_CODE_URL: "url?",
     Setting.DRIVE_TOKEN_URL: "url?",
     Setting.DRIVE_HOST_NAME: "str?",
     Setting.SAVE_DRIVE_CREDS_PATH: "str?",
@@ -465,7 +471,8 @@ for setting in Setting:
 # for key in addon_config["schema"]:
 #     _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
 
-_VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsSecondsValidator("max_sync_interval_seconds", 1, None)
+_VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator("max_sync_interval_seconds", minimum=1, maximum=None)
+_VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator("delete_ignored_after_days", minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
 VERSION = addon_config["version"]
 
 

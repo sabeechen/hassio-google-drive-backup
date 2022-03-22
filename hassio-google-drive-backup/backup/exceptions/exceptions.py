@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_BACKUP_FOLDER_MISSING, ERROR_BAD_PASSWORD_KEY,
                      ERROR_CREDS_EXPIRED, ERROR_DRIVE_FULL,
-                     ERROR_EXISTING_FOLDER, ERROR_GOOGLE_CONNECT,
+                     ERROR_EXISTING_FOLDER, ERROR_GOOGLE_CONNECT, ERROR_GOOGLE_CRED_PROCESS,
                      ERROR_GOOGLE_DNS, ERROR_GOOGLE_INTERNAL,
                      ERROR_GOOGLE_SESSION, ERROR_GOOGLE_TIMEOUT,
                      ERROR_HA_DELETE_ERROR, ERROR_INVALID_CONFIG, ERROR_LOGIC,
@@ -433,3 +433,14 @@ class SupervisorFileSystemError(KnownError):
 
     def code(self):
         return ERROR_SUPERVISOR_FILE_SYSTEM
+
+
+class GoogleCredGenerateError(KnownError):
+    def __init__(self, message):
+        self._msg = message
+
+    def message(self):
+        return self._msg
+
+    def code(self):
+        return ERROR_GOOGLE_CRED_PROCESS

@@ -1,6 +1,5 @@
 from backup.config import Config, Setting, Startable
 from backup.logger import getLogger
-import sys
 from injector import inject, singleton
 logger = getLogger(__name__)
 
@@ -13,10 +12,7 @@ class DebugServer(Startable):
 
     async def start(self):
         if self._config.get(Setting.DEBUGGER_PORT) is not None:
-            if 'ptvsd' not in sys.modules:
-                logger.error("Unable to start the debugger server because the ptvsd library is not installed")
-            else:
-                import ptvsd
-                port = self._config.get(Setting.DEBUGGER_PORT)
-                logger.info("Starting debugger on port {}".format(port))
-                ptvsd.enable_attach(('0.0.0.0', port))
+            import debugpy
+            port = self._config.get(Setting.DEBUGGER_PORT)
+            logger.info("Starting debugger on port {}".format(port))
+            debugpy.listen(("0.0.0.0", port))

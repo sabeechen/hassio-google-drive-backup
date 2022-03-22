@@ -771,3 +771,61 @@ async def test_generational_empty(time, model: Model, dest, source, simple_confi
     assert len(model.backups) == 0
     await model.sync(now)
     assert len(model.backups) == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_ignored_other_backup_after_some_time(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    # Create a few backups, one ignored
+    source.setMax(2)
+    dest.setMax(2)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    simple_config.override(Setting.IGNORE_OTHER_BACKUPS, True)
+    simple_config.override(Setting.DELETE_IGNORED_AFTER_DAYS, 1)
+    ignored = source.insert("Ignored", time.now())
+    source.insert("Existing", time.now())
+    ignored.setIgnore(True)
+    await model.sync(time.now())
+    source.assertThat(current=2)
+    dest.assertThat(saved=1, current=1)
+    source.reset()
+    dest.reset()
+
+    time.advance(hours=23)
+    await model.sync(time.now())
+
+    source.assertThat(current=2)
+    dest.assertThat(current=1)
+
+    time.advance(hours=2)
+    await model.sync(time.now())
+    source.assertThat(current=1, deleted=1)
+    dest.assertThat(current=1)
+
+
+@pytest.mark.asyncio
+async def test_delete_ignored_upgrade_backup_after_some_time(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    # Create a few backups, one ignored
+    source.setMax(2)
+    dest.setMax(2)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    simple_config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    simple_config.override(Setting.DELETE_IGNORED_AFTER_DAYS, 1)
+    ignored = source.insert("Ignored", time.now())
+    source.insert("Existing", time.now())
+    ignored.setIgnore(True)
+    await model.sync(time.now())
+    source.assertThat(current=2)
+    dest.assertThat(saved=1, current=1)
+    source.reset()
+    dest.reset()
+
+    time.advance(hours=23)
+    await model.sync(time.now())
+
+    source.assertThat(current=2)
+    dest.assertThat(current=1)
+
+    time.advance(hours=2)
+    await model.sync(time.now())
+    source.assertThat(current=1, deleted=1)
+    dest.assertThat(current=1)

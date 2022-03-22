@@ -1,3 +1,12 @@
+## [0.106.1 2022-3-21]
+### Fixes
+* Updates the mechanism for using custom/personal Google API credentials to work with Google's newer APIs
+* Fixes a problem that prevented loading backups from Google Drive -> Home Assistant through the Nabu Casa remote UI
+
+### New
+* Added the ability to delete any "ignored" snapshots after a certain age.
+
+
 ## [0.105.2 2021-9-7]
 ### Fixes
 * Include addon version number in the path component of static resources in an attempt to resolve [issue #466](https://github.com/sabeechen/hassio-google-drive-backup/issues/466).  Special thanks to [@stigvig](https://github.com/stigvig) and [@loomyr](https://github.com/loomyr) for helping me dig into this.

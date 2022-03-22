@@ -19,6 +19,11 @@ class UrlMatch():
         self.sleep = sleep
         self.response = response
         self.fail_for = fail_for
+        self.responses = []
+        self._calls = 0
+
+    def addResponse(self, response):
+        self.responses.append(response)
 
     def isMatch(self, request):
         return re.match(self.url, request.url.path)
@@ -29,7 +34,13 @@ class UrlMatch():
     def clear(self):
         self.wait_event.set()
 
+    def callCount(self):
+        return self._calls
+
     async def _doAction(self, request: Request):
+        self._calls += 1
+        if len(self.responses) > 0:
+            return self.responses.pop(0)
         if self.status is not None:
             await self._readAll(request)
             if self.response:
@@ -72,9 +83,10 @@ class RequestInterceptor:
         self._matchers = []
         self._history = []
 
-    def setError(self, url, status, fail_after=None, fail_for=None, response=None):
-        matcher = UrlMatch(url, fail_after, status, response, fail_for=fail_for)
+    def setError(self, url, status=None, fail_after=None, fail_for=None, response=None) -> UrlMatch:
+        matcher = UrlMatch(url, fail_after, status=status, response=response, fail_for=fail_for)
         self._matchers.append(matcher)
+        return matcher
 
     def clear(self):
         self._matchers.clear()

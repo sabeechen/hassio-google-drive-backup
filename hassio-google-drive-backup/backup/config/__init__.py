@@ -5,4 +5,5 @@ from .createoptions import CreateOptions
 from .boolvalidator import BoolValidator
 from .startable import Startable
 from .listvalidator import ListValidator
+from.durationasstringvalidator import DurationAsStringValidator
 from .version import Version

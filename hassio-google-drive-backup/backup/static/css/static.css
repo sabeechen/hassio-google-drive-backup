@@ -524,3 +524,18 @@ input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default
   color: var(--accent-hover-color);
   background-color: var(--accent-bg-hover-color);
 }
+
+.device-code-box {
+  font-size: 2em;
+  width: auto;
+  border-color: var(--accent-text-color);
+  color: var(--accent-text-color);
+  background: var(--accent-color);
+  border-radius: 6px;
+  padding: 6px;
+  margin: 6px;
+}
+
+.device-code-box:hover {
+  background-color: var(--accent-bg-hover-color);
+}

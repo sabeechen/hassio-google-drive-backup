@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import backup.exceptions
 import inspect
 import pytest
-from backup.exceptions import KnownError, KnownTransient, SimulatedError, GoogleDrivePermissionDenied, InvalidConfigurationValue, LogicError, ProtocolError, NoBackup, NotUploadable, PleaseWait, UploadFailed
+from backup.exceptions import GoogleCredGenerateError, KnownError, KnownTransient, SimulatedError, GoogleDrivePermissionDenied, InvalidConfigurationValue, LogicError, ProtocolError, NoBackup, NotUploadable, PleaseWait, UploadFailed
 from .conftest import ReaderHelper
 
 
@@ -20,7 +20,8 @@ async def test_verify_coverage(ui_server, reader: ReaderHelper):
         NotUploadable,
         PleaseWait,
         ProtocolError,
-        UploadFailed
+        UploadFailed,
+        GoogleCredGenerateError,
     ]
     codes = {}
     for name, obj in inspect.getmembers(backup.exceptions):

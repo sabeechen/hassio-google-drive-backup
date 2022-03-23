@@ -1,6 +1,7 @@
 import os
 import json
 from time import sleep
+from wsgiref.util import setup_testing_defaults
 
 import pytest
 import asyncio
@@ -11,8 +12,7 @@ from dev.simulationserver import SimulationServer
 from dev.simulated_google import SimulatedGoogle, URL_MATCH_UPLOAD_PROGRESS, URL_MATCH_FILE
 from dev.request_interceptor import RequestInterceptor
 from backup.drive import DriveSource, FolderFinder, DriveRequests, RETRY_SESSION_ATTEMPTS, UPLOAD_SESSION_EXPIRATION_DURATION, URL_START_UPLOAD
-from backup.drive.driverequests import (BASE_CHUNK_SIZE,
-                                        CHUNK_UPLOAD_TARGET_SECONDS, MAX_CHUNK_SIZE)
+from backup.drive.driverequests import (BASE_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS)
 from backup.drive.drivesource import FOLDER_MIME_TYPE
 from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
                                DriveQuotaExceeded, ExistingBackupFolderError,
@@ -217,19 +217,35 @@ async def test_upload_resume(drive: DriveSource, time, backup_helper: BackupHelp
     await compareStreams(data, await drive.read(from_backup))
 
 
-def test_chunk_size(drive: DriveSource):
+def test_chunk_size(drive: DriveSource, config: Config):
+    max = config.get(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES)
     assert drive.drivebackend._getNextChunkSize(
-        1000000000, 0) == MAX_CHUNK_SIZE
+        1000000000, 0) == max
     assert drive.drivebackend._getNextChunkSize(
         1, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
     assert drive.drivebackend._getNextChunkSize(
-        1000000000, CHUNK_UPLOAD_TARGET_SECONDS) == MAX_CHUNK_SIZE
+        1000000000, CHUNK_UPLOAD_TARGET_SECONDS) == max
     assert drive.drivebackend._getNextChunkSize(
         BASE_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
     assert drive.drivebackend._getNextChunkSize(
         BASE_CHUNK_SIZE, 1) == BASE_CHUNK_SIZE * CHUNK_UPLOAD_TARGET_SECONDS
     assert drive.drivebackend._getNextChunkSize(
         BASE_CHUNK_SIZE, 1.01) == BASE_CHUNK_SIZE * (CHUNK_UPLOAD_TARGET_SECONDS - 1)
+
+
+def test_chunk_size_limits(drive: DriveSource, config: Config):
+    config.override(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES, 1)
+    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == BASE_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(1, 1000000) == BASE_CHUNK_SIZE
+
+    config.override(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES, BASE_CHUNK_SIZE * 1.5)
+    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == BASE_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(1, 1000000) == BASE_CHUNK_SIZE
+
+    config.override(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES, BASE_CHUNK_SIZE * 3.5)
+    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == BASE_CHUNK_SIZE * 3
+    assert drive.drivebackend._getNextChunkSize(1, 1000000) == BASE_CHUNK_SIZE
+
 
 
 @pytest.mark.asyncio

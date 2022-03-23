@@ -40,9 +40,8 @@ PAGE_SIZE = 100
 CHUNK_SIZE = 5 * 262144
 RANGE_RE = re.compile("^bytes=0-\\d+$")
 
-BASE_CHUNK_SIZE = 262144  # Google's api requires uploading chunks in multiples of 256kb
-# Never try to uplod mroe than 10mb at once
-MAX_CHUNK_SIZE = BASE_CHUNK_SIZE * 40
+BASE_CHUNK_SIZE = 256 * 1024  # Google's api requires uploading chunks in multiples of 256kb
+
 # During upload, chunks get sized to complete upload after 10s so we can give status updates on progress.
 CHUNK_UPLOAD_TARGET_SECONDS = 10
 
@@ -317,11 +316,14 @@ class DriveRequests():
             await partial.release()
 
     def _getNextChunkSize(self, last_chunk_size, last_chunk_seconds):
+        max = BASE_CHUNK_SIZE * math.floor(self.config.get(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES) / BASE_CHUNK_SIZE)
+        if max < BASE_CHUNK_SIZE:
+            max = BASE_CHUNK_SIZE
         if last_chunk_seconds <= 0:
-            return MAX_CHUNK_SIZE
+            return max
         next_chunk = CHUNK_UPLOAD_TARGET_SECONDS * last_chunk_size / last_chunk_seconds
-        if next_chunk > MAX_CHUNK_SIZE:
-            return MAX_CHUNK_SIZE
+        if next_chunk >= max:
+            return max
         if next_chunk < BASE_CHUNK_SIZE:
             return BASE_CHUNK_SIZE
         return math.floor(next_chunk / BASE_CHUNK_SIZE) * BASE_CHUNK_SIZE

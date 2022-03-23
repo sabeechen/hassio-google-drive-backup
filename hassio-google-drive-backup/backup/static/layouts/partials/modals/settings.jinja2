@@ -567,13 +567,26 @@
               <input type="text" id="max_sync_interval_seconds" name="max_sync_interval_seconds"
                 pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
                 class="validate" />
-              <label for="drive_ipv4">Sync Interval</label>
+              <label for="max_sync_interval_seconds">Sync Interval</label>
               <span class="helper-text">
                 How often the addon should check Home Assistant and Google Drive for backups. The addon will still
                 sync more frequently when it starts, creates a new backup, or
                 encounters errors. This can be any duration of time expressed as hours, minutes, and seconds. Examples:
                 '1 hour', '30 minutes', '1 hour, 30 minutes, 10 seconds',
                 etc.</span>
+            </div>
+          </div>
+          <div class="col s11 offset-s1 row">
+            <div class="input-field col s12 m12 s12">
+              <i class="material-icons prefix">refresh</i>
+              <input type="text" id="maximum_upload_chunk_bytes" name="maximum_upload_chunk_bytes"
+                pattern="^[ ]*([0-9,]*\.?[0-9]*)[ ]*(b|B|k|K|m|M|g|G|t|T|p|P|e|E|z|Z|y|Y)[a-zA-Z ]*[ ]*$"
+                class="validate" />
+              <label for="maximum_upload_chunk_bytes">Maximum Drive Upload Chunk Size</label>
+              <span class="helper-text">
+                Sets the maximum "chunk" size allowed for uploads to Google Drive.  Larger sizes will upload faster but delay reports 
+                of progress and may cause interuptions on some network hardware.  Between 1MB and 20MB is recommended, minimum is 256 kB. 
+                The value can be provided in any binary-prefix format, eg '256 Kb', '10 Mb', '3000Kb', etc.</span>
             </div>
           </div>
           <div class="col s11 offset-s1">

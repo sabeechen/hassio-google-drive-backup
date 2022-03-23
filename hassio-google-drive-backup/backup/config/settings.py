@@ -1,3 +1,4 @@
+from ast import Bytes
 import json
 from enum import Enum, unique
 from os.path import abspath, join
@@ -9,6 +10,7 @@ from .regexvalidator import RegexValidator
 from .stringvalidator import StringValidator
 from .listvalidator import ListValidator
 from .durationasstringvalidator import DurationAsStringValidator
+from .bytesizeasstringvalidator import BytesizeAsStringValidator
 from ..logger import getLogger
 
 logger = getLogger(__name__)
@@ -83,6 +85,7 @@ class Setting(Enum):
     DEFAULT_DRIVE_CLIENT_ID = "default_drive_client_id"
     DEFAULT_DRIVE_CLIENT_SECRET = "default_drive_client_secret"
     DRIVE_PICKER_API_KEY = "drive_picker_api_key"
+    MAXIMUM_UPLOAD_CHUNK_BYTES = "maximum_upload_chunk_bytes"
 
     # Files and folders
     FOLDER_FILE_PATH = "folder_file_path"
@@ -229,6 +232,7 @@ _DEFAULTS = {
     Setting.IGNORE_IPV6_ADDRESSES: False,
     Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS: 180,
     Setting.GOOGLE_DRIVE_PAGE_SIZE: 100,
+    Setting.MAXIMUM_UPLOAD_CHUNK_BYTES: 10 * 1024 * 1024,
 
     # Remote endpoints
     Setting.AUTHORIZATION_HOST: "https://habackup.io",
@@ -358,6 +362,7 @@ _CONFIG = {
     Setting.IGNORE_IPV6_ADDRESSES: "bool?",
     Setting.GOOGLE_DRIVE_TIMEOUT_SECONDS: "float(1,)?",
     Setting.GOOGLE_DRIVE_PAGE_SIZE: "int(1,)?",
+    Setting.MAXIMUM_UPLOAD_CHUNK_BYTES: f"float({1024 * 256},)?",
 
     # Remote endpoints
     Setting.AUTHORIZATION_HOST: "url?",
@@ -473,6 +478,7 @@ for setting in Setting:
 
 _VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator("max_sync_interval_seconds", minimum=1, maximum=None)
 _VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator("delete_ignored_after_days", minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
+_VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator("maximum_upload_chunk_bytes", minimum=256 * 1024)
 VERSION = addon_config["version"]
 
 

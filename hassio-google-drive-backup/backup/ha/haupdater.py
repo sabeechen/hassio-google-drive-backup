@@ -146,11 +146,15 @@ class HaUpdater(Worker):
                 }
             }
         else:
+            next = self._coordinator.nextBackupTime()
+            if next is not None:
+                next = next.isoformat()
             return {
                 "state": self._state(),
                 "attributes": {
                     "friendly_name": "Backup State",
                     "last_backup": last,  # type: ignore
+                    "next_backup": next,
                     "last_uploaded": last_uploaded,
                     "backups_in_google_drive": len(drive_backups),
                     "backups_in_home_assistant": len(ha_backups),

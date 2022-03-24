@@ -196,7 +196,7 @@ class Uploader():
         self.session = session
         self.time = time
 
-    async def upload(self, data):
+    async def upload(self, data) -> AsyncHttpGetter:
         async with await self.session.post(self.host + "/uploadfile", data=data) as resp:
             resp.raise_for_status()
         source = AsyncHttpGetter(self.host + "/readfile", {}, self.session, time=self.time)

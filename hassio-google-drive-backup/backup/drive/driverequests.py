@@ -193,7 +193,7 @@ class DriveRequests():
             pass
 
     async def getAboutInfo(self):
-        q = {"fields": 'storageQuota'}
+        q = {"fields": 'storageQuota,user'}
         return await self.retryRequest("GET", URL_ABOUT + "?" + urlencode(q), is_json=True)
 
     async def create(self, stream, metadata, mime_type):

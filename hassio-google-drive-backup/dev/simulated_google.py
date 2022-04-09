@@ -354,6 +354,9 @@ class SimulatedGoogle(BaseServer):
             'storageQuota': {
                 'usage': 1024 * 1024 * 1024,
                 'limit': 5 * 1024 * 1024 * 1024
+            },
+            'user': {
+                'emailAddress': "testing@no.where"
             }
         })
 

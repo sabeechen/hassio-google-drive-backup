@@ -72,6 +72,9 @@ class BackupSource(Trigger, Generic[T]):
     def postSync(self) -> None:
         return
 
+    def detail(self) -> str:
+        return ""
+
     # Gets called after reading state but before any changes are made
     # to check for additional errors.
     def checkBeforeChanges(self) -> None:

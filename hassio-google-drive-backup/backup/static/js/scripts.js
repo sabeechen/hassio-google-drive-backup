@@ -379,6 +379,12 @@ function processSourcesUpdate(sources) {
     }
 
     $(".source_title", template).html("in " + source.title );
+    $(".source-detail", template).html(source.detail);
+    if (source.detail.length > 0) {
+      $(".source-detail-label", template).show();
+    } else {
+      $(".source-detail-label", template).hide();
+    }
     $("use", template).attr('xlink:href', "#" + source.icon);
 
     if (source.retained > 0) {

@@ -96,6 +96,12 @@ class DriveSource(BackupDestination):
     def isWorking(self):
         return self._uploadedAtLeastOneChunk
 
+    def detail(self):
+        if self._drive_info and 'user' in self._drive_info and 'emailAddress' in self._drive_info['user']:
+            return f'{self._drive_info["user"]["emailAddress"]}'
+        else:
+            return super().detail()
+
     async def get(self, allow_retry=True) -> Dict[str, DriveBackup]:
         parent = await self.getFolderId()
         try:

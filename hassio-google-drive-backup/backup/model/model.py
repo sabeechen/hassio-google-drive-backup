@@ -211,7 +211,7 @@ class Model():
                     "", upload.date(), self.dest.name(), "dummy_slug_name")
                 proposed = list(self.backups.values())
                 proposed.append(dummy)
-                if self._nextPurge(self.dest, proposed) != dummy:
+                if self._nextPurge(self.dest, proposed)[1] != dummy:
                     if self.config.get(Setting.DELETE_BEFORE_NEW_BACKUP):
                         await self._purge(self.dest, pre_purge=True)
                     upload.addSource(await self.dest.save(upload, await self.source.read(upload)))
@@ -252,7 +252,7 @@ class Model():
         purges = {}
         for source in [self.source, self.dest]:
             purges[source.name()] = self._nextPurge(
-                source, self.backups.values(), findNext=True)
+                source, self.backups.values(), findNext=True)[1]
         return purges
 
     def _parseTimeOfDay(self) -> Optional[Tuple[int, int]]:
@@ -315,9 +315,9 @@ class Model():
         Given a list of backups, decides if one should be purged.
         """
         if not source.enabled() or len(backups) == 0:
-            return None
+            return None, None
         if source.maxCount() == 0 and not self.config.get(Setting.DELETE_AFTER_UPLOAD):
-            return None
+            return None, None
 
         scheme = self._buildDeleteScheme(source, findNext=findNext)
         consider_purging = []
@@ -326,17 +326,19 @@ class Model():
             if source_backup is not None and source_backup.considerForPurge() and not backup.ignore():
                 consider_purging.append(backup)
         if len(consider_purging) == 0:
-            return None
+            return None, None
         return scheme.getOldest(consider_purging)
 
     async def _purge(self, source: BackupSource, pre_purge=False):
         while True:
             purge = self._getPurgeList(source, pre_purge)
+
+            reasons = set(map(lambda p: p[1], purge))
             if len(purge) <= 0:
                 return
-            if len(purge) > 1 and (self.config.get(Setting.CONFIRM_MULTIPLE_DELETES) and not self.info.isPermitMultipleDeletes()):
+            if len(purge) != len(reasons) and (self.config.get(Setting.CONFIRM_MULTIPLE_DELETES) and not self.info.isPermitMultipleDeletes()):
                 raise DeleteMutlipleBackupsError(self._getPurgeStats())
-            await self.deleteBackup(purge[0], source)
+            await self.deleteBackup(purge[0][0], source)
 
     def _getPurgeStats(self):
         ret = {}
@@ -350,9 +352,9 @@ class Model():
         candidates = list(self.backups.values())
         purges = []
         while True:
-            next_purge = self._nextPurge(source, candidates, findNext=pre_purge)
+            reason, next_purge = self._nextPurge(source, candidates, findNext=pre_purge)
             if next_purge is None:
                 return purges
             else:
-                purges.append(next_purge)
+                purges.append((next_purge, reason))
                 candidates.remove(next_purge)

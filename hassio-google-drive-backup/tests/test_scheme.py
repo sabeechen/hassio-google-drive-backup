@@ -21,13 +21,13 @@ def test_trivial(time) -> None:
         makeBackup("single", time.local(1928, 12, 6))
     ]
 
-    assert scheme.getOldest(backups).date() == time.local(1928, 12, 6)
+    assert scheme.getOldest(backups)[1].date() == time.local(1928, 12, 6)
 
 
 def test_trivial_empty(time):
     config = GenConfig(days=1)
     scheme = GenerationalScheme(time, config, count=0)
-    assert scheme.getOldest([]) is None
+    assert scheme.getOldest([])[1] is None
 
 
 def test_trivial_oldest(time: Time) -> None:
@@ -160,7 +160,8 @@ def test_simulate_daily_backup_for_4_years(time):
                        day_of_week='mon', day_of_month=1, day_of_year=1)
     scheme = GenerationalScheme(time, config, count=16)
     backups = simulate(time.local(2019, 1, 1),
-                         time.local(2022, 12, 31), scheme)
+                       time.local(2022, 12, 31),
+                       scheme)
     assertRemovalOrder(GenerationalScheme(time, config, count=0), backups, [
         # 4 years
         time.local(2019, 1, 1),
@@ -194,7 +195,8 @@ def test_simulate_agressive_daily_backup_for_4_years(time):
                        day_of_week='mon', day_of_month=1, day_of_year=1, aggressive=True)
     scheme = GenerationalScheme(time, config, count=16)
     backups = simulate(time.local(2019, 1, 1),
-                         time.local(2022, 12, 31), scheme)
+                       time.local(2022, 12, 31),
+                       scheme)
 
     assertRemovalOrder(GenerationalScheme(time, config, count=0), backups, [
         # 4 years
@@ -366,7 +368,6 @@ def test_removal_order_years(time):
         time.local(2019, 2, 15),
     ])
 
-
 def getRemovalOrder(scheme, toCheck):
     backups = list(toCheck)
     removed = []
@@ -385,7 +386,7 @@ def assertRemovalOrder(scheme, toCheck, expected):
     index = 0
     time = scheme.time
     while True:
-        oldest = scheme.getOldest(backups)
+        reason, oldest = scheme.getOldest(backups)
         if index >= len(expected):
             if oldest is not None:
                 fail("at index {0}, expected 'None' but got {1}".format(
@@ -410,10 +411,16 @@ def simulate(start: datetime, end: datetime, scheme: GenerationalScheme, backups
     today = start
     while today <= end:
         backups.append(makeBackup("test", today))
-        oldest = scheme.getOldest(backups)
+        test = scheme.getOldest(backups)
+        if test is None:
+            pass
+        reason, oldest = test
         while oldest is not None:
             backups.remove(oldest)
-            oldest = scheme.getOldest(backups)
+            test = scheme.getOldest(backups)
+            if test is None:
+                pass
+            reason, oldest = test
         today = today + timedelta(hours=27)
         today = scheme.time.local(today.year, today.month, today.day)
     return backups

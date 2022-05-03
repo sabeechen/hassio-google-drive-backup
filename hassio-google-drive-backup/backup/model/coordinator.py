@@ -13,7 +13,7 @@ from backup.time import Time
 from backup.worker import Trigger
 from backup.logger import getLogger
 from backup.creds.creds import Creds
-from .model import Model
+from .model import BackupSource, Model
 from .backups import AbstractBackup, Backup, SOURCE_HA
 
 logger = getLogger(__name__)
@@ -29,7 +29,7 @@ class Coordinator(Trigger):
         self._config = config
         self._lock: Lock = Lock()
         self._global_info: GlobalInfo = global_info
-        self._sources = {
+        self._sources: Dict[str, BackupSource] = {
             self._model.source.name(): self._model.source,
             self._model.dest.name(): self._model.dest
         }
@@ -130,6 +130,7 @@ class Coordinator(Trigger):
                 'enabled': source_class.enabled(),
                 'icon': source_class.icon(),
                 'ignored': 0,
+                'detail': source_class.detail()
             }
             size = 0
             ignored_size = 0

@@ -99,6 +99,7 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'icon': 'google-drive',
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "",
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -114,6 +115,7 @@ async def test_getstatus(reader, config: Config, ha, server, ports: Ports):
         'icon': 'home-assistant',
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "",
     }
     assert len(data['sources']) == 2
 
@@ -141,6 +143,7 @@ async def test_getstatus_sync(reader, config: Config, backup: Backup, time: Fake
         'free_space': "4.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "testing@no.where",
     }
     assert data['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -156,6 +159,7 @@ async def test_getstatus_sync(reader, config: Config, backup: Backup, time: Fake
         'icon': 'home-assistant',
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "",
     }
     assert len(data['sources']) == 2
 
@@ -181,6 +185,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'free_space': "4.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "testing@no.where",
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -196,6 +201,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'icon': 'home-assistant',
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "",
     }
 
     await reader.getjson("retain", json={'slug': slug, 'sources': {"GoogleDrive": False, "HomeAssistant": False}})
@@ -214,6 +220,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'free_space': "4.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "testing@no.where",
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 1,
@@ -229,6 +236,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'icon': 'home-assistant',
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "",
     }
     delete_req = {
         "slug": slug,
@@ -251,6 +259,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'free_space': "4.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "testing@no.where",
     }
     assert status['sources'][SOURCE_HA] == {
         'deletable': 0,
@@ -266,6 +275,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'icon': 'home-assistant',
         'ignored': 0,
         'ignored_size': '0.0 B',
+        'detail': "",
     }
 
     # sync again, which should upoload the backup to Drive

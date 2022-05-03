@@ -120,9 +120,14 @@ class AsyncHttpGetter:
             current = next
             last_speed = speed
 
-        if current[0] < now - period:
-            # if we didn't transfer any data over the sample period, don't try to estimate
-            return None
+        time_since_last = now - current[0]
+        if time_since_last > period:
+            # linear decay the "estimated" rate over the period
+            diff = time_since_last - period
+            if diff > period:
+                return 0
+            else:
+                return last_speed * (1 - diff.total_seconds() / period.total_seconds())
 
         # behave as though we continued with the pseed form the last interval
         intervals.append([current[0], now, last_speed])
@@ -131,6 +136,7 @@ class AsyncHttpGetter:
         stop = now
         start = now - period
         total = 0
+        minimum_time = now
         for interval in intervals:
             if start > interval[1]:
                 continue
@@ -140,7 +146,9 @@ class AsyncHttpGetter:
             overlap_stop = min(stop, interval[1])
             if overlap_stop > overlap_start:
                 total += (overlap_stop - overlap_start).total_seconds() * interval[2]
-        return total / period.total_seconds()
+            if overlap_start < minimum_time:
+                minimum_time = overlap_start
+        return total / (now - minimum_time).total_seconds()
 
     def startTime(self):
         return self._startTime
@@ -148,9 +156,7 @@ class AsyncHttpGetter:
     def __format__(self, format_spec: str) -> str:
         return str(int(self.progress()))
 
-    async def _startReadRemoteAt(self, where=None):
-        if where is None:
-            where = self._position
+    async def _startReadRemoteAt(self, where: int):
         headers = self._headers.copy()
         # request a byte range
         if where != 0:
@@ -223,9 +229,6 @@ class AsyncHttpGetter:
     async def __aexit__(self, type, value, traceback):
         if self._response is not None:
             await self._response.release()
-
-    async def close(self):
-        await self.__aexit__()
 
     def __aiter__(self):
         return self

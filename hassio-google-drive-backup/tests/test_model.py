@@ -26,7 +26,7 @@ def dest():
 
 
 @pytest.fixture
-def simple_config():
+def simple_config() -> Config:
     config = createConfig()
     return config
 
@@ -829,3 +829,65 @@ async def test_delete_ignored_upgrade_backup_after_some_time(time: FakeTime, mod
     await model.sync(time.now())
     source.assertThat(current=1, deleted=1)
     dest.assertThat(current=1)
+
+
+@pytest.mark.asyncio
+async def test_generational_delete_issue602(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("Europe/Rome")
+    start = time.local(2021, 1, 1, 1)
+    end = time.local(2023, 5, 1, 1)
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 50)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.IGNORE_OTHER_BACKUPS, True)
+    simple_config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "00:00")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 14)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 5)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 13)
+    simple_config.override(Setting.GENERATIONAL_YEARS, 1)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(1)
+    dest.setMax(30)
+    model.reinitialize()
+    time.setNow(time.toUtc(start))
+    await model.sync(time.now())
+    while(time.now() < end):
+        next = model.nextBackup(time.now())
+        assert next > time.now()
+        time.setNow(next)
+        await model.sync(time.now())
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.parse('2022-04-30T22:00:00+00:00'),
+                     time.parse('2022-05-31T22:00:00+00:00'),
+                     time.parse('2022-06-30T22:00:00+00:00'),
+                     time.parse('2022-07-31T22:00:00+00:00'),
+                     time.parse('2022-08-31T22:00:00+00:00'),
+                     time.parse('2022-09-30T22:00:00+00:00'),
+                     time.parse('2022-10-31T23:00:00+00:00'),
+                     time.parse('2022-11-30T23:00:00+00:00'),
+                     time.parse('2022-12-31T23:00:00+00:00'),
+                     time.parse('2023-01-31T23:00:00+00:00'),
+                     time.parse('2023-02-28T23:00:00+00:00'),
+                     time.parse('2023-03-31T22:00:00+00:00'),
+                     time.parse('2023-04-02T22:00:00+00:00'),
+                     time.parse('2023-04-09T22:00:00+00:00'),
+                     time.parse('2023-04-16T22:00:00+00:00'),
+                     time.parse('2023-04-18T22:00:00+00:00'),
+                     time.parse('2023-04-19T22:00:00+00:00'),
+                     time.parse('2023-04-20T22:00:00+00:00'),
+                     time.parse('2023-04-21T22:00:00+00:00'),
+                     time.parse('2023-04-22T22:00:00+00:00'),
+                     time.parse('2023-04-23T22:00:00+00:00'),
+                     time.parse('2023-04-24T22:00:00+00:00'),
+                     time.parse('2023-04-25T22:00:00+00:00'),
+                     time.parse('2023-04-26T22:00:00+00:00'),
+                     time.parse('2023-04-27T22:00:00+00:00'),
+                     time.parse('2023-04-28T22:00:00+00:00'),
+                     time.parse('2023-04-29T22:00:00+00:00'),
+                     time.parse('2023-04-30T22:00:00+00:00'),
+                     time.parse('2023-05-01T22:00:00+00:00')]

@@ -81,6 +81,7 @@
     "ignore_other_snapshots": "bool?",
     "ignore_upgrade_snapshots": "bool?",
     "delete_before_new_snapshot": "bool?",
+    "delete_ignored_after_days": "float(0,)?",
     "snapshot_name": "str?",
     "snapshot_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
     "specify_snapshot_folder": "bool?",

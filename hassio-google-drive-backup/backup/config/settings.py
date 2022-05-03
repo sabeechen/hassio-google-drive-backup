@@ -1,4 +1,3 @@
-from ast import Bytes
 import json
 from enum import Enum, unique
 from os.path import abspath, join
@@ -473,8 +472,8 @@ with open(abspath(join(__file__, "..", "..", "..", "config.json"))) as f:
 
 for setting in Setting:
     _VALIDATORS[setting] = getValidator(setting.value, _CONFIG[setting])
-# for key in addon_config["schema"]:
-#     _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
+for key in addon_config["schema"]:
+    _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
 
 _VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator("max_sync_interval_seconds", minimum=1, maximum=None)
 _VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator("delete_ignored_after_days", minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)

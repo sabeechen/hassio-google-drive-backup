@@ -17,8 +17,7 @@ from backup.config import CreateOptions
 all_folders = [
     "share",
     "ssl",
-    "addons/local",
-    "homeassistant"
+    "addons/local"
 ]
 all_addons = [
     {
@@ -63,10 +62,17 @@ def skipForRoot():
 
 def createBackupTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:
     backup_type = "full"
+    haVersion = None
     if included_folders is not None:
-        folders = included_folders.copy()
+        folders = []
+        for folder in included_folders:
+            if folder == "homeassistant":
+                haVersion = "0.92.2"
+            else:
+                folders.append(folder)
     else:
         folders = all_folders.copy()
+        haVersion = "0.92.2"
 
     if included_addons is not None:
         backup_type = "partial"
@@ -83,7 +89,7 @@ def createBackupTar(slug: str, name: str, date: datetime, padSize: int, included
         "date": date.isoformat(),
         "type": backup_type,
         "protected": password is not None,
-        "homeassistant": "0.92.2",
+        "homeassistant": haVersion,
         "folders": folders,
         "addons": addons,
         "repositories": [

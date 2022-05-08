@@ -303,10 +303,13 @@
         $("#restore_link").addClass('default-hidden');
       }
 
-      if (backup.folders.length + backup.addons.length > 0 && !modal.data('details_shown')) {
+      if ((backup.haVersion || backup.folders.length + backup.addons.length > 0) && !modal.data('details_shown')) {
         let content = [];
         let content_container = $(".details-contents")
         content_container.html("");
+        if (backup.haVersion) {
+          content_container.append(genContentTemplate("HA Config", `v${backup.haVersion}`, "broken", "folder-home"));
+        }
         for (var i = 0; i < backup.folders.length; i++) {
           let slug = backup.folders[i];
           let folder = "Unknown Folder";
@@ -321,12 +324,6 @@
           } else if (slug == "addons/local") {
             folder = "Local Add-on Folder";
             icon = "folder-pound";
-          } else if (slug == "homeassistant") {
-            folder = "HA Config Folder";
-            icon = "folder-home";
-            if (backup.haVersion) {
-              subtext = `v${backup.haVersion}`;
-            }
           } else if (slug == "media") {
             folder = "Media Folder";
             icon = "folder-music";
@@ -385,7 +382,12 @@
         gen_detail = "Generation " + backup.status_detail[0];
       }
       configureDetailBadge('detail-type', backup.type == 'full' ? 'Full Backup' : 'Partial Backup', true);
-      configureDetailBadge('detail-ha-version', "HA v" + backup.haVersion, backup.haVersion);
+      if (backup.haVersion) {
+        $(".detail-ha-version").show();
+        configureDetailBadge('detail-ha-version', "HA v" + backup.haVersion, backup.haVersion);
+      } else {
+        $(".detail-ha-version").hide();
+      }
       configureDetailBadge('detail-password', "Password Protected", backup.protected);
       configureDetailBadge('detail-time', backup.date, true);
       configureDetailBadge('detail-size', backup.size, true);

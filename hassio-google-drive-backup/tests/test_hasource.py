@@ -265,29 +265,29 @@ async def test_default_name(time: FakeTime, ha, server):
 
 
 @pytest.mark.asyncio
-async def test_pending_backup_timeout(time: FakeTime, ha: HaSource, config: Config, interceptor: RequestInterceptor):
-    interceptor.setSleep(URL_MATCH_BACKUP_FULL, sleep=5)
+async def test_pending_backup_timeout(time: FakeTime, ha: HaSource, config: Config, interceptor: RequestInterceptor, supervisor: SimulatedSupervisor):
     config.override(Setting.NEW_BACKUP_TIMEOUT_SECONDS, 1)
     config.override(Setting.FAILED_BACKUP_TIMEOUT_SECONDS, 1)
     config.override(Setting.PENDING_BACKUP_TIMEOUT_SECONDS, 1)
 
-    backup_immediate: PendingBackup = await ha.create(CreateOptions(time.now(), "Test Name"))
-    assert isinstance(backup_immediate, PendingBackup)
-    assert backup_immediate.name() == "Test Name"
-    assert not ha.check()
-    assert ha.pending_backup is backup_immediate
+    async with supervisor._backup_inner_lock:
+        backup_immediate: PendingBackup = await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert isinstance(backup_immediate, PendingBackup)
+        assert backup_immediate.name() == "Test Name"
+        assert not ha.check()
+        assert ha.pending_backup is backup_immediate
 
-    await asyncio.wait({ha._pending_backup_task})
-    assert ha.pending_backup is backup_immediate
-    assert ha.check()
-    assert not ha.check()
+        await asyncio.wait({ha._pending_backup_task})
+        assert ha.pending_backup is backup_immediate
+        assert ha.check()
+        assert not ha.check()
 
-    time.advance(minutes=1)
-    assert ha.check()
-    assert len(await ha.get()) == 0
-    assert not ha.check()
-    assert ha.pending_backup is None
-    assert backup_immediate.isStale()
+        time.advance(minutes=1)
+        assert ha.check()
+        assert len(await ha.get()) == 0
+        assert not ha.check()
+        assert ha.pending_backup is None
+        assert backup_immediate.isStale()
 
 
 @pytest.mark.asyncio
@@ -728,7 +728,7 @@ async def test_backup_supervisor_path(ha: HaSource, supervisor: SimulatedSupervi
 
 
 @pytest.mark.asyncio
-async def test_backup_supervisor_path(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+async def test_backup_supervisor_path_old_version(ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
     supervisor._super_version = Version(2021, 7)
     await ha.get()
     assert not interceptor.urlWasCalled(URL_MATCH_BACKUPS)
@@ -889,3 +889,58 @@ async def test_old_delete_path(ha: HaSource, supervisor: SimulatedSupervisor, in
     full.addSource(backup)
     await ha.delete(full)
     assert interceptor.urlWasCalled("/snapshots/{0}/remove".format(backup.slug()))
+
+
+@pytest.mark.asyncio
+async def test_ignore_upgrade_backup_ha_config(ha: HaSource, time: Time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, data_cache: DataCache):
+    config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    slug = (await ha.harequests.createBackup({'name': "Suddenly Appears", 'folders': ['homeassistant'], 'addons': []}))['slug']
+
+    backups = await ha.get()
+    assert len(backups) == 1
+    assert slug in backups
+    assert backups[slug].ignore()
+
+
+@pytest.mark.asyncio
+async def test_ignore_upgrade_backup_single_folder(ha: HaSource, time: Time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, data_cache: DataCache):
+    config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    slug = (await ha.harequests.createBackup({'name': "Suddenly Appears", 'folders': ['share'], 'addons': []}))['slug']
+
+    backups = await ha.get()
+    assert len(backups) == 1
+    assert slug in backups
+    assert backups[slug].ignore()
+
+
+@pytest.mark.asyncio
+async def test_ignore_upgrade_backup_single_addon(ha: HaSource, time: Time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, data_cache: DataCache):
+    config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    slug = (await ha.harequests.createBackup({'name': "Suddenly Appears", 'folders': [], 'addons': ["particla_accel"]}))['slug']
+
+    backups = await ha.get()
+    assert len(backups) == 1
+    assert slug in backups
+    assert backups[slug].ignore()
+
+
+@pytest.mark.asyncio
+async def test_ignore_upgrade_backup_two_folders(ha: HaSource, time: Time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, data_cache: DataCache):
+    config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    slug = (await ha.harequests.createBackup({'name': "Suddenly Appears", 'folders': ['homeassistant', "share"], 'addons': []}))['slug']
+
+    backups = await ha.get()
+    assert len(backups) == 1
+    assert slug in backups
+    assert not backups[slug].ignore()
+
+
+@pytest.mark.asyncio
+async def test_ignore_upgrade_backup_empty(ha: HaSource, time: Time, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor, config: Config, data_cache: DataCache):
+    config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    slug = (await ha.harequests.createBackup({'name': "Suddenly Appears", 'folders': [], 'addons': []}))['slug']
+
+    backups = await ha.get()
+    assert len(backups) == 1
+    assert slug in backups
+    assert not backups[slug].ignore()

@@ -944,3 +944,43 @@ async def test_ignore_upgrade_backup_empty(ha: HaSource, time: Time, supervisor:
     assert len(backups) == 1
     assert slug in backups
     assert not backups[slug].ignore()
+
+
+@pytest.mark.asyncio
+async def test_very_long_running_backup(time, config, ha: HaSource, supervisor: SimulatedSupervisor):
+    config.override(Setting.NEW_BACKUP_TIMEOUT_SECONDS, 1)
+    config.override(Setting.PENDING_BACKUP_TIMEOUT_SECONDS, 2)
+    config.override(Setting.IGNORE_OTHER_BACKUPS, True)
+
+    async with supervisor._backup_inner_lock:
+        await ha.create(CreateOptions(time.now(), "Actually gets made"))
+
+        for _ in range(4):
+            time.advance(hours=1)
+            assert "pending" in (await ha.get())
+
+        # Let the task fail
+        await ha._pending_backup_task
+
+        # after 4 hours the pending backup should be assumed to have failed and cleaned up
+        time.advance(hours=1)
+        assert len(await ha.get()) == 0
+
+        for _ in range(4):
+            time.advance(hours=1)
+            # Making a backup should keep failing
+            with pytest.raises(BackupInProgress):
+                await ha.create(CreateOptions(time.now(), "Ignored"))
+            backups = await ha.get()
+            assert len(backups) == 1
+            assert "pending" in backups
+
+    # Wait for the backup to complete
+    async with supervisor._backup_lock:
+        pass
+
+    time.advance(hours=1)
+    backups = await ha.get()
+    assert len(backups) == 1
+    assert "pending" not in backups
+    assert list(backups.values())[0].madeByTheAddon()

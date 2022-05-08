@@ -228,7 +228,7 @@ class SimulatedSupervisor(BaseServer):
             }
         )
 
-    async def _internalNewBackup(self, request: Request, input_json, date=None, verify_header=True) -> Response:
+    async def _internalNewBackup(self, request: Request, input_json, date=None, verify_header=True) -> str:
         async with self._backup_lock:
             async with self._backup_inner_lock:
                 if 'wait' in input_json:
@@ -257,7 +257,8 @@ class SimulatedSupervisor(BaseServer):
         if self._backup_lock.locked():
             raise HTTPBadRequest()
         input_json = await request.json()
-        return self._formatDataResponse({"slug": await self._internalNewBackup(request, input_json)})
+        task = asyncio.shield(asyncio.create_task(self._internalNewBackup(request, input_json)))
+        return self._formatDataResponse({"slug": await task})
 
     async def _uploadbackup(self, request: Request):
         await self._verifyHeader(request)

@@ -205,13 +205,14 @@ class HaSource(BackupSource[HABackup], Startable):
             self._pending_backup_task = asyncio.create_task(self._requestAsync(
                 self.pending_backup), name="Pending Backup Requester")
             await asyncio.wait({self._pending_backup_task}, timeout=self.config.get(Setting.NEW_BACKUP_TIMEOUT_SECONDS))
-            # set up the pending backup info
+            self.pending_backup.raiseIfNeeded()
+
+            # There is not other backup in progress, so assume its been requested.
             pending = self._data_cache.backup(KEY_PENDING)
             pending[KEY_NAME] = request['name']
             pending[KEY_CREATED] = options.when.isoformat()
             pending[KEY_LAST_SEEN] = self.time.now().isoformat()
             self._data_cache.makeDirty()
-            self.pending_backup.raiseIfNeeded()
             if self.pending_backup.isComplete():
                 # It completed while we waited, so just query the new backup
                 ret = await self.harequests.backup(self.pending_backup.createdSlug())

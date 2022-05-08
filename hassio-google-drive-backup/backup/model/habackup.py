@@ -45,8 +45,12 @@ class HABackup(AbstractBackup):
             return False
         if self._config.get(Setting.IGNORE_OTHER_BACKUPS):
             return True
-        single_backup = len(self.details().get("addons", [])) + len(self.details().get("folders", [])) == 1
-        if single_backup and self._config.get(Setting.IGNORE_UPGRADE_BACKUPS):
+        archive_count = len(self.details().get("addons", [])) + len(self.details().get("folders", []))
+        if self.details().get("homeassistant", None) is not None:
+            # Supervisor backup query API doesn't quite match the create API, if the HA config folder
+            # is present in a backup then the Home Assistant version is present in its details
+            archive_count += 1
+        if archive_count == 1 and self._config.get(Setting.IGNORE_UPGRADE_BACKUPS):
             return True
         return super().ignore()
 

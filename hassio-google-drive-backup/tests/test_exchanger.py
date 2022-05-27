@@ -42,7 +42,7 @@ async def test_all_bad_hosts(time: Time, session: TracingSession, config: Config
         await drive_requests.exchanger.refresh(drive_requests.creds)
 
     # Error should be about the last host name
-    assert e.value.reason == "Couldn't communicate with also.a.bad.host"
+    assert e.value.reason.index("also.a.bad.host") >= 0
 
     # Verify both hosts were checked
     session._records[0]['url'] == URL("https://this.goes.nowhere.info").with_path("/drive/refresh")

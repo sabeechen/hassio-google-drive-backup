@@ -210,7 +210,10 @@ class GenerationalScheme(BackupScheme):
         sorted.sort(key=lambda s: s.date())
         for backup in sorted:
             backup.setStatusDetail(None)
-        for part in self._buildPartitions(sorted):
+        # Ignored snapshots should have their label cleared in case
+        # it was added previosuly, but shoudl nto get new labels
+        unignored = filter(lambda s: not s.ignore(), sorted)
+        for part in self._buildPartitions(unignored):
             if part.selected is not None:
                 if part.selected.getStatusDetail() is None:
                     part.selected.setStatusDetail([])

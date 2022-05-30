@@ -1,3 +1,6 @@
+## [0.107.3 2022-05-30]
+* Fixed an isue causing ignroed backups to get labelled as generational backups.
+
 ## [0.107.2 2022-05-07]
 The "ignore" config options get some love today
 * Fixed a bug causing any "core" backup to uploaded to Drive even if you told the addon to ignore it.

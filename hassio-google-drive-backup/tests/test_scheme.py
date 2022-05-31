@@ -368,6 +368,22 @@ def test_removal_order_years(time):
         time.local(2019, 2, 15),
     ])
 
+
+@pytest.mark.asyncio
+async def test_ignored_generational_labels(time):
+    config = GenConfig(days=2)
+
+    scheme = GenerationalScheme(time, config, count=10)
+    backup1 = makeBackup("test", time.local(2019, 2, 15))
+    backup2 = makeBackup("test", time.local(2019, 2, 14))
+    backup3 = makeBackup("test", time.local(2019, 2, 13), ignore=True)
+    backups = [backup1, backup2, backup3]
+    scheme.handleNaming(backups)
+    assert backup1.getStatusDetail() == ['Day 1 of 2']
+    assert backup2.getStatusDetail() == ['Day 2 of 2']
+    assert backup3.getStatusDetail() is None
+
+
 def getRemovalOrder(scheme, toCheck):
     backups = list(toCheck)
     removed = []
@@ -401,10 +417,10 @@ def assertRemovalOrder(scheme, toCheck, expected):
     return removed
 
 
-def makeBackup(slug, date, name=None) -> Backup:
+def makeBackup(slug, date, name=None, ignore=False) -> Backup:
     if not name:
         name = slug
-    return DummyBackup(name, date.astimezone(tzutc()), "src", slug)
+    return DummyBackup(name, date.astimezone(tzutc()), "src", slug, ignore=ignore)
 
 
 def simulate(start: datetime, end: datetime, scheme: GenerationalScheme, backups=[]):

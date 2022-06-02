@@ -287,6 +287,18 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
 
 
 @pytest.mark.asyncio
+async def test_note(reader: ReaderHelper, config: Config, backup: Backup, coord: Coordinator, time: FakeTime):
+    slug = backup.slug()
+    assert backup.note() is None
+    assert await reader.getjson("note", json={'slug': slug, 'note': "This is the note"}) == {
+        'message': "Updated the backup's settings"
+    }
+    status = await reader.getjson("getstatus")
+    assert backup.note() == "This is the note"
+    assert status['backups'][0]['note'] == "This is the note"
+
+
+@pytest.mark.asyncio
 async def test_sync(reader, ui_server, coord: Coordinator, time: FakeTime, session):
     assert len(coord.backups()) == 0
     status = await reader.getjson("sync")
@@ -331,6 +343,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, backup: Backup, coo
     assert len(status["backups"]) == 2
     assert status["backups"][1]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["backups"][1]["name"] == "TestName"
+    assert status["backups"][1]["note"] == None
     assert status["backups"][1]['sources'][0]['retained'] is False
     assert len(status["backups"][1]['sources']) == 1
 
@@ -357,6 +370,19 @@ async def test_backup_now(reader, ui_server, time: FakeTime, backup: Backup, coo
     assert status["backups"][3]['sources'][1]['retained'] is False
     assert status["backups"][3]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["backups"][3]["name"] == "TestName3"
+
+
+@pytest.mark.asyncio
+async def test_backup_now_with_note(reader, ui_server, time: FakeTime, coord: Coordinator):
+    assert len(coord.backups()) == 0
+
+    time.advance(hours=1)
+    assert await reader.getjson("backup?custom_name=TestName&retain_drive=False&retain_ha=False&note=ThisIsTheNote") == {
+        'message': "Requested backup 'TestName'"
+    }
+    await coord.sync()
+    status = await reader.getjson('getstatus')
+    assert status['backups'][0]["note"] == "ThisIsTheNote"
 
 
 @pytest.mark.asyncio

@@ -216,6 +216,7 @@ class UiServer(Trigger, Startable):
             'upload_info': backup.getUploadInfo(self._time),
             'ignored': backup.ignore(),
             'timestamp': backup.date().timestamp(),
+            'note': backup.note()
         }
 
     def formatAddons(self, backup_data):
@@ -280,10 +281,11 @@ class UiServer(Trigger, Startable):
             request.query.get("retain_drive", False))
         retain_ha = BoolValidator.strToBool(
             request.query.get("retain_ha", False))
+        note = request.query.get("note", None)
         options = CreateOptions(self._time.now(), custom_name, {
             SOURCE_GOOGLE_DRIVE: retain_drive,
             SOURCE_HA: retain_ha
-        })
+        }, note=note)
         backup = await self._coord.startBackup(options)
         return web.json_response({"message": "Requested backup '{0}'".format(backup.name())})
 
@@ -311,6 +313,14 @@ class UiServer(Trigger, Startable):
 
         self._coord.getBackup(slug)
         await self._coord.retain(data['sources'], slug)
+        return web.json_response({'message': "Updated the backup's settings"})
+
+    async def note(self, request: Request):
+        data = await request.json()
+        slug = data['slug']
+
+        self._coord.getBackup(slug)
+        await self._coord.note(data.get("note", None), slug)
         return web.json_response({'message': "Updated the backup's settings"})
 
     async def resolvefolder(self, request: Request):
@@ -674,6 +684,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self.download)
         self._addRoute(app, self.deleteSnapshot)
         self._addRoute(app, self.retain)
+        self._addRoute(app, self.note)
 
         self._addRoute(app, self._debug.simerror)
         self._addRoute(app, self._debug.getTasks)

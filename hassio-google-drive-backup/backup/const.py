@@ -42,6 +42,7 @@ NECESSARY_OLD_SUPERVISOR_URL = "http://hassio"
 NECESSARY_PROP_KEY_SLUG = "snapshot_slug"
 NECESSARY_PROP_KEY_DATE = "snapshot_date"
 NECESSARY_PROP_KEY_NAME = "snapshot_name"
+PROP_NOTE = "note"
 
 DRIVE_FOLDER_URL_FORMAT = "https://drive.google.com/drive/u/0/folders/{0}"
 GITHUB_ISSUE_URL = "https://github.com/sabeechen/hassio-google-drive-backup/issues/new?labels[]=People%20Management&labels[]=[Type]%20Bug&title={title}&assignee=sabeechen&body={body}"

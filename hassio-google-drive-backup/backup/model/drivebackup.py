@@ -1,7 +1,7 @@
 from .backups import AbstractBackup
 from typing import Any, Dict
 
-from ..const import SOURCE_GOOGLE_DRIVE, NECESSARY_PROP_KEY_SLUG, NECESSARY_PROP_KEY_DATE, NECESSARY_PROP_KEY_NAME
+from ..const import SOURCE_GOOGLE_DRIVE, NECESSARY_PROP_KEY_SLUG, NECESSARY_PROP_KEY_DATE, NECESSARY_PROP_KEY_NAME, PROP_NOTE
 from ..exceptions import ensureKey
 from ..config import BoolValidator
 from ..time import Time
@@ -41,7 +41,8 @@ class DriveBackup(AbstractBackup):
             protected=BoolValidator.strToBool(props.get(PROP_PROTECTED, "?")),
             retained=retained,
             uploadable=False,
-            details=None)
+            details=None,
+            note=props.get(PROP_NOTE, None))
         self._drive_data = data
         self._id = ensureKey('id', data, DRIVE_KEY_TEXT)
 

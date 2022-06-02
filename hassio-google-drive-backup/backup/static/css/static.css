@@ -29,6 +29,10 @@ i.material-icons.active, input:focus + label {
   color: var(--accent-focus-color) !important;
 } 
 
+i.material-icons.active, textarea:focus + label {
+  color: var(--accent-focus-color) !important;
+} 
+
 input:focus {
   border-bottom: 1px solid var(--accent-focus-color) !important;
 }
@@ -208,6 +212,14 @@ nav .brand-logo img {
   border-radius: 5px;
 }
 
+.snapshot-card {
+  padding-top: 24px;
+  padding-right: 24px;
+  padding-left: 24px;
+  height: 145px;
+  border-radius: 0 0 2px 2px;
+}
+
 .copyright {
   height: 100%;
   display: flex;
@@ -218,6 +230,7 @@ nav .brand-logo img {
 .backup-ui .archive-icon {
   position: relative;
   margin-right: 18px;
+  top: -10px;
 }
 
 .tabs {

@@ -500,6 +500,16 @@ function populateBackupDiv(backup_div, backups, icon) {
       $("#name", template).html(backup['name']);
       $("#name", template).attr('title', backup['name']);
       $("#status", template).html(backup['status']);
+      let note = $("#note", template);
+      if (backup.note) {
+        note.html(backup['note']);
+        note.attr('data-tooltip', backup['note']);
+        note.addClass('tooltipped');
+      } else {
+        note.html("&nbsp;");
+        note.attr('data-tooltip', '');
+        note.removeClass('tooltipped');
+      }
       if (backup.status_detail) {
         $("#gen_detail", template).show();
         tooltip = "Kept generationally for " + backup.status_detail[0];
@@ -797,6 +807,7 @@ function newBackupClick() {
   setInputValue("retain_drive_one_off", false);
   setInputValue("retain_ha_one_off", false);
   setInputValue("backup_name_one_off", "");
+  setInputValue("backup_note_one_off", "");
   backupNameOneOffExample();
   M.Modal.getInstance(document.querySelector('#backupmodal')).open();
 }
@@ -805,7 +816,8 @@ function doNewBackup() {
   var drive = $("#retain_drive_one_off").prop('checked');
   var ha = $("#retain_ha_one_off").prop('checked');
   var name = $("#backup_name_one_off").val()
-  var url = "backup?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha;
+  let note = $("#backup_note_one_off").val()
+  var url = "backup?custom_name=" + encodeURIComponent(name) + "&retain_drive=" + drive + "&retain_ha=" + ha + "&note=" + encodeURIComponent(note);
   postJson(url, {}, refreshstats, null, "Requesting backup (takes a few seconds)...");
   return false;
 }

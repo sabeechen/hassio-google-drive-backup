@@ -17,6 +17,7 @@ KEY_NAME = "name"
 KEY_LAST_VERSION = "last_verison"
 KEY_UPGRADES = "upgrades"
 KEY_FLAGS = "flags"
+KEY_NOTE = "note"
 
 CACHE_EXPIRATION_DAYS = 30
 

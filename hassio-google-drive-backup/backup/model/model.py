@@ -66,6 +66,9 @@ class BackupSource(Trigger, Generic[T]):
     async def retain(self, backup: T, retain: bool) -> None:
         pass
 
+    async def note(self, backup, note: str) -> None:
+        pass
+
     def maxCount(self) -> None:
         return 0
 

@@ -44,7 +44,7 @@
 <div id="backup-template" style="display: none">
   <div class="backup-ui col s12 m12 l6 xl6">
     <div id="backup_card" onclick="showDetails(this);return false;" class="card">
-      <div class="card-content">
+      <div class="snapshot-card">
         <div style="display: flex; align-items: center;">
           <div class="archive-icon">
             <i class="large material-icons backup_icon" style="font-size: 30px;"></i>
@@ -74,6 +74,7 @@
             </div>
             <div id="type"></div>
             <div id="createdAt"></div>
+            <div id="note" style="font-style: italic;" class="truncate tooltipped" data-position="bottom" data-tooltip=""></div>
           </div>
         </div>
       </div>
@@ -189,7 +190,7 @@
             <span class="card-title">Restore a Backup</span>
             <p>Backups must be restored through the supervisor Backups page. You can restore a backup by
               navigating to
-              "Supervisor" &gt; "Backups" from the Home Assistant Web-UI,
+              "Settings" &gt; "System" &gt; "Backups" from the Home Assistant Web-UI,
               or by clicking the button below to navigate there by a direct link. Depending on how you access the Home
               Assistant Web-UI the direct link may not work, so you'll just have to navigate there.</p>
           </div>

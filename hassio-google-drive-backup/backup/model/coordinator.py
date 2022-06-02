@@ -264,6 +264,11 @@ class Coordinator(Trigger):
             await self._ensureSource(source).retain(backup, sources[source])
         self._updateFreshness()
 
+    async def note(self, note: str, slug: str):
+        backup = self._ensureBackup(None, slug)
+        for source in backup.sources.keys():
+            await self._ensureSource(source).note(backup, note)
+
     async def delete(self, sources, slug):
         await self._withSoftLock(lambda: self._delete(sources, slug))
 

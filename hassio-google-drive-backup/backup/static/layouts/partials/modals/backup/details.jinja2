@@ -235,6 +235,8 @@
       let rendered_sources = $(".backup-source-container", sources_container);
       let modal = $('#details_modal');
 
+      $(".detail-comment").html(backup.note);
+
       // Update values for any sources that have changed.
       let existing_sources = {};
       rendered_sources.each(function () {
@@ -400,7 +402,59 @@
       cancelUploadHaClicked();
 
       $("#download_link").data('backup', backup);
+      cancelEditCommentClick()
+      setInputValue("edit-comment-input", "");
       M.Modal.getInstance(document.getElementById('details_modal')).open();
+    }
+
+    function editCommentClick() {
+      let modal = $("#details_modal");
+      let backup = modal.data("backup")
+      $(".detail-comment").addClass("default-hidden");
+      setInputValue("edit-comment-input", backup.note);
+      $(".edit-comment-button").addClass("default-hidden");
+      $(".cancel-comment-edit-button").removeClass("default-hidden");
+      $(".save-comment-edit-button").removeClass("default-hidden");
+      $(".detail-edit-comment").removeClass("default-hidden");
+      M.textareaAutoResize($('#edit-comment-input'));
+      M.updateTextFields();
+      $('#edit-comment-input').focus();
+    }
+
+    function cancelEditCommentClick() {
+      $(".detail-comment").removeClass("default-hidden");
+      $(".edit-comment-button").removeClass("default-hidden");
+      $(".cancel-comment-edit-button").addClass("default-hidden");
+      $(".save-comment-edit-button").addClass("default-hidden");
+      $(".detail-edit-comment").addClass("default-hidden");
+      setInputValue("edit-comment-input", "");
+    }
+
+    function saveEditCommentClick() {
+      let modal = $("#details_modal");
+      let backup = modal.data("backup")
+      let comment = $("#edit-comment-input").val();
+
+      data = {
+        'slug': backup.slug,
+        'note': comment
+      };
+      let success = function (info) { editCommentSaveSuccess(backup.slug, comment); };
+      let fail = function (info) { editCommentSaveFailure(); };
+      postJson("note", data, success, fail, "Updating backup... ");
+    }
+
+    function editCommentSaveSuccess(slug, comment) {
+      let modal = $("#details_modal");
+      let backup = modal.data("backup");
+      if (backup.slug == slug) {
+        cancelEditCommentClick();
+        backup.note = comment;
+        $(".detail-comment").html(comment);
+      }
+    }
+
+    function editCommentSaveFailure() {
     }
 
     function uploadHaClicked() {
@@ -509,7 +563,7 @@
           <blockquote>
             <i class="material-icons left" style="font-size: 40px;">lock</i>
             The uploaded backup will be marked as "Never Delete" in Home Assistant. It won't count toward the limit
-            you've configured for backup kept in Home Assistant and it will be never be deleted until you manually
+            you've configured for backups kept in Home Assistant and it will be never be deleted until you manually
             tell the addon to do so.
           </blockquote>
           </p>
@@ -523,6 +577,20 @@
         <a class="btn-flat cancel-load-ha-button" onclick="cancelUploadHaClicked();"><i
             class="material-icons">close</i>Cancel</a>
       </div>
+    </div>
+    <div class="row">
+      <span class="detail-comment" style="white-space: pre-wrap"></span>
+      <div class="input-field col s12 detail-edit-comment">
+        <i class="material-icons prefix">comment</i>
+        <textarea class="materialize-textarea edit-comment-input" id="edit-comment-input" name="edit-comment-input"></textarea>
+        <label for="edit-comment-input">Comment</label>
+      </div>
+      <a class="btn-flat edit-comment-button" onclick="editCommentClick();"><i
+        class="material-icons">edit</i>Edit Comment</a>
+      <a class="btn-flat cancel-comment-edit-button" onclick="cancelEditCommentClick();"><i
+        class="material-icons">close</i>Cancel</a>
+      <a class="btn-flat save-comment-edit-button" onclick="saveEditCommentClick();"><i
+        class="material-icons">save</i>Save</a>
     </div>
     <div class="detail-contents-card">
       <h6>Contents</h6>

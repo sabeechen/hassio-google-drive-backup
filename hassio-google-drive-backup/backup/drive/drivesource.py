@@ -12,7 +12,7 @@ from ..const import SOURCE_GOOGLE_DRIVE
 from ..exceptions import (BackupFolderInaccessible,
                           ExistingBackupFolderError,
                           GoogleDrivePermissionDenied, LogicError)
-from ..model.backups import (PROP_PROTECTED, PROP_RETAINED, PROP_TYPE, PROP_VERSION)
+from ..model.backups import (PROP_NOTE, PROP_PROTECTED, PROP_RETAINED, PROP_TYPE, PROP_VERSION)
 from ..time import Time
 from .driverequests import DriveRequests
 from .folderfinder import FolderFinder
@@ -29,6 +29,7 @@ THUMBNAIL_MIME_TYPE = "image/png"
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
 FOLDER_NAME = 'Home Assistant Backups'
 FOLDER_CACHE_SECONDS = 30
+DRIVE_MAX_PROPERTY_LENGTH = 120
 
 
 @singleton
@@ -148,20 +149,24 @@ class DriveSource(BackupDestination):
     async def save(self, backup: Backup, source: AsyncHttpGetter) -> DriveBackup:
         retain = backup.getOptions() and backup.getOptions().retain_sources.get(self.name(), False)
         parent_id = await self.getFolderId()
+        if backup.note() is not None:
+            desc = backup.note()
+        else:
+            desc = 'A Home Assistant backup file uploaded by Home Assistant Google Drive Backup'
         file_metadata = {
             'name': str(backup.name()) + ".tar",
             'parents': [parent_id],
-            'description': 'A Home Assistant backup file uploaded by Home Assistant Google Drive Backup',
+            'description': desc,
             'appProperties': {
                 NECESSARY_PROP_KEY_SLUG: backup.slug(),
                 NECESSARY_PROP_KEY_DATE: str(backup.date()),
                 PROP_TYPE: str(backup.backupType()),
                 PROP_VERSION: str(backup.version()),
                 PROP_PROTECTED: str(backup.protected()),
-                PROP_RETAINED: str(retain)
+                PROP_RETAINED: str(retain),
             },
             'contentHints': {
-                'indexableText': 'Home Assistant hassio ' + NECESSARY_OLD_BACKUP_NAME + ' ' + NECESSARY_OLD_BACKUP_PLURAL_NAME + ' backup backups home assistant',
+                'indexableText': 'Home Assistant hassio ' + NECESSARY_OLD_BACKUP_NAME + ' ' + NECESSARY_OLD_BACKUP_PLURAL_NAME + ' backup backups home assistant ' + desc,
                 'thumbnail': {
                     'image': THUMBNAIL_IMAGE,
                     'mimeType': THUMBNAIL_MIME_TYPE
@@ -171,8 +176,9 @@ class DriveSource(BackupDestination):
             'modifiedTime': self._timeToRfc3339String(backup.date())
         }
 
-        if len(backup.name().encode()) < 100:
-            file_metadata['appProperties'][NECESSARY_PROP_KEY_NAME] = str(backup.name())
+        if backup.note() is not None:
+            file_metadata['appProperties'][PROP_NOTE] = self.truncateAppProperty(PROP_NOTE, backup.note())
+        file_metadata['appProperties'][NECESSARY_PROP_KEY_NAME] = self.truncateAppProperty(NECESSARY_PROP_KEY_NAME, str(backup.name()))
 
         async with source:
             try:
@@ -205,6 +211,20 @@ class DriveSource(BackupDestination):
                 self._uploadedAtLeastOneChunk = False
                 backup.clearStatus()
 
+    def truncateAppProperty(self, key: str, value: str):
+        # Annoylingly, Drive properties can be a maximum of 124 bytes, in len(key + value) UTF8 encoded.
+        # https://developers.google.com/drive/api/guides/properties
+        # Is the extra indexing REALLY that expensive? Thats like some 1990's mainframe limitation.
+        # Make sure we stay well under that limit
+        if value is None:
+            return value
+        permitted = ""
+        current = 0
+        while(current < len(value) and len(str(key + permitted + value[current]).encode('utf-8')) < DRIVE_MAX_PROPERTY_LENGTH):
+            permitted += value[current]
+            current += 1
+        return permitted
+
     async def read(self, backup: Backup) -> IOBase:
         item = self._validateBackup(backup)
         return await self.drivebackend.download(item.id(), item.size())
@@ -220,6 +240,19 @@ class DriveSource(BackupDestination):
         }
         await self.drivebackend.update(item.id(), file_metadata)
         item.setRetained(retain)
+
+    async def note(self, backup, note: str) -> None:
+        item = self._validateBackup(backup)
+        truncated = self.truncateAppProperty(PROP_NOTE, note)
+        file_metadata: Dict[str, str] = {
+            'appProperties': {
+                PROP_NOTE: truncated,
+            },
+            'description': note,
+        }
+        logger.debug(f"Adding a note to drive backup '{item.name()}'")
+        await self.drivebackend.update(item.id(), file_metadata)
+        item.setNote(truncated)
 
     async def getFolderId(self):
         return await self.folder_finder.get()

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
-from backup.util import AsyncHttpGetter, GlobalInfo, Estimator, DataCache, KEY_LAST_SEEN, KEY_PENDING, KEY_NAME, KEY_CREATED, KEY_I_MADE_THIS, KEY_IGNORE
+from backup.util import AsyncHttpGetter, GlobalInfo, Estimator, DataCache, KEY_NOTE, KEY_LAST_SEEN, KEY_PENDING, KEY_NAME, KEY_CREATED, KEY_I_MADE_THIS, KEY_IGNORE
 from ..config import Config, Setting, CreateOptions, Startable
 from ..const import SOURCE_HA
 from ..model import BackupSource, AbstractBackup, HABackup, Backup
@@ -38,7 +38,8 @@ class PendingBackup(AbstractBackup):
             protected=protected,
             retained=False,
             uploadable=False,
-            details=None)
+            details=None,
+            note=options.note)
         self._config = config
         self._failed = False
         self._complete = False
@@ -74,6 +75,7 @@ class PendingBackup(AbstractBackup):
         self._backupType = "unknown"
         self._protected = False
         self._pending_subverted = True
+        self._note = None
 
     def createdSlug(self):
         return self._completed_slug
@@ -216,6 +218,8 @@ class HaSource(BackupSource[HABackup], Startable):
             if self.pending_backup.isComplete():
                 # It completed while we waited, so just query the new backup
                 ret = await self.harequests.backup(self.pending_backup.createdSlug())
+                if options.note is not None:
+                    ret.setNote(options.note)
                 self.setDataCacheInfo(ret)
                 self._data_cache.backup(ret.slug())[KEY_I_MADE_THIS] = True
                 return ret
@@ -276,9 +280,17 @@ class HaSource(BackupSource[HABackup], Startable):
                         # Copy over options if we got the requested backup.
                         backups[self.pending_backup.createdSlug()].setOptions(
                             self.pending_backup.getOptions())
+                        if self.pending_backup.note() is not None:
+                            # Save the note with the now known slug
+                            await self.note(backups[self.pending_backup.createdSlug()], self.pending_backup.note())
                         self._killPending()
                     elif self.last_slugs.symmetric_difference(slugs).intersection(slugs):
                         # New backup added, ignore pending backup.
+                        sorted = list(backups.values())
+                        sorted.sort(key=HABackup.date)
+                        if self.pending_backup.note() is not None and len(sorted) > 0:
+                            # Save the note with the newest backup
+                            await self.note(sorted[-1], self.pending_backup.note())
                         self._killPending()
             if self.pending_backup:
                 backups[self.pending_backup.slug()] = self.pending_backup
@@ -302,6 +314,7 @@ class HaSource(BackupSource[HABackup], Startable):
             stored_backup[KEY_I_MADE_THIS] = self_created
             stored_backup[KEY_CREATED] = backup.date().isoformat()
             stored_backup[KEY_NAME] = backup.name()
+            stored_backup[KEY_NOTE] = backup.note()
             if self_created:
                 # Remove the pending backup info from the cache so it doesn't get reused.
                 del self._data_cache.backups[KEY_PENDING]
@@ -320,6 +333,21 @@ class HaSource(BackupSource[HABackup], Startable):
         logger.info("Updating ignore settings for '{0}'".format(backup.name()))
         self._data_cache.backup(slug)[KEY_IGNORE] = ignore
         self._data_cache.makeDirty()
+
+    async def note(self, backup, note: str) -> None:
+        if isinstance(backup, HABackup):
+            validated = backup
+        else:
+            validated = self._validateBackup(backup)
+        logger.debug(f"Adding a note to ha backup '{validated.name()}'")
+        if isinstance(validated, PendingBackup):
+            # The ntoe will get set once the backup is created and we know the slug
+            validated.setNote(note)
+        else:
+            self._data_cache.backup(validated.slug())[KEY_NOTE] = note
+            self._data_cache.makeDirty()
+            validated.setNote(note)
+        return await super().note(backup, note)
 
     async def save(self, backup: Backup, source: AsyncHttpGetter) -> HABackup:
         logger.info("Downloading '{0}'".format(backup.name()))

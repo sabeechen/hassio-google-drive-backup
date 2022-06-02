@@ -462,7 +462,7 @@ blockquote {
 
 .content-logo {
 	max-height: 2rem;
-	margin-right: 15px;
+	margin-right: 9px;
 }
 
 span.content-logo > i {
@@ -475,7 +475,7 @@ span.content-logo > i {
 }
 
 .content-icon {
-  margin-right: 6px;
+  margin-right: 9px;
   fill: var(--text-primary-color);
   width: 2rem;
   height: 2rem;

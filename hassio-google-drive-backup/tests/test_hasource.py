@@ -984,3 +984,104 @@ async def test_very_long_running_backup(time, config, ha: HaSource, supervisor: 
     assert len(backups) == 1
     assert "pending" not in backups
     assert list(backups.values())[0].madeByTheAddon()
+
+
+@pytest.mark.asyncio
+async def test_note(time, config, ha: HaSource, supervisor: SimulatedSupervisor):
+    backup = await ha.create(CreateOptions(time.now(), "Backup"))
+    assert isinstance(backup, HABackup)
+    assert backup.note() is None
+
+    full = DummyBackup(backup.name(), backup.date(),
+                       backup.size(), backup.slug(), "dummy")
+    full.addSource(backup)
+    await ha.note(full, "new note")
+    assert backup.note() == "new note"
+
+    await ha.note(full, None)
+    assert backup.note() is None
+
+
+@pytest.mark.asyncio
+async def test_note_creation(time, config, ha: HaSource, supervisor: SimulatedSupervisor):
+    backup = await ha.create(CreateOptions(time.now(), "Backup", note="creation note"))
+    assert isinstance(backup, HABackup)
+    assert backup.note() == "creation note"
+    assert (await ha.get())[backup.slug()].note() == "creation note"
+
+    full = DummyBackup(backup.name(), backup.date(),
+                       backup.size(), backup.slug(), "dummy")
+    full.addSource(backup)
+    await ha.note(full, "new note")
+    assert backup.note() == "new note"
+    assert (await ha.get())[full.slug()].note() == "new note"
+
+    await ha.note(full, None)
+    assert backup.note() is None
+
+
+@pytest.mark.asyncio
+async def test_note_long_backup(time, config, ha: HaSource, supervisor: SimulatedSupervisor):
+    config.override(Setting.NEW_BACKUP_TIMEOUT_SECONDS, 1)
+
+    async with supervisor._backup_inner_lock:
+        backup = await ha.create(CreateOptions(time.now(), "Backup", note="Creation note"))
+        assert isinstance(backup, PendingBackup)
+        assert backup.note() == "Creation note"
+
+        pending = (await ha.get())[backup.slug()]
+        assert pending.note() == "Creation note"
+    await ha._pending_backup_task
+    completed = next(iter((await ha.get()).values()))
+    assert not isinstance(completed, PendingBackup)
+    assert completed.note() == "Creation note"
+
+
+@pytest.mark.asyncio
+async def test_note_long_backup_changed_during_creation(time, config, ha: HaSource, supervisor: SimulatedSupervisor):
+    config.override(Setting.NEW_BACKUP_TIMEOUT_SECONDS, 1)
+
+    async with supervisor._backup_inner_lock:
+        backup = await ha.create(CreateOptions(time.now(), "Backup", note="Creation note"))
+        assert isinstance(backup, PendingBackup)
+        assert backup.note() == "Creation note"
+
+        pending = (await ha.get())[backup.slug()]
+        assert pending.note() == "Creation note"
+
+        full = DummyBackup(pending.name(), pending.date(), pending.size(), pending.slug(), "dummy")
+        full.addSource(pending)
+        await ha.note(full, "changed")
+
+        still_pending = next(iter((await ha.get()).values()))
+        assert isinstance(still_pending, PendingBackup)
+        assert still_pending.note() == "changed"
+
+    await ha._pending_backup_task
+    completed = next(iter((await ha.get()).values()))
+    assert not isinstance(completed, PendingBackup)
+    assert completed.note() == "changed"
+
+
+@pytest.mark.asyncio
+async def test_note_change_external_backup(time, config, ha: HaSource, supervisor: SimulatedSupervisor):
+    config.override(Setting.NEW_BACKUP_TIMEOUT_SECONDS, 100)
+
+    await supervisor.toggleBlockBackup()
+    with pytest.raises(BackupInProgress):
+        await ha.create(CreateOptions(time.now(), "Ignored", note="ignored"))
+    pending = next(iter((await ha.get()).values()))
+    assert isinstance(pending, PendingBackup)
+    assert pending.note() is None
+
+    full = DummyBackup(pending.name(), pending.date(), pending.size(), pending.slug(), "dummy")
+    full.addSource(pending)
+    await ha.note(full, "changed note")
+    assert full.note() == "changed note"
+
+    # create a new backup in the background, this should get the note of the pending backup.
+    await supervisor.toggleBlockBackup()
+    await supervisor.createBackup({"name": "Test Backup"}, date=time.now() - timedelta(hours=12))
+    completed = next(iter((await ha.get()).values()))
+    assert not isinstance(completed, PendingBackup)
+    assert completed.note() == "changed note"

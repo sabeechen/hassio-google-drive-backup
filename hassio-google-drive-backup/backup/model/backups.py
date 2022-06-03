@@ -6,6 +6,7 @@ from ..util import Estimator
 
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
 from ..logger import getLogger
+from ..config import CreateOptions
 
 logger = getLogger(__name__)
 
@@ -13,13 +14,14 @@ PROP_TYPE = "type"
 PROP_VERSION = "version"
 PROP_PROTECTED = "protected"
 PROP_RETAINED = "retained"
+PROP_NOTE = "note"
 
 DRIVE_KEY_TEXT = "Google Drive's backup metadata"
 HA_KEY_TEXT = "Home Assistant's backup metadata"
 
 
 class AbstractBackup():
-    def __init__(self, name: str, slug: str, source: str, date: str, size: int, version: str, backupType: str, protected: bool, retained: bool = False, uploadable: bool = False, details={}):
+    def __init__(self, name: str, slug: str, source: str, date: str, size: int, version: str, backupType: str, protected: bool, note=None, retained: bool = False, uploadable: bool = False, details={}):
         self._options = None
         self._name = name
         self._slug = slug
@@ -33,11 +35,12 @@ class AbstractBackup():
         self._backupType = backupType
         self._protected = protected
         self._ignore = False
+        self._note = note
 
-    def setOptions(self, options):
+    def setOptions(self, options: CreateOptions):
         self._options = options
 
-    def getOptions(self):
+    def getOptions(self) -> CreateOptions:
         return self._options
 
     def name(self) -> str:
@@ -48,6 +51,9 @@ class AbstractBackup():
 
     def size(self) -> int:
         return self._size
+
+    def note(self) -> str:
+        return self._note
 
     def sizeInt(self) -> int:
         try:
@@ -87,6 +93,9 @@ class AbstractBackup():
 
     def details(self):
         return self._details
+
+    def setNote(self, note: str):
+        self._note = note
 
     def status(self):
         return None
@@ -166,6 +175,13 @@ class Backup(object):
         for backup in self.sources.values():
             return backup.name()
         return "error"
+
+    def note(self):
+        longest = None
+        for backup in self.sources.values():
+            if backup.note() is not None and (longest is None or len(backup.note()) > len(longest)):
+                longest = backup.note()
+        return longest
 
     def slug(self) -> str:
         for backup in self.sources.values():

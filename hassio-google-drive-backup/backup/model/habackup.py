@@ -5,7 +5,7 @@ from backup.exceptions import ensureKey
 from backup.time import Time
 from .backups import AbstractBackup
 from backup.logger import getLogger
-from backup.util import DataCache, KEY_I_MADE_THIS, KEY_IGNORE
+from backup.util import DataCache, KEY_I_MADE_THIS, KEY_IGNORE, KEY_NOTE
 from backup.config import Config, Setting
 
 logger = getLogger(__name__)
@@ -36,6 +36,13 @@ class HABackup(AbstractBackup):
 
     def madeByTheAddon(self):
         return self._data_cache.backup(self.slug()).get(KEY_I_MADE_THIS, False)
+
+    def note(self):
+        parent = super().note()
+        if parent is None:
+            return self._data_cache.backup(self.slug()).get(KEY_NOTE, None)
+        else:
+            return parent
 
     def ignore(self):
         override = self._data_cache.backup(self.slug()).get(KEY_IGNORE, None)

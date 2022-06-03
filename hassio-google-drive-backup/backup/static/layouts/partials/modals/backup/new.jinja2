@@ -14,7 +14,7 @@
           <label for="backup_name_one_off">Backup Name</label>
           <span class="helper-text">
             The name to use for this backup, or leave it blank to use the default
-            naming scheme. Optionally you can use template variables.
+            naming scheme. It can't be changed later.  Optionally you can use template variables.
             <a target="_blank" rel="noreferrer"
               href="https://github.com/sabeechen/hassio-google-drive-backup#can-i-give-backups-a-different-name">
               See here
@@ -25,6 +25,14 @@
               <br />
               <b id="backup_name_example_one_off"></b>
             </div>
+          </span>
+        </div>
+        <div class="input-field col s12">
+          <i class="material-icons prefix">comment</i>
+          <input type="text" id="backup_note_one_off" name="backup_note_one_off" />
+          <label for="backup_note_one_off">Comment</label>
+          <span class="helper-text">
+            Add a comment that appears alongside the backup in this web UI and in Google Drive.  You can change this later.
           </span>
         </div>
       </div>

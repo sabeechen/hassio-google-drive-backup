@@ -1,7 +1,6 @@
 import os
 import json
 from time import sleep
-from wsgiref.util import setup_testing_defaults
 
 import pytest
 import asyncio
@@ -32,9 +31,9 @@ class BackupHelper():
         self.time = time
         self.uploader = uploader
 
-    async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name"):
+    async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name", note=None):
         from_backup: DummyBackup = DummyBackup(
-            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug)
+            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug, note=note)
         data = await self.uploader.upload(createBackupTar(slug, name, self.time.now(), size))
         return from_backup, data
 
@@ -245,7 +244,6 @@ def test_chunk_size_limits(drive: DriveSource, config: Config):
     config.override(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES, BASE_CHUNK_SIZE * 3.5)
     assert drive.drivebackend._getNextChunkSize(1000000000, 0) == BASE_CHUNK_SIZE * 3
     assert drive.drivebackend._getNextChunkSize(1, 1000000) == BASE_CHUNK_SIZE
-
 
 
 @pytest.mark.asyncio
@@ -954,3 +952,40 @@ async def test_shared_drive_content_manager(drive: DriveSource, time: FakeTime, 
     await drive.delete(from_backup)
     assert len(await drive.get()) == 0
     assert (await drive_requests.get(backup.id()))['trashed']
+
+
+@pytest.mark.asyncio
+async def test_note(drive: DriveSource, time: FakeTime, folder_finder: FolderFinder, backup_helper: BackupHelper, drive_requests: DriveRequests):
+    from_backup, data = await backup_helper.createFile()
+    backup = await drive.save(from_backup, data)
+    assert backup.note() is None
+
+    full = DummyBackup(backup.name(), backup.date(),
+                       backup.size(), backup.slug(), "dummy")
+    full.addSource(backup)
+    await drive.note(full, "new note")
+    assert backup.note() == "new note"
+
+    await drive.note(full, None)
+    assert backup.note() is None
+
+
+@pytest.mark.asyncio
+async def test_note_truncation(drive: DriveSource, time: FakeTime, folder_finder: FolderFinder, backup_helper: BackupHelper, drive_requests: DriveRequests):
+    from_backup, data = await backup_helper.createFile()
+    backup = await drive.save(from_backup, data)
+    assert backup.note() is None
+
+    full = DummyBackup(backup.name(), backup.date(),
+                       backup.size(), backup.slug(), "dummy")
+    full.addSource(backup)
+    long_note = "".join(["䷷" for x in range(500)])
+    await drive.note(full, long_note)
+    assert backup.note() == "".join(["䷷" for x in range(38)])
+
+
+@pytest.mark.asyncio
+async def test_note_creation(drive: DriveSource, time: FakeTime, folder_finder: FolderFinder, backup_helper: BackupHelper, drive_requests: DriveRequests):
+    from_backup, data = await backup_helper.createFile(note="test")
+    backup = await drive.save(from_backup, data)
+    assert backup.note() == "test"

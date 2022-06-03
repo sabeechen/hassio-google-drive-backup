@@ -343,7 +343,7 @@ async def test_backup_now(reader, ui_server, time: FakeTime, backup: Backup, coo
     assert len(status["backups"]) == 2
     assert status["backups"][1]["date"] == time.toLocal(time.now()).strftime("%c")
     assert status["backups"][1]["name"] == "TestName"
-    assert status["backups"][1]["note"] == None
+    assert status["backups"][1]["note"] is None
     assert status["backups"][1]['sources'][0]['retained'] is False
     assert len(status["backups"][1]['sources']) == 1
 

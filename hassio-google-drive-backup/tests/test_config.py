@@ -281,6 +281,18 @@ def test_empty_colors():
     assert config.get(Setting.ACCENT_COLOR) == Setting.ACCENT_COLOR.default()
 
 
+def test_ignore_upgrades_default():
+    # Test specifying one value
+    config = Config()
+    assert config.get(Setting.IGNORE_UPGRADE_BACKUPS)
+
+    config.useLegacyIgnoredBehavior(True)
+    assert not config.get(Setting.IGNORE_UPGRADE_BACKUPS)
+
+    config.useLegacyIgnoredBehavior(False)
+    assert config.get(Setting.IGNORE_UPGRADE_BACKUPS)
+
+
 def getGenConfig(update):
     base = {
         "days": 1,

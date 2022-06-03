@@ -176,6 +176,7 @@ class UiServer(Trigger, Startable):
         ignored = len(list(filter(lambda s: s.date() < upgrade_date, filter(Backup.ignore, self._coord.backups()))))
         status["notify_check_ignored"] = ignored > 0 and self.ignore_other_turned_on
         status["warn_backup_upgrade"] = self.config.get(Setting.CALL_BACKUP_SNAPSHOT) and not self._data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
+        status["warn_upgrade_backups"] = self._data_cache.notifyForIgnoreUpgrades
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -464,6 +465,18 @@ class UiServer(Trigger, Startable):
         self._data_cache.saveIfDirty()
         return web.json_response({'message': 'Configuration updated'})
 
+    async def ignoredbackupswitch(self, request: Request):
+        switch = BoolValidator.strToBool(request.query.get("switch", False))
+
+        validated = self.config.validateUpdate({Setting.IGNORE_UPGRADE_BACKUPS: switch})
+        await self._updateConfiguration(validated)
+        self._data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_IGNORED_BACKUPS)
+        self._data_cache.saveIfDirty()
+        if switch:
+            return web.json_response({'message': 'Configuration updated'})
+        else:
+            return web.json_response({'message': 'Acknowledged'})
+
     async def ignorestartupcooldown(self, request: Request):
         self._coord.ignoreStartupDelay()
         return await self.sync(request)
@@ -691,6 +704,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self.makeanissue)
         self._addRoute(app, self.ignorestartupcooldown)
         self._addRoute(app, self.callbackupsnapshot)
+        self._addRoute(app, self.ignoredbackupswitch)
         self._addRoute(app, self.ignore)
         self._addRoute(app, self.ackignorecheck)
         self._addRoute(app, self.checkManualAuth)

@@ -549,6 +549,10 @@ input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default
   margin: 6px;
 }
 
+.card .card-content .card-title.mini-title {
+  font-size: 18px;
+}
+
 .device-code-box:hover {
   background-color: var(--accent-bg-hover-color);
 }

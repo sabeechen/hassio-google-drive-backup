@@ -21,10 +21,13 @@ KEY_NOTE = "note"
 
 CACHE_EXPIRATION_DAYS = 30
 
+VERSION_DEFUALT_IGNORE_UPGRADES = Version.parse("0.108.2")
+
 
 @unique
 class UpgradeFlags(Enum):
     NOTIFIED_ABOUT_BACKUP_RENAME = "notified_backup_rename"
+    NOTIFIED_ABOUT_IGNORED_BACKUPS = "notified_ignored_backups"
     TESTING_FLAG = "testing_flag"
 
 
@@ -37,6 +40,7 @@ class DataCache:
         self._dirty = {}
         self._time = time
         self._last_version = Version.default()
+        self._first_version = Version.default()
         self._flags = set()
         self._load()
 
@@ -61,7 +65,18 @@ class DataCache:
             })
             self._data[KEY_LAST_VERSION] = str(self.currentVersion)
             self.makeDirty()
-            self.saveIfDirty()
+        if KEY_UPGRADES not in self._data or len(self._data[KEY_UPGRADES]) == 0:
+            self._first_version = self.currentVersion
+        else:
+            self._first_version = Version.parse(self._data[KEY_UPGRADES][0]['new_version'])
+
+        if self._config.isExplicit(Setting.IGNORE_OTHER_BACKUPS) or self._config.isExplicit(Setting.IGNORE_UPGRADE_BACKUPS):
+            self.addFlag(UpgradeFlags.NOTIFIED_ABOUT_IGNORED_BACKUPS)
+
+        if self.notifyForIgnoreUpgrades:
+            self._config.useLegacyIgnoredBehavior(True)
+
+        self.saveIfDirty()
 
     def save(self, data=None):
         if data is None:
@@ -102,8 +117,16 @@ class DataCache:
         return self._last_version
 
     @property
+    def firstVersion(self):
+        return self._first_version
+
+    @property
     def currentVersion(self):
         return Version.parse(VERSION)
+
+    @property
+    def notifyForIgnoreUpgrades(self):
+        return self.firstVersion < VERSION_DEFUALT_IGNORE_UPGRADES and not self.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_IGNORED_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_OTHER_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_UPGRADE_BACKUPS) 
 
     def checkFlag(self, flag: UpgradeFlags):
         return flag.value in self._data.get(KEY_FLAGS, [])

@@ -155,6 +155,40 @@
             <a target="_blank" class="btn-flat" onClick="callBackupSnapshot('false');"><i class="material-icons">close</i>Keep them as-is</a>
           </div>
         </div>
+
+        <div class="card s12 default-hidden question-card" id="warn_upgrade_backups_card">
+          <div class="card-content">
+            <span class="card-title">
+              <i class="material-icons">info_outline</i>
+              <span>Ignoring upgrade backups is recommended</span>
+            </span>
+            <p>With your current settings, this addon assumes any backup it finds should be uploaded to Google Drive.  This can create undesireable behavior when you upgrade
+              Home Assistant or an addon and an automatic partial backup is created by Home Assistant for the upgrade (this is Home Assistant's default behavior).  
+              <div class="card">
+                <div class="card-content">
+                  <span class="card-title mini-title">For Example</span>
+                  If you save 4 full backups in Google Drive and then upgrade 4 add-ons, the 4 partial backups Home Assistant automatically creates would overwite ALL of the full backups this add-on made previously leaving you with no 
+                  full backups to restore from until the next one is made 24 hours or more later.  Most people don't want that to happen, as it leaves a possible gap in your backup strategy.
+                </div>
+              </div>
+            </p>
+            <p>
+              To prevent this most people enable the "Ignore upgrgrade backups" setting in this addon, which will cause it to completely ignore these partial upgrade backups.
+              Moving forward this will be enabled by default for new installations, and it is recommended for everyone.  Because you're upgrading from an 
+              older version of the addon that had different behavior, you have to choose.  You can also enable some other features in the <a href="#!" onclick="loadSettings()"><i class="material-icons inline-icon">settings</i>add-on settings</a> that might be useful for this, such as:
+              <ul class="browser-default">
+                <li>The setting <b>'Delete ignored backups after: X'</b> can be used to automatically delete upgrade backups after some time period, which helps reclaim the space they might use.</li>
+                <li>The <b>'Ignore Other Backups'</b> setting makes the addon ignore <i>any</i> backup it didn't create, including 'upgrade' backups.</li>
+              </ul>
+              If none of this makes any sense to you, just click "Start ignoring upgrade backups" below to make this notification go away.
+            </p>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="btn-flat" onClick="loadSettings();"><i class="material-icons">settings</i>Open Settings</a>
+            <a target="_blank" class="btn-flat" onClick="dismissIgnoredBackupWarning('true');"><i class="material-icons">check</i>Start ignoring upgrade backups</a>
+            <a target="_blank" class="btn-flat" onClick="dismissIgnoredBackupWarning('false');"><i class="material-icons">close</i>Keep current settings</a>
+          </div>
+        </div>
         
         <div class="card default-hidden question-card" id="ingress_upgrade_card">
           <div class="card-content">

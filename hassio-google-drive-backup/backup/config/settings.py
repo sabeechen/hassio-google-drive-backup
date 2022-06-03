@@ -158,7 +158,7 @@ _DEFAULTS = {
     Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE: 4,
     Setting.DAYS_BETWEEN_BACKUPS: 3,
     Setting.IGNORE_OTHER_BACKUPS: False,
-    Setting.IGNORE_UPGRADE_BACKUPS: False,
+    Setting.IGNORE_UPGRADE_BACKUPS: True,
     Setting.DELETE_IGNORED_AFTER_DAYS: 0,
     Setting.DELETE_BEFORE_NEW_BACKUP: False,
     Setting.BACKUP_NAME: "{type} Backup {year}-{month}-{day} {hr24}:{min}:{sec}",

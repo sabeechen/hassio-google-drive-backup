@@ -101,7 +101,8 @@ class Exchanger():
                 secret=creds.secret,
                 access_token=ensureKey(KEY_ACCESS_TOKEN, data, CRED_OBJECT_NAME),
                 refresh_token=creds.refresh_token,
-                expiration=self._get_expiration(data))
+                expiration=self._get_expiration(data),
+                original_expiration=creds.original_expiration)
         finally:
             if resp is not None:
                 resp.release()
@@ -121,7 +122,7 @@ class Exchanger():
                 }
                 async with self.session.post(str(url), headers=headers, json=data, timeout=ClientTimeout(total=self.config.get(Setting.EXCHANGER_TIMEOUT_SECONDS))) as resp:
                     if resp.status < 400:
-                        return Creds.load(self.time, await resp.json())
+                        return Creds.load(self.time, await resp.json(), original_expiration=creds.original_expiration)
                     elif resp.status == 503:
                         json = {}
                         try:

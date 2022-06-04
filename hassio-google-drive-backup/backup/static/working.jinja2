@@ -189,6 +189,39 @@
             <a target="_blank" class="btn-flat" onClick="dismissIgnoredBackupWarning('false');"><i class="material-icons">close</i>Keep current settings</a>
           </div>
         </div>
+
+        <div class="card s12 default-hidden question-card" id="warn_creds_deprecated_card">
+          <div class="card-content">
+            <span class="card-title">
+              <i class="material-icons">info_outline</i>
+              <span>Your credentials with Google may expire</span>
+            </span>
+            <p>Google <a href="https://developers.googleblog.com/2022/02/making-oauth-flows-safer.html" target="_blank" rel="noreferrer">recently announced</a> changes they're making 
+              to how their OAuth credentials are generated.  You previously followed 
+              <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md" target="_blank" rel="noreferrer">these instructions</a> to set up credentials
+               the add-on can use to upload to Google Drive.  If you did that before <b>March 16 2022</b>, Google is going to make those credentials invalid in <b>October of 2022</b>.
+               If you are affected this means that in October 2022 the add-on will be unable to authorize with Google Drive and your backups will not get uploaded.  
+            </p>
+            <p>
+              This is somewhat expected, as using Google Cloud credentials for a local installation like this is not something Google intends for us to do.  But we can make it work.  
+            </p>
+            <p>
+              If you are affected, you likely received an email from Google titled 'Migrate your OAuth out-of-band flow'.  To make your credentials work, please follow the steps again to 
+              <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md" target="_blank" rel="noreferrer">make your credentials</a> and reauthorize the addon.  
+              You don't need to follow all the steps exactly, you just need to modify what you have to match up with the instructions.  In particular please ensure that:
+              <ul class="browser-default">
+                <li>You can skip steps 0, 1, and 2 because you already did them</li>
+                <li>In step 3, ensure your "OAuth Consent Screen" has a Publishing status of "In production".  You don't need to create a new consent screen.</li>
+                <li>In step 4, ensure your credentials use application type "TVs and Limited Input Devices".  If not you will need to create new credentials, which will create a new client ID and client secret you can use to reauthorize the addon.</li>
+              </ul>
+
+              Once you do, please <a href="reauthenticate?private=1"></i>reauthorize</a> the add-on with Google Drive.  You can also wait until your credentials stop working and regerate them then.  There is no rush.
+            </p>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="btn-flat" onClick="aknowledgeooboauth();"><i class="material-icons">check</i>Aknowledge (you wont see this message again)</a>
+          </div>
+        </div>
         
         <div class="card default-hidden question-card" id="ingress_upgrade_card">
           <div class="card-content">

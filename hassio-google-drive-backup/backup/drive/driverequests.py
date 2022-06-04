@@ -5,7 +5,7 @@ import os
 import re
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientResponseError, ServerTimeoutError
@@ -20,6 +20,7 @@ from backup.util import Backoff
 from ..time import Time
 from ..logger import getLogger
 from backup.creds import Creds, Exchanger, DriveRequester
+from datetime import timezone
 
 logger = getLogger(__name__)
 
@@ -68,6 +69,8 @@ DRIVE_RETRY_INITIAL_SECONDS: int = 2
 # How uch longer to wait for each Drive service call (Exponential backoff)
 DRIVE_EXPONENTIAL_BACKOFF: int = 2
 
+OOB_CRED_CUTOFF = datetime(2022, 3, 16, tzinfo=timezone.utc)
+
 
 @singleton
 class DriveRequests():
@@ -92,6 +95,20 @@ class DriveRequests():
             "Authorization": "Bearer " + await self.getToken(),
             "Client-Identifier": self.config.clientIdentifier()
         }
+
+    @property
+    def might_be_oob_creds(self):
+        """Attempts to determine if the user might be using custom creds affected by google's OOB cred deprecation"""
+        if not self.isCustomCreds():
+            return False
+        if self.creds.original_expiration is None:
+            # These creds must be old, so assume they're affected
+            return True
+        try:
+            return self.creds.original_expiration < OOB_CRED_CUTOFF
+        except:  # noqa: E722
+            # Regardless of why this happens, assume they need to check
+            return True
 
     def isCustomCreds(self):
         return self.creds is not None and self.creds.id != self.config.get(Setting.DEFAULT_DRIVE_CLIENT_ID)

@@ -20,7 +20,7 @@ from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
                           SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from backup.creds import Creds
 from backup.model import Coordinator, Backup
-from backup.drive import DriveSource, FolderFinder
+from backup.drive import DriveSource, FolderFinder, OOB_CRED_CUTOFF
 from backup.drive.drivesource import FOLDER_MIME_TYPE, DriveRequests
 from backup.ha import HaSource, HaUpdater
 from backup.config import VERSION
@@ -796,28 +796,11 @@ async def test_manual_creds(reader: ReaderHelper, ui_server: UiServer, config: C
     drive.saveCreds(None)
     assert not drive.enabled()
 
-    # get the auth url
-    req_path = URL("manualauth").with_query({
-        "client_id": server.google._custom_drive_client_id,
-        "client_secret": server.google._custom_drive_client_secret})
-    data = await reader.getjson(str(req_path))
-    assert "auth_url" in data
-    assert "code" in data
-    assert "expires" in data
+    await setup_manual_creds(reader, server, drive, session)
 
-    periodic_check = await reader.getjson("checkManualAuth")
-    assert periodic_check['message'] == "Waiting for you to authorize the add-on."
-
-    # Authorize the device using the url and device code provided
-    authorize_url = URL(data["auth_url"]).with_query({"code": data['code']})
-    async with session.get(str(authorize_url), allow_redirects=False) as resp:
-        resp.raise_for_status()
-
-    # TODO: Wait for new credentials in a smarter way.
-    await asyncio.sleep(2)
-
-    # verify creds are saved and drive is enabled
+    # Verify creds are saved and drive is enabled
     assert drive.enabled()
+    assert drive.isCustomCreds()
 
 
 @pytest.mark.asyncio
@@ -1143,3 +1126,50 @@ async def test_ha_upload(reader: ReaderHelper, backup_helper, ui_server: UiServe
     assert reply['message'] == "Uploading backup in the background"
     await ui_server.waitForUpload()
     assert len(await ha.get()) == 1
+
+
+async def setup_manual_creds(reader: ReaderHelper, server: SimulationServer, drive: DriveSource, session: ClientSession):
+    # get the auth url
+    req_path = URL("manualauth").with_query({
+        "client_id": server.google._custom_drive_client_id,
+        "client_secret": server.google._custom_drive_client_secret})
+    data = await reader.getjson(str(req_path))
+    assert "auth_url" in data
+    assert "code" in data
+    assert "expires" in data
+
+    periodic_check = await reader.getjson("checkManualAuth")
+    assert periodic_check['message'] == "Waiting for you to authorize the add-on."
+
+    # Authorize the device using the url and device code provided
+    drive._cred_trigger.clear()
+    authorize_url = URL(data["auth_url"]).with_query({"code": data['code']})
+    async with session.get(str(authorize_url), allow_redirects=False) as resp:
+        resp.raise_for_status()
+
+    await drive.debug_wait_for_credentials()
+
+    # verify creds are saved and drive is enabled
+    assert drive.enabled()
+    assert drive.isCustomCreds()
+
+
+@pytest.mark.asyncio
+async def test_oob_warning(reader: ReaderHelper, ui_server: UiServer, config: Config, server: SimulationServer, session, drive: DriveSource, data_cache: DataCache):
+    server.google._custom_drive_client_expiration = OOB_CRED_CUTOFF + timedelta(seconds=1)
+    assert not data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW)
+    await setup_manual_creds(reader, server, drive, session)
+    assert data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW)
+    data_cache.TESTS_ONLY_clearFlags()
+    status = await reader.getjson("getstatus")
+    assert status['warn_oob_oauth'] is False
+
+    server.google._custom_drive_client_expiration = OOB_CRED_CUTOFF - timedelta(seconds=1)
+    await setup_manual_creds(reader, server, drive, session)
+    data_cache.TESTS_ONLY_clearFlags()
+    status = await reader.getjson("getstatus")
+    assert status['warn_oob_oauth'] is True
+
+    data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW)
+    status = await reader.getjson("getstatus")
+    assert status['warn_oob_oauth'] is False

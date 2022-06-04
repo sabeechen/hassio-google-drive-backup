@@ -177,6 +177,7 @@ class UiServer(Trigger, Startable):
         status["notify_check_ignored"] = ignored > 0 and self.ignore_other_turned_on
         status["warn_backup_upgrade"] = self.config.get(Setting.CALL_BACKUP_SNAPSHOT) and not self._data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_BACKUP_RENAME)
         status["warn_upgrade_backups"] = self._data_cache.notifyForIgnoreUpgrades
+        status["warn_oob_oauth"] = not self._data_cache.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW) and self._coord._model.dest.might_be_oob_creds
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
@@ -236,6 +237,7 @@ class UiServer(Trigger, Startable):
         try:
             creds = await auth.waitForPermission()
             self._coord.saveCreds(creds)
+            self._data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW)
         except asyncio.CancelledError:
             # Cancelled, thats fine
             pass
@@ -547,6 +549,11 @@ class UiServer(Trigger, Startable):
         self.ignore_other_turned_on = False
         return web.json_response({'message': "Acknowledged."})
 
+    async def aknowledgeooboauth(self, request: Request):
+        self._data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW)
+        self._data_cache.saveIfDirty()
+        return web.json_response({'message': "Acknowledged"})
+
     async def _updateConfiguration(self, new_config, backup_folder_id=None, trigger=True):
         update = {}
         for key in new_config:
@@ -707,6 +714,7 @@ class UiServer(Trigger, Startable):
         self._addRoute(app, self.ignoredbackupswitch)
         self._addRoute(app, self.ignore)
         self._addRoute(app, self.ackignorecheck)
+        self._addRoute(app, self.aknowledgeooboauth)
         self._addRoute(app, self.checkManualAuth)
 
     def _addRoute(self, app, method):

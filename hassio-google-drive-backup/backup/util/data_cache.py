@@ -28,6 +28,7 @@ VERSION_DEFUALT_IGNORE_UPGRADES = Version.parse("0.108.2")
 class UpgradeFlags(Enum):
     NOTIFIED_ABOUT_BACKUP_RENAME = "notified_backup_rename"
     NOTIFIED_ABOUT_IGNORED_BACKUPS = "notified_ignored_backups"
+    NOTIFIED_ABOUT_OOB_FLOW = "notified_about_oob_flow"
     TESTING_FLAG = "testing_flag"
 
 
@@ -126,10 +127,13 @@ class DataCache:
 
     @property
     def notifyForIgnoreUpgrades(self):
-        return self.firstVersion < VERSION_DEFUALT_IGNORE_UPGRADES and not self.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_IGNORED_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_OTHER_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_UPGRADE_BACKUPS) 
+        return self.firstVersion < VERSION_DEFUALT_IGNORE_UPGRADES and not self.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_IGNORED_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_OTHER_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_UPGRADE_BACKUPS)
 
     def checkFlag(self, flag: UpgradeFlags):
         return flag.value in self._data.get(KEY_FLAGS, [])
+
+    def TESTS_ONLY_clearFlags(self):
+        self._data[KEY_FLAGS] = []
 
     def addFlag(self, flag: UpgradeFlags):
         all_flags = set(self._data.get(KEY_FLAGS, []))

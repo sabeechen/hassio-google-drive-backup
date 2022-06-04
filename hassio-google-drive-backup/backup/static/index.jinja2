@@ -54,7 +54,7 @@
                     <li>
                       The addon will only have access to the files and folders it creates. It can't see any of the other files you've added to Google Drive.</h6>
                     </li>
-                    <li>To generate your own private credentials with Google instead that doesn't use a third-party domain, <a href="#" onclick="$('#option2').show();$('#option1').hide();">click here</a>.  Fair warning: that way is much more complicated.</li>
+                    <li>To generate your own private credentials with Google instead that doesn't use a third-party domain, <a href="#" onclick="doOption2();">click here</a>.  Fair warning: that way is much more complicated.</li>
                   </ul>
                 </div>
               </div>
@@ -154,6 +154,12 @@
 
 {% block scripts %}
   <script type="text/javascript">
+
+    function doOption2() {
+      $('#option2').show();
+      $('#option1').hide();
+    }
+
     function backOption2Step1() {
       $('#option2').hide();
       $('#option1').show();
@@ -311,6 +317,11 @@
 
       window.setInterval(reloadForNewCreds, 5000);
       reloadForNewCreds();
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("private")) {
+        doOption2();
+      }
     });
 
     function sleep(ms) {

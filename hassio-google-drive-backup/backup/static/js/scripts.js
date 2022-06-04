@@ -133,11 +133,27 @@ function callBackupSnapshot(doSwitch) {
   }, null, "Saving...");
 }
 
+function dismissIgnoredBackupWarning(doSwitch) {
+  var url = "ignoredbackupswitch?switch=" + doSwitch;
+  postJson(url, {}, function (data) {
+    $('#warn_upgrade_backups_card').fadeOut(500);
+    refreshstats();
+  }, null, "Saving settings...");
+}
+
 function ackCheckIgnoredBackups() {
   postJson("ackignorecheck", {}, function (data) {
     $('#ignore_helper_card').fadeOut(500);
   }, null, "Acknowledging...");
   
+}
+
+function aknowledgeooboauth() {
+  var url = "aknowledgeooboauth";
+  postJson(url, {}, function (data) {
+    $('#warn_creds_deprecated_card').fadeOut(500);
+    refreshstats();
+  }, null, "Acknowledging...");
 }
 
 function resolvefolder(use_existing) {
@@ -724,6 +740,10 @@ function processStatusUpdate(data) {
     question_card = "error_reports_card";
   } else if (data.warn_backup_upgrade && !found) {
     question_card = "backup_upgrade_card";
+  } else if (data.warn_upgrade_backups) {
+    question_card = "warn_upgrade_backups_card";
+  } else if (data.warn_oob_oauth) {
+    question_card = "warn_creds_deprecated_card";
   }
 
   $('.question-card').each(function (i) {

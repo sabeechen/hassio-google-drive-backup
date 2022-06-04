@@ -62,6 +62,15 @@ After you start the addon you have an opportunity to review your settings within
 If you'd still prefer use edit your setting in yaml or through the supervisor, the list of configurable options with explanations is available [here](./hassio-google-drive-backup/DOCS.md#configuration).
 
 ## FAQ
+### Is this for me?
+Most likely, yes.  This addon is focused on making backup simple, reliable, easy to understand, and well supported.  It provides clear error messages when things go wrong and explains how you fix it.  It has a fancy-pants web interface you can look at to see how things are going.  To do that it sacrafices customizability.  It can't:
+- Create backups more than once a day.
+- Create backups only when your configuration changes.
+- Upload somewhere other than Google Drive.
+- Be customized outside of what the settings allow.
+
+If you want a backup strategy _highly_ customized to your needs, you might be better off hacking something together with automations and the samba addon, for example.  This project started out as me doing exactly that for myself, and now its grown into a mature project with ~100k people using it all over the world.  Weird.  I never thought I'd be getting community pressure to translate the UI into portugese, but here I am dealing with those kinds of problems now.
+
 
 ### How will I know this will be there when I need it?
 
@@ -77,9 +86,9 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 
 Redundancy is the foundation of reliability. With local backups, Google Drive's backups, and two flavors of notification I think you're covered.
 
-### How do I restore a backups?
+### How do I restore a backup?
 The backups this addon creates are the same backups that Home Assistant makes by itself and can be restored using any of the methods documented elsewhere.  Here are few pointers to get you started.
-- If you can still get to the addon's web-UI then can select the backup and click "Load into Home Assistant" have it copied back into Home Assistant.
+- If you can still get to the addon's web-UI then select the backup and click "Load into Home Assistant" have it copied back into Home Assistant.
 - If not (eg, maybe your hard drive died and you're starting over):
   - Download one of the backups you've previously created from [Google Drive](https://drive.google.com).
   - On whatever hardware you're using to run Home Assistant now, follow the [normal instructions](https://www.home-assistant.io/getting-started/) to install Home Assistant.

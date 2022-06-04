@@ -88,6 +88,10 @@ class BackupDestination(BackupSource):
     def isWorking(self):
         return False
 
+    @property
+    def might_be_oob_creds(self) -> bool:
+        return False
+
 
 @singleton
 class Model():

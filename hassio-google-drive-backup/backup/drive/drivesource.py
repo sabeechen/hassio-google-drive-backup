@@ -1,5 +1,6 @@
 from datetime import datetime
 from io import IOBase
+from asyncio import Event
 from typing import Dict
 
 from aiohttp import ClientSession
@@ -46,14 +47,24 @@ class DriveSource(BackupDestination):
         self._info = info
         self._uploadedAtLeastOneChunk = False
         self._drive_info = None
+        self._cred_trigger = Event()
 
     def saveCreds(self, creds: Creds) -> None:
         logger.info("Saving new Google Drive credentials")
         self.drivebackend.saveCredentials(creds)
         self.trigger()
+        self._cred_trigger.set()
+
+    async def debug_wait_for_credentials(self):
+        await self._cred_trigger.wait()
+        self._cred_trigger.clear()
 
     def isCustomCreds(self):
         return self.drivebackend.isCustomCreds()
+
+    @property
+    def might_be_oob_creds(self) -> bool:
+        return self.drivebackend.might_be_oob_creds
 
     def name(self) -> str:
         return SOURCE_GOOGLE_DRIVE

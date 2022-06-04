@@ -5,6 +5,7 @@ from datetime import timedelta
 from backup.logger import getLogger
 from backup.config import Setting, Config
 from backup.time import Time
+from backup.creds import KEY_CLIENT_SECRET, KEY_CLIENT_ID, KEY_ACCESS_TOKEN, KEY_TOKEN_EXPIRY
 from aiohttp.web import (HTTPBadRequest, HTTPNotFound,
                          HTTPUnauthorized, Request, Response, delete, get,
                          json_response, patch, post, put, HTTPSeeOther)
@@ -39,6 +40,7 @@ class SimulatedGoogle(BaseServer):
         # auth state
         self._custom_drive_client_id = self.generateId(5)
         self._custom_drive_client_secret = self.generateId(5)
+        self._custom_drive_client_expiration = None
         self._drive_auth_code = "drive_auth_code"
         self._port = ports.server
         self._auth_token = ""
@@ -221,13 +223,16 @@ class SimulatedGoogle(BaseServer):
         else:
             raise HTTPBadRequest()
         self.generateNewRefreshToken()
-        return json_response({
+        resp = {
             'access_token': self._auth_token,
             'refresh_token': self._refresh_token,
-            'client_id': data.get('client_id'),
-            'client_secret': self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
-            'token_expiry': self.timeToRfc3339String(self._time.now()),
-        })
+            KEY_CLIENT_ID: data.get('client_id'),
+            KEY_CLIENT_SECRET: self.config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
+            KEY_TOKEN_EXPIRY: self.timeToRfc3339String(self._time.now()),
+        }
+        if self._custom_drive_client_expiration is not None:
+            resp[KEY_TOKEN_EXPIRY] = self.timeToRfc3339String(self._custom_drive_client_expiration)
+        return json_response(resp)
 
     def _checkClientIdandSecret(self, client_id: str, client_secret: str) -> bool:
         if self._custom_drive_client_id == client_id and self._custom_drive_client_secret == client_secret:

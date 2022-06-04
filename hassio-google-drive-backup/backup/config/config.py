@@ -17,7 +17,8 @@ ALWAYS_KEEP = {
 }
 
 KEEP_DEFAULT = {
-    Setting.SEND_ERROR_REPORTS
+    Setting.SEND_ERROR_REPORTS,
+    Setting.IGNORE_UPGRADE_BACKUPS
 }
 
 # these are the options that should trigger a restart of the server
@@ -124,6 +125,7 @@ class Config():
             self.config = {}
         else:
             self.config = data
+        self._legacy_ignored_behavior = False
         self._subscriptions = []
         self._clientIdentifier = None
         self.retained = self._loadRetained()
@@ -271,7 +273,7 @@ class Config():
                 }, f)
 
     def isExplicit(self, setting):
-        return setting in self.config
+        return setting in self.config or setting.value in self.config
 
     def override(self, setting: Setting, value):
         self.overrides[setting] = value
@@ -285,6 +287,9 @@ class Config():
         if setting.key() in self.config:
             return self.config[setting.key()]
         else:
+            if setting == Setting.IGNORE_UPGRADE_BACKUPS and self._legacy_ignored_behavior:
+                # Use the old behavior, rather than the new one
+                return False
             return setting.default()
 
     def getForUi(self, setting: Setting):
@@ -301,3 +306,7 @@ class Config():
 
     def persistedChanges(self):
         self._config_was_upgraded = False
+
+    def useLegacyIgnoredBehavior(self, value: bool):
+        """If the user upgrades from an old version and hasn't explicitely said they want to include upgrade backups, then this reverts them to the old behavior where they aren't ignored"""
+        self._legacy_ignored_behavior = value

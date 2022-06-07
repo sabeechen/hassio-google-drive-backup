@@ -1,12 +1,12 @@
 # Using Custom/Personal Google Credentials
-You've arrived here because you'd like to use your own client ID and client secret to authenticate the add-on with Google Drive.  I'll caution that this is a very detailed and complicated process geared more toward developers than end users, so if you'd like to do it the easy way, go back to your add-on (typically http://homeassistant.local:8123/hassio/ingress/hassio_google_drive_backup) and click the "Authenticate with Google Drive" button.  These instructions will have you create a project on Google's Developer Cloud console, generate your own credentials, and use them to authenticate with Google Drive.  You can expect this to take about 15 minutes.  Typically this is what would be done by a developer when releasing a project that serveral users would use, but in this case you will be the only user.  This workflow is for you if:
-* You'd like to avoid having your account's credentials go through a server maintained by the developer of this addon.  The typical authentication workflow never sees your Google account password, but it does recieve a token from Google that, if I were malicious, I could use to see the backups you've uploaded to Google Drive.  I don't store this token anywhere and instead just pass it back to you, but because of how Google OAuth tokens are generated there is no way you could verify that.  I tip my tinfoil hat to yours and respect your desire to protect your personal information :)
-* The typical authentication flow didn't work.  This may be because of a bug, or because the server I set up to handle it is down or broken.  Its just me back here providing this as a free service to the community, so applogogies if things fall into disrepair.
+You've arrived here because you'd like to use your own client ID and client secret to authenticate the add-on with Google Drive.  I'll caution that this is a very detailed and complicated process geared more toward developers than end users, so if you'd like to do it the easy way, go back to your add-on (typically http://homeassistant.local:8123/hassio/ingress/hassio_google_drive_backup) and click the "Authenticate with Google Drive" button.  These instructions will have you create a project on Google's Developer Cloud console, generate your own credentials, and use them to authenticate with Google Drive.  You can expect this to take about 15 minutes.  Typically this is what would be done by a developer when releasing a project that several users would use, but in this case you will be the only user.  This workflow is for you if:
+* You'd like to avoid having your account's credentials go through a server maintained by the developer of this addon.  The typical authentication workflow never sees your Google account password, but it does receive a token from Google that, if I were malicious, I could use to see the backups you've uploaded to Google Drive.  I don't store this token anywhere and instead just pass it back to you, but because of how Google OAuth tokens are generated there is no way you could verify that.  I tip my tinfoil hat to yours and respect your desire to protect your personal information :)
+* The typical authentication flow didn't work.  This may be because of a bug, or because the server I set up to handle it is down or broken.  Its just me back here providing this as a free service to the community, so apologies if things fall into disrepair.
 
 These instructions are current as of June 2022.  If you do this and notice they're out of date, Please file an issue on this project's issue page so I can be made aware of it and make the changes necessary.  Thanks!
 
 ## Step 0 - Check addon version
-You must be runnign version 0.106.1 or greater of the add-on for this to work.  In Feb 2022 Google changed how some of their authentication APIs work which broke the way the addon did it before that version
+You must be running version 0.106.1 or greater of the add-on for this to work.  In Feb 2022 Google changed how some of their authentication APIs work which broke the way the addon did it before that version
 ## Step 1 - Create a Google Cloud Project
 >**NOTE:** If you already followed these steps in the past, you do not need to create a new project.  Just use the one you used before.
 * Go to http://console.developers.google.com and log in with your Google account.
@@ -24,7 +24,7 @@ With your project now created:
 * Search for "Google Drive API", and click "Enable".  This is necessary because the "Project" you're creating will use the [Google Drive API](https://developers.google.com/drive/api/v3/reference). 
 
 ## Step 3 - Create a Consent Screen
->**NOTE:** If you already followed these steps in the past, you probably already have a consent screen.  Resue your existing one and just make sure it matches the information described below.  In particular ensure the consent screen in "Publishing status" is "In production"
+>**NOTE:** If you already followed these steps in the past, you probably already have a consent screen.  Reuse your existing one and just make sure it matches the information described below.  In particular ensure the consent screen in "Publishing status" is "In production"
 
 Before creating credentials, you'll need to create a consent screen.  Normally this is what people would see when they request to allow your new application to access their Google Drive, but because you're creating it just for yourself this is basically just a necessary formality.
 * Go back to http://console.developers.google.com and ensure the project name you created earlier is displayed in the upper left.
@@ -36,14 +36,14 @@ Before creating credentials, you'll need to create a consent screen.  Normally t
 * Once its created, either click **Go Back to Dashboard** or click **OAuth Consent Screen** on the left.  Under **Publishing status** click **Publish App** and then **Confirm**.  This dialog will warn that the app will be available to all users, but in our case it will still only be you if you keep the credentials you create later just to yourself.  This step is necessary because "Testing" credentials would require you to manually re-authorize the addon ever 7 days, which is a pain.
 
 ## Step 4 - Create Credentials
->**NOTE:** If you already followed these steps in the past, you probably already have credentials.  If they don't whats desribed below, you'll need to create a new ones.  In particular ensure the credential type is "TVs and Limited Input Devices".  So long as you use the same consent screen, you can create any number of credentials you want.
+>**NOTE:** If you already followed these steps in the past, you probably already have credentials.  If they don't whats described below, you'll need to create a new ones.  In particular ensure the credential type is "TVs and Limited Input Devices".  So long as you use the same consent screen, you can create any number of credentials you want.
 
 Now you've set up everything necessary to actually create credentials.
 * From http://console.developers.google.com, click **Enabled APIs & Services** then **Credentials** on the left.
 * Click **+ Create Credentials** at the top of the page.
 * Select "OAuth client ID" form the drop down.
 This should have opened a dialog titled "Create OAuth client ID".
-* Select **TVs and Limited Input Devices** for **Application Type**.  Home Assistant might not seem like a "Limited Input Device" but is is necessary because its the only OAuth authentication method Google provides that doesn't require you to maintain a public SSL encrpted web service. 
+* Select **TVs and Limited Input Devices** for **Application Type**.  Home Assistant might not seem like a "Limited Input Device" but is is necessary because its the only OAuth authentication method Google provides that doesn't require you to maintain a public SSL encrypted web service. 
 * Give the credentials a **Name**, anything will do and it doesn't matter.
 ![](images/step4.png)
 * Click "Create"

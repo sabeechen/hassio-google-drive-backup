@@ -43,7 +43,7 @@
 {% call macros.errorMessage("Error while backing up", "error_card", "sync_problem", error_card_actions) %}
   <p>
     The add-on got the error below while trying to sync your backups. Some transient errors are expected
-    (eg an upload could fail if the internet is down) but if this persist for more than a few minutes your
+    (e.g. an upload could fail if the internet is down) but if this persist for more than a few minutes your
     backups won't get uploaded and the information you see on this page may be stale. If you file an
     issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the
     "Download Logs" link below
@@ -70,7 +70,7 @@
     <b id="data_pct_used"></b> full and only has <b id="data_space_remaining"></b> left so creating 
     another backup runs the risk of exhausting the space available.  When Home Assistant runs out of 
     disk space, it can stop responding and become very difficult to fix.  This addon can only estimate 
-    how big the the next backup will be based on your most recent one, it can't know how big the backup 
+    how big the next backup will be based on your most recent one, it can't know how big the backup 
     will be until its actually created.
   </p>
   <p>To resolve this you can:</p>
@@ -107,14 +107,14 @@
   <p>
     Google Drive is full, backups can't continue until space is available. You can go to Google Drive's
     <a href="https://drive.google.com/drive/quota" target="_blank" rel="noreferrer">quota page</a>
-    to see whats using up space in your Google Drive, but because that space is shared between several Google products (eg GMail, Google Photos)
+    to see what's using up space in your Google Drive, but because that space is shared between several Google products (e.g. Gmail, Google Photos)
     one of those products might be using the space instead. You can see your usage across all those products on
     Google's <a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">storage settings</a> page.
   </p>
   <p>To resolve this you can:</p>
   <ul class="browser-default">
     <li>
-      Free up space in Google Drive, GMail, or Google Photos by deleting things.
+      Free up space in Google Drive, Gmail, or Google Photos by deleting things.
     </li>
     <li>
       Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
@@ -176,7 +176,7 @@
     <li>The internet is working.</li>
     <li>
       The server www.googleapis.com is reachable from your Home Assistant
-      machine. Some ad-blocking and firewall software (eg Ad Guard, Pihole, etc) can block this
+      machine. Some ad-blocking and firewall software (e.g. Ad Guard, Pi-hole, etc) can block this
       addresses.
     </li>
   </ul>
@@ -187,7 +187,7 @@
       <p>
         Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
         the result from an attempt the add-on has made to ping the address. This may help in
-        determining if something in your network is blocking accesss to one of Google's API servers,
+        determining if something in your network is blocking access to one of Google's API servers,
         or if Google's API servers are having problems.
       </p>
       <div class="dns_info row"></div>
@@ -212,7 +212,7 @@
     <li>
       The server www.googleapis.com are reachable from your Home Assistant
       machine. Some ad-blocking and
-      firewall software (eg Ad Guard, pi-hole, etc) can block or throttle traffic to this address.
+      firewall software (e.g. Ad Guard, Pi-hole, etc) can block or throttle traffic to this address.
     </li>
   </ul>
   <div style="margin-top: -10px; margin-bottom: 15px;">
@@ -224,7 +224,7 @@
       <p>
         Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
         the result from an attempt the add-on has made to ping the address. This may help in
-        determining if something in your network is blocking accesss to one of Google's API servers,
+        determining if something in your network is blocking access to one of Google's API servers,
         or if Google's API servers are having problems.
       </p>
       <div class="dns_info row"></div>
@@ -260,7 +260,7 @@
       <p>
         Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
         the result from an attempt the add-on has made to ping the address. This may help in
-        determining if something in your network is blocking accesss to one of Google's API servers,
+        determining if something in your network is blocking access to one of Google's API servers,
         or if Google's API servers are having problems.
       </p>
       <div class="dns_info row"></div>
@@ -342,7 +342,7 @@
     <li>Making sure the internet is working fine.</li>
     <li>Making sure you're able to log into your <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive
         account</a> and upload files without problems.</li>
-    <li>Reauthenting the add-on with Google Drive (click <b>"ACTIONS"</b> -> <b>"Reauthorize Google Drive"</b> up top)
+    <li>Re-authenticating the add-on with Google Drive (click <b>"ACTIONS"</b> -> <b>"Reauthorize Google Drive"</b> up top)
     </li>
     <li>Restarting the add-on, Home Assistant, or the supervisor.</li>
     <li>Reinstalling the add-on.</li>
@@ -404,7 +404,7 @@
   <p>Note: If you run multiple instance of Home Assistant with this addon using the same Google
     Drive account,
     its recommended that you use a different folder for each instance. Otherwise they'll delete
-    eachother's
+    each other's
     backups!</p>
 {% endcall %}
 
@@ -412,10 +412,10 @@
   <a class="btn-flat" href="#" onclick="loadSettings()"><i class="material-icons">settings</i>Open settings</a>
 {% endset %}
 {% call macros.errorMessage("Please choose a backup folder", "backup_folder_missing", "folder_special", backup_folder_missing_actions) %}
-  <p class="hide-for-custom-creds">You've choosen to upload your backups to a folder of your choosing.
+  <p class="hide-for-custom-creds">You've chosen to upload your backups to a folder of your choosing.
     Click the link below to open a new window and select the folder in Google Drive you'd like to store
     your backups in.</p>
-  <p class="hide-for-default-creds">You've choosen to upload your backups to a folder of your choosing.
+  <p class="hide-for-default-creds">You've chosen to upload your backups to a folder of your choosing.
     Please navigate to the addon settings to specify a folder to store backups in.</p>
     {{ chooseFolder(id="choose_folder_folder_missing") }}
   <ul class="browser-default">
@@ -434,7 +434,7 @@
       <p>If you run multiple instances of
         Home Assistant with this addon using the same Google Drive account, its recommended that you use a
         different folder
-        for each instance. Otherwise they'll delete eachother's backups!</p>
+        for each instance. Otherwise they'll delete each other's backups!</p>
     </li>
   </ul>
   <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to
@@ -601,7 +601,7 @@
   <p>
     The addon was unable to communicate with the Supervisor because it timed out.  This addon 
     must communicate with the supervisor to create backups, load configuration, etc.  Without the supervisor the 
-    addon will not be able to do anything useful. This usually resolves itself after the addon retrys, but if 
+    addon will not be able to do anything useful. This usually resolves itself after the addon retries, but if 
     you see this error stick around for a while you can try
   </p>
   <ul class="browser-default">
@@ -620,7 +620,7 @@
     The addon was unable to communicate with the Supervisor because it gave back an unreadable response.  
     This addon must communicate with the supervisor to create backups, load configuration, etc.  Without 
     the supervisor the addon will not be able to do anything useful. This usually 
-    resolves itself after the addon retrys, but if you see this error stick around for a while you can try:
+    resolves itself after the addon retries, but if you see this error stick around for a while you can try:
   </p>
   <ul class="browser-default">
     <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
@@ -639,7 +639,7 @@
     with the Home Assistant supervisor, which is responsible for creating the file system this addon needs to function. Here are some reasons this might happen:
   </p>
   <ul class="browser-default">
-    <li>You recently upgraded Home Assistant.  Sometimes during an upgrade, the docker enviornment Home Assistant creates for the addon can get messed up.  
+    <li>You recently upgraded Home Assistant.  Sometimes during an upgrade, the docker environment Home Assistant creates for the addon can get messed up.  
       If this is the problem, then restarting the host machine where Home assistant is running will usually resolve it.</li>
     <li>Your machine may have run out of space.  Home Assistant will sometimes make the file system read-only to protect itself if it is close to running out of space, causing this error.  You 
       should be able to see an estimate of how much space is remaining down below on this page or by going to "Supervisor" > "System" in the Home Assistant UI.</li>
@@ -653,8 +653,8 @@
 {% call macros.errorMessage("Google drive Returned an Unexpected Response", "google_unexpected", "error", google_unexpected_actions) %}
   <p>
     The addon was unable to communicate with Google Drive because it gave back an unreadable response.  
-    Withotu beign able to communicate with google drive, the addon will nto be able to back up backups to the cloud.
-    This usually resolves itself after the addon retrys, but if you see this error stick around for a while you can try:
+    Without being able to communicate with Google Drive, the addon will not be able to transfer backups to the cloud.
+    This usually resolves itself after the addon retries, but if you see this error stick around for a while you can try:
   </p>
   <ul class="browser-default">
     <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>

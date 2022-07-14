@@ -117,7 +117,7 @@
               <i class="material-icons">info_outline</i>
               <span>Share Error Reports?</span>
             </span>
-            <p>If you select yes the text of unexpected exceptions this add-on produces will be sent to a server
+            <p>If you select yes, the text of unexpected exceptions this add-on produces will be sent to a server
               maintained by the developer. This is completely optional, but helps give him a heads up for problems
               with new releases and aids in providing better help messages when things go wrong. If you're unsure,
               just select "No". You can always change this in the settings menu up on the top right of the page.</p>
@@ -136,7 +136,7 @@
             </span>
             <p>In August 2021 <a href="https://www.home-assistant.io/blog/2021/08/24/supervisor-update/" target="_blank">the Home Assistant 
               team announced</a> that 'snapshots' will be called 'backups' moving forward.  This addon exposes a
-              binary sensor to indicate if snapshots are stale and a another sensor that publishes details about backups.  Both of the sensors
+              binary sensor to indicate if snapshots are stale and another sensor that publishes details about backups.  Both of the sensors
               used 'snapshot' in their names and values, so they had to be changed to match the new language.  In the spirit of "not breaking 
               your stuff" the addon will only start using the new names and values if you tell it to, just in case you have automations or UI 
               using the old sensor names/values.
@@ -162,18 +162,18 @@
               <i class="material-icons">info_outline</i>
               <span>Ignoring upgrade backups is recommended</span>
             </span>
-            <p>With your current settings, this addon assumes any backup it finds should be uploaded to Google Drive.  This can create undesireable behavior when you upgrade
+            <p>With your current settings, this addon assumes any backup it finds should be uploaded to Google Drive.  This can create undesirable behavior when you upgrade
               Home Assistant or an addon and an automatic partial backup is created by Home Assistant for the upgrade (this is Home Assistant's default behavior).  
               <div class="card">
                 <div class="card-content">
                   <span class="card-title mini-title">For Example</span>
-                  If you save 4 full backups in Google Drive and then upgrade 4 add-ons, the 4 partial backups Home Assistant automatically creates would overwite ALL of the full backups this add-on made previously leaving you with no 
+                  If you save 4 full backups in Google Drive and then upgrade 4 add-ons, the 4 partial backups Home Assistant automatically creates would overwrite ALL of the full backups this add-on made previously leaving you with no 
                   full backups to restore from until the next one is made 24 hours or more later.  Most people don't want that to happen, as it leaves a possible gap in your backup strategy.
                 </div>
               </div>
             </p>
             <p>
-              To prevent this most people enable the "Ignore upgrgrade backups" setting in this addon, which will cause it to completely ignore these partial upgrade backups.
+              To prevent this most people enable the "Ignore upgrade backups" setting in this addon, which will cause it to completely ignore these partial upgrade backups.
               Moving forward this will be enabled by default for new installations, and it is recommended for everyone.  Because you're upgrading from an 
               older version of the addon that had different behavior, you have to choose.  You can also enable some other features in the <a href="#!" onclick="loadSettings()"><i class="material-icons inline-icon">settings</i>add-on settings</a> that might be useful for this, such as:
               <ul class="browser-default">
@@ -203,23 +203,23 @@
                If you are affected this means that in October 2022 the add-on will be unable to authorize with Google Drive and your backups will not get uploaded.  
             </p>
             <p>
-              While annoying, this change is also somewhat expected.  Using using Google Cloud credentials for a local installation like this is not something Google 'intended' for us to do, it isn't an officially supported way of using their services. We can still make due though.  
+              While annoying, this change is also somewhat expected.  Using Google Cloud credentials for a local installation like this is not something Google 'intended' for us to do, it isn't an officially supported way of using their services. We can still make do though.  
             </p>
             <p>
               If you are affected, you likely received an email from Google titled 'Migrate your OAuth out-of-band flow'.  To make your credentials work, please follow the steps linked here to 
               <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/LOCAL_AUTH.md" target="_blank" rel="noreferrer">make your credentials</a> and reauthorize the addon.  
-              You don't need to follow all the steps exactly, you just need to modify what you have to match up with the instructions.  In particular please ensure that:
+              You don't need to follow all the steps exactly; you just need to modify what you have to match up with the instructions.  In particular please ensure that:
               <ul class="browser-default">
                 <li>You can skip steps 0, 1, and 2 because you already did them</li>
                 <li>In step 3, ensure your "OAuth Consent Screen" has a Publishing status of "In production".  You don't need to create a new consent screen.</li>
-                <li>In step 4, ensure your credentials use application type "TVs and Limited Input Devices".  If not you will need to create new credentials, which will create a new client ID and client secret you can use to reauthorize the addon.</li>
+                <li>In step 4, ensure your credentials use application type "TVs and Limited Input Devices".  If not, you will need to create new credentials, which will create a new client ID and client secret you can use to reauthorize the addon.</li>
               </ul>
 
-              Once you do, please <a href="reauthenticate?private=1"></i>reauthorize</a> the add-on with Google Drive.  You can also wait until your credentials stop working and regerate them then.  There is no rush.
+              Once you do, please <a href="reauthenticate?private=1"></i>reauthorize</a> the add-on with Google Drive.  You can also wait until your credentials stop working and regenerate them then.  There is no rush.
             </p>
           </div>
           <div class="card-action">
-            <a target="_blank" class="btn-flat" onClick="aknowledgeooboauth();"><i class="material-icons">check</i>Aknowledge (you wont see this message again)</a>
+            <a target="_blank" class="btn-flat" onClick="aknowledgeooboauth();"><i class="material-icons">check</i>Acknowledge (you won't see this message again)</a>
           </div>
         </div>
         
@@ -228,8 +228,8 @@
             <span class="card-title">Use Ingress instead?</span>
             <p>The latest version of this add-on supports <a target="_blank" rel="noreferrer"
                 href="https://www.home-assistant.io/blog/2019/04/15/hassio-ingress/">ingress</a>. Ingress allows
-              this web interface to be embeeded inside of Home Assistant, which is usually more secure because it
-              delegates authentication to the same mechanisms you've configured in Home Assistant (eg SSL and
+              this web interface to be embedded within Home Assistant, which is usually more secure because it
+              delegates authentication to the same mechanisms you've configured in Home Assistant (e.g. SSL and
               username/password). Currently this interface is being served on an additional port outside of
               Home Assistant which is less secure.</p>
             <br />
@@ -237,10 +237,10 @@
               almost always more secure.
               In the future you can access this interface by following the "WEB UI" link from the add-on
               installation page or embedding it in
-              your Home Assistant side-bar from the same place.</p>
+              your Home Assistant sidebar from the same place.</p>
             <br />
             <p><b>Select NO</b> to continue exposing a web interface on an open port with the SSL and authentication
-              settings you choose. The port, which defaults to 1627, can be changed form the add-on page in Home
+              settings you choose. The port, which defaults to 1627, can be changed from the add-on page in Home
               Assistant.</p>
             <br />
             <p>You can change this option any time from the settings menu. No matter which you choose, the interface
@@ -274,7 +274,7 @@
             </span>
             <p>Because this addon gets a limited view of the world, it might not be able to accurately determine if all of your older backups were created by the addon.  
               Its recommended that you check below to ensure that all of the backups the addon is ignoring now are the ones you intend to have ignored.
-              If not, you can click on an ignored backups to see its details and click "Don't ignore" to have the addon include them in future backup, cleanup, etc.</p>
+              If not, you can click on an ignored backups to see its details and click "Don't ignore" to have the addon include them in future backup, clean-up, etc.</p>
           </div>
           <div class="card-action">
             <a target="_blank" class="btn-flat" onClick="toggleLinkSlide(this, 'backups_ignored');"><i class="material-icons">remove_red_eye</i>Show/Hide Ignored Backups</a>
@@ -287,7 +287,7 @@
               <i class="material-icons">timer</i>
               <span>Taking a backup soon</span>
             </span>
-            <p>Since the addon just started up a few minutes ago, its going to wait a few minutes before taking a backup to make sure thats what you want.  Look below to see exactly how long before the next backup.  
+            <p>Since the addon just started up a few minutes ago, it's going to wait a few minutes before taking a backup to make sure that's what you want.  Look below to see exactly how long before the next backup.  
               You can wait for that to happen, change your <a href="#!" onclick="loadSettings()"><i class="material-icons inline-icon">settings</i>add-on
             settings</a> to something different, or just click the button below to let the automatic backup happen immediately.</p>
           </div>

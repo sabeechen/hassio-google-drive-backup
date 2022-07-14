@@ -16,7 +16,7 @@
             <input type="number" id="max_backups_in_ha" name="max_backups_in_ha" min="0" class="validate" />
             <label for="max_backups_in_ha">Backups in Home Assistant</label>
             <span class="helper-text">The maximum number of backups to keep locally in Home Assistant, or 0 to disable
-              cleanup of old backups entirely.</span>
+              clean-up of old backups entirely.</span>
           </div>
           <div class="input-field col m6 s12">
             <i class="material-icons prefix">cloud_upload</i>
@@ -24,7 +24,7 @@
               class="validate" />
             <label for="max_backups_in_google_drive">Backups in Google Drive</label>
             <span class="helper-text">The maximum number of backups to keep remotely in Google Drive, or 0 to disable
-              cleanup of old backups entirely.</span>
+              clean-up of old backups entirely.</span>
           </div>
         </div>
         <div class="row">
@@ -35,7 +35,7 @@
               <span>Delete Backups After Upload</span>
               <br />
               <span class="helper-text">Delete backups in Home Assistant immediately after uploading them to Google Drive.  
-                This can be useful if you machine is low on space, but your backups will only be stored in the cloud. 
+                This can be useful if your machine is low on space, but your backups will only be stored in the cloud. 
                  Enabling this will cause "Backups in Home Assistant" to be ignored.</span>
             </label>
           </div>
@@ -189,7 +189,7 @@
                 class="filled-in checkbox-ha" />
               <span>Enable Staleness Notifications</span>
               <br />
-              <span class="helper-text">When there is a problem with the backups, show a persistant notification in
+              <span class="helper-text">When there is a problem with the backups, show a persistent notification in
                 the Home Assistant interface.</span>
             </label>
           </div>
@@ -277,7 +277,7 @@
         <div class="row" id="settings_server_details" style="display: none">
           <div class="col s11 offset-s1">
             <label>
-              <span class="helper-text">Use the options below to configure what kind of SSL and and authentication you'd
+              <span class="helper-text">Use the options below to configure what kind of SSL and authentication you'd
                 like to use for this webpage. By default this server is exposed on port 1627, but
                 that can be changed from the add-on installation page.</span>
             </label>
@@ -407,7 +407,7 @@
                     <br />
                     <span class="helper-text">When checked, old backups that aren't part of any daily, weekly,
                       monthly, or yearly cycle you've configured will be deleted even if you haven't reached the
-                      configured maxium number of backups in Google Drive/Home Assistant.</span>
+                      configured maximum number of backups in Google Drive/Home Assistant.</span>
                   </label>
                 </div>
               </div>
@@ -494,7 +494,7 @@
                 <a href="#!" class="btn-flat" style="margin-left: 45px; margin-top: 10px"
                   onclick="showPallette(this)" id="accent_color"></a>
                 <label style="transform: translateY(-20px) scale(0.8)">Accent Color</label>
-                <span class="helper-text" style="margin-top: 10px">The accent color of this interface (eg links,
+                <span class="helper-text" style="margin-top: 10px">The accent color of this interface (e.g. links,
                   buttons, and other elements you can interact with). <a href="#" onclick="revertColors();">Click
                     here</a> to revert
                   back to the default.</span>
@@ -585,8 +585,8 @@
               <label for="maximum_upload_chunk_bytes">Maximum Drive Upload Chunk Size</label>
               <span class="helper-text">
                 Sets the maximum "chunk" size allowed for uploads to Google Drive.  Larger sizes will upload faster but delay reports 
-                of progress and may cause interuptions on some network hardware.  Between 1MB and 20MB is recommended, minimum is 256 kB. 
-                The value can be provided in any binary-prefix format, eg '256 Kb', '10 Mb', '3000Kb', etc.</span>
+                of progress and may cause interruptions on some network hardware.  Between 1MB and 20MB is recommended, minimum is 256 kB. 
+                The value can be provided in any binary-prefix format, e.g. '256 Kb', '10 Mb', '3000Kb', etc.</span>
             </div>
           </div>
           <div class="col s11 offset-s1">

@@ -88,7 +88,9 @@
     "notify_for_stale_snapshots": "bool?",
     "enable_snapshot_stale_sensor": "bool?",
     "enable_snapshot_state_sensor": "bool?",
-    "snapshot_password": "str?" 
+    "snapshot_password": "str?",
+    "maximum_upload_chunk_bytes": "int(262144,)?"
+
   },
   "ports": {
     "1627/tcp": 1627

@@ -89,7 +89,7 @@
     "enable_snapshot_stale_sensor": "bool?",
     "enable_snapshot_state_sensor": "bool?",
     "snapshot_password": "str?",
-    "maximum_upload_chunk_bytes": "int(262144,)?"
+    "maximum_upload_chunk_bytes": "float(262144,)?"
 
   },
   "ports": {

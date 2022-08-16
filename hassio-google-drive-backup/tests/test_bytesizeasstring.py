@@ -38,6 +38,13 @@ def test_ui_format():
     assert parser.formatForUi(98743.1234 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024) == "98743.1234 YB"
 
 
+def test_numbers():
+    parser = BytesizeAsStringValidator("test")
+    parser.validate(1.2) == 1
+    parser.validate(1024.9) == 1024
+    parser.validate(1024) == 1024
+
+
 def test_parsing():
     parser = BytesizeAsStringValidator("test")
     assert parser.validate("1 B") == 1

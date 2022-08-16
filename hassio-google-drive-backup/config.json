@@ -1,6 +1,6 @@
 {
   "name": "Home Assistant Google Drive Backup",
-  "version": "0.108.2",
+  "version": "0.108.3",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically manage backups between Home Assistant and Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
@@ -88,7 +88,9 @@
     "notify_for_stale_snapshots": "bool?",
     "enable_snapshot_stale_sensor": "bool?",
     "enable_snapshot_state_sensor": "bool?",
-    "snapshot_password": "str?" 
+    "snapshot_password": "str?",
+    "maximum_upload_chunk_bytes": "float(262144,)?"
+
   },
   "ports": {
     "1627/tcp": 1627

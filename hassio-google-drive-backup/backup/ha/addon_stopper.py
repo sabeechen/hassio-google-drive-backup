@@ -19,6 +19,8 @@ ATTR_NAME = "name"
 STATE_STOPPED = "stopped"
 STATE_STARTED = "started"
 
+STATES_STOPPED = ["stopped", "unknown", "error"]
+
 
 @singleton
 class AddonStopper(Worker):
@@ -101,15 +103,18 @@ class AddonStopper(Worker):
                 for slug in list(self.must_start):
                     try:
                         info = await self.requests.getAddonInfo(slug)
-                        if info.get(ATTR_STATE, None) == STATE_STOPPED:
+                        state = info.get(ATTR_STATE, None)
+                        if info.get(ATTR_STATE, None) in STATES_STOPPED:
                             LOGGER.info("Starting addon '%s'", info.get(ATTR_NAME, slug))
                             await self.requests.startAddon(slug)
                             self.must_start.remove(slug)
                             changes = True
-                        elif info.get(ATTR_STATE, None) == 'started' and self.time.now() > self.stop_start_check_time:
+                        elif info.get(ATTR_STATE, None) == STATE_STARTED and self.time.now() > self.stop_start_check_time:
                             # Give up on restarting it, looks like it was never stopped
                             self.must_start.remove(slug)
                             changes = True
+                        else:
+                            LOGGER.error(f"Addon '{info.get(ATTR_NAME, slug)} had unrecognized state {state}'.  The addon will most likely be unable to automatically restart this addon.", )
                     except Exception as e:
                         LOGGER.error("Unable to start addon '%s'", slug)
                         LOGGER.printException(e)

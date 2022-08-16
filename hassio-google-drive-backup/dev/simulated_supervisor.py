@@ -175,7 +175,7 @@ class SimulatedSupervisor(BaseServer):
         slug = request.match_info.get('slug')
         for addon in self._addons:
             if addon.get("slug", "") == slug:
-                if addon.get("state") == "stopped":
+                if addon.get("state") != "started":
                     addon["state"] = "started"
                     return self._formatDataResponse({})
         raise HTTPBadRequest()

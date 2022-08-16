@@ -10,7 +10,7 @@ google-cloud-firestore
 injector
 oauth2client
 ptvsd
-python-dateutil==2.6.1
+python-dateutil
 pyyaml
 watchdog
 aiohttp-jinja2

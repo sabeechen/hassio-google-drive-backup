@@ -98,6 +98,27 @@ async def test_start_and_stop(supervisor: SimulatedSupervisor, addon_stopper: Ad
 
 
 @pytest.mark.asyncio
+async def test_start_and_stop_error(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config) -> None:
+    slug1 = "test_slug_1"
+    supervisor.installAddon(slug1, "Test decription")
+    config.override(Setting.STOP_ADDONS, ",".join([slug1]))
+    addon_stopper.allowRun()
+    addon_stopper.must_start = set()
+    assert supervisor.addon(slug1)["state"] == "started"
+
+    await addon_stopper.stopAddons("ignore")
+
+    assert supervisor.addon(slug1)["state"] == "stopped"
+    await addon_stopper.check()
+    assert supervisor.addon(slug1)["state"] == "stopped"
+    supervisor.addon(slug1)["state"] = "error"
+    assert supervisor.addon(slug1)["state"] == "error"
+    await addon_stopper.startAddons()
+    assert supervisor.addon(slug1)["state"] == "started"
+    assert getSaved(config) == (set(), set())
+
+
+@pytest.mark.asyncio
 async def test_stop_failure(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config, interceptor: RequestInterceptor) -> None:
     slug1 = "test_slug_1"
     supervisor.installAddon(slug1, "Test decription")

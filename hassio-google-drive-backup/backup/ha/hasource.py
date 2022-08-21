@@ -394,6 +394,7 @@ class HaSource(BackupSource[HABackup], Startable):
             self.host_info = await self.harequests.info()
             self.ha_info = await self.harequests.haInfo()
             self.super_info = await self.harequests.supervisorInfo()
+            addon_info = ensureKey("addons", await self.harequests.getAddons(), "Supervisor Metadata")
             self.config.update(
                 ensureKey("options", self.self_info, "addon metdata"))
             if self.config.mustSaveUpgradeChanges():
@@ -408,14 +409,13 @@ class HaSource(BackupSource[HABackup], Startable):
                 "port", self.ha_info, "Home Assistant metadata")
             self._info.ha_ssl = ensureKey(
                 "ssl", self.ha_info, "Home Assistant metadata")
-            self._info.addons = ensureKey(
-                "addons", self.super_info, "Supervisor metadata")
+            self._info.addons = addon_info
             self._info.slug = ensureKey(
                 "slug", self.self_info, "addon metdata")
             self._info.url = self.getAddonUrl()
 
             self._addons = {}
-            for addon in self.super_info['addons']:
+            for addon in addon_info:
                 self._addons[addon.get('slug', "default")] = addon
 
             self._info.addDebugInfo("self_info", self.self_info)

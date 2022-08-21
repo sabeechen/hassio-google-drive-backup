@@ -140,6 +140,10 @@ class HaRequests():
         return await self._getHassioData(self.getSupervisorURL().with_path("addons/{0}/info".format(addon_slug)))
 
     @supervisor_call
+    async def getAddons(self) -> Dict[str, Any]:
+        return await self._getHassioData(self.getSupervisorURL().with_path("addons"))
+
+    @supervisor_call
     async def hassosInfo(self) -> Dict[str, Any]:
         return await self._getHassioData(self.getSupervisorURL().with_path("hassos/info"))
 

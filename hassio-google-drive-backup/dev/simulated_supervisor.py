@@ -76,6 +76,7 @@ class SimulatedSupervisor(BaseServer):
             get('/auth', self._authenticate),
             get('/info', self._miscInfo),
             get('/addons/self/info', self._selfInfo),
+            get('/addons', self._allAddons),
             get('/addons/{slug}/info', self._addonInfo),
 
             post('/addons/{slug}/start', self._startAddon),
@@ -196,8 +197,15 @@ class SimulatedSupervisor(BaseServer):
         await self._verifyHeader(request)
         return self._formatDataResponse(
             {
-                "addons": list(self._addons).copy(),
                 'version': str(self._super_version)
+            }
+        )
+
+    async def _allAddons(self, request: Request):
+        await self._verifyHeader(request)
+        return self._formatDataResponse(
+            {
+                "addons": list(self._addons).copy()
             }
         )
 

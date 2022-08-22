@@ -18,6 +18,8 @@ from yarl import URL
 
 logger = getLogger(__name__)
 
+HEADER_TOKEN = "X-Supervisor-Token"
+
 NOTIFICATION_ID = "backup_broken"
 EVENT_BACKUP_START = "backup_started"
 EVENT_BACKUP_END = "backup_ended"
@@ -81,7 +83,7 @@ class HaRequests():
 
     @supervisor_call
     async def auth(self, user: str, password: str) -> None:
-        await self._postHassioData(self.getSupervisorURL().with_path("auth"), {"username": user, "password": password})
+        await self._postHassioData(self.getSupervisorURL().with_path("auth"), {"username": user, "password": password}, headers=self._altAuthHeaders())
 
     @supervisor_call
     async def upload(self, stream):
@@ -178,7 +180,7 @@ class HaRequests():
     async def download(self, slug) -> AsyncHttpGetter:
         url = self.getSupervisorURL().with_path("{1}/{0}/download".format(slug, self._getBackupPath()))
         ret = AsyncHttpGetter(url,
-                              self._getHassioHeaders(),
+                              self._getAuthHeaders(),
                               self.session,
                               timeoutFactory=SupervisorTimeoutError.factory,
                               otherErrorFactory=SupervisorUnexpectedError.factory,
@@ -190,14 +192,14 @@ class HaRequests():
     @supervisor_call
     async def getSuperLogs(self):
         url = self.getSupervisorURL().with_path("supervisor/logs")
-        async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
+        async with self.session.get(url, headers=self._getAuthHeaders()) as resp:
             resp.raise_for_status()
             return await resp.text()
 
     @supervisor_call
     async def getCoreLogs(self):
         url = self.getSupervisorURL().with_path("core/logs")
-        async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
+        async with self.session.get(url, headers=self._getAuthHeaders()) as resp:
             resp.raise_for_status()
             return await resp.text()
 
@@ -219,7 +221,7 @@ class HaRequests():
 
     async def getAddonLogo(self, slug: str):
         url = self.getSupervisorURL().with_path("addons/{0}/icon".format(slug))
-        async with self.session.get(url, headers=self._getHassioHeaders()) as resp:
+        async with self.session.get(url, headers=self._getAuthHeaders()) as resp:
             resp.raise_for_status()
             return (resp.headers['Content-Type'], await resp.read())
 
@@ -232,30 +234,34 @@ class HaRequests():
         # Older versions of the supervisor use a different name for the token.
         return os.environ.get("HASSIO_TOKEN")
 
-    def _getHassioHeaders(self):
-        return self._getHaHeaders()
-
-    def _getHaHeaders(self):
+    def _getAuthHeaders(self):
         return {
             'Authorization': 'Bearer ' + self._getToken()
+        }
+
+    def _altAuthHeaders(self):
+        return {
+            HEADER_TOKEN: self._getToken()
         }
 
     @supervisor_call
     async def _getHassioData(self, url: URL) -> Dict[str, Any]:
         logger.debug("Making Hassio request: " + str(url))
-        return await self._validateHassioReply(await self.session.get(url, headers=self._getHassioHeaders()))
+        return await self._validateHassioReply(await self.session.get(url, headers=self._getAuthHeaders()))
 
-    async def _postHassioData(self, url: URL, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
-        return await self._sendHassioData("post", url, json, file, data, timeout)
+    async def _postHassioData(self, url: URL, json=None, file=None, data=None, timeout=None, headers=None) -> Dict[str, Any]:
+        return await self._sendHassioData("post", url, json, file, data, timeout, headers)
 
     @supervisor_call
-    async def _sendHassioData(self, method: str, url: URL, json=None, file=None, data=None, timeout=None) -> Dict[str, Any]:
+    async def _sendHassioData(self, method: str, url: URL, json=None, file=None, data=None, timeout=None, headers=None) -> Dict[str, Any]:
+        if headers is None:
+            headers = self._getAuthHeaders()
         logger.debug("Making Hassio request: " + str(url))
-        return await self._validateHassioReply(await self.session.request(method, url, headers=self._getHassioHeaders(), json=json, data=data, timeout=timeout))
+        return await self._validateHassioReply(await self.session.request(method, url, headers=headers, json=json, data=data, timeout=timeout))
 
     async def _postHaData(self, path: str, data: Dict[str, Any]) -> None:
         url = self.getSupervisorURL().with_path("/core/api/" + path)
-        async with self.session.post(url, headers=self._getHaHeaders(), json=data) as resp:
+        async with self.session.post(url, headers=self._getAuthHeaders(), json=data) as resp:
             resp.raise_for_status()
 
     async def sendNotification(self, title: str, message: str) -> None:

@@ -147,6 +147,8 @@ class SimulatedSupervisor(BaseServer):
     async def _verifyHeader(self, request) -> bool:
         if request.headers.get("Authorization", None) == "Bearer " + self._auth_token:
             return
+        if request.headers.get("X-Supervisor-Token", None) == self._auth_token:
+            return
         raise HTTPUnauthorized()
 
     async def _getSnapshots(self, request: Request):

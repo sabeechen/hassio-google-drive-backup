@@ -1,4 +1,9 @@
-## v0108.3 [2022-08-16]
+## v0.108.4 [2022-08-22]
+* Fixed an error causing "Undefined" to show up for addon descriptions.
+* Fixed an error preventing addon thumbnails from showing up.
+* Fixed an error causing username/password authentication to fail.
+
+## v0.108.3 [2022-08-16]
 * Fixed an error preventing stopped addons form being started if they hit errors while stopping. 
 * Fixed many, many, many gramatical errors thanks to [@markvader's](https://github.com/markvader) [#665](https://github.com/sabeechen/hassio-google-drive-backup/pull/665).
 * Fixed a missing config option in the addon schema, maximum_upload_chunk_bytes.

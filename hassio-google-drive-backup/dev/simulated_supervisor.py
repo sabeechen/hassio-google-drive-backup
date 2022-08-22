@@ -76,6 +76,7 @@ class SimulatedSupervisor(BaseServer):
             get('/auth', self._authenticate),
             get('/info', self._miscInfo),
             get('/addons/self/info', self._selfInfo),
+            get('/addons', self._allAddons),
             get('/addons/{slug}/info', self._addonInfo),
 
             post('/addons/{slug}/start', self._startAddon),
@@ -146,6 +147,8 @@ class SimulatedSupervisor(BaseServer):
     async def _verifyHeader(self, request) -> bool:
         if request.headers.get("Authorization", None) == "Bearer " + self._auth_token:
             return
+        if request.headers.get("X-Supervisor-Token", None) == self._auth_token:
+            return
         raise HTTPUnauthorized()
 
     async def _getSnapshots(self, request: Request):
@@ -196,8 +199,15 @@ class SimulatedSupervisor(BaseServer):
         await self._verifyHeader(request)
         return self._formatDataResponse(
             {
-                "addons": list(self._addons).copy(),
                 'version': str(self._super_version)
+            }
+        )
+
+    async def _allAddons(self, request: Request):
+        await self._verifyHeader(request)
+        return self._formatDataResponse(
+            {
+                "addons": list(self._addons).copy()
             }
         )
 

@@ -20,6 +20,26 @@ class Color {
     return new Color(128, 128, 128);
   }
 
+  static defaultAccent() {
+    return new Color(3, 169, 260);
+  }
+
+  static defaultBackgroundLight() {
+    return Color.white();
+  }
+
+  static defaultBackgroundDark() {
+    return new Color(26, 26, 26);
+  }
+
+  static defaultBackground() {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return Color.defaultBackgroundDark();
+    } else {
+      return Color.defaultBackgroundLight();
+    }
+  }
+
   static hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
@@ -143,6 +163,18 @@ class Color {
 }
 
 function setColors(background, accent) {
+  if (!background || (typeof(background) == 'string' && background.length == 0)) {
+    background = Color.defaultBackground();
+  } else if (typeof(background) == 'string') {
+    background = Color.parse(background);
+  }
+
+  if (!accent || (typeof(accent) == 'string' && accent.length == 0)) {
+    accent = Color.defaultAccent();
+  } else if (typeof(accent) == 'string') {
+    accent = Color.parse(accent);
+  }
+
   themeStyleContainer.dataset.backgroundColor = background.toHex();
   themeStyleContainer.dataset.accentColor = accent.toHex();
 
@@ -152,8 +184,8 @@ function setColors(background, accent) {
 
   let drop_shadow = Color.black();
   let bg_lum = background.luminance();
-  if (bg_lum < 0.02) {
-    drop_shadow = Color.white().tint(Color.black(), 0.3);
+  if (bg_lum < 0.01) {
+    drop_shadow = Color.white().tint(Color.black(), 0.9);
   }
 
   let icon_warn = Color.parse("#f57f17").makeLegible(background);
@@ -212,7 +244,4 @@ function setColors(background, accent) {
   themeStyleContainer.innerHTML = properties.join("\n");
 }
 
-setColors(
-  Color.parse(themeStyleContainer.dataset.backgroundColor),
-  Color.parse(themeStyleContainer.dataset.accentColor),
-);
+setColors(themeStyleContainer.dataset.backgroundColor, themeStyleContainer.dataset.accentColor);

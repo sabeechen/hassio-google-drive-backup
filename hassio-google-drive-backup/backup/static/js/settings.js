@@ -36,9 +36,9 @@ function setStyles() {
 }
 
 function revertColors() {
-  background = Color.parse(defaults.background_color);
+  background = Color.defaultBackground()
   updateColorSelector($("#background_color"), background);
-  accent = Color.parse(defaults.accent_color);
+  accent = Color.defaultAccent();
   updateColorSelector($("#accent_color"), accent);
 
   window.setColors(background, accent);
@@ -100,15 +100,11 @@ function handleCloseSettings() {
   // determine is the settings hanve changed.
   if (settingsChanged) {
     if (confirm("Discard changes?")) {
-      background = Color.parse(config.background_color);
-      accent = Color.parse(config.accent_color);
-      window.setColors(background, accent);
+      window.setColors(config.background_color, config.accent_color);
       M.Modal.getInstance(document.getElementById("settings_modal")).close();
     }
   } else {
-    background = Color.parse(config.background_color);
-    accent = Color.parse(config.accent_color);
-    window.setColors(background, accent);
+    window.setColors(config.background_color, config.accent_color);
     M.Modal.getInstance(document.getElementById("settings_modal")).close();
   }
 }
@@ -220,8 +216,22 @@ function handleSettingsDialog(data) {
     $("#backup_password").data("old_password", "");
   }
   $("#backup_password_reenter").val("");
-  updateColorSelector($("#background_color"), Color.parse(config.background_color));
-  updateColorSelector($("#accent_color"), Color.parse(config.accent_color));
+
+  let background = config.background_color;
+  if (!background || background.length == 0) {
+    background = Color.defaultBackground();
+  } else {
+    background = Color.parse(config.background_color);
+  }
+  let accent = config.accent_color;
+  if (!accent || accent.length == 0) {
+    accent = Color.defaultAccent();
+  } else {
+    accent = Color.parse(config.accent_color);
+  }
+
+  updateColorSelector($("#background_color"), background);
+  updateColorSelector($("#accent_color"), accent);
   checkForSecret();
   M.Modal.getInstance(document.querySelector('#settings_modal')).open();
   showPallette($("#background_color"));
@@ -315,8 +325,18 @@ function saveSettings() {
       }
     }
   }
-  config.background_color = $("#background_color").html();
-  config.accent_color = $("#accent_color").html();
+
+  if ( $("#background_color").html() == Color.defaultBackground().toHex()){
+    config.background_color = "";
+  } else {
+    config.background_color = $("#background_color").html();
+  }
+
+  if ( $("#accent_color").html() == Color.defaultAccent().toHex()){
+    config.accent_color = "";
+  } else {
+    config.accent_color = $("#accent_color").html();
+  }
 
   modal = M.Modal.getInstance(document.getElementById("settings_modal"))
   postJson("saveconfig", {"config": config, "backup_folder": $("#settings_specify_folder_id").val()}, closeSettings, showSettingError); 

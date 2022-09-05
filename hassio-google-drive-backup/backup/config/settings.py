@@ -221,8 +221,8 @@ _DEFAULTS = {
     Setting.ENABLE_DRIVE_UPLOAD: True,
 
     # Theme Settings
-    Setting.BACKGROUND_COLOR: "#ffffff",
-    Setting.ACCENT_COLOR: "#03a9f4",
+    Setting.BACKGROUND_COLOR: "",
+    Setting.ACCENT_COLOR: "",
 
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8,8.8.4.4",

@@ -338,7 +338,21 @@
 
         for (var i = 0; i < backup.addons.length; i++) {
           let addon = backup.addons[i];
-          let sub = `v${addon.version} - ${addon.size}`;
+          let sub = "";
+          if (addon.version != false) {
+            if (!isNaN(addon.version)) {
+              sub += "v" + addon.version;
+            } else {
+              sub += addon.version;
+            }
+          }
+
+
+          if (addon.size > 0) {
+            sub += addon.size
+          } else if (isNaN(addon.size) && addon.size != "0.0 B") {
+            sub += addon.size;
+          }
           content_container.append(genContentTemplate(addon.name, sub, `logo/${addon.slug}`, 'puzzle-outline'));
         }
         modal.data('details_shown', true);

@@ -339,18 +339,22 @@
         for (var i = 0; i < backup.addons.length; i++) {
           let addon = backup.addons[i];
           let sub = "";
+          let add_space = "";
           if (addon.version != false) {
             if (!isNaN(addon.version)) {
               sub += "v" + addon.version;
+              add_space + = " - ";
             } else {
               sub += addon.version;
+              add_space + = " - ";
             }
           }
-
-
+          
           if (addon.size > 0) {
-            sub += addon.size
+            sub += add_space;
+            sub += addon.size;
           } else if (isNaN(addon.size) && addon.size != "0.0 B") {
+            sub += add_space;
             sub += addon.size;
           }
           content_container.append(genContentTemplate(addon.name, sub, `logo/${addon.slug}`, 'puzzle-outline'));

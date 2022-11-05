@@ -344,6 +344,18 @@ async def test_update_backups_old_names(updater: HaUpdater, server, backup: Back
     })
 
 
+@pytest.mark.asyncio
+async def test_drive_free_space(updater: HaUpdater, time: FakeTime, server: SimulationServer, supervisor: SimulatedSupervisor, coord: Coordinator, config: Config):
+    await updater.update()
+    state = supervisor.getAttributes("sensor.backup_state")
+    assert state["free_space_in_google_drive"] == ""
+
+    await coord.sync()
+    await updater.update()
+    state = supervisor.getAttributes("sensor.backup_state")
+    assert state["free_space_in_google_drive"] == "4.0 GB"
+
+
 def verifyEntity(backend: SimulatedSupervisor, name, state, attributes):
     assert backend.getEntity(name) == state
     assert backend.getAttributes(name) == attributes

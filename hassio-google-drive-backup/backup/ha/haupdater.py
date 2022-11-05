@@ -156,12 +156,11 @@ class HaUpdater(Worker):
                 }
             }
         else:
+            source_metrics = self._coordinator.buildBackupMetrics()
             next = self._coordinator.nextBackupTime()
             if next is not None:
                 next = next.isoformat()
-            return {
-                "state": self._state(),
-                "attributes": {
+                attr = {
                     "friendly_name": "Backup State",
                     "last_backup": last,  # type: ignore
                     "next_backup": next,
@@ -172,4 +171,11 @@ class HaUpdater(Worker):
                     "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
                     "backups": list(map(makeBackupData, backups))
                 }
+            if SOURCE_GOOGLE_DRIVE in source_metrics and 'free_space' in source_metrics[SOURCE_GOOGLE_DRIVE]:
+                attr["free_space_in_google_drive"] = source_metrics[SOURCE_GOOGLE_DRIVE]['free_space']
+            else:
+                attr["free_space_in_google_drive"] = ""
+            return {
+                "state": self._state(),
+                "attributes": attr
             }

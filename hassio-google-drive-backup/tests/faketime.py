@@ -39,7 +39,7 @@ class FakeTime(Time):
     def nowLocal(self) -> datetime:
         return self.toLocal(self._now)
 
-    async def sleepAsync(self, seconds: float):
+    async def sleepAsync(self, seconds: float, _exit_early: asyncio.Event = None):
         self.sleeps.append(seconds)
         self._now = self._now + timedelta(seconds=seconds)
         # allow the task to be interrupted if such a thing is requested.

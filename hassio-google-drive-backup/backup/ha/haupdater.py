@@ -34,10 +34,10 @@ REASSURING_MESSAGE = "Unable to reach Home Assistant (HTTP {0}).  This is normal
 class HaUpdater(Worker):
     @inject
     def __init__(self, requests: HaRequests, coordinator: Coordinator, config: Config, time: Time, global_info: GlobalInfo):
-        super().__init__("Sensor Updater", self.update, time, 10)
+        self._config = config
+        super().__init__("Sensor Updater", self.update, time, self.getInterval)
         self._time = time
         self._coordinator = coordinator
-        self._config = config
         self._requests: HaRequests = requests
         self._info = global_info
         self._notified = False
@@ -47,6 +47,16 @@ class HaUpdater(Worker):
 
         self._last_backup_update = None
         self.last_backup_update_time = time.now() - timedelta(days=1)
+        self._config.subscribe(self.config_updated)
+        self._last_interval = self.getInterval()
+
+    def config_updated(self):
+        if self._last_interval != self.getInterval():
+            self._wait_event.set()
+            self._last_interval = self.getInterval()
+
+    def getInterval(self):
+        return self._config.get(Setting.HA_REPORTING_INTERVAL_SECONDS)
 
     async def update(self):
         try:

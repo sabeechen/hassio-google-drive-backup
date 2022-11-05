@@ -35,8 +35,14 @@ class Time(object):
     def toUtc(self, dt: datetime) -> datetime:
         return dt.astimezone(tzutc())
 
-    async def sleepAsync(self, seconds: float) -> None:
-        await asyncio.sleep(seconds)
+    async def sleepAsync(self, seconds: float, early_exit: asyncio.Event = None) -> None:
+        if early_exit is None:
+            await asyncio.sleep(seconds)
+        else:
+            try:
+                await asyncio.wait_for(early_exit.wait(), seconds)
+            except asyncio.TimeoutError:
+                pass
 
     def local(self, year, month, day, hour=0, minute=0, second=0, ms=0):
         return datetime(year, month, day, hour, minute, second, ms, tzinfo=self.local_tz)

@@ -112,8 +112,8 @@ class Coordinator(Trigger):
             else:
                 return min(self.nextBackupTime(), scheduled)
 
-    def nextBackupTime(self):
-        return self._buildModel().nextBackup(self._time.now())
+    def nextBackupTime(self, include_pending=True):
+        return self._buildModel().nextBackup(self._time.now(), include_pending)
 
     def buildBackupMetrics(self):
         info = {}

@@ -60,6 +60,10 @@ class GlobalInfo():
     def setDnsInfo(self, info):
         self._dns_info = info
 
+    @property
+    def start_time(self):
+        return self._start_time
+
     def getDnsInfo(self):
         return self._dns_info
 

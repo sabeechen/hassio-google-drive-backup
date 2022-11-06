@@ -137,7 +137,9 @@ class Model():
         elif self.dest.needsConfiguration():
             next = None
         elif not last_backup:
-            next = now - timedelta(minutes=1)
+            # this isn't the cleanest logic, but the idea here is that if there are no backups, 
+            # then the backups shoudl be made right when the addon starts up.
+            next = self.info.start_time
         elif not timeofDay:
             next = last_backup + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_BACKUPS))
         else:
@@ -152,17 +154,25 @@ class Model():
                 next = self.time.toUtc(
                     time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_BACKUPS)))
 
+        if next is None:
+            self.waiting_for_startup = False
+            return None
+
         # Don't backup X minutes after startup, since that can put an unreasonable amount of strain on
-        # system just booting up.
-        if next is not None and next < now and now < self.info.backupCooldownTime() and not self.ignore_startup_delay:
+        # the system while booting up.
+        cooldown_minimum = self.info.backupCooldownTime()
+        if next <= now and now < cooldown_minimum and not self.ignore_startup_delay:
             self.waiting_for_startup = True
-            return self.info.backupCooldownTime()
-        else:
+            return cooldown_minimum
+        elif self.ignore_startup_delay:
             self.waiting_for_startup = False
             return next
+        else:
+            self.waiting_for_startup = False
+            return max(next, cooldown_minimum)
 
-    def nextBackup(self, now: datetime):
-        latest = max(filter(lambda s: not s.ignore(), self.backups.values()),
+    def nextBackup(self, now: datetime, include_pending=True):
+        latest = max(filter(lambda s: not s.ignore() and (not s.isPending() or include_pending), self.backups.values()),
                      default=None, key=lambda s: s.date())
         if latest:
             latest = latest.date()

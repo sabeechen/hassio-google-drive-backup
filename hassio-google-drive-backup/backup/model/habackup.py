@@ -30,7 +30,8 @@ class HABackup(AbstractBackup):
             protected=ensureKey('protected', data, HA_KEY_TEXT),
             retained=retained,
             uploadable=True,
-            details=data)
+            details=data,
+            pending=False)
         self._data_cache = data_cache
         self._config = config
 

@@ -42,7 +42,8 @@ class DriveBackup(AbstractBackup):
             retained=retained,
             uploadable=False,
             details=None,
-            note=props.get(PROP_NOTE, None))
+            note=props.get(PROP_NOTE, None),
+            pending=False)
         self._drive_data = data
         self._id = ensureKey('id', data, DRIVE_KEY_TEXT)
 

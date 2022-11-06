@@ -126,6 +126,7 @@ class Setting(Enum):
     BACKUP_STARTUP_DELAY_MINUTES = "backup_startup_delay_minutes"
     EXCHANGER_TIMEOUT_SECONDS = "exchanger_timeout_seconds"
     HA_REPORTING_INTERVAL_SECONDS = "ha_reporting_interval_seconds"
+    LONG_TERM_STALE_BACKUP_SECONDS = "long_term_stale_backup_seconds"
 
     # Old, deprecated settings
     DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
@@ -277,6 +278,7 @@ _DEFAULTS = {
     Setting.BACKUP_STARTUP_DELAY_MINUTES: 10,
     Setting.EXCHANGER_TIMEOUT_SECONDS: 10,
     Setting.HA_REPORTING_INTERVAL_SECONDS: 10,
+    Setting.LONG_TERM_STALE_BACKUP_SECONDS: 60 * 60 * 24,
 }
 
 _STAGING_DEFAULTS = {
@@ -407,7 +409,8 @@ _CONFIG = {
     Setting.CONSOLE_LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     Setting.BACKUP_STARTUP_DELAY_MINUTES: "float(0,)?",
     Setting.EXCHANGER_TIMEOUT_SECONDS: "float(0,)?",
-    Setting.HA_REPORTING_INTERVAL_SECONDS: "int(1,)?"
+    Setting.HA_REPORTING_INTERVAL_SECONDS: "int(1,)?",
+    Setting.LONG_TERM_STALE_BACKUP_SECONDS: "int(1,)?"
 }
 
 PRIVATE = [

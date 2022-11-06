@@ -41,10 +41,11 @@ async def test_init(updater: HaUpdater, global_info, supervisor: SimulatedSuperv
     verifyEntity(supervisor, "sensor.backup_state", "waiting", {
         'friendly_name': 'Backup State',
         'last_backup': 'Never',
-        'next_backup': (time.now() - timedelta(minutes=1)).isoformat(),
+        'next_backup': time.now().isoformat(),
         'last_uploaded': 'Never',
         'backups': [],
         'backups_in_google_drive': 0,
+        'free_space_in_google_drive': "",
         'backups_in_home_assistant': 0,
         'size_in_google_drive': "0.0 B",
         'size_in_home_assistant': '0.0 B'
@@ -123,13 +124,14 @@ async def test_update_backups(updater: HaUpdater, server, time: FakeTime, superv
     verifyEntity(supervisor, "sensor.backup_state", "waiting", {
         'friendly_name': 'Backup State',
         'last_backup': 'Never',
-        'next_backup': (time.now() - timedelta(minutes=1)).isoformat(),
+        'next_backup': time.now().isoformat(),
         'last_uploaded': 'Never',
         'backups': [],
         'backups_in_google_drive': 0,
         'backups_in_home_assistant': 0,
         'size_in_home_assistant': "0.0 B",
-        'size_in_google_drive': "0.0 B"
+        'size_in_google_drive': "0.0 B",
+        'free_space_in_google_drive': ''
     })
 
 
@@ -150,7 +152,8 @@ async def test_update_backups_no_next_backup(updater: HaUpdater, server, time: F
         'backups_in_google_drive': 0,
         'backups_in_home_assistant': 0,
         'size_in_home_assistant': "0.0 B",
-        'size_in_google_drive': "0.0 B"
+        'size_in_google_drive': "0.0 B",
+        'free_space_in_google_drive': ''
     })
 
 
@@ -178,7 +181,8 @@ async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, b
         'backups_in_google_drive': 1,
         'backups_in_home_assistant': 1,
         'size_in_home_assistant': Estimator.asSizeString(backup.size()),
-        'size_in_google_drive': Estimator.asSizeString(backup.size())
+        'size_in_google_drive': Estimator.asSizeString(backup.size()),
+        'free_space_in_google_drive': '4.0 GB'
     })
 
 
@@ -192,13 +196,14 @@ async def test_notification_link(updater: HaUpdater, server, time: FakeTime, glo
     verifyEntity(supervisor, "sensor.backup_state", "waiting", {
         'friendly_name': 'Backup State',
         'last_backup': 'Never',
-        'next_backup': (time.now() - timedelta(minutes=1)).isoformat(),
+        'next_backup': time.now().isoformat(),
         'last_uploaded': 'Never',
         'backups': [],
         'backups_in_google_drive': 0,
         'backups_in_home_assistant': 0,
         'size_in_home_assistant': "0.0 B",
-        'size_in_google_drive': "0.0 B"
+        'size_in_google_drive': "0.0 B",
+        'free_space_in_google_drive': ''
     })
     assert supervisor.getNotification() is None
 
@@ -221,7 +226,7 @@ async def test_notification_clears(updater: HaUpdater, server, time: FakeTime, g
     assert supervisor.getNotification() is None
 
     global_info.failed(Exception())
-    time.advanceDay()
+    time.advance(hours=8)
     await updater.update()
     assert supervisor.getNotification() is not None
 
@@ -236,12 +241,12 @@ async def test_publish_for_failure(updater: HaUpdater, server, time: FakeTime, g
     await updater.update()
     assert supervisor.getNotification() is None
 
-    time.advanceDay()
+    time.advance(hours=8)
     global_info.failed(Exception())
     await updater.update()
     assert supervisor.getNotification() is not None
 
-    time.advanceDay()
+    time.advance(hours=8)
     global_info.failed(Exception())
     await updater.update()
     assert supervisor.getNotification() is not None
@@ -354,6 +359,56 @@ async def test_drive_free_space(updater: HaUpdater, time: FakeTime, server: Simu
     await updater.update()
     state = supervisor.getAttributes("sensor.backup_state")
     assert state["free_space_in_google_drive"] == "4.0 GB"
+
+
+@pytest.mark.asyncio
+async def test_stale_backup_is_error(updater: HaUpdater, server, backup: Backup, time: FakeTime, supervisor: SimulatedSupervisor, config: Config):
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "backed_up"
+
+    time.advance(days=1)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "backed_up"
+
+    time.advance(days=1)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "error"
+
+    time.advance(days=1)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "error"
+
+
+@pytest.mark.asyncio
+async def test_stale_backup_ignores_pending(updater: HaUpdater, server, backup: Backup, time: FakeTime, supervisor: SimulatedSupervisor, config: Config, coord: Coordinator):
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+
+    config.override(Setting.NEW_BACKUP_TIMEOUT_SECONDS, 1)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "backed_up"
+
+    time.advance(days=2)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "error"
+
+    async with supervisor._backup_inner_lock:
+        await coord.sync()
+        assert coord.getBackup("pending") is not None
+        await updater.update()
+        assert supervisor.getEntity("sensor.backup_state") == "error"
+
+
+@pytest.mark.asyncio
+async def test_stale_backups_fine_for_no_creation(updater: HaUpdater, server, backup: Backup, time: FakeTime, supervisor: SimulatedSupervisor, config: Config, coord: Coordinator):
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "backed_up"
+
+    # backups shouldn't become stale because the addon doesn't create them.
+    time.advance(days=100)
+    await updater.update()
+    assert supervisor.getEntity("sensor.backup_state") == "backed_up"
 
 
 def verifyEntity(backend: SimulatedSupervisor, name, state, attributes):

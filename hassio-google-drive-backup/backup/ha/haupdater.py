@@ -108,9 +108,17 @@ class HaUpdater(Worker):
     def _stale(self):
         if self._info._first_sync:
             return False
-        if not self._info._last_error:
-            return False
-        return self._time.now() > self._info._last_success + timedelta(seconds=self._config.get(Setting.BACKUP_STALE_SECONDS))
+        if self._info._last_error:
+            return self._time.now() > self._info._last_success + timedelta(seconds=self._config.get(Setting.BACKUP_STALE_SECONDS))
+        else:
+            next_backup = self._coordinator.nextBackupTime(include_pending=False)
+            if not next_backup:
+                # no backups are configured
+                return False
+
+            # Determine if a lot of time has passed since the last backup "should" have been made.
+            warn_after = next_backup + timedelta(seconds=self._config.get(Setting.LONG_TERM_STALE_BACKUP_SECONDS))
+            return self._time.now() >= warn_after
 
     def _state(self):
         if self._stale():
@@ -160,17 +168,17 @@ class HaUpdater(Worker):
             next = self._coordinator.nextBackupTime()
             if next is not None:
                 next = next.isoformat()
-                attr = {
-                    "friendly_name": "Backup State",
-                    "last_backup": last,  # type: ignore
-                    "next_backup": next,
-                    "last_uploaded": last_uploaded,
-                    "backups_in_google_drive": len(drive_backups),
-                    "backups_in_home_assistant": len(ha_backups),
-                    "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_backups))),
-                    "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
-                    "backups": list(map(makeBackupData, backups))
-                }
+            attr = {
+                "friendly_name": "Backup State",
+                "last_backup": last,  # type: ignore
+                "next_backup": next,
+                "last_uploaded": last_uploaded,
+                "backups_in_google_drive": len(drive_backups),
+                "backups_in_home_assistant": len(ha_backups),
+                "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_backups))),
+                "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
+                "backups": list(map(makeBackupData, backups))
+            }
             if SOURCE_GOOGLE_DRIVE in source_metrics and 'free_space' in source_metrics[SOURCE_GOOGLE_DRIVE]:
                 attr["free_space_in_google_drive"] = source_metrics[SOURCE_GOOGLE_DRIVE]['free_space']
             else:

@@ -21,7 +21,7 @@ HA_KEY_TEXT = "Home Assistant's backup metadata"
 
 
 class AbstractBackup():
-    def __init__(self, name: str, slug: str, source: str, date: str, size: int, version: str, backupType: str, protected: bool, note=None, retained: bool = False, uploadable: bool = False, details={}):
+    def __init__(self, name: str, slug: str, source: str, date: str, size: int, version: str, backupType: str, protected: bool, note=None, retained: bool = False, uploadable: bool = False, details={}, pending=False):
         self._options = None
         self._name = name
         self._slug = slug
@@ -36,6 +36,10 @@ class AbstractBackup():
         self._protected = protected
         self._ignore = False
         self._note = note
+        self._pending = pending
+
+    def isPending(self):
+        return self._pending
 
     def setOptions(self, options: CreateOptions):
         self._options = options
@@ -297,6 +301,12 @@ class Backup(object):
     def clearStatus(self):
         self._status_override = None
         self._status_override_args = None
+
+    def isPending(self):
+        for backup in self.sources.values():
+            if backup.isPending():
+                return True
+        return False
 
     def __str__(self) -> str:
         return "<Slug: {0} {1} {2}>".format(self.slug(), " ".join(self.sources), self.date().isoformat())

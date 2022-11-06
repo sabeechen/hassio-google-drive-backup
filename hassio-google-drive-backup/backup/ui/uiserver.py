@@ -211,7 +211,7 @@ class UiServer(Trigger, Startable):
             'folders': backup.details().get("folders", []),
             'addons': self.formatAddons(backup.details()),
             'sources': sources,
-            'haVersion': backup.version(),
+            'haVersion': False if backup.version() == None else backup.version(),
             'uploadable': backup.getSource(SOURCE_HA) is None and len(backup.sources) > 0,
             'restorable': backup.getSource(SOURCE_HA) is not None,
             'status_detail': backup.getStatusDetail(),

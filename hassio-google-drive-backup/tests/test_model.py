@@ -544,6 +544,26 @@ async def test_wait_for_startup_with_backup(time: FakeTime, model: Model, dest: 
 
 
 @pytest.mark.asyncio
+async def test_wait_for_startup_with_backup_during_cooldown(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo, simple_config: Config):
+    global_info.triggerBackupCooldown(timedelta(minutes=10))
+
+    source.setMax(3)
+    source.insert("old", time.now())
+
+    backup_time = time.toLocal(time.now()) + timedelta(minutes=5)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, f"{backup_time.hour}:{backup_time.minute}")
+    model.reinitialize()
+    await model.sync(time.now())
+    assert model.nextBackup(time.now()) == global_info.backupCooldownTime()
+    assert model.waiting_for_startup
+
+    time.advance(minutes=15)
+    assert model.nextBackup(time.now()) == global_info.backupCooldownTime()
+    assert not model.waiting_for_startup
+
+
+
+@pytest.mark.asyncio
 async def test_ignore_startup_delay(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
     time.setNow(time.local(2019, 5, 10))
     global_info.__init__(time)
@@ -858,7 +878,7 @@ async def test_generational_delete_issue602(time: FakeTime, model: Model, dest: 
     model.reinitialize()
     time.setNow(time.toUtc(start))
     await model.sync(time.now())
-    while(time.now() < end):
+    while time.now() < end:
         next = model.nextBackup(time.now())
         assert next > time.now()
         time.setNow(next)

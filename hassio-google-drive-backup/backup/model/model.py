@@ -167,9 +167,12 @@ class Model():
         elif self.ignore_startup_delay:
             self.waiting_for_startup = False
             return next
+        elif cooldown_minimum > next:
+            self.waiting_for_startup = cooldown_minimum > now
+            return cooldown_minimum
         else:
             self.waiting_for_startup = False
-            return max(next, cooldown_minimum)
+            return next
 
     def nextBackup(self, now: datetime, include_pending=True):
         latest = max(filter(lambda s: not s.ignore() and (not s.isPending() or include_pending), self.backups.values()),

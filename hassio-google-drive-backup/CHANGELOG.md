@@ -1,4 +1,4 @@
-## v0.109.1
+## v0.109.1 [2022-11-07]
 * If configured from the browser, defaults to a "dark" theme if haven't already configured custom colors
 * Makes the interval at which the addon publishes sensors to Home Assistant configurable (see the "Uncommon Options" settings)
 * "Free space in Google Drive" is now published as an attribute of the "sensor.backup_state" sensor.
@@ -20,10 +20,3 @@
 * Switched to ignoring 'upgrade' backups by default for new users.
 * Added a warning for existing users if you're not ignoring upgrade backups.
 * Added a warning about google's OOB deprecation for private credential users.
-
-## v0.108.1 [2022-06-02]
-* Added commenting on backups, ie you can annotate them before or after creation.
-* Fixed layout gaps in the backup details page
-
-## v0.107.3 [2022-05-30]
-* Fixed an issue causing ignored backups to get labelled as generational backups.

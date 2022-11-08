@@ -34,10 +34,10 @@ REASSURING_MESSAGE = "Unable to reach Home Assistant (HTTP {0}).  This is normal
 class HaUpdater(Worker):
     @inject
     def __init__(self, requests: HaRequests, coordinator: Coordinator, config: Config, time: Time, global_info: GlobalInfo):
-        super().__init__("Sensor Updater", self.update, time, 10)
+        self._config = config
+        super().__init__("Sensor Updater", self.update, time, self.getInterval)
         self._time = time
         self._coordinator = coordinator
-        self._config = config
         self._requests: HaRequests = requests
         self._info = global_info
         self._notified = False
@@ -47,6 +47,16 @@ class HaUpdater(Worker):
 
         self._last_backup_update = None
         self.last_backup_update_time = time.now() - timedelta(days=1)
+        self._config.subscribe(self.config_updated)
+        self._last_interval = self.getInterval()
+
+    def config_updated(self):
+        if self._last_interval != self.getInterval():
+            self._wait_event.set()
+            self._last_interval = self.getInterval()
+
+    def getInterval(self):
+        return self._config.get(Setting.HA_REPORTING_INTERVAL_SECONDS)
 
     async def update(self):
         try:
@@ -98,9 +108,17 @@ class HaUpdater(Worker):
     def _stale(self):
         if self._info._first_sync:
             return False
-        if not self._info._last_error:
-            return False
-        return self._time.now() > self._info._last_success + timedelta(seconds=self._config.get(Setting.BACKUP_STALE_SECONDS))
+        if self._info._last_error:
+            return self._time.now() > self._info._last_success + timedelta(seconds=self._config.get(Setting.BACKUP_STALE_SECONDS))
+        else:
+            next_backup = self._coordinator.nextBackupTime(include_pending=False)
+            if not next_backup:
+                # no backups are configured
+                return False
+
+            # Determine if a lot of time has passed since the last backup "should" have been made.
+            warn_after = next_backup + timedelta(seconds=self._config.get(Setting.LONG_TERM_STALE_BACKUP_SECONDS))
+            return self._time.now() >= warn_after
 
     def _state(self):
         if self._stale():
@@ -146,20 +164,26 @@ class HaUpdater(Worker):
                 }
             }
         else:
+            source_metrics = self._coordinator.buildBackupMetrics()
             next = self._coordinator.nextBackupTime()
             if next is not None:
                 next = next.isoformat()
+            attr = {
+                "friendly_name": "Backup State",
+                "last_backup": last,  # type: ignore
+                "next_backup": next,
+                "last_uploaded": last_uploaded,
+                "backups_in_google_drive": len(drive_backups),
+                "backups_in_home_assistant": len(ha_backups),
+                "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_backups))),
+                "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
+                "backups": list(map(makeBackupData, backups))
+            }
+            if SOURCE_GOOGLE_DRIVE in source_metrics and 'free_space' in source_metrics[SOURCE_GOOGLE_DRIVE]:
+                attr["free_space_in_google_drive"] = source_metrics[SOURCE_GOOGLE_DRIVE]['free_space']
+            else:
+                attr["free_space_in_google_drive"] = ""
             return {
                 "state": self._state(),
-                "attributes": {
-                    "friendly_name": "Backup State",
-                    "last_backup": last,  # type: ignore
-                    "next_backup": next,
-                    "last_uploaded": last_uploaded,
-                    "backups_in_google_drive": len(drive_backups),
-                    "backups_in_home_assistant": len(ha_backups),
-                    "size_in_google_drive": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), drive_backups))),
-                    "size_in_home_assistant": Estimator.asSizeString(sum(map(lambda v: v.sizeInt(), ha_backups))),
-                    "backups": list(map(makeBackupData, backups))
-                }
+                "attributes": attr
             }

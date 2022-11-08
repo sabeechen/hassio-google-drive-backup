@@ -578,6 +578,20 @@
           </div>
           <div class="col s11 offset-s1 row">
             <div class="input-field col s12 m12 s12">
+              <i class="material-icons prefix">sync</i>
+              <input type="text" id="ha_reporting_interval_seconds" name="ha_reporting_interval_seconds"
+                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
+                class="validate" />
+              <label for="ha_reporting_interval_seconds">Home Assistant Reporting Interval</label>
+              <span class="helper-text">
+                How often the addon should update the "Backups Stale" sensor in Home Assistant.  The addon will still update immediately when it encounters 
+                errors.  With longer values it may take longer after Home Assistant starts up before the "Backups Stale" sensor it available.  This can be any duration of time expressed as hours, minutes, and seconds. Examples:
+                '10 seconds', '3 minute', '2 hours, 30 minutes', etc.
+              </span>
+            </div>
+          </div>
+          <div class="col s11 offset-s1 row">
+            <div class="input-field col s12 m12 s12">
               <i class="material-icons prefix">refresh</i>
               <input type="text" id="maximum_upload_chunk_bytes" name="maximum_upload_chunk_bytes"
                 pattern="^[ ]*([0-9,]*\.?[0-9]*)[ ]*(b|B|k|K|m|M|g|G|t|T|p|P|e|E|z|Z|y|Y)[a-zA-Z ]*[ ]*$"

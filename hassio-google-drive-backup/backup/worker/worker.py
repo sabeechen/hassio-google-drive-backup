@@ -21,9 +21,11 @@ class Worker(Startable):
         self._interval = interval
         self._task = None
         self._should_stop = False
+        self._wait_event = asyncio.Event()
 
     async def work(self):
         while not self._should_stop:
+            self._wait_event.clear()
             try:
                 await self._method()
             except StopWorkException:
@@ -35,7 +37,11 @@ class Worker(Startable):
                 logger.error(
                     "Worker {0} got an unexpected error".format(self._name))
                 logger.printException(e)
-            await self._time.sleepAsync(self._interval)
+            if isinstance(self._interval, float) or isinstance(self._interval, int):
+                interval = self._interval
+            else:
+                interval = self._interval()
+            await self._time.sleepAsync(interval, self._wait_event)
 
     async def start(self):
         self._should_stop = False

@@ -125,6 +125,8 @@ class Setting(Enum):
     CONSOLE_LOG_LEVEL = "console_log_level"
     BACKUP_STARTUP_DELAY_MINUTES = "backup_startup_delay_minutes"
     EXCHANGER_TIMEOUT_SECONDS = "exchanger_timeout_seconds"
+    HA_REPORTING_INTERVAL_SECONDS = "ha_reporting_interval_seconds"
+    LONG_TERM_STALE_BACKUP_SECONDS = "long_term_stale_backup_seconds"
 
     # Old, deprecated settings
     DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
@@ -221,8 +223,8 @@ _DEFAULTS = {
     Setting.ENABLE_DRIVE_UPLOAD: True,
 
     # Theme Settings
-    Setting.BACKGROUND_COLOR: "#ffffff",
-    Setting.ACCENT_COLOR: "#03a9f4",
+    Setting.BACKGROUND_COLOR: "",
+    Setting.ACCENT_COLOR: "",
 
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8,8.8.4.4",
@@ -274,7 +276,9 @@ _DEFAULTS = {
     Setting.LOG_LEVEL: 'DEBUG',
     Setting.CONSOLE_LOG_LEVEL: 'INFO',
     Setting.BACKUP_STARTUP_DELAY_MINUTES: 10,
-    Setting.EXCHANGER_TIMEOUT_SECONDS: 10
+    Setting.EXCHANGER_TIMEOUT_SECONDS: 10,
+    Setting.HA_REPORTING_INTERVAL_SECONDS: 10,
+    Setting.LONG_TERM_STALE_BACKUP_SECONDS: 60 * 60 * 24,
 }
 
 _STAGING_DEFAULTS = {
@@ -404,7 +408,9 @@ _CONFIG = {
     Setting.LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     Setting.CONSOLE_LOG_LEVEL: "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     Setting.BACKUP_STARTUP_DELAY_MINUTES: "float(0,)?",
-    Setting.EXCHANGER_TIMEOUT_SECONDS: "float(0,)?"
+    Setting.EXCHANGER_TIMEOUT_SECONDS: "float(0,)?",
+    Setting.HA_REPORTING_INTERVAL_SECONDS: "int(1,)?",
+    Setting.LONG_TERM_STALE_BACKUP_SECONDS: "int(1,)?"
 }
 
 PRIVATE = [
@@ -476,6 +482,7 @@ for key in addon_config["schema"]:
     _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
 
 _VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator("max_sync_interval_seconds", minimum=1, maximum=None)
+_VALIDATORS[Setting.HA_REPORTING_INTERVAL_SECONDS] = DurationAsStringValidator("ha_reporting_interval_seconds", minimum=1, maximum=None)
 _VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator("delete_ignored_after_days", minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
 _VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator("maximum_upload_chunk_bytes", minimum=256 * 1024)
 VERSION = addon_config["version"]

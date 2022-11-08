@@ -392,7 +392,7 @@ class UiServer(Trigger, Startable):
 
     async def token(self, request: Request) -> None:
         self._global_info.setIngoreErrorsForNow(True)
-        creds_deserialized = json.loads(str(base64.b64decode(request.query.get('creds').encode("utf-8")), 'utf-8'))
+        creds_deserialized = json.loads(str(base64.b64decode(request.query.get('creds').strip().encode("utf-8")), 'utf-8'))
         creds = Creds.load(self._time, creds_deserialized)
         self._coord.saveCreds(creds)
 

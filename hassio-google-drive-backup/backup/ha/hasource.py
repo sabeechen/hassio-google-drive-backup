@@ -39,7 +39,8 @@ class PendingBackup(AbstractBackup):
             retained=False,
             uploadable=False,
             details=None,
-            note=options.note)
+            note=options.note,
+            pending=True)
         self._config = config
         self._failed = False
         self._complete = False

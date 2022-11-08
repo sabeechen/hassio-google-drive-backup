@@ -99,7 +99,7 @@ def test_next_time(estimator, data_cache):
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator, data_cache)
     assert model._nextBackup(
-        now=now, last_backup=None) == now - timedelta(minutes=1)
+        now=now, last_backup=None) == now
     assert model._nextBackup(
         now=now, last_backup=now) == now + timedelta(days=1)
     assert model._nextBackup(
@@ -119,10 +119,9 @@ def test_next_time_of_day(estimator, data_cache):
                          default_source, info, estimator, data_cache)
 
     assert model._nextBackup(
-        now=now, last_backup=None) == now - timedelta(minutes=1)
+        now=now, last_backup=None) == now
     assert model._nextBackup(
-        now=now, last_backup=now - timedelta(days=1)) == datetime(
-        1985, 12, 5, 8, 0, tzinfo=test_tz)
+        now=now, last_backup=now - timedelta(days=1)) == now
     assert model._nextBackup(now=now, last_backup=now) == datetime(
         1985, 12, 6, 8, 0, tzinfo=test_tz)
     assert model._nextBackup(now=now, last_backup=datetime(
@@ -137,13 +136,15 @@ def test_next_time_of_day_drift(estimator, data_cache):
     time.setNow(now)
     info = GlobalInfo(time)
 
+    # ignore the backup cooldown for this test
+    info.triggerBackupCooldown(timedelta(days=-7))
     config: Config = createConfig().override(Setting.DAYS_BETWEEN_BACKUPS, 1).override(
         Setting.BACKUP_TIME_OF_DAY, '08:00')
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator, data_cache)
 
     assert model._nextBackup(
-        now=now, last_backup=None) == now - timedelta(minutes=1)
+        now=now, last_backup=None) == now
     assert model._nextBackup(
         now=now, last_backup=now - timedelta(days=1) + timedelta(minutes=1)) == datetime(1985, 12, 5, 8, 0, tzinfo=test_tz)
 
@@ -151,7 +152,7 @@ def test_next_time_of_day_drift(estimator, data_cache):
 def test_next_time_of_day_dest_disabled(model, time, source, dest):
     dest.setEnabled(True)
     assert model._nextBackup(
-        now=time.now(), last_backup=None) == time.now() - timedelta(minutes=1)
+        now=time.now(), last_backup=None) == time.now()
     dest.setEnabled(False)
     assert model._nextBackup(now=time.now(), last_backup=None) is None
 
@@ -512,20 +513,22 @@ async def test_delete_when_drive_disabled(time, model: Model, dest: HelperTestSo
 
 @pytest.mark.asyncio
 async def test_wait_for_startup_no_backup(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
-    time.setNow(time.local(2019, 5, 10))
+    time.setNow(time.toUtc(time.local(2019, 5, 10)))
+    global_info.__init__(time)
     global_info.triggerBackupCooldown(timedelta(minutes=10))
     assert model.nextBackup(time.now()) == time.now() + timedelta(minutes=10)
     assert model.nextBackup(time.now()) == global_info.backupCooldownTime()
     assert model.waiting_for_startup
 
     time.advance(minutes=10)
-    assert model.nextBackup(time.now()) == time.now() - timedelta(minutes=1)
+    assert model.nextBackup(time.now()) == time.now()
     assert not model.waiting_for_startup
 
 
 @pytest.mark.asyncio
 async def test_wait_for_startup_with_backup(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
     time.setNow(time.local(2019, 5, 10))
+    global_info.__init__(time)
     global_info.triggerBackupCooldown(timedelta(minutes=10))
 
     source.setMax(3)
@@ -536,16 +539,37 @@ async def test_wait_for_startup_with_backup(time: FakeTime, model: Model, dest: 
     assert model.waiting_for_startup
 
     time.advance(minutes=10)
-    assert model.nextBackup(time.now()) == time.now() - timedelta(minutes=1)
+    assert model.nextBackup(time.now()) == time.now()
     assert not model.waiting_for_startup
+
+
+@pytest.mark.asyncio
+async def test_wait_for_startup_with_backup_during_cooldown(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo, simple_config: Config):
+    global_info.triggerBackupCooldown(timedelta(minutes=10))
+
+    source.setMax(3)
+    source.insert("old", time.now())
+
+    backup_time = time.toLocal(time.now()) + timedelta(minutes=5)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, f"{backup_time.hour}:{backup_time.minute}")
+    model.reinitialize()
+    await model.sync(time.now())
+    assert model.nextBackup(time.now()) == global_info.backupCooldownTime()
+    assert model.waiting_for_startup
+
+    time.advance(minutes=15)
+    assert model.nextBackup(time.now()) == global_info.backupCooldownTime()
+    assert not model.waiting_for_startup
+
 
 
 @pytest.mark.asyncio
 async def test_ignore_startup_delay(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, global_info: GlobalInfo):
     time.setNow(time.local(2019, 5, 10))
+    global_info.__init__(time)
     global_info.triggerBackupCooldown(timedelta(minutes=10))
     model.ignore_startup_delay = True
-    assert model.nextBackup(time.now()) == time.now() - timedelta(minutes=1)
+    assert model.nextBackup(time.now()) == time.now()
     assert not model.waiting_for_startup
 
 
@@ -854,7 +878,7 @@ async def test_generational_delete_issue602(time: FakeTime, model: Model, dest: 
     model.reinitialize()
     time.setNow(time.toUtc(start))
     await model.sync(time.now())
-    while(time.now() < end):
+    while time.now() < end:
         next = model.nextBackup(time.now())
         assert next > time.now()
         time.setNow(next)

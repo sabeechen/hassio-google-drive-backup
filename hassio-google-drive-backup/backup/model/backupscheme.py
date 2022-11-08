@@ -111,7 +111,7 @@ class GenerationalScheme(BackupScheme):
 
         # build the list of dates we should partition by
         day_of_week = 3
-        lookup = {
+        weekday_lookup = {
             'mon': 0,
             'tue': 1,
             'wed': 2,
@@ -120,8 +120,8 @@ class GenerationalScheme(BackupScheme):
             'sat': 5,
             'sun': 6,
         }
-        if self.config.day_of_week in lookup:
-            day_of_week = lookup[self.config.day_of_week]
+        if self.config.day_of_week in weekday_lookup:
+            day_of_week = weekday_lookup[self.config.day_of_week]
 
         last = self.time.toLocal(backups[len(backups) - 1].date())
         lookups: List[Partition] = []
@@ -204,15 +204,16 @@ class GenerationalScheme(BackupScheme):
         return None, None
 
     def handleNaming(self, backups: Sequence[Backup]) -> None:
-        if len(backups) == 0:
-            return
         sorted = list(backups)
         sorted.sort(key=lambda s: s.date())
         for backup in sorted:
             backup.setStatusDetail(None)
         # Ignored snapshots should have their label cleared in case
-        # it was added previosuly, but shoudl nto get new labels
-        unignored = filter(lambda s: not s.ignore(), sorted)
+        # it was added previosuly, but should not get new labels
+        unignored = list(filter(lambda s: not s.ignore(), sorted))
+
+        if len(unignored) == 0:
+            return
         for part in self._buildPartitions(unignored):
             if part.selected is not None:
                 if part.selected.getStatusDetail() is None:

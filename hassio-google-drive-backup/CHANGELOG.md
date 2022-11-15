@@ -1,3 +1,6 @@
+## v0.109.2 [2022-11-15]
+* Fixed a bug where disabling deletion from Google Drive and enabling deltes after upload could cause backups in Google Drive to be deleted.
+
 ## v0.109.1 [2022-11-07]
 * If configured from the browser, defaults to a "dark" theme if haven't already configured custom colors
 * Makes the interval at which the addon publishes sensors to Home Assistant configurable (see the "Uncommon Options" settings)
@@ -15,8 +18,3 @@
 * Fixed an error preventing stopped addons form being started if they hit errors while stopping. 
 * Fixed many, many, many gramatical errors thanks to [@markvader's](https://github.com/markvader) [#665](https://github.com/sabeechen/hassio-google-drive-backup/pull/665).
 * Fixed a missing config option in the addon schema, maximum_upload_chunk_bytes.
-
-## v0.108.2 [2022-06-03]
-* Switched to ignoring 'upgrade' backups by default for new users.
-* Added a warning for existing users if you're not ignoring upgrade backups.
-* Added a warning about google's OOB deprecation for private credential users.

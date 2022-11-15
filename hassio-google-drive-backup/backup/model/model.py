@@ -78,6 +78,9 @@ class BackupSource(Trigger, Generic[T]):
     def detail(self) -> str:
         return ""
 
+    def isDestination(self) -> bool:
+        return False
+
     # Gets called after reading state but before any changes are made
     # to check for additional errors.
     def checkBeforeChanges(self) -> None:
@@ -91,6 +94,9 @@ class BackupDestination(BackupSource):
     @property
     def might_be_oob_creds(self) -> bool:
         return False
+
+    def isDestination(self) -> bool:
+        return True
 
 
 @singleton
@@ -335,6 +341,9 @@ class Model():
         Given a list of backups, decides if one should be purged.
         """
         if not source.enabled() or len(backups) == 0:
+            return None, None
+        if source.maxCount() == 0 and source.isDestination():
+            # When maxCount is zero for a destination, we should never delete from it.
             return None, None
         if source.maxCount() == 0 and not self.config.get(Setting.DELETE_AFTER_UPLOAD):
             return None, None

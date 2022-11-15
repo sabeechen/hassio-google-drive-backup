@@ -17,12 +17,12 @@ default_source = BackupSource()
 
 @pytest.fixture
 def source():
-    return HelperTestSource("Source")
+    return HelperTestSource("Source", is_destination=False)
 
 
 @pytest.fixture
 def dest():
-    return HelperTestSource("Dest")
+    return HelperTestSource("Dest", is_destination=True)
 
 
 @pytest.fixture
@@ -853,6 +853,29 @@ async def test_delete_ignored_upgrade_backup_after_some_time(time: FakeTime, mod
     await model.sync(time.now())
     source.assertThat(current=1, deleted=1)
     dest.assertThat(current=1)
+
+
+@pytest.mark.asyncio
+async def test_zero_config_whiled_deleting_backups(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    """
+    Issue #745 identified that setting setting destination max backups to 0 and "delete after upload"=True would cause destination 
+    backups to get deleted due to an error in the logic for handling purges.  This test verifies that no longer happens.  
+    """
+    source.setMax(1)
+    dest.setMax(1)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.DELETE_AFTER_UPLOAD, True)
+    source.insert("Backup", time.now())
+    await model.sync(time.now())
+    source.assertThat(current=0, deleted=1)
+    dest.assertThat(current=1, saved=1)
+    source.reset()
+    dest.reset()
+
+    dest.setMax(0)
+    await model.sync(time.now())
+    dest.assertThat(current=1)
+    source.assertThat()
 
 
 @pytest.mark.asyncio

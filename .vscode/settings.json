@@ -16,5 +16,6 @@
     "editor.defaultFormatter": "vscode.html-language-features",
     "editor.tabSize": 2,
   },
-  "python.analysis.completeFunctionParens": true
+  "python.analysis.completeFunctionParens": true,
+  "files.eol": "\n"
 }

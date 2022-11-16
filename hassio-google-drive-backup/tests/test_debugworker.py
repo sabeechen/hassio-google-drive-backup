@@ -16,12 +16,8 @@ async def test_dns_info(debug_worker: DebugWorker, config: Config):
     config.override(Setting.SEND_ERROR_REPORTS, True)
     config.override(Setting.DRIVE_HOST_NAME, "localhost")
     await debug_worker.doWork()
-    assert debug_worker.dns_info == {
-        'localhost': {
-            '127.0.0.1': 'alive',
-            'localhost': 'alive'
-        }
-    }
+    assert '127.0.0.1' in debug_worker.dns_info['localhost']
+    assert 'localhost' in debug_worker.dns_info['localhost']
 
 
 @pytest.mark.asyncio
@@ -29,12 +25,7 @@ async def test_bad_host(debug_worker: DebugWorker, config: Config):
     skipForWindows()
     config.override(Setting.DRIVE_HOST_NAME, "dasdfdfgvxcvvsoejbr.com")
     await debug_worker.doWork()
-    assert debug_worker.dns_info == {
-        'dasdfdfgvxcvvsoejbr.com': {
-            'dasdfdfgvxcvvsoejbr.com': "Name or service not known"
-        }
-    }
-
+    assert "Name or service not known" in debug_worker.dns_info['dasdfdfgvxcvvsoejbr.com']['dasdfdfgvxcvvsoejbr.com']
 
 @pytest.mark.asyncio
 async def test_send_error_report(time, debug_worker: DebugWorker, config: Config, global_info: GlobalInfo, server, error_store: ErrorStore):

@@ -162,8 +162,8 @@ class IntentionalFailure(Exception):
 
 
 class HelperTestSource(SimulatedSource):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, is_destination=False):
+        super().__init__(name, is_destination=is_destination)
         self.allow_create = True
         self.allow_save = True
 

@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 
 class SimulatedSource(BackupDestination):
-    def __init__(self, name):
+    def __init__(self, name, is_destination=False):
         self._name = name
         self.current: Dict[str, DummyBackupSource] = {}
         self.saved = []
@@ -25,6 +25,10 @@ class SimulatedSource(BackupDestination):
         self.backup_type = "Full"
         self.working = False
         self.needConfig = None
+        self.is_destination = is_destination
+
+    def isDestination(self):
+        return self.is_destination
 
     def setEnabled(self, value):
         self._enabled = value

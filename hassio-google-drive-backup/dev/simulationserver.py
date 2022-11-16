@@ -106,6 +106,7 @@ class SimulationServer(BaseServer):
         await site.start()
 
     async def stop(self):
+        self.interceptor.stop()
         await self.runner.shutdown()
         await self.runner.cleanup()
 

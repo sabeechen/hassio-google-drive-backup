@@ -164,6 +164,7 @@ async def generate_config(server_url: URL, ports, cleandir):
         Setting.PORT: ports.ui,
         Setting.INGRESS_PORT: ports.ingress,
         Setting.BACKUP_STARTUP_DELAY_MINUTES: 0,
+        Setting.PING_TIMEOUT: 0.1,
     })
 
 

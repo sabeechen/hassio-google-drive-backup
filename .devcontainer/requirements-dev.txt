@@ -28,3 +28,4 @@ beautifulsoup4
 firebase-admin
 aiofile
 grpcio
+aioping

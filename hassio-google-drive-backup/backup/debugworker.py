@@ -1,6 +1,6 @@
 import asyncio
 import socket
-import subprocess
+import aioping
 from datetime import datetime, timedelta
 
 from aiohttp import ClientSession, ClientTimeout
@@ -184,26 +184,21 @@ class DebugWorker(Worker):
     async def getPingInfo(self):
         who = self.config.get(Setting.DRIVE_HOST_NAME)
         ips = await self.resolve(who)
-        pings = {who: {}}
+        results = {who: {}}
+        tasks = {who: {}}
         for ip in ips:
-            pings[who][ip] = "Unknown"
-        command = "fping -t 5000 " + " ".join(ips)
+            results[who][ip] = "Unknown"
+            tasks[who][ip] = asyncio.create_task(aioping.ping(ip, timeout=self.config.get(Setting.PING_TIMEOUT)))
 
-        # fping each server
-        process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        stdout_data, stderr_data = await process.communicate()
-
-        for line in stdout_data.decode().split("\n"):
-            for host in pings.keys():
-                for address in pings[host].keys():
-                    if line.startswith(address):
-                        response = line[len(address):].strip()
-                        if response.startswith(":"):
-                            response = response[2:].strip()
-                        if response.startswith("is"):
-                            response = response[3:].strip()
-                        pings[host][address] = response
-        return pings
+        # ping each server
+        for server in tasks.keys():
+            for ip in tasks[server].keys():
+                try:
+                    time = await tasks[server][ip]
+                    results[server][ip] = f"{round(time * 1000, 0)} ms"
+                except Exception as e:
+                    results[server][ip] = str(e)
+        return results
 
     async def resolve(self, who: str):
         try:

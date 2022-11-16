@@ -1,12 +1,14 @@
 import re
 from aiohttp.web import Request, Response
-from asyncio import Event, sleep
+from asyncio import Event
 from aiohttp.web_response import json_response
 from injector import singleton, inject
+from backup.time import Time
 
 
 class UrlMatch():
-    def __init__(self, url, fail_after=None, status=None, response=None, wait=False, sleep=None, fail_for=None):
+    def __init__(self, time: Time, url, fail_after=None, status=None, response=None, wait=False, sleep=None, fail_for=None):
+        self.time = time
         self.url: str = url
         self.fail_after: int = fail_after
         self.status: int = status
@@ -21,9 +23,14 @@ class UrlMatch():
         self.fail_for = fail_for
         self.responses = []
         self._calls = 0
+        self.time = time
 
     def addResponse(self, response):
         self.responses.append(response)
+
+    def stop(self):
+        self.wait_event.set()
+        self.trigger_event.set()
 
     def isMatch(self, request):
         return re.match(self.url, request.url.path)
@@ -51,7 +58,7 @@ class UrlMatch():
             self.trigger_event.set()
             await self.wait_event.wait()
         elif self.sleep is not None:
-            await sleep(self.sleep)
+            await self.time.sleepAsync(self.sleep, early_exit=self.wait_event)
 
     async def called(self, request: Request):
         if self.fail_after is None or self.fail_after <= 0:
@@ -82,9 +89,14 @@ class RequestInterceptor:
     def __init__(self):
         self._matchers = []
         self._history = []
+        self.time = Time()
+
+    def stop(self):
+        for matcher in self._matchers:
+            matcher.stop()
 
     def setError(self, url, status=None, fail_after=None, fail_for=None, response=None) -> UrlMatch:
-        matcher = UrlMatch(url, fail_after, status=status, response=response, fail_for=fail_for)
+        matcher = UrlMatch(self.time, url, fail_after, status=status, response=response, fail_for=fail_for)
         self._matchers.append(matcher)
         return matcher
 
@@ -93,12 +105,12 @@ class RequestInterceptor:
         self._history.clear()
 
     def setWaiter(self, url, attempts=None):
-        matcher = UrlMatch(url, attempts, wait=True)
+        matcher = UrlMatch(self.time, url, attempts, wait=True)
         self._matchers.append(matcher)
         return matcher
 
     def setSleep(self, url, attempts=None, sleep=None, wait_for=None):
-        matcher = UrlMatch(url, attempts, sleep=sleep, fail_for=wait_for)
+        matcher = UrlMatch(self.time, url, attempts, sleep=sleep, fail_for=wait_for)
         self._matchers.append(matcher)
         return matcher
 

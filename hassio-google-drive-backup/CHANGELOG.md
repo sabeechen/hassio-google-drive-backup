@@ -5,7 +5,7 @@
 * If configured from the browser, defaults to a "dark" theme if haven't already configured custom colors
 * Makes the interval at which the addon publishes sensors to Home Assistant configurable (see the "Uncommon Options" settings)
 * "Free space in Google Drive" is now published as an attribute of the "sensor.backup_state" sensor.
-* The "sensors.backups_stale" sensor will now report a problem if creating a backup hangs for more than a day.
+* The "binary_sensor.backups_stale" sensor will now report a problem if creating a backup hangs for more than a day.
 * Fixes potential whitespace errors when copy-pasting Google Drive credentials.
 * Fixes an exception when using generational backup and no backups are present.
 

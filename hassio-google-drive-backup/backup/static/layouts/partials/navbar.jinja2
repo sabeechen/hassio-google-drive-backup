@@ -46,17 +46,17 @@
 {% macro actionMenu(id) %}
 <ul id="{{ id }}" class="dropdown-content">
   {% if coordEnabled %}
+    {% if showOpenDriveLink %}
     <li>
       <a onclick="newBackupClick(); return false;" style="cursor: pointer">
         <i class="material-icons left">add</i>Backup Now
       </a>
     </li>
-    {% if showOpenDriveLink %}
     <li>
       <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
     </li>
+    <li class="open_drive_menu default-hidden" ><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
     {% endif %}
-    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
     <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   {% endif %}
   <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
@@ -104,14 +104,14 @@
   <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
   <li><a href="log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
   {% if coordEnabled %}
-    <li>
-      <a onclick="newBackupClick(); return false;" style="cursor: pointer">
-        <i class="material-icons left">add</i>Backup Now</a>
-    </li>
     {% if showOpenDriveLink %}
+      <li>
+        <a onclick="newBackupClick(); return false;" style="cursor: pointer">
+          <i class="material-icons left">add</i>Backup Now</a>
+      </li>
       <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
+      <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
     {% endif %}
-    <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
     <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
   {% endif %}
   <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>

@@ -12,9 +12,9 @@ Quickly set up a backup strategy without much fuss. It doesn't require much fami
 >[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/paypal-button.svg" width=150 height=40 style="margin: 5px"/>](https://www.paypal.com/paypalme/stephenbeechen)
 >[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/patreon-button.svg" width=150 height=40 style="margin: 5px"/>](https://www.patreon.com/bePatron?u=4064183)
 >[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/github-sponsors-button.svg" width=150 height=40 style="margin: 5px"/>](https://github.com/sponsors/sabeechen)
->[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/monero-button.svg" width=150 height=40 style="margin: 5px"/>](monero:8BtRhV9vUNkTDST7WEWuH7JumpvrFApVag5D2fVTLgfdJH8sjiy5LQo68WK4GaLBijTYb7XW6D6bChQGkDeDMmfTTTZGNTr)
->[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/bitcoin-button.svg" width=150 height=40 style="margin: 5px"/>](bitcoin:bc1qystpwsqqwusam38mhwafh8n4yln798zqprsl93)
->[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/ethereum-button.svg" width=150 height=40 style="margin: 5px"/>](ethereum:0xfa455Bdd245F67Dd1D549C2Ac67EA6BBf91402a7)
+>[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/monero-button.svg" width=150 height=40 style="margin: 5px"/>](https://github.com/sabeechen/hassio-google-drive-backup/donate-crypto.md)
+>[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/bitcoin-button.svg" width=150 height=40 style="margin: 5px"/>](https://github.com/sabeechen/hassio-google-drive-backup/donate-crypto.md)
+>[<img src="https://raw.githubusercontent.com/sabeechen/hassio-google-drive-backup/master/images/ethereum-button.svg" width=150 height=40 style="margin: 5px"/>](https://github.com/sabeechen/hassio-google-drive-backup/donate-crypto.md)
 
 
 ### Features

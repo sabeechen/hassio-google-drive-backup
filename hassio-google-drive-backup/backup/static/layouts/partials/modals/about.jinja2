@@ -6,22 +6,34 @@
       I'm an individual who works on projects like this in my spare time.
       If you like it and would like to support me, you can star my projects on
       <a href="https://github.com/sabeechen" target="_blank" rel="noreferrer">Github</a>
-      or just gimme money at:
-      <br>
-      <a target="_blank" rel="noreferrer" href="https://www.buymeacoffee.com/sabeechen" style="margin: 15px; margin-left: 0;">
-        <img width=150 src="static/{{ version }}/images/bmc-button.svg" alt="Support me">
-      </a>
-      <a href="https://www.paypal.com/paypalme/stephenbeechen?locale.x=en_US" target="_blank" rel="noreferrer" style="margin: 15px;">
-        <img width=150 src="static/{{ version }}/images/paypal-button.svg"  alt="Donate through PayPal" />
-      </a>
-      <a href="https://www.patreon.com/bePatron?u=4064183" target="_blank" rel="noreferrer" style="margin: 15px;">
-        <img width=150 src="static/{{ version }}/images/patreon-button.svg"/>
-      </a>
-      <br>
+      or contribute financially usign any of the methods below, they all go into the same bucket used to support the add-on:
+      <div class="flex-wrap">
+        <a target="_blank" rel="noreferrer" href="https://www.buymeacoffee.com/sabeechen" class="donate-button">
+          <img src="static/{{ version }}/images/bmc-button.svg" alt="Support me">
+        </a>
+        <a href="https://www.paypal.com/paypalme/stephenbeechen?locale.x=en_US" target="_blank" rel="noreferrer" class="donate-button">
+          <img src="static/{{ version }}/images/paypal-button.svg"  alt="Donate through PayPal" />
+        </a>
+        <a href="https://www.patreon.com/bePatron?u=4064183" target="_blank" rel="noreferrer" class="donate-button">
+          <img src="static/{{ version }}/images/patreon-button.svg"/>
+        </a>
+        <a href="https://github.com/sponsors/sabeechen" target="_blank" rel="noreferrer" class="donate-button">
+          <img src="static/{{ version }}/images/github-sponsors-button.svg"/>
+        </a>
+        <a href="#!" class="modal-trigger donate-button" data-target="monero_modal">
+          <img src="static/{{ version }}/images/monero-button.svg"/>
+        </a>
+        <a href="#!" class="modal-trigger donate-button" data-target="bitcoin_modal">
+          <img src="static/{{ version }}/images/bitcoin-button.svg"/>
+        </a>
+        <a href="#!" class="modal-trigger donate-button" data-target="ethereum_modal">
+          <img src="static/{{ version }}/images/ethereum-button.svg"/>
+        </a>
+      </div>
     </p>
 
     <h5>
-      Contributors <span id="contributors-count" class="default-hidden"></span>
+      Code Contributors <span id="contributors-count" class="default-hidden"></span>
     </h5>
     <div id="contributors-loading" class="progress" style="width: 30%; margin-top: 22px; margin-bottom: 22px;">
       <div class="indeterminate"></div>
@@ -57,7 +69,7 @@
   </div>
   <div class="modal-footer">
     <div class="copyright left">
-      © 2021 Stephen Beechen
+      © 2022 Stephen Beechen
     </div>
     <a href="#!" class="modal-close btn-flat"><i class="material-icons">close</i>Close</a>
   </div>

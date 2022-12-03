@@ -556,3 +556,31 @@ input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default
 .device-code-box:hover {
   background-color: var(--accent-bg-hover-color);
 }
+
+.qr-code {
+  padding: 5px;
+  background-color: white;
+  display: inline-block;
+}
+
+.title-logo {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  top: 8px;
+  margin-right: 10px;
+}
+
+.flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.donate-button {
+  margin: 7px;
+}
+
+.donate-button img {
+  width: 150px;
+  height: 40px;
+}

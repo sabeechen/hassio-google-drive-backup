@@ -32,5 +32,5 @@ class Scyncer(Worker):
                     await self._time.sleepAsync(3)
                 await self.coord.sync()
         except PleaseWait:
-            # Ignore this, since it means a sync already started (race condition)
+            # Ignore this, since it means a sync already started (unavilable race condition)
             pass

@@ -15,6 +15,7 @@ from backup.logger import getLogger
 from backup.creds.creds import Creds
 from .model import BackupSource, Model
 from .backups import AbstractBackup, Backup, SOURCE_HA
+from random import Random
 
 logger = getLogger(__name__)
 
@@ -40,6 +41,9 @@ class Coordinator(Trigger):
         self._sync_start = Event()
         self._sync_wait = Event()
         self._sync_wait.set()
+        self._random = Random()
+        self._random.seed()
+        self._next_sync_offset = self._random.random()
         self._global_info.triggerBackupCooldown(timedelta(minutes=self._config.get(Setting.BACKUP_STARTUP_DELAY_MINUTES)))
         self.trigger()
 
@@ -104,13 +108,25 @@ class Coordinator(Trigger):
             if scheduled is None:
                 scheduled = self._time.now() - timedelta(minutes=1)
             else:
-                scheduled += timedelta(seconds=self._config.get(
-                    Setting.MAX_SYNC_INTERVAL_SECONDS))
+                
+                scheduled += timedelta(seconds=self.nextSyncCheckOffset())
             next_backup = self.nextBackupTime()
             if next_backup is None:
                 return scheduled
             else:
                 return min(self.nextBackupTime(), scheduled)
+
+    def nextSyncCheckOffset(self):
+        """Determines how long we shoudl wait from the last check the refresh the cache of backups from Google Drive and Home Assistant"""
+        # If we always sync MAX_SYNC_INTERVAL_SECONDS secodns after the last 
+        # check, then the addon in aggregate puts a really high strain on google
+        # on every hour and the addon's auth servers need to be provisioned for 
+        # a big peak, which is epxensive.  Instead we add some randomness to the time interval.
+        randomness_max = self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) * self._config.get(Setting.DEFAULT_SYNC_INTERVAL_VARIATION)
+        non_randomness = self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) - randomness_max
+
+        # The offset should be stable between syncs, which gets controlled by updating _next_sync_offset on each good sync
+        return self._next_sync_offset * randomness_max + non_randomness
 
     def nextBackupTime(self, include_pending=True):
         return self._buildModel().nextBackup(self._time.now(), include_pending)
@@ -175,6 +191,7 @@ class Coordinator(Trigger):
             self._global_info.sync()
             self._estimator.refresh()
             await self._buildModel().sync(self._time.now())
+            self._next_sync_offset = self._random.random()
             self._global_info.success()
             self._backoff.reset()
             self._global_info.setSkipSpaceCheckOnce(False)

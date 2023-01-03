@@ -70,6 +70,7 @@
     "accent_color": "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
 
     "max_sync_interval_seconds": "float(300,)?",
+    "default_sync_interval_variation": "float(0,1)?",
     "port": "int(0,)?",
     "debugger_port": "int(100,)?",
     "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",

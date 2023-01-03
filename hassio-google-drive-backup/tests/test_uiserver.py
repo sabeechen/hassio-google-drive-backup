@@ -769,12 +769,12 @@ async def test_update_sync_interval(reader, ui_server, config: Config, superviso
     # Make sure the default saves nothing
     update = {
         "config": {
-            "max_sync_interval_seconds": '1 hour',
+            "max_sync_interval_seconds": '3 hours',
         },
         "backup_folder": "unused"
     }
     assert await reader.postjson("saveconfig", json=update) == {'message': 'Settings saved', "reload_page": False}
-    assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60
+    assert config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) == 60 * 60 * 3
     assert "max_sync_interval_seconds" not in supervisor._options
 
     # Update custom

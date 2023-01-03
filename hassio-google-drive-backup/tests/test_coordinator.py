@@ -276,12 +276,13 @@ async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest
     assert coord.check()
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
+    
 
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
     assert not coord.check()
-    error = Exception("BOOM")
     old_sync = model.sync
-    model.sync = lambda s: doRaise(error)
+    model.sync = lambda s: doRaise(Exception("BOOM"))
     await coord.sync()
 
     # first backoff should be 0 seconds
@@ -429,6 +430,7 @@ async def test_schedule_backup_next_sync_attempt(coord: Coordinator, model, sour
     """
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
 
     time.setTimeZone("Europe/Stockholm")
     simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
@@ -452,6 +454,7 @@ async def test_max_sync_interval_next_sync_attempt(coord: Coordinator, model, so
     """
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
 
     time.setTimeZone("Europe/Stockholm")
     simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
@@ -488,3 +491,35 @@ async def test_generational_only_ignored_snapshots(coord: Coordinator, model, so
 
     await coord.sync()
     assert global_info._last_error is None
+
+
+@pytest.mark.asyncio
+async def test_max_sync_interval_randomness(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, backup, time: FakeTime, simple_config: Config):
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0.5)
+
+    time.setTimeZone("Europe/Stockholm")
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+
+    source.setMax(10)
+    source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 3, 33)))
+    time.setNow(time.local(2020, 3, 17, 1, 29))
+    model.reinitialize()
+    coord.reset()
+    await coord.sync()
+    next_attempt = coord.nextSyncAttempt()
+
+    # verify its within expected range
+    assert next_attempt - time.now() <= timedelta(hours=1)
+    assert next_attempt - time.now() >= timedelta(hours=0.5)
+
+    # verify it doesn't change
+    assert coord.nextSyncAttempt() == next_attempt
+    time.advance(minutes=1)
+    assert coord.nextSyncAttempt() == next_attempt
+
+    # sync, and verify it does change
+    await coord.sync()
+    assert coord.nextSyncAttempt() != next_attempt

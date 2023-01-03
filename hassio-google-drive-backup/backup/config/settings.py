@@ -113,6 +113,7 @@ class Setting(Enum):
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
+    DEFAULT_SYNC_INTERVAL_VARIATION = "default_sync_interval_variation"
     BACKUP_STALE_SECONDS = "backup_stale_seconds"
     PENDING_BACKUP_TIMEOUT_SECONDS = "pending_backup_timeout_seconds"
     FAILED_BACKUP_TIMEOUT_SECONDS = "failed_backup_timeout_seconds"
@@ -266,7 +267,8 @@ _DEFAULTS = {
     Setting.PENDING_BACKUP_TIMEOUT_SECONDS: 60 * 60 * 5,
     Setting.FAILED_BACKUP_TIMEOUT_SECONDS: 60 * 15,
     Setting.NEW_BACKUP_TIMEOUT_SECONDS: 5,
-    Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60,
+    Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60 * 3,  # 3 hours
+    Setting.DEFAULT_SYNC_INTERVAL_VARIATION: 0.5,  # intermittent checkup syncs happen between 1.5 and 3 hours since the last one, randomly
     Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "",
     Setting.DRIVE_PICKER_API_KEY: "",
@@ -400,6 +402,7 @@ _CONFIG = {
     Setting.FAILED_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
     Setting.NEW_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
     Setting.MAX_SYNC_INTERVAL_SECONDS: "float(300,)?",
+    Setting.DEFAULT_SYNC_INTERVAL_VARIATION: "float(0,1)?",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "str?",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "str?",
     Setting.DRIVE_PICKER_API_KEY: "str?",

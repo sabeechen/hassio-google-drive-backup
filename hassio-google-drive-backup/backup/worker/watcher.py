@@ -3,7 +3,7 @@ from threading import Lock
 from typing import List, Optional
 
 from injector import inject, singleton
-from watchdog.events import FileSystemEvent
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from ..config import Config, Setting, Startable
@@ -60,18 +60,18 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
         finally:
             self.lock.release()
 
-    def on_moved(self, event):
+    def on_moved(self, event: FileSystemEvent):
         logger.debug(f"Backup directory moved event: {event.src_path}")
 
-    def on_created(self, event):
+    def on_created(self, event: FileSystemEvent):
         logger.debug(f"Backup directory created event: {event.src_path}")
 
-    def on_deleted(self, event):
+    def on_deleted(self, event: FileSystemEvent):
         # Always trigger on delete, most likely a backup was deleted
         self.trigger()
         logger.debug(f"Backup directory deleted event: {event.src_path}")
 
-    def on_modified(self, event):
+    def on_modified(self, event: FileSystemEvent):
         logger.debug(f"Backup directory modified event: {event.src_path}")
 
     def haveFilesChanged(self) -> bool:

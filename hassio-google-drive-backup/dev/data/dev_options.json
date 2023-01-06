@@ -19,7 +19,10 @@
     "drive_device_code_url": "http://localhost:56153/device/code",
     "drive_token_url": "http://localhost:56153/token",
     "ingress_token_file_path": "hassio-google-drive-backup/dev/data/ingress.dat",
-    "log_level": "TRACE",
+    "log_level": "DEBUG",
+    "console_log_level": "DEBUG",
     "ingress_port": 56152,
-    "port": 56151
+    "port": 56151,
+    "max_sync_interval_seconds": 600,
+    "cache_warmup_max_seconds": 300
 }

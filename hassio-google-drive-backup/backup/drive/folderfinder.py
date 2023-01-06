@@ -17,7 +17,7 @@ logger = getLogger(__name__)
 
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
 FOLDER_NAME = 'Home Assistant Backups'
-FOLDER_CACHE_SECONDS = 30
+FOLDER_CACHE_SECONDS = 60 * 31  # 31 minutes
 
 
 @singleton

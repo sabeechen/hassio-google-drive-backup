@@ -7,7 +7,7 @@ from pytest import raises
 from backup.config import Config, Setting, CreateOptions
 from backup.exceptions import LogicError, LowSpaceError, NoBackup, PleaseWait, UserCancelledError
 from backup.util import GlobalInfo, DataCache
-from backup.model import Coordinator, Model, Backup
+from backup.model import Coordinator, Model, Backup, DestinationPrecache
 from .conftest import FsFaker
 from .faketime import FakeTime
 from .helpers import HelperTestSource, skipForWindows
@@ -38,6 +38,11 @@ def model(source, dest, time, simple_config, global_info, estimator, data_cache:
 @pytest.fixture
 def coord(model, time, simple_config, global_info, estimator):
     return Coordinator(model, time, simple_config, global_info, estimator)
+
+
+@pytest.fixture
+def precache(coord, time, dest, simple_config):
+    return DestinationPrecache(coord, time, dest, simple_config)
 
 
 @pytest.mark.asyncio
@@ -277,7 +282,6 @@ async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)
     simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
-    
 
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
     assert not coord.check()
@@ -523,3 +527,26 @@ async def test_max_sync_interval_randomness(coord: Coordinator, model, source: H
     # sync, and verify it does change
     await coord.sync()
     assert coord.nextSyncAttempt() != next_attempt
+
+
+@pytest.mark.asyncio
+async def test_precaching(coord: Coordinator, precache: DestinationPrecache, dest: HelperTestSource, time: FakeTime, global_info: GlobalInfo):
+    await coord.sync()
+    dest.reset()
+
+    # Warm the cache
+    assert precache.getNextWarmDate() < coord.nextSyncAttempt()
+    assert precache.cached(dest.name(), time.now()) is None
+    assert dest.query_count == 0
+    time.setNow(precache.getNextWarmDate())
+    await precache.checkForSmoothing()
+    assert precache.cached(dest.name(), time.now()) is not None
+    assert dest.query_count == 1
+
+    # No queries should have been made to dest, and the cache should now be cleared
+    time.setNow(coord.nextSyncAttempt())
+    assert precache.cached(dest.name(), time.now()) is not None
+    await coord.sync()
+    assert dest.query_count == 1
+    assert precache.cached(dest.name(), time.now()) is None
+    assert global_info._last_error is None

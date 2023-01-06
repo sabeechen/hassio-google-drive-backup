@@ -417,10 +417,12 @@ class UiServer(Trigger, Startable):
         return web.json_response({})
 
     async def sync(self, request: Request = None) -> Any:
+        self._coord.clearCaches()
         await self._coord.sync()
         return await self.getstatus(request)
 
     async def startSync(self, request) -> Any:
+        self._coord.clearCaches()
         asyncio.create_task(self._coord.sync(), name="Sync from web request")
         await self._coord._sync_start.wait()
         return await self.getstatus(request)

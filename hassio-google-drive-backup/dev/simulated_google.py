@@ -22,6 +22,7 @@ mimeTypeQueryPattern = re.compile("^mimeType='.*'$")
 parentsQueryPattern = re.compile("^'.*' in parents$")
 resumeBytesPattern = re.compile("^bytes \\*/\\d+$")
 
+URL_MATCH_DRIVE_API = "^.*drive.*$"
 URL_MATCH_UPLOAD = "^/upload/drive/v3/files/$"
 URL_MATCH_UPLOAD_PROGRESS = "^/upload/drive/v3/files/progress/.*$"
 URL_MATCH_CREATE = "^/upload/drive/v3/files/progress/.*$"

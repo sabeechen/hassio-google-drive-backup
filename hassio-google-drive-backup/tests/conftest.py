@@ -19,8 +19,7 @@ from backup.drive import DriveRequests, DriveSource, FolderFinder, AuthCodeQuery
 from backup.util import GlobalInfo, Estimator, Resolver, DataCache
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
-from backup.model import Model
-from backup.model import DummyBackup
+from backup.model import DummyBackup, DestinationPrecache, Model
 from backup.time import Time
 from backup.module import BaseModule
 from backup.debugworker import DebugWorker
@@ -239,6 +238,11 @@ async def data_cache(injector):
 async def session(injector):
     async with injector.get(ClientSession) as session:
         yield session
+
+
+@pytest.fixture
+async def precache(injector):
+    return injector.get(DestinationPrecache)
 
 
 @pytest.fixture

@@ -13,6 +13,7 @@ from backup.time import Time
 from backup.worker import Trigger
 from backup.logger import getLogger
 from backup.creds.creds import Creds
+from .precache import Precache
 from .model import BackupSource, Model
 from .backups import AbstractBackup, Backup, SOURCE_HA
 from random import Random
@@ -26,6 +27,7 @@ class Coordinator(Trigger):
     def __init__(self, model: Model, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
         self._model = model
+        self._precache: Precache = None
         self._time = time
         self._config = config
         self._lock: Lock = Lock()
@@ -55,6 +57,9 @@ class Coordinator(Trigger):
 
         self._model.dest.saveCreds(creds)
         self._global_info.credsSaved()
+
+    def setPrecache(self, precache: Precache):
+        self._precache = precache
 
     def name(self):
         return "Coordinator"
@@ -94,6 +99,7 @@ class Coordinator(Trigger):
         task = self._sync_task
         if task is not None and not task.done():
             task.cancel()
+            self.clearCaches()
             await wait([task])
 
     def nextSyncAttempt(self):
@@ -108,7 +114,6 @@ class Coordinator(Trigger):
             if scheduled is None:
                 scheduled = self._time.now() - timedelta(minutes=1)
             else:
-                
                 scheduled += timedelta(seconds=self.nextSyncCheckOffset())
             next_backup = self.nextBackupTime()
             if next_backup is None:
@@ -118,9 +123,9 @@ class Coordinator(Trigger):
 
     def nextSyncCheckOffset(self):
         """Determines how long we shoudl wait from the last check the refresh the cache of backups from Google Drive and Home Assistant"""
-        # If we always sync MAX_SYNC_INTERVAL_SECONDS secodns after the last 
+        # If we always sync MAX_SYNC_INTERVAL_SECONDS secodns after the last
         # check, then the addon in aggregate puts a really high strain on google
-        # on every hour and the addon's auth servers need to be provisioned for 
+        # on every hour and the addon's auth servers need to be provisioned for
         # a big peak, which is epxensive.  Instead we add some randomness to the time interval.
         randomness_max = self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) * self._config.get(Setting.DEFAULT_SYNC_INTERVAL_VARIATION)
         non_randomness = self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) - randomness_max
@@ -198,6 +203,10 @@ class Coordinator(Trigger):
         except BaseException as e:
             self.handleError(e)
         finally:
+            if self._precache:
+                # Any sync should invalidate the precache regardless of the outcome
+                # so the next sync uses fresh data
+                self.clearCaches()
             self._updateFreshness()
 
     def handleError(self, e):
@@ -238,6 +247,7 @@ class Coordinator(Trigger):
         await self._withSoftLock(lambda: self._uploadBackup(slug))
 
     async def _uploadBackup(self, slug):
+        self.clearCaches()
         backup = self._ensureBackup(self._model.dest.name(), slug)
         backup_dest = backup.getSource(self._model.dest.name())
         backup_source = backup.getSource(self._model.source.name())
@@ -254,6 +264,7 @@ class Coordinator(Trigger):
         return await self._withSoftLock(lambda: self._startBackup(options))
 
     async def _startBackup(self, options: CreateOptions):
+        self.clearCaches()
         self._estimator.refresh()
         self._estimator.checkSpace(self.backups())
         created = await self._buildModel().source.create(options)
@@ -267,6 +278,7 @@ class Coordinator(Trigger):
         return self._ensureBackup(None, slug)
 
     async def download(self, slug):
+        self.clearCaches()
         backup = self._ensureBackup(None, slug)
         for source in self._sources.values():
             if not source.enabled():
@@ -276,12 +288,14 @@ class Coordinator(Trigger):
         raise NoBackup()
 
     async def retain(self, sources: Dict[str, bool], slug: str):
+        self.clearCaches()
         for source in sources:
             backup = self._ensureBackup(source, slug)
             await self._ensureSource(source).retain(backup, sources[source])
         self._updateFreshness()
 
     async def note(self, note: str, slug: str):
+        self.clearCaches()
         backup = self._ensureBackup(None, slug)
         for source in backup.sources.keys():
             await self._ensureSource(source).note(backup, note)
@@ -293,6 +307,7 @@ class Coordinator(Trigger):
         await self._withSoftLock(lambda: self._ignore(slug, ignore))
 
     async def _delete(self, sources, slug):
+        self.clearCaches()
         for source in sources:
             backup = self._ensureBackup(source, slug)
             await self._ensureSource(source).delete(backup)
@@ -301,6 +316,7 @@ class Coordinator(Trigger):
         self._updateFreshness()
 
     async def _ignore(self, slug: str, ignore: bool):
+        self.clearCaches()
         backup = self._ensureBackup(SOURCE_HA, slug)
         await self._ensureSource(SOURCE_HA).ignore(backup, ignore)
 
@@ -323,7 +339,7 @@ class Coordinator(Trigger):
         raise LogicError()
 
     def _buildModel(self) -> Model:
-        self._model.reinitialize()
+        self._model.reinitialize(self._precache)
         return self._model
 
     def _updateFreshness(self):
@@ -332,6 +348,10 @@ class Coordinator(Trigger):
             for source in purges:
                 if backup.getSource(source):
                     backup.updatePurge(source, backup == purges[source])
+
+    def clearCaches(self):
+        if self._precache:
+            self._precache.clear()
 
     async def _withSoftLock(self, callable):
         with self._lock:

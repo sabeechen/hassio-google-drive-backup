@@ -129,6 +129,8 @@ class Setting(Enum):
     HA_REPORTING_INTERVAL_SECONDS = "ha_reporting_interval_seconds"
     LONG_TERM_STALE_BACKUP_SECONDS = "long_term_stale_backup_seconds"
     PING_TIMEOUT = "ping_timeout"
+    CACHE_WARMUP_MAX_SECONDS = "cache_warmup_max_seconds"
+    CACHE_WARMUP_ERROR_TIMEOUT_SECONDS = "cache_warmup_error_timeout"
 
     # Old, deprecated settings
     DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
@@ -282,7 +284,9 @@ _DEFAULTS = {
     Setting.EXCHANGER_TIMEOUT_SECONDS: 10,
     Setting.HA_REPORTING_INTERVAL_SECONDS: 10,
     Setting.LONG_TERM_STALE_BACKUP_SECONDS: 60 * 60 * 24,
-    Setting.PING_TIMEOUT: 5
+    Setting.PING_TIMEOUT: 5,
+    Setting.CACHE_WARMUP_MAX_SECONDS: 15 * 60,  # 30 minutes
+    Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: 24 * 60 * 60,  # 1 day
 }
 
 _STAGING_DEFAULTS = {
@@ -416,7 +420,9 @@ _CONFIG = {
     Setting.EXCHANGER_TIMEOUT_SECONDS: "float(0,)?",
     Setting.HA_REPORTING_INTERVAL_SECONDS: "int(1,)?",
     Setting.LONG_TERM_STALE_BACKUP_SECONDS: "int(1,)?",
-    Setting.PING_TIMEOUT: "float(0,)?"
+    Setting.PING_TIMEOUT: "float(0,)?",
+    Setting.CACHE_WARMUP_MAX_SECONDS: "float(0,)",
+    Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: "float(0,)"
 }
 
 PRIVATE = [

@@ -1,7 +1,5 @@
 import io
-import json
 import math
-import os
 import re
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
@@ -17,6 +15,7 @@ from ..exceptions import (GoogleCredentialsExpired,
                           GoogleSessionError, LogicError,
                           ProtocolError, ensureKey, KnownTransient, GoogleTimeoutError, GoogleUnexpectedError)
 from backup.util import Backoff
+from backup.file import JsonFileSaver
 from ..time import Time
 from ..logger import getLogger
 from backup.creds import Creds, Exchanger, DriveRequester
@@ -127,22 +126,21 @@ class DriveRequests():
                 "Attempt to use Google Drive before credentials are configured")
 
     def tryLoadCredentials(self):
-        if os.path.isfile(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
+        path = self.config.get(Setting.CREDENTIALS_FILE_PATH)
+        if JsonFileSaver.exists(path):
             try:
-                with open(self.config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
-                    self.creds = Creds.load(self.time, json.load(f))
-                return
+                self.creds = Creds.load(self.time, JsonFileSaver.read(path))
             except Exception:
                 pass
 
     def saveCredentials(self, creds: Creds):
+        path = self.config.get(Setting.CREDENTIALS_FILE_PATH)
         if not creds:
-            if os.path.exists(self.config.get(Setting.CREDENTIALS_FILE_PATH)):
-                os.remove(self.config.get(Setting.CREDENTIALS_FILE_PATH))
+            if JsonFileSaver.exists(path):
+                JsonFileSaver.delete(path)
                 self.creds = None
             return
-        with open(self.config.get(Setting.CREDENTIALS_FILE_PATH), "w") as f:
-            json.dump(creds.serialize(), f)
+        JsonFileSaver.write(path, creds.serialize())
         self.tryLoadCredentials()
 
     async def getToken(self, refresh=False):

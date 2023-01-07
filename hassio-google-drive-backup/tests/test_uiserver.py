@@ -12,7 +12,8 @@ import base64
 from aiohttp import BasicAuth
 from aiohttp.client import ClientSession
 
-from backup.util import AsyncHttpGetter, GlobalInfo, File, DataCache, UpgradeFlags
+from backup.file import File
+from backup.util import AsyncHttpGetter, GlobalInfo, DataCache, UpgradeFlags
 from backup.ui import UiServer, Restarter
 from backup.config import Config, Setting, CreateOptions
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
@@ -559,7 +560,7 @@ async def test_update_multiple_deletes_setting(reader, ui_server, server, config
 async def test_resolve_folder_reuse(reader, config: Config, backup, time, drive):
     # Simulate an existing folder error
     old_folder = await drive.getFolderId()
-    os.remove(config.get(Setting.FOLDER_FILE_PATH))
+    File.delete(config.get(Setting.FOLDER_FILE_PATH))
     time.advance(days=1)
     status = await reader.getjson("sync")
     assert status["last_error"]["error_type"] == ERROR_EXISTING_FOLDER
@@ -574,7 +575,7 @@ async def test_resolve_folder_reuse(reader, config: Config, backup, time, drive)
 async def test_resolve_folder_new(reader, config: Config, backup, time, drive):
     # Simulate an existing folder error
     old_folder = await drive.getFolderId()
-    os.remove(config.get(Setting.FOLDER_FILE_PATH))
+    File.delete(config.get(Setting.FOLDER_FILE_PATH))
     time.advance(days=1)
     status = await reader.getjson("sync")
     assert status["last_error"]["error_type"] == ERROR_EXISTING_FOLDER

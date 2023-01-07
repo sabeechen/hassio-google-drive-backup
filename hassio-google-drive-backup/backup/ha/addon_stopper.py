@@ -1,7 +1,5 @@
-import json
-import os
-
 from backup.config import Config, Setting
+from backup.file import JsonFileSaver
 from backup.worker import Worker
 from backup.exceptions import SupervisorFileSystemError
 from .harequests import HaRequests
@@ -40,11 +38,11 @@ class AddonStopper(Worker):
     async def start(self, schedule=True):
         if schedule:
             await super().start()
-        if os.path.isfile(self.config.get(Setting.STOP_ADDON_STATE_PATH)):
-            with open(self.config.get(Setting.STOP_ADDON_STATE_PATH)) as file:
-                data = json.load(file)
-                self.must_enable_watchdog = set(data.get("watchdog", []))
-                self.must_start = set(data.get("start", []))
+        path = self.config.get(Setting.STOP_ADDON_STATE_PATH)
+        if JsonFileSaver.exists(path):
+            data = JsonFileSaver.read(path)
+            self.must_enable_watchdog = set(data.get("watchdog", []))
+            self.must_start = set(data.get("start", []))
 
     def allowRun(self):
         if not self.allow_run:
@@ -141,7 +139,8 @@ class AddonStopper(Worker):
 
     def _save(self):
         try:
-            with open(self.config.get(Setting.STOP_ADDON_STATE_PATH), "w") as file:
-                json.dump({"start": list(self.must_start), "watchdog": list(self.must_enable_watchdog)}, file)
+            path = self.config.get(Setting.STOP_ADDON_STATE_PATH)
+            data = {"start": list(self.must_start), "watchdog": list(self.must_enable_watchdog)}
+            JsonFileSaver.write(path, data)
         except OSError:
             raise SupervisorFileSystemError()

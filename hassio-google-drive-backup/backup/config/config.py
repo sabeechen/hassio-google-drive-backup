@@ -7,6 +7,7 @@ from yarl import URL
 
 from .settings import _LOOKUP, Setting, _VALIDATORS
 from ..logger import getLogger
+from backup.file import JsonFileSaver
 
 logger = getLogger(__name__)
 
@@ -92,9 +93,7 @@ class GenConfig():
 class Config():
     @classmethod
     def fromFile(cls, config_path):
-        with open(config_path, "r") as f:
-            data = json.load(f)
-        return Config(data)
+        return Config(JsonFileSaver.read(config_path))
 
     @classmethod
     def withOverrides(cls, overrides):
@@ -105,8 +104,7 @@ class Config():
 
     @classmethod
     def withFileOverrides(cls, override_path):
-        with open(override_path, "r") as f:
-            data = json.load(f)
+        data = JsonFileSaver.read(override_path)
         overrides = {}
         for key in data.keys():
             overrides[_LOOKUP[key]] = data[key]
@@ -215,13 +213,11 @@ class Config():
     def clientIdentifier(self) -> str:
         if self._clientIdentifier is None:
             try:
-                if os.path.exists(self.get(Setting.ID_FILE_PATH)):
-                    with open(self.get(Setting.ID_FILE_PATH)) as f:
-                        self._clientIdentifier = json.load(f)['id']
+                if JsonFileSaver.exists(self.get(Setting.ID_FILE_PATH)):
+                    self._clientIdentifier = JsonFileSaver.read(self.get(Setting.ID_FILE_PATH))['id']
                 else:
                     self._clientIdentifier = str(uuid.uuid4())
-                    with open(self.get(Setting.ID_FILE_PATH), "w") as f:
-                        json.dump({'id': self._clientIdentifier}, f)
+                    JsonFileSaver.write(self.get(Setting.ID_FILE_PATH), {'id': self._clientIdentifier})
             except Exception:
                 self._clientIdentifier = str(uuid.uuid4())
         return self._clientIdentifier
@@ -249,13 +245,12 @@ class Config():
         return base
 
     def _loadRetained(self) -> List[str]:
-        if os.path.exists(self.get(Setting.RETAINED_FILE_PATH)):
-            with open(self.get(Setting.RETAINED_FILE_PATH)) as f:
-                try:
-                    return json.load(f)['retained']
-                except json.JSONDecodeError:
-                    logger.error("Unable to parse retained backup settings")
-                    return []
+        if JsonFileSaver.exists(self.get(Setting.RETAINED_FILE_PATH)):
+            try:
+                return JsonFileSaver.read(self.get(Setting.RETAINED_FILE_PATH))['retained']
+            except json.decoder.JSONDecodeError:
+                logger.error("Unable to parse retained backup settings")
+                return []
         return []
 
     def isRetained(self, slug):
@@ -264,16 +259,10 @@ class Config():
     def setRetained(self, slug, retain):
         if retain and slug not in self.retained:
             self.retained.append(slug)
-            with open(self.get(Setting.RETAINED_FILE_PATH), "w") as f:
-                json.dump({
-                    'retained': self.retained
-                }, f)
+            JsonFileSaver.write(self.get(Setting.RETAINED_FILE_PATH), {'retained': self.retained})
         elif not retain and slug in self.retained:
             self.retained.remove(slug)
-            with open(self.get(Setting.RETAINED_FILE_PATH), "w") as f:
-                json.dump({
-                    'retained': self.retained
-                }, f)
+            JsonFileSaver.write(self.get(Setting.RETAINED_FILE_PATH), {'retained': self.retained})
 
     def isExplicit(self, setting):
         return setting in self.config or setting.value in self.config

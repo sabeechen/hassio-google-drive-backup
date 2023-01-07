@@ -16,7 +16,8 @@ from backup.config import Config, Setting, CreateOptions, BoolValidator, Startab
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Backup, AbstractBackup
 from backup.exceptions import KnownError, GoogleCredGenerateError, ensureKey
-from backup.util import GlobalInfo, Estimator, File, DataCache, UpgradeFlags
+from backup.util import GlobalInfo, Estimator, DataCache, UpgradeFlags
+from backup.file import File
 from backup.ha import HaSource, PendingBackup, BACKUP_NAME_KEYS, HaRequests, HaUpdater
 from backup.ha import Password
 from backup.time import Time

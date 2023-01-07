@@ -486,6 +486,7 @@ for setting in Setting:
     _LOOKUP[setting.value] = setting
 
 with open(abspath(join(__file__, "..", "..", "..", "config.json"))) as f:
+    # Thsi is a static file included in the container, so don't worry about using JsonFileLoader
     addon_config = json.load(f)
 
 for setting in Setting:

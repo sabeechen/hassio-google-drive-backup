@@ -81,6 +81,7 @@ class Watcher(Trigger, FileSystemEventHandler, Startable):
                 check_backup_source = True
                 self._last_change_time = None
                 self._changes_have_happened = False
+                self._last_log_time = None
         if check_backup_source:
             logger.debug("Checking backup source for changes...")
             await self._source.get()

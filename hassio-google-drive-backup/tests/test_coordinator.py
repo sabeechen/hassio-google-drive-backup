@@ -278,43 +278,43 @@ async def test_download(coord: Coordinator, source, dest, backup):
 
 @pytest.mark.asyncio
 async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, backup, time: FakeTime, simple_config: Config):
-    assert coord.check()
+    assert await coord.check()
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)
     simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
 
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
-    assert not coord.check()
+    assert not await coord.check()
     old_sync = model.sync
     model.sync = lambda s: doRaise(Exception("BOOM"))
     await coord.sync()
 
     # first backoff should be 0 seconds
     assert coord.nextSyncAttempt() == time.now()
-    assert coord.check()
+    assert await coord.check()
 
     # backoff maxes out at 1 hr = 3600 seconds
     for seconds in [10, 20, 40, 80, 160, 320, 640, 1280, 2560, 3600, 3600, 3600]:
         await coord.sync()
         assert coord.nextSyncAttempt() == time.now() + timedelta(seconds=seconds)
-        assert not coord.check()
-        assert not coord.check()
-        assert not coord.check()
+        assert not await coord.check()
+        assert not await coord.check()
+        assert not await coord.check()
 
     # a good sync resets it back to 6 hours from now
     model.sync = old_sync
     await coord.sync()
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
-    assert not coord.check()
+    assert not await coord.check()
 
     # if the next backup is less that 6 hours from the last one, that that shoudl be when we sync
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1.0 / 24.0)
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=1)
-    assert not coord.check()
+    assert not await coord.check()
 
     time.advance(hours=2)
     assert coord.nextSyncAttempt() == time.now() - timedelta(hours=1)
-    assert coord.check()
+    assert await coord.check()
 
 
 def test_save_creds(coord: Coordinator, source, dest):
@@ -390,14 +390,14 @@ async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Mod
     model.reinitialize()
     coord.reset()
     await coord.sync()
-    assert not coord.check()
+    assert not await coord.check()
     assert coord.nextBackupTime() == time.local(2020, 3, 17, 12)
 
     time.setNow(time.local(2020, 3, 17, 11, 59))
     await coord.sync()
-    assert not coord.check()
+    assert not await coord.check()
     time.setNow(time.local(2020, 3, 17, 12))
-    assert coord.check()
+    assert await coord.check()
 
 
 @pytest.mark.asyncio
@@ -413,9 +413,9 @@ async def test_disabled_at_install(coord: Coordinator, dest, time):
 
     dest.setEnabled(False)
     time.advance(days=5)
-    assert coord.check()
+    assert await coord.check()
     await coord.sync()
-    assert not coord.check()
+    assert not await coord.check()
 
 
 @pytest.mark.asyncio

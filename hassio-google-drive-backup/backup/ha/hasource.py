@@ -145,6 +145,7 @@ class HaSource(BackupSource[HABackup], Startable):
         self.stopper = stopper
         self.estimator = estimator
         self._addons = {}
+        self._changes_from_last_query = False
 
         # This lock should be used for _ANYTHING_ that interacts with self._pending_backup
         self._pending_backup_lock = asyncio.Lock()
@@ -155,11 +156,11 @@ class HaSource(BackupSource[HABackup], Startable):
     def isInitialized(self):
         return self._initialized
 
-    def check(self) -> bool:
+    async def check(self) -> bool:
         pending = self.pending_backup
         if pending and pending.isStale():
             self.trigger()
-        return super().check()
+        return await super().check()
 
     def icon(self) -> str:
         return "home-assistant"
@@ -243,6 +244,10 @@ class HaSource(BackupSource[HABackup], Startable):
             self._pending_backup_task.cancel()
             await asyncio.wait([self._pending_backup_task])
 
+    @property
+    def query_had_changes(self):
+        return self._changes_from_last_query
+
     async def get(self) -> Dict[str, HABackup]:
         if not self._initialized:
             await self.init()
@@ -298,6 +303,7 @@ class HaSource(BackupSource[HABackup], Startable):
         for slug in retained:
             if not self.config.isRetained(slug):
                 self.config.setRetained(slug, False)
+        self._changes_from_last_query = self.last_slugs != slugs
         self.last_slugs = slugs
         return backups
 

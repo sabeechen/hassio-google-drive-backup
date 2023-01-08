@@ -216,7 +216,8 @@ class HaRequests():
 
             if "data" not in details:
                 return {}
-            logger.trace("Hassio replied: %s", details)
+            if self.config.get(Setting.TRACE_REQUESTS):
+                logger.trace("Hassio replied: %s", details)
             return details["data"]
 
     async def getAddonLogo(self, slug: str):
@@ -246,7 +247,8 @@ class HaRequests():
 
     @supervisor_call
     async def _getHassioData(self, url: URL) -> Dict[str, Any]:
-        logger.debug("Making Hassio request: " + str(url))
+        if self.config.get(Setting.TRACE_REQUESTS):
+            logger.trace("Making Hassio request: " + str(url))
         return await self._validateHassioReply(await self.session.get(url, headers=self._getAuthHeaders()))
 
     async def _postHassioData(self, url: URL, json=None, file=None, data=None, timeout=None, headers=None) -> Dict[str, Any]:
@@ -256,7 +258,8 @@ class HaRequests():
     async def _sendHassioData(self, method: str, url: URL, json=None, file=None, data=None, timeout=None, headers=None) -> Dict[str, Any]:
         if headers is None:
             headers = self._getAuthHeaders()
-        logger.debug("Making Hassio request: " + str(url))
+        if self.config.get(Setting.TRACE_REQUESTS):
+            logger.trace("Making Hassio request: " + str(url))
         return await self._validateHassioReply(await self.session.request(method, url, headers=headers, json=json, data=data, timeout=timeout))
 
     async def _postHaData(self, path: str, data: Dict[str, Any]) -> None:

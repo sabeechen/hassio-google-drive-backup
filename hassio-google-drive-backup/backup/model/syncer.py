@@ -24,7 +24,7 @@ class Scyncer(Worker):
         try:
             doSync = False
             for trigger in self.triggers:
-                if trigger.check():
+                if await trigger.check():
                     logger.debug("Sync requested by " + str(trigger.name()))
                     doSync = True
             if doSync:

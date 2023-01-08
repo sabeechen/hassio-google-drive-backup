@@ -274,18 +274,18 @@ async def test_pending_backup_timeout(time: FakeTime, ha: HaSource, config: Conf
         backup_immediate: PendingBackup = await ha.create(CreateOptions(time.now(), "Test Name"))
         assert isinstance(backup_immediate, PendingBackup)
         assert backup_immediate.name() == "Test Name"
-        assert not ha.check()
+        assert not await ha.check()
         assert ha.pending_backup is backup_immediate
 
         await asyncio.wait({ha._pending_backup_task})
         assert ha.pending_backup is backup_immediate
-        assert ha.check()
-        assert not ha.check()
+        assert await ha.check()
+        assert not await ha.check()
 
         time.advance(minutes=1)
-        assert ha.check()
+        assert await ha.check()
         assert len(await ha.get()) == 0
-        assert not ha.check()
+        assert not await ha.check()
         assert ha.pending_backup is None
         assert backup_immediate.isStale()
 
@@ -301,13 +301,13 @@ async def test_pending_backup_timeout_external(time, config, ha: HaSource, super
     await supervisor.toggleBlockBackup()
     assert isinstance(backup_immediate, PendingBackup)
     assert backup_immediate.name() == "Pending Backup"
-    assert ha.check()
-    assert not ha.check()
+    assert await ha.check()
+    assert not await ha.check()
     assert ha.pending_backup is backup_immediate
 
     # should clean up after a day, since we're still waiting on the backup thread.
     time.advanceDay()
-    assert ha.check()
+    assert await ha.check()
     assert len(await ha.get()) == 0
 
 
@@ -322,7 +322,7 @@ async def test_pending_backup_replaces_original(time, ha: HaSource, config: Conf
     await supervisor.toggleBlockBackup()
     assert isinstance(backup_immediate, PendingBackup)
     assert backup_immediate.name() == "Pending Backup"
-    assert ha.check()
+    assert await ha.check()
     assert ha.pending_backup is backup_immediate
     assert await ha.get() == {backup_immediate.slug(): backup_immediate}
 
@@ -402,7 +402,7 @@ async def test_failed_backup(time, ha: HaSource, supervisor: SimulatedSupervisor
     backup_immediate = await ha.create(CreateOptions(time.now(), "Some Name"))
     assert isinstance(backup_immediate, PendingBackup)
     assert backup_immediate.name() == "Some Name"
-    assert not ha.check()
+    assert not await ha.check()
     assert not backup_immediate.isFailed()
     await supervisor.toggleBlockBackup()
 
@@ -432,7 +432,7 @@ async def test_failed_backup_retry(ha: HaSource, time: FakeTime, config: Config,
     backup_immediate = await ha.create(CreateOptions(time.now(), "Some Name"))
     assert isinstance(backup_immediate, PendingBackup)
     assert backup_immediate.name() == "Some Name"
-    assert not ha.check()
+    assert not await ha.check()
     assert not backup_immediate.isFailed()
     await supervisor.toggleBlockBackup()
 
@@ -443,14 +443,14 @@ async def test_failed_backup_retry(ha: HaSource, time: FakeTime, config: Config,
     assert backup_immediate.isFailed()
     assert backup_immediate._exception.status == 524
 
-    assert ha.check()
-    assert not ha.check()
+    assert await ha.check()
+    assert not await ha.check()
     time.advance(seconds=config.get(Setting.FAILED_BACKUP_TIMEOUT_SECONDS))
 
     # should trigger a sync after the failed backup timeout
-    assert ha.check()
+    assert await ha.check()
     await ha.get()
-    assert not ha.check()
+    assert not await ha.check()
 
 
 @pytest.mark.asyncio
@@ -466,14 +466,14 @@ async def test_immediate_backup_failure(time: FakeTime, ha: HaSource, config: Co
     assert backups[0].isFailed()
 
     # Failed backup should go away after it times out
-    assert ha.check()
-    assert not ha.check()
+    assert await ha.check()
+    assert not await ha.check()
     time.advance(seconds=config.get(
         Setting.FAILED_BACKUP_TIMEOUT_SECONDS) + 1)
-    assert ha.check()
+    assert await ha.check()
 
     assert len(await ha.get()) == 0
-    assert not ha.check()
+    assert not await ha.check()
 
 
 @pytest.mark.asyncio

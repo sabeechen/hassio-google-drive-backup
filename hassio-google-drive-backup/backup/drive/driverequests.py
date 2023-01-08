@@ -354,7 +354,8 @@ class DriveRequests():
             headers_to_use = await self._getHeaders()
             if headers:
                 headers_to_use.update(headers)
-            logger.debug("Making Google Drive request: " + url)
+            if self.config.get(Setting.TRACE_REQUESTS):
+                logger.trace("Making Google Drive request: " + url)
             try:
                 data_to_use = data
                 if isinstance(data_to_use, io.BytesIO):

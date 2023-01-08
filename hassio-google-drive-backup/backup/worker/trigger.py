@@ -19,7 +19,7 @@ class Trigger():
     def name(self):
         return "Unnamed Trigger"
 
-    def check(self) -> bool:
+    async def check(self) -> bool:
         if self.triggered():
             self.reset()
             return True

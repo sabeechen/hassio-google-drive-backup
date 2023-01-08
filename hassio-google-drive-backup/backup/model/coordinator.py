@@ -73,12 +73,12 @@ class Coordinator(Trigger):
     def ignoreStartupDelay(self):
         self._model.ignore_startup_delay = True
 
-    def check(self) -> bool:
+    async def check(self) -> bool:
         if self._time.now() >= self.nextSyncAttempt():
             self.reset()
             return True
         else:
-            return super().check()
+            return await super().check()
 
     async def sync(self):
         await self._withSoftLock(lambda: self._sync_wrapper())

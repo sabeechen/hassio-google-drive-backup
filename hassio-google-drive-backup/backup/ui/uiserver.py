@@ -731,8 +731,11 @@ class UiServer(Trigger, Startable):
 
     async def _start_site(self, app, port, ssl_context=None):
         aiohttp_logger = TraceLogger("aiohttp.access")
-        runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger,
-                               access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
+        if self.config.get(Setting.TRACE_REQUESTS):
+            runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger,
+                                access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
+        else:
+            runner = web.AppRunner(app)
         self.runners.append(runner)
         await runner.setup()
         # maybe host should be 0.0.0.0
@@ -760,10 +763,13 @@ class UiServer(Trigger, Startable):
     @web.middleware
     async def error_middleware(self, request: Request, handler):
         try:
-            logger.trace("Serving %s %s to %s", request.method,
-                         request.url, request.remote)
+            log_trace = self.config.get(Setting.TRACE_REQUESTS)
+            if log_trace:
+                logger.trace("Serving %s %s to %s", request.method,
+                            request.url, request.remote)
             handled = await handler(request)
-            logger.trace("Completed %s %s", request.method, request.url)
+            if log_trace:
+                logger.trace("Completed %s %s", request.method, request.url)
             return handled
         except Exception as ex:
             if isinstance(ex, HTTPException):

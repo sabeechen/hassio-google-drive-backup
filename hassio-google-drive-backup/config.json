@@ -37,6 +37,8 @@
     "backup_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
     "specify_backup_folder": "bool?",
     "warn_for_low_space": "bool?",
+    "watch_backup_directory": "bool?",
+    "trace_requests": "bool?",
 
     "generational_days": "int(0,)?",
     "generational_weeks": "int(0,)?",

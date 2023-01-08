@@ -69,6 +69,8 @@ class Setting(Enum):
     SEND_ERROR_REPORTS = "send_error_reports"
     CONFIRM_MULTIPLE_DELETES = "confirm_multiple_deletes"
     ENABLE_DRIVE_UPLOAD = "enable_drive_upload"
+    WATCH_BACKUP_DIRECTORY = "watch_backup_directory"
+    TRACE_REQUESTS = "trace_requests"
 
     # Theme Settings
     BACKGROUND_COLOR = "background_color"
@@ -174,6 +176,8 @@ _DEFAULTS = {
     Setting.ENABLE_BACKUP_STALE_SENSOR: True,
     Setting.ENABLE_BACKUP_STATE_SENSOR: True,
     Setting.BACKUP_PASSWORD: "",
+    Setting.WATCH_BACKUP_DIRECTORY: True,
+    Setting.TRACE_REQUESTS: False,
 
     # Basic backup settings
     Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 4,
@@ -310,6 +314,8 @@ _CONFIG = {
     Setting.ENABLE_BACKUP_STALE_SENSOR: "bool?",
     Setting.ENABLE_BACKUP_STATE_SENSOR: "bool?",
     Setting.BACKUP_PASSWORD: "str?",
+    Setting.WATCH_BACKUP_DIRECTORY: "bool?",
+    Setting.TRACE_REQUESTS: "bool?",
 
     # Basic backup settings
     Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: "int(0,)?",

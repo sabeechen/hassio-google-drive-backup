@@ -12,7 +12,8 @@ from backup.ha import HaSource, HaUpdater, AddonStopper
 from backup.model import BackupDestination, BackupSource, Scyncer
 from backup.util import Resolver
 from backup.model import Coordinator, Precache, DestinationPrecache
-from backup.worker import Trigger, Watcher
+from backup.worker import Trigger
+from backup.watcher import Watcher
 from backup.ui import UiServer, Restarter
 from backup.logger import getLogger
 from backup.debug import DebugServer
@@ -57,11 +58,11 @@ class BaseModule(Module):
 
     @provider
     @singleton
-    def getSession(self, resolver: Resolver) -> ClientSession:
+    def getSession(self, resolver: Resolver, config: Config) -> ClientSession:
         conn = None
         if self._override_dns:
             conn = aiohttp.TCPConnector(resolver=resolver, family=socket.AF_INET)
-        return TracingSession(connector=conn)
+        return TracingSession(config, connector=conn)
 
 
 class MainModule(Module):

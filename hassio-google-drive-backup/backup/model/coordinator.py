@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from injector import inject, singleton
 
-from backup.config import Config, Setting, CreateOptions
+from backup.config import Config, Setting, CreateOptions, DurationParser
 from backup.exceptions import (KnownError, LogicError, NoBackup, PleaseWait,
                                UserCancelledError)
 from backup.util import GlobalInfo, Backoff, Estimator
@@ -36,7 +36,7 @@ class Coordinator(Trigger):
             self._model.source.name(): self._model.source,
             self._model.dest.name(): self._model.dest
         }
-        self._backoff = Backoff(initial=0, base=10, max=60 * 60)
+        self._backoff = Backoff(initial=0, base=10, max=config.get(Setting.MAX_BACKOFF_SECONDS))
         self._estimator = estimator
         self._busy = False
         self._sync_task: Task = None
@@ -224,19 +224,8 @@ class Coordinator(Trigger):
             self._backoff.backoff(e)
         self._global_info.failed(e)
 
-        seconds = self._backoff.peek()
-        if seconds < 1:
-            text = "right now"
-        elif seconds < 60:
-            text = "in {0} seconds".format(seconds)
-        elif seconds < 60 * 60:
-            text = "in {0}(ish) minutes".format(int(seconds / 60))
-        elif seconds == 60 * 60:
-            text = "in an hour"
-        else:
-            text = "much later"
-
-        logger.info("I'll try again {0}".format(text))
+        text = DurationParser().format(timedelta(seconds=self._backoff.peek()))
+        logger.info("I'll try again in {0}".format(text))
 
     def backups(self) -> List[Backup]:
         ret = list(self._model.backups.values())

@@ -45,6 +45,7 @@ NON_UI_SETTING = {
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS,
     Setting.WATCH_BACKUP_DIRECTORY,
     Setting.TRACE_REQUESTS,
+    Setting.MAX_BACKOFF_SECONDS
 }
 
 UPGRADE_OPTIONS = {
@@ -273,7 +274,7 @@ class Config():
         self.overrides[setting] = value
         return self
 
-    def get(self, setting: Setting):
+    def get(self, setting: Setting) -> Any:
         if setting in self.overrides:
             return self.overrides[setting]
         if setting in self.config:

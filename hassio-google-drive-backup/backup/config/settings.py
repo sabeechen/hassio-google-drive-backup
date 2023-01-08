@@ -133,6 +133,7 @@ class Setting(Enum):
     PING_TIMEOUT = "ping_timeout"
     CACHE_WARMUP_MAX_SECONDS = "cache_warmup_max_seconds"
     CACHE_WARMUP_ERROR_TIMEOUT_SECONDS = "cache_warmup_error_timeout"
+    MAX_BACKOFF_SECONDS = "max_backoff_seconds"
 
     # Old, deprecated settings
     DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
@@ -291,6 +292,7 @@ _DEFAULTS = {
     Setting.PING_TIMEOUT: 5,
     Setting.CACHE_WARMUP_MAX_SECONDS: 15 * 60,  # 30 minutes
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: 24 * 60 * 60,  # 1 day
+    Setting.MAX_BACKOFF_SECONDS: 60 * 60 * 2,  # 2 hours
 }
 
 _STAGING_DEFAULTS = {
@@ -428,7 +430,8 @@ _CONFIG = {
     Setting.LONG_TERM_STALE_BACKUP_SECONDS: "int(1,)?",
     Setting.PING_TIMEOUT: "float(0,)?",
     Setting.CACHE_WARMUP_MAX_SECONDS: "float(0,)",
-    Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: "float(0,)"
+    Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: "float(0,)",
+    Setting.MAX_BACKOFF_SECONDS: "int(3600,)?",
 }
 
 PRIVATE = [

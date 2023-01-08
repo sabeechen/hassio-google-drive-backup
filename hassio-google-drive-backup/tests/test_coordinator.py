@@ -293,8 +293,8 @@ async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest
     assert coord.nextSyncAttempt() == time.now()
     assert await coord.check()
 
-    # backoff maxes out at 1 hr = 3600 seconds
-    for seconds in [10, 20, 40, 80, 160, 320, 640, 1280, 2560, 3600, 3600, 3600]:
+    # backoff maxes out at 2 hr = 7200 seconds
+    for seconds in [10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120, 7200, 7200]:
         await coord.sync()
         assert coord.nextSyncAttempt() == time.now() + timedelta(seconds=seconds)
         assert not await coord.check()

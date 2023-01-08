@@ -64,6 +64,10 @@ If you have anything else that could help explain what happened, click "Markdown
  Timezone: `{timezone}`
  Failure Time: `{failure_time}`
  Last Good Sync: `{sync_last_start}`
+ Next Sync: `{next_sync}`
+ Next Backup: `{next_backup}`
+ Next Cache Warm: `{next_cache_warm}`
+ Time Offset: `{time_offset}`
  ###### Exception:
  ```
  {error}

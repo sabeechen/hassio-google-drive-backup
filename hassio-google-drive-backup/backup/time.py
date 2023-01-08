@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dateutil.tz import tzlocal, tzutc
 from injector import inject, singleton
@@ -15,12 +15,21 @@ class Time(object):
     @inject
     def __init__(self, local_tz=tzlocal()):
         self.local_tz = local_tz
+        self._offset = timedelta(seconds=0)
 
     def now(self) -> datetime:
-        return datetime.now(tzutc())
+        return datetime.now(tzutc()) + self._offset
 
     def nowLocal(self) -> datetime:
-        return datetime.now(self.local_tz)
+        return datetime.now(self.local_tz) + self._offset
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, delta: timedelta):
+        self._offset = delta
 
     @classmethod
     def parse(cls, text: str) -> datetime:

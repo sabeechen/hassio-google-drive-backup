@@ -711,6 +711,7 @@ class UiServer(Trigger, Startable):
 
         self._addRoute(app, self._debug.simerror)
         self._addRoute(app, self._debug.getTasks)
+        self._addRoute(app, self._debug.timeoffset)
         self._addRoute(app, self.makeanissue)
         self._addRoute(app, self.ignorestartupcooldown)
         self._addRoute(app, self.callbackupsnapshot)

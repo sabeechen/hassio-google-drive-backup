@@ -1,4 +1,9 @@
 name: push_to_staging
+concurrency:
+  # Only run this workflow one at a time, and cancel any in progress
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on: 
   workflow_dispatch:
     branches:

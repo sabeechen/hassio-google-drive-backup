@@ -78,3 +78,4 @@ class DestinationPrecache(Worker, Precache):
     def clear(self):
         """Clears any precached data"""
         self._cache = {}
+        self._offset = Random().random()

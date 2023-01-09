@@ -333,9 +333,9 @@ async def test_google_internal_error(drive, server, time: FakeTime, interceptor:
 
 @pytest.mark.asyncio
 async def test_check_time(drive: DriveSource, drive_creds: Creds):
-    assert not drive.check()
+    assert not await drive.check()
     drive.saveCreds(drive_creds)
-    assert drive.check()
+    assert await drive.check()
 
 
 @pytest.mark.asyncio

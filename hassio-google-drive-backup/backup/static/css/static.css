@@ -157,6 +157,10 @@ nav ul a i,
   color: #3141d1;
 }
 
+.console-trace {
+  color: #282828;
+}
+
 .console-critical {
   color: #810000;
 }

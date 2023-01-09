@@ -13,7 +13,7 @@ from backup.time import Time
 from backup.worker import Worker
 from backup.logger import getLogger, getHistory
 from backup.ha import HaRequests, HaSource
-from backup.model import Coordinator
+from backup.model import Coordinator, DestinationPrecache
 from yarl import URL
 
 logger = getLogger(__name__)
@@ -23,7 +23,7 @@ ERROR_LOG_LENGTH = 30
 @singleton
 class DebugWorker(Worker):
     @inject
-    def __init__(self, time: Time, info: GlobalInfo, config: Config, resolver: Resolver, session: ClientSession, ha: HaRequests, coord: Coordinator, ha_source: HaSource):
+    def __init__(self, time: Time, info: GlobalInfo, config: Config, resolver: Resolver, session: ClientSession, ha: HaRequests, coord: Coordinator, ha_source: HaSource, precache: DestinationPrecache):
         super().__init__("Debug Worker", self.doWork, time, interval=10)
         self.time = time
         self._info = info
@@ -42,6 +42,7 @@ class DebugWorker(Worker):
         self.session = session
         self._last_server_check = None
         self._last_server_refresh = timedelta(days=1)
+        self._precache = precache
 
     async def doWork(self):
         if not self.last_dns_update or self.time.now() > self.last_dns_update + timedelta(hours=12):
@@ -132,13 +133,17 @@ class DebugWorker(Worker):
         report['upload_count'] = self._info._uploads
         report['upload_last_size'] = self._info._last_upload_size
         report['upload_last_attempt'] = self.formatDate(self._info._last_upload)
+        report['next_sync'] = self.formatDate(self.coord.nextSyncAttempt())
+        report['next_backup'] = self.formatDate(self.coord.nextBackupTime())
+        report['next_cache_warm'] = self.formatDate(self._precache.getNextWarmDate())
+        report['time_offset'] = self._time.offset.total_seconds()
 
         report['debug'] = self._info.debug
         report['version'] = VERSION
         report['error'] = error
         report['client'] = self.config.clientIdentifier()
 
-        if self.ha_source.isInitialized():
+        if self.ha_source.isInitialized() and self.ha_source.host_info and self.ha_source.super_info and self.ha_source.ha_info:
             report["super_version"] = self.ha_source.host_info.get('supervisor', "None")
             report["hassos_version"] = self.ha_source.host_info.get('hassos', "None")
             report["docker_version"] = self.ha_source.host_info.get('docker', "None")

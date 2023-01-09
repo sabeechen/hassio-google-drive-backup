@@ -8,3 +8,4 @@ from .listvalidator import ListValidator
 from .durationasstringvalidator import DurationAsStringValidator
 from .bytesizeasstringvalidator import BytesizeAsStringValidator
 from .version import Version
+from .durationparser import DurationParser

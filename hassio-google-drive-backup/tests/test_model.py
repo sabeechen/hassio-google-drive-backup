@@ -180,11 +180,11 @@ async def test_sync_single_source(model: Model, source, dest, time):
 @pytest.mark.asyncio
 async def test_sync_source_and_dest(model: Model, time, source, dest: HelperTestSource):
     backup_source = await source.create(CreateOptions(time.now(), "name"))
-    await model._syncBackups([source, dest])
+    await model._syncBackups([source, dest], time.now())
     assert len(model.backups) == 1
 
     backup_dest = await dest.save(model.backups[backup_source.slug()])
-    await model._syncBackups([source, dest])
+    await model._syncBackups([source, dest], time.now())
     assert len(model.backups) == 1
     assert model.backups[backup_source.slug()].getSource(
         source.name()) is backup_source
@@ -197,7 +197,7 @@ async def test_sync_different_sources(model: Model, time, source, dest):
     backup_source = await source.create(CreateOptions(time.now(), "name"))
     backup_dest = await dest.create(CreateOptions(time.now(), "name"))
 
-    await model._syncBackups([source, dest])
+    await model._syncBackups([source, dest], time.now())
     assert len(model.backups) == 2
     assert model.backups[backup_source.slug()].getSource(
         source.name()) is backup_source
@@ -208,10 +208,10 @@ async def test_sync_different_sources(model: Model, time, source, dest):
 @pytest.mark.asyncio
 async def test_removal(model: Model, time, source, dest):
     await source.create(CreateOptions(time.now(), "name"))
-    await model._syncBackups([source, dest])
+    await model._syncBackups([source, dest], time.now())
     assert len(model.backups) == 1
     source.current = {}
-    await model._syncBackups([source, dest])
+    await model._syncBackups([source, dest], time.now())
     assert len(model.backups) == 0
 
 

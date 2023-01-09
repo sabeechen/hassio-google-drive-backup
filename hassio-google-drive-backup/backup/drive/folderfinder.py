@@ -1,8 +1,6 @@
-import os
-import os.path
 from datetime import timedelta
 from typing import Any, Dict
-
+from backup.file import File
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
@@ -17,7 +15,7 @@ logger = getLogger(__name__)
 
 FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
 FOLDER_NAME = 'Home Assistant Backups'
-FOLDER_CACHE_SECONDS = 30
+FOLDER_CACHE_SECONDS = 60 * 31  # 31 minutes
 
 
 @singleton
@@ -87,15 +85,14 @@ class FolderFinder():
         else:
             self._folder_details = None
         logger.info("Saving backup folder: " + folder)
-        with open(self.config.get(Setting.FOLDER_FILE_PATH), 'w') as folder_file:
-            folder_file.write(folder)
+        File.write(self.config.get(Setting.FOLDER_FILE_PATH), folder)
         self._folderId = folder
         self._folder_queryied_last = self.time.now()
         self._existing_folder = None
 
     def reset(self):
-        if os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
-            os.remove(self.config.get(Setting.FOLDER_FILE_PATH))
+        if File.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
+            File.delete(self.config.get(Setting.FOLDER_FILE_PATH))
         self._folderId = None
         self._folder_queryied_last = None
         self._existing_folder = None
@@ -109,11 +106,10 @@ class FolderFinder():
 
     async def _readFolderId(self) -> str:
         # First, check if we cached the drive folder
-        if not os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
+        if not File.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
             raise BackupFolderMissingError()
-        if os.path.exists(self.config.get(Setting.FOLDER_FILE_PATH)):
-            with open(self.config.get(Setting.FOLDER_FILE_PATH), "r") as folder_file:
-                folder_id: str = folder_file.readline()
+        else:
+            folder_id: str = File.read(self.config.get(Setting.FOLDER_FILE_PATH)).strip()
             if await self._verify(folder_id):
                 return folder_id
             else:

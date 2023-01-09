@@ -69,6 +69,8 @@ class Setting(Enum):
     SEND_ERROR_REPORTS = "send_error_reports"
     CONFIRM_MULTIPLE_DELETES = "confirm_multiple_deletes"
     ENABLE_DRIVE_UPLOAD = "enable_drive_upload"
+    WATCH_BACKUP_DIRECTORY = "watch_backup_directory"
+    TRACE_REQUESTS = "trace_requests"
 
     # Theme Settings
     BACKGROUND_COLOR = "background_color"
@@ -113,6 +115,7 @@ class Setting(Enum):
 
     # Timing and timeouts
     MAX_SYNC_INTERVAL_SECONDS = "max_sync_interval_seconds"
+    DEFAULT_SYNC_INTERVAL_VARIATION = "default_sync_interval_variation"
     BACKUP_STALE_SECONDS = "backup_stale_seconds"
     PENDING_BACKUP_TIMEOUT_SECONDS = "pending_backup_timeout_seconds"
     FAILED_BACKUP_TIMEOUT_SECONDS = "failed_backup_timeout_seconds"
@@ -128,6 +131,9 @@ class Setting(Enum):
     HA_REPORTING_INTERVAL_SECONDS = "ha_reporting_interval_seconds"
     LONG_TERM_STALE_BACKUP_SECONDS = "long_term_stale_backup_seconds"
     PING_TIMEOUT = "ping_timeout"
+    CACHE_WARMUP_MAX_SECONDS = "cache_warmup_max_seconds"
+    CACHE_WARMUP_ERROR_TIMEOUT_SECONDS = "cache_warmup_error_timeout"
+    MAX_BACKOFF_SECONDS = "max_backoff_seconds"
 
     # Old, deprecated settings
     DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
@@ -171,6 +177,8 @@ _DEFAULTS = {
     Setting.ENABLE_BACKUP_STALE_SENSOR: True,
     Setting.ENABLE_BACKUP_STATE_SENSOR: True,
     Setting.BACKUP_PASSWORD: "",
+    Setting.WATCH_BACKUP_DIRECTORY: True,
+    Setting.TRACE_REQUESTS: False,
 
     # Basic backup settings
     Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: 4,
@@ -266,7 +274,8 @@ _DEFAULTS = {
     Setting.PENDING_BACKUP_TIMEOUT_SECONDS: 60 * 60 * 5,
     Setting.FAILED_BACKUP_TIMEOUT_SECONDS: 60 * 15,
     Setting.NEW_BACKUP_TIMEOUT_SECONDS: 5,
-    Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60,
+    Setting.MAX_SYNC_INTERVAL_SECONDS: 60 * 60 * 3,  # 3 hours
+    Setting.DEFAULT_SYNC_INTERVAL_VARIATION: 0.5,  # intermittent checkup syncs happen between 1.5 and 3 hours since the last one, randomly
     Setting.DEFAULT_DRIVE_CLIENT_ID: "933944288016-n35gnn2juc76ub7u5326ls0iaq9dgjgu.apps.googleusercontent.com",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "",
     Setting.DRIVE_PICKER_API_KEY: "",
@@ -280,7 +289,10 @@ _DEFAULTS = {
     Setting.EXCHANGER_TIMEOUT_SECONDS: 10,
     Setting.HA_REPORTING_INTERVAL_SECONDS: 10,
     Setting.LONG_TERM_STALE_BACKUP_SECONDS: 60 * 60 * 24,
-    Setting.PING_TIMEOUT: 5
+    Setting.PING_TIMEOUT: 5,
+    Setting.CACHE_WARMUP_MAX_SECONDS: 15 * 60,  # 30 minutes
+    Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: 24 * 60 * 60,  # 1 day
+    Setting.MAX_BACKOFF_SECONDS: 60 * 60 * 2,  # 2 hours
 }
 
 _STAGING_DEFAULTS = {
@@ -304,6 +316,8 @@ _CONFIG = {
     Setting.ENABLE_BACKUP_STALE_SENSOR: "bool?",
     Setting.ENABLE_BACKUP_STATE_SENSOR: "bool?",
     Setting.BACKUP_PASSWORD: "str?",
+    Setting.WATCH_BACKUP_DIRECTORY: "bool?",
+    Setting.TRACE_REQUESTS: "bool?",
 
     # Basic backup settings
     Setting.DEPRECTAED_MAX_BACKUPS_IN_HA: "int(0,)?",
@@ -400,6 +414,7 @@ _CONFIG = {
     Setting.FAILED_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
     Setting.NEW_BACKUP_TIMEOUT_SECONDS: "float(0,)?",
     Setting.MAX_SYNC_INTERVAL_SECONDS: "float(300,)?",
+    Setting.DEFAULT_SYNC_INTERVAL_VARIATION: "float(0,1)?",
     Setting.DEFAULT_DRIVE_CLIENT_ID: "str?",
     Setting.DEFAULT_DRIVE_CLIENT_SECRET: "str?",
     Setting.DRIVE_PICKER_API_KEY: "str?",
@@ -413,7 +428,10 @@ _CONFIG = {
     Setting.EXCHANGER_TIMEOUT_SECONDS: "float(0,)?",
     Setting.HA_REPORTING_INTERVAL_SECONDS: "int(1,)?",
     Setting.LONG_TERM_STALE_BACKUP_SECONDS: "int(1,)?",
-    Setting.PING_TIMEOUT: "float(0,)?"
+    Setting.PING_TIMEOUT: "float(0,)?",
+    Setting.CACHE_WARMUP_MAX_SECONDS: "float(0,)",
+    Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: "float(0,)",
+    Setting.MAX_BACKOFF_SECONDS: "int(3600,)?",
 }
 
 PRIVATE = [
@@ -477,6 +495,7 @@ for setting in Setting:
     _LOOKUP[setting.value] = setting
 
 with open(abspath(join(__file__, "..", "..", "..", "config.json"))) as f:
+    # Thsi is a static file included in the container, so don't worry about using JsonFileLoader
     addon_config = json.load(f)
 
 for setting in Setting:

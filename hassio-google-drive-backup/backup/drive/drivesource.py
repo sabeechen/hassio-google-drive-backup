@@ -231,7 +231,7 @@ class DriveSource(BackupDestination):
             return value
         permitted = ""
         current = 0
-        while(current < len(value) and len(str(key + permitted + value[current]).encode('utf-8')) < DRIVE_MAX_PROPERTY_LENGTH):
+        while current < len(value) and len(str(key + permitted + value[current]).encode('utf-8')) < DRIVE_MAX_PROPERTY_LENGTH:
             permitted += value[current]
             current += 1
         return permitted

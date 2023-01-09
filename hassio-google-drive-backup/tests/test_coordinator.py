@@ -7,7 +7,7 @@ from pytest import raises
 from backup.config import Config, Setting, CreateOptions
 from backup.exceptions import LogicError, LowSpaceError, NoBackup, PleaseWait, UserCancelledError
 from backup.util import GlobalInfo, DataCache
-from backup.model import Coordinator, Model, Backup
+from backup.model import Coordinator, Model, Backup, DestinationPrecache
 from .conftest import FsFaker
 from .faketime import FakeTime
 from .helpers import HelperTestSource, skipForWindows
@@ -38,6 +38,11 @@ def model(source, dest, time, simple_config, global_info, estimator, data_cache:
 @pytest.fixture
 def coord(model, time, simple_config, global_info, estimator):
     return Coordinator(model, time, simple_config, global_info, estimator)
+
+
+@pytest.fixture
+def precache(coord, time, dest, simple_config):
+    return DestinationPrecache(coord, time, dest, simple_config)
 
 
 @pytest.mark.asyncio
@@ -273,43 +278,43 @@ async def test_download(coord: Coordinator, source, dest, backup):
 
 @pytest.mark.asyncio
 async def test_backoff(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, backup, time: FakeTime, simple_config: Config):
-    assert coord.check()
+    assert await coord.check()
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60 * 6)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
 
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
-    assert not coord.check()
-    error = Exception("BOOM")
+    assert not await coord.check()
     old_sync = model.sync
-    model.sync = lambda s: doRaise(error)
+    model.sync = lambda s: doRaise(Exception("BOOM"))
     await coord.sync()
 
     # first backoff should be 0 seconds
     assert coord.nextSyncAttempt() == time.now()
-    assert coord.check()
+    assert await coord.check()
 
-    # backoff maxes out at 1 hr = 3600 seconds
-    for seconds in [10, 20, 40, 80, 160, 320, 640, 1280, 2560, 3600, 3600, 3600]:
+    # backoff maxes out at 2 hr = 7200 seconds
+    for seconds in [10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120, 7200, 7200]:
         await coord.sync()
         assert coord.nextSyncAttempt() == time.now() + timedelta(seconds=seconds)
-        assert not coord.check()
-        assert not coord.check()
-        assert not coord.check()
+        assert not await coord.check()
+        assert not await coord.check()
+        assert not await coord.check()
 
     # a good sync resets it back to 6 hours from now
     model.sync = old_sync
     await coord.sync()
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=6)
-    assert not coord.check()
+    assert not await coord.check()
 
     # if the next backup is less that 6 hours from the last one, that that shoudl be when we sync
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1.0 / 24.0)
     assert coord.nextSyncAttempt() == time.now() + timedelta(hours=1)
-    assert not coord.check()
+    assert not await coord.check()
 
     time.advance(hours=2)
     assert coord.nextSyncAttempt() == time.now() - timedelta(hours=1)
-    assert coord.check()
+    assert await coord.check()
 
 
 def test_save_creds(coord: Coordinator, source, dest):
@@ -385,14 +390,14 @@ async def test_alternate_timezone(coord: Coordinator, time: FakeTime, model: Mod
     model.reinitialize()
     coord.reset()
     await coord.sync()
-    assert not coord.check()
+    assert not await coord.check()
     assert coord.nextBackupTime() == time.local(2020, 3, 17, 12)
 
     time.setNow(time.local(2020, 3, 17, 11, 59))
     await coord.sync()
-    assert not coord.check()
+    assert not await coord.check()
     time.setNow(time.local(2020, 3, 17, 12))
-    assert coord.check()
+    assert await coord.check()
 
 
 @pytest.mark.asyncio
@@ -408,9 +413,9 @@ async def test_disabled_at_install(coord: Coordinator, dest, time):
 
     dest.setEnabled(False)
     time.advance(days=5)
-    assert coord.check()
+    assert await coord.check()
     await coord.sync()
-    assert not coord.check()
+    assert not await coord.check()
 
 
 @pytest.mark.asyncio
@@ -429,6 +434,7 @@ async def test_schedule_backup_next_sync_attempt(coord: Coordinator, model, sour
     """
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
 
     time.setTimeZone("Europe/Stockholm")
     simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
@@ -452,6 +458,7 @@ async def test_max_sync_interval_next_sync_attempt(coord: Coordinator, model, so
     """
     simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
     simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0)
 
     time.setTimeZone("Europe/Stockholm")
     simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
@@ -487,4 +494,59 @@ async def test_generational_only_ignored_snapshots(coord: Coordinator, model, so
     source.setEnabled(True)
 
     await coord.sync()
+    assert global_info._last_error is None
+
+
+@pytest.mark.asyncio
+async def test_max_sync_interval_randomness(coord: Coordinator, model, source: HelperTestSource, dest: HelperTestSource, backup, time: FakeTime, simple_config: Config):
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.MAX_SYNC_INTERVAL_SECONDS, 60 * 60)
+    simple_config.override(Setting.DEFAULT_SYNC_INTERVAL_VARIATION, 0.5)
+
+    time.setTimeZone("Europe/Stockholm")
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:23")
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+
+    source.setMax(10)
+    source.insert("Fri", time.toUtc(time.local(2020, 3, 16, 3, 33)))
+    time.setNow(time.local(2020, 3, 17, 1, 29))
+    model.reinitialize()
+    coord.reset()
+    await coord.sync()
+    next_attempt = coord.nextSyncAttempt()
+
+    # verify its within expected range
+    assert next_attempt - time.now() <= timedelta(hours=1)
+    assert next_attempt - time.now() >= timedelta(hours=0.5)
+
+    # verify it doesn't change
+    assert coord.nextSyncAttempt() == next_attempt
+    time.advance(minutes=1)
+    assert coord.nextSyncAttempt() == next_attempt
+
+    # sync, and verify it does change
+    await coord.sync()
+    assert coord.nextSyncAttempt() != next_attempt
+
+
+@pytest.mark.asyncio
+async def test_precaching(coord: Coordinator, precache: DestinationPrecache, dest: HelperTestSource, time: FakeTime, global_info: GlobalInfo):
+    await coord.sync()
+    dest.reset()
+
+    # Warm the cache
+    assert precache.getNextWarmDate() < coord.nextSyncAttempt()
+    assert precache.cached(dest.name(), time.now()) is None
+    assert dest.query_count == 0
+    time.setNow(precache.getNextWarmDate())
+    await precache.checkForSmoothing()
+    assert precache.cached(dest.name(), time.now()) is not None
+    assert dest.query_count == 1
+
+    # No queries should have been made to dest, and the cache should now be cleared
+    time.setNow(coord.nextSyncAttempt())
+    assert precache.cached(dest.name(), time.now()) is not None
+    await coord.sync()
+    assert dest.query_count == 1
+    assert precache.cached(dest.name(), time.now()) is None
     assert global_info._last_error is None

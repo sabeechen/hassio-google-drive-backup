@@ -2,8 +2,10 @@ import asyncio
 from aiohttp import web
 from aiohttp.web import Request
 from injector import inject, singleton
-from ..model import Model, Coordinator
-from ..logger import getLogger
+from backup.time import Time
+from backup.model import Model, Coordinator
+from backup.logger import getLogger
+from datetime import timedelta
 
 logger = getLogger(__name__)
 
@@ -11,9 +13,10 @@ logger = getLogger(__name__)
 @singleton
 class Debug():
     @inject
-    def __init__(self, model: Model, coord: Coordinator):
+    def __init__(self, model: Model, coord: Coordinator, time: Time):
         self._model = model
         self._coord = coord
+        self._time = time
 
     async def getTasks(self, request):
         resp = []
@@ -64,4 +67,9 @@ class Debug():
         else:
             self._model.simulate_error = error
         self._coord.trigger()
+        return web.json_response({})
+
+    async def timeoffset(self, request: Request):
+        delta = int(request.query.get("offset", ""))
+        self._time.offset = timedelta(seconds=delta)
         return web.json_response({})

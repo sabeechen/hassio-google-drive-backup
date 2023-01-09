@@ -16,7 +16,8 @@ from backup.config import Config, Setting, CreateOptions, BoolValidator, Startab
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
 from backup.model import Coordinator, Backup, AbstractBackup
 from backup.exceptions import KnownError, GoogleCredGenerateError, ensureKey
-from backup.util import GlobalInfo, Estimator, File, DataCache, UpgradeFlags
+from backup.util import GlobalInfo, Estimator, DataCache, UpgradeFlags
+from backup.file import File
 from backup.ha import HaSource, PendingBackup, BACKUP_NAME_KEYS, HaRequests, HaUpdater
 from backup.ha import Password
 from backup.time import Time
@@ -417,10 +418,12 @@ class UiServer(Trigger, Startable):
         return web.json_response({})
 
     async def sync(self, request: Request = None) -> Any:
+        self._coord.clearCaches()
         await self._coord.sync()
         return await self.getstatus(request)
 
     async def startSync(self, request) -> Any:
+        self._coord.clearCaches()
         asyncio.create_task(self._coord.sync(), name="Sync from web request")
         await self._coord._sync_start.wait()
         return await self.getstatus(request)
@@ -708,6 +711,7 @@ class UiServer(Trigger, Startable):
 
         self._addRoute(app, self._debug.simerror)
         self._addRoute(app, self._debug.getTasks)
+        self._addRoute(app, self._debug.timeoffset)
         self._addRoute(app, self.makeanissue)
         self._addRoute(app, self.ignorestartupcooldown)
         self._addRoute(app, self.callbackupsnapshot)
@@ -728,8 +732,11 @@ class UiServer(Trigger, Startable):
 
     async def _start_site(self, app, port, ssl_context=None):
         aiohttp_logger = TraceLogger("aiohttp.access")
-        runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger,
-                               access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
+        if self.config.get(Setting.TRACE_REQUESTS):
+            runner = web.AppRunner(app, logger=aiohttp_logger, access_log=aiohttp_logger,
+                                access_log_format='%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i (%Tfs)"')
+        else:
+            runner = web.AppRunner(app)
         self.runners.append(runner)
         await runner.setup()
         # maybe host should be 0.0.0.0
@@ -757,10 +764,13 @@ class UiServer(Trigger, Startable):
     @web.middleware
     async def error_middleware(self, request: Request, handler):
         try:
-            logger.trace("Serving %s %s to %s", request.method,
-                         request.url, request.remote)
+            log_trace = self.config.get(Setting.TRACE_REQUESTS)
+            if log_trace:
+                logger.trace("Serving %s %s to %s", request.method,
+                            request.url, request.remote)
             handled = await handler(request)
-            logger.trace("Completed %s %s", request.method, request.url)
+            if log_trace:
+                logger.trace("Completed %s %s", request.method, request.url)
             return handled
         except Exception as ex:
             if isinstance(ex, HTTPException):

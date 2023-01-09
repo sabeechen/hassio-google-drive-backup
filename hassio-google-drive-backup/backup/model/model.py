@@ -10,6 +10,7 @@ from backup.exceptions import DeleteMutlipleBackupsError, SimulatedError
 from backup.util import GlobalInfo, Estimator, DataCache
 from .backups import AbstractBackup, Backup
 from .dummybackup import DummyBackup
+from .precache import Precache
 from backup.time import Time
 from backup.worker import Trigger
 from backup.logger import getLogger
@@ -105,6 +106,7 @@ class Model():
     def __init__(self, config: Config, time: Time, source: BackupSource, dest: BackupDestination, info: GlobalInfo, estimator: Estimator, data_cache: DataCache):
         self.config: Config = config
         self.time = time
+        self.precache: Precache = None
         self.source: BackupSource = source
         self.dest: BackupDestination = dest
         self.reinitialize()
@@ -127,7 +129,8 @@ class Model():
     def allSources(self):
         return [self.source, self.dest]
 
-    def reinitialize(self):
+    def reinitialize(self, precache: Precache = None):
+        self.precache = precache
         self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
 
         # SOMEDAY: this should be cached in config and regenerated on config updates, not here
@@ -143,7 +146,7 @@ class Model():
         elif self.dest.needsConfiguration():
             next = None
         elif not last_backup:
-            # this isn't the cleanest logic, but the idea here is that if there are no backups, 
+            # this isn't the cleanest logic, but the idea here is that if there are no backups,
             # then the backups shoudl be made right when the addon starts up.
             next = self.info.start_time
         elif not timeofDay:
@@ -193,7 +196,7 @@ class Model():
                 raise Exception(self.simulate_error)
             else:
                 raise SimulatedError(self.simulate_error)
-        await self._syncBackups([self.source, self.dest])
+        await self._syncBackups([self.source, self.dest], now)
 
         self.source.checkBeforeChanges()
         self.dest.checkBeforeChanges()
@@ -298,10 +301,15 @@ class Model():
             # Parse error
             return None
 
-    async def _syncBackups(self, sources: List[BackupSource]):
+    async def _syncBackups(self, sources: List[BackupSource], now: datetime):
         for source in sources:
             if source.enabled():
-                from_source: Dict[str, AbstractBackup] = await source.get()
+                # check if we have the results from this source precached
+                from_source: Dict[str, AbstractBackup] = None
+                if self.precache is not None:
+                    from_source = self.precache.cached(source.name(), now)
+                if not from_source:
+                    from_source = await source.get()
             else:
                 from_source: Dict[str, AbstractBackup] = {}
             for backup in from_source.values():

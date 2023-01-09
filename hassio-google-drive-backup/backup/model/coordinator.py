@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from injector import inject, singleton
 
-from backup.config import Config, Setting, CreateOptions
+from backup.config import Config, Setting, CreateOptions, DurationParser
 from backup.exceptions import (KnownError, LogicError, NoBackup, PleaseWait,
                                UserCancelledError)
 from backup.util import GlobalInfo, Backoff, Estimator
@@ -13,8 +13,10 @@ from backup.time import Time
 from backup.worker import Trigger
 from backup.logger import getLogger
 from backup.creds.creds import Creds
+from .precache import Precache
 from .model import BackupSource, Model
 from .backups import AbstractBackup, Backup, SOURCE_HA
+from random import Random
 
 logger = getLogger(__name__)
 
@@ -25,6 +27,7 @@ class Coordinator(Trigger):
     def __init__(self, model: Model, time: Time, config: Config, global_info: GlobalInfo, estimator: Estimator):
         super().__init__()
         self._model = model
+        self._precache: Precache = None
         self._time = time
         self._config = config
         self._lock: Lock = Lock()
@@ -33,13 +36,16 @@ class Coordinator(Trigger):
             self._model.source.name(): self._model.source,
             self._model.dest.name(): self._model.dest
         }
-        self._backoff = Backoff(initial=0, base=10, max=60 * 60)
+        self._backoff = Backoff(initial=0, base=10, max=config.get(Setting.MAX_BACKOFF_SECONDS))
         self._estimator = estimator
         self._busy = False
         self._sync_task: Task = None
         self._sync_start = Event()
         self._sync_wait = Event()
         self._sync_wait.set()
+        self._random = Random()
+        self._random.seed()
+        self._next_sync_offset = self._random.random()
         self._global_info.triggerBackupCooldown(timedelta(minutes=self._config.get(Setting.BACKUP_STARTUP_DELAY_MINUTES)))
         self.trigger()
 
@@ -51,6 +57,9 @@ class Coordinator(Trigger):
 
         self._model.dest.saveCreds(creds)
         self._global_info.credsSaved()
+
+    def setPrecache(self, precache: Precache):
+        self._precache = precache
 
     def name(self):
         return "Coordinator"
@@ -64,12 +73,12 @@ class Coordinator(Trigger):
     def ignoreStartupDelay(self):
         self._model.ignore_startup_delay = True
 
-    def check(self) -> bool:
+    async def check(self) -> bool:
         if self._time.now() >= self.nextSyncAttempt():
             self.reset()
             return True
         else:
-            return super().check()
+            return await super().check()
 
     async def sync(self):
         await self._withSoftLock(lambda: self._sync_wrapper())
@@ -90,6 +99,7 @@ class Coordinator(Trigger):
         task = self._sync_task
         if task is not None and not task.done():
             task.cancel()
+            self.clearCaches()
             await wait([task])
 
     def nextSyncAttempt(self):
@@ -104,13 +114,24 @@ class Coordinator(Trigger):
             if scheduled is None:
                 scheduled = self._time.now() - timedelta(minutes=1)
             else:
-                scheduled += timedelta(seconds=self._config.get(
-                    Setting.MAX_SYNC_INTERVAL_SECONDS))
+                scheduled += timedelta(seconds=self.nextSyncCheckOffset())
             next_backup = self.nextBackupTime()
             if next_backup is None:
                 return scheduled
             else:
                 return min(self.nextBackupTime(), scheduled)
+
+    def nextSyncCheckOffset(self):
+        """Determines how long we shoudl wait from the last check the refresh the cache of backups from Google Drive and Home Assistant"""
+        # If we always sync MAX_SYNC_INTERVAL_SECONDS secodns after the last
+        # check, then the addon in aggregate puts a really high strain on google
+        # on every hour and the addon's auth servers need to be provisioned for
+        # a big peak, which is epxensive.  Instead we add some randomness to the time interval.
+        randomness_max = self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) * self._config.get(Setting.DEFAULT_SYNC_INTERVAL_VARIATION)
+        non_randomness = self._config.get(Setting.MAX_SYNC_INTERVAL_SECONDS) - randomness_max
+
+        # The offset should be stable between syncs, which gets controlled by updating _next_sync_offset on each good sync
+        return self._next_sync_offset * randomness_max + non_randomness
 
     def nextBackupTime(self, include_pending=True):
         return self._buildModel().nextBackup(self._time.now(), include_pending)
@@ -175,12 +196,17 @@ class Coordinator(Trigger):
             self._global_info.sync()
             self._estimator.refresh()
             await self._buildModel().sync(self._time.now())
+            self._next_sync_offset = self._random.random()
             self._global_info.success()
             self._backoff.reset()
             self._global_info.setSkipSpaceCheckOnce(False)
         except BaseException as e:
             self.handleError(e)
         finally:
+            if self._precache:
+                # Any sync should invalidate the precache regardless of the outcome
+                # so the next sync uses fresh data
+                self.clearCaches()
             self._updateFreshness()
 
     def handleError(self, e):
@@ -198,19 +224,8 @@ class Coordinator(Trigger):
             self._backoff.backoff(e)
         self._global_info.failed(e)
 
-        seconds = self._backoff.peek()
-        if seconds < 1:
-            text = "right now"
-        elif seconds < 60:
-            text = "in {0} seconds".format(seconds)
-        elif seconds < 60 * 60:
-            text = "in {0}(ish) minutes".format(int(seconds / 60))
-        elif seconds == 60 * 60:
-            text = "in an hour"
-        else:
-            text = "much later"
-
-        logger.info("I'll try again {0}".format(text))
+        text = DurationParser().format(timedelta(seconds=self._backoff.peek()))
+        logger.info("I'll try again in {0}".format(text))
 
     def backups(self) -> List[Backup]:
         ret = list(self._model.backups.values())
@@ -221,6 +236,7 @@ class Coordinator(Trigger):
         await self._withSoftLock(lambda: self._uploadBackup(slug))
 
     async def _uploadBackup(self, slug):
+        self.clearCaches()
         backup = self._ensureBackup(self._model.dest.name(), slug)
         backup_dest = backup.getSource(self._model.dest.name())
         backup_source = backup.getSource(self._model.source.name())
@@ -237,6 +253,7 @@ class Coordinator(Trigger):
         return await self._withSoftLock(lambda: self._startBackup(options))
 
     async def _startBackup(self, options: CreateOptions):
+        self.clearCaches()
         self._estimator.refresh()
         self._estimator.checkSpace(self.backups())
         created = await self._buildModel().source.create(options)
@@ -250,6 +267,7 @@ class Coordinator(Trigger):
         return self._ensureBackup(None, slug)
 
     async def download(self, slug):
+        self.clearCaches()
         backup = self._ensureBackup(None, slug)
         for source in self._sources.values():
             if not source.enabled():
@@ -259,12 +277,14 @@ class Coordinator(Trigger):
         raise NoBackup()
 
     async def retain(self, sources: Dict[str, bool], slug: str):
+        self.clearCaches()
         for source in sources:
             backup = self._ensureBackup(source, slug)
             await self._ensureSource(source).retain(backup, sources[source])
         self._updateFreshness()
 
     async def note(self, note: str, slug: str):
+        self.clearCaches()
         backup = self._ensureBackup(None, slug)
         for source in backup.sources.keys():
             await self._ensureSource(source).note(backup, note)
@@ -276,6 +296,7 @@ class Coordinator(Trigger):
         await self._withSoftLock(lambda: self._ignore(slug, ignore))
 
     async def _delete(self, sources, slug):
+        self.clearCaches()
         for source in sources:
             backup = self._ensureBackup(source, slug)
             await self._ensureSource(source).delete(backup)
@@ -284,6 +305,7 @@ class Coordinator(Trigger):
         self._updateFreshness()
 
     async def _ignore(self, slug: str, ignore: bool):
+        self.clearCaches()
         backup = self._ensureBackup(SOURCE_HA, slug)
         await self._ensureSource(SOURCE_HA).ignore(backup, ignore)
 
@@ -306,7 +328,7 @@ class Coordinator(Trigger):
         raise LogicError()
 
     def _buildModel(self) -> Model:
-        self._model.reinitialize()
+        self._model.reinitialize(self._precache)
         return self._model
 
     def _updateFreshness(self):
@@ -315,6 +337,10 @@ class Coordinator(Trigger):
             for source in purges:
                 if backup.getSource(source):
                     backup.updatePurge(source, backup == purges[source])
+
+    def clearCaches(self):
+        if self._precache:
+            self._precache.clear()
 
     async def _withSoftLock(self, callable):
         with self._lock:

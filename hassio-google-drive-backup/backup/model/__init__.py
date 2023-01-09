@@ -9,3 +9,5 @@ from .dummybackup import DummyBackup
 from .dummybackupsource import DummyBackupSource
 from .habackup import HABackup
 from .simulatedsource import SimulatedSource
+from .precache import Precache
+from .destinationprecache import DestinationPrecache

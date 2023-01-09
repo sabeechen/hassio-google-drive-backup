@@ -24,7 +24,7 @@ class Scyncer(Worker):
         try:
             doSync = False
             for trigger in self.triggers:
-                if trigger.check():
+                if await trigger.check():
                     logger.debug("Sync requested by " + str(trigger.name()))
                     doSync = True
             if doSync:
@@ -32,5 +32,5 @@ class Scyncer(Worker):
                     await self._time.sleepAsync(3)
                 await self.coord.sync()
         except PleaseWait:
-            # Ignore this, since it means a sync already started (race condition)
+            # Ignore this, since it means a sync already started (unavilable race condition)
             pass

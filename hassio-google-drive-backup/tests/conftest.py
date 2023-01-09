@@ -19,8 +19,7 @@ from backup.drive import DriveRequests, DriveSource, FolderFinder, AuthCodeQuery
 from backup.util import GlobalInfo, Estimator, Resolver, DataCache
 from backup.ha import HaRequests, HaSource, HaUpdater
 from backup.logger import reset
-from backup.model import Model
-from backup.model import DummyBackup
+from backup.model import DummyBackup, DestinationPrecache, Model
 from backup.time import Time
 from backup.module import BaseModule
 from backup.debugworker import DebugWorker
@@ -28,6 +27,7 @@ from backup.creds import Creds
 from backup.server import ErrorStore
 from backup.ha import AddonStopper
 from backup.ui import UiServer
+from backup.watcher import Watcher
 from .faketime import FakeTime
 from .helpers import Uploader, createBackupTar
 from dev.ports import Ports
@@ -160,7 +160,7 @@ async def generate_config(server_url: URL, ports, cleandir):
         Setting.INGRESS_TOKEN_FILE_PATH: "ingress.dat",
         Setting.DEFAULT_DRIVE_CLIENT_ID: "test_client_id",
         Setting.DEFAULT_DRIVE_CLIENT_SECRET: "test_client_secret",
-        Setting.BACKUP_DIRECTORY_PATH: cleandir,
+        Setting.BACKUP_DIRECTORY_PATH: os.path.join(cleandir, "backups"),
         Setting.PORT: ports.ui,
         Setting.INGRESS_PORT: ports.ingress,
         Setting.BACKUP_STARTUP_DELAY_MINUTES: 0,
@@ -171,6 +171,8 @@ async def generate_config(server_url: URL, ports, cleandir):
 @pytest.fixture
 async def injector(cleandir, ports, generate_config):
     drive_creds = Creds(FakeTime(), "test_client_id", None, "test_access_token", "test_refresh_token")
+
+    os.mkdir(os.path.join(cleandir, "backups"))
     with open(os.path.join(cleandir, "secrets.yaml"), "w") as f:
         f.write("for_unit_tests: \"password value\"\n")
 
@@ -239,6 +241,11 @@ async def data_cache(injector):
 async def session(injector):
     async with injector.get(ClientSession) as session:
         yield session
+
+
+@pytest.fixture
+async def precache(injector):
+    return injector.get(DestinationPrecache)
 
 
 @pytest.fixture
@@ -382,6 +389,13 @@ async def debug_worker(injector):
 @pytest.fixture()
 async def folder_finder(injector):
     return injector.get(FolderFinder)
+
+
+@pytest.fixture()
+async def watcher(injector):
+    watcher = injector.get(Watcher)
+    yield watcher
+    await watcher.stop()
 
 
 class BackupHelper():

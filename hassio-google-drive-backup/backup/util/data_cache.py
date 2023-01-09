@@ -1,6 +1,7 @@
 from datetime import timedelta
 from enum import Enum, unique
 from backup.config import Config, Setting, VERSION, Version
+from backup.file import JsonFileSaver
 from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME
 from injector import inject, singleton
 from ..time import Time
@@ -46,11 +47,11 @@ class DataCache:
         self._load()
 
     def _load(self):
-        if not os.path.isfile(self._config.get(Setting.DATA_CACHE_FILE_PATH)):
+        path = self._config.get(Setting.DATA_CACHE_FILE_PATH)
+        if not JsonFileSaver.exists(path):
             self._data = {NECESSARY_OLD_BACKUP_PLURAL_NAME: {}}
         else:
-            with open(self._config.get(Setting.DATA_CACHE_FILE_PATH)) as f:
-                self._data = json.load(f)
+            self._data = JsonFileSaver.read(path)
 
         # Check for an upgrade.
         if KEY_LAST_VERSION in self._data:
@@ -82,8 +83,8 @@ class DataCache:
     def save(self, data=None):
         if data is None:
             data = self._data
-        with open(self._config.get(Setting.DATA_CACHE_FILE_PATH), "w") as f:
-            json.dump(data, f, indent=4)
+        path = self._config.get(Setting.DATA_CACHE_FILE_PATH)
+        JsonFileSaver.write(path, data)
         self._dirty = False
 
     def makeDirty(self):

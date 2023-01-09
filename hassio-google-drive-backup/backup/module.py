@@ -11,8 +11,9 @@ from backup.drive import DriveSource
 from backup.ha import HaSource, HaUpdater, AddonStopper
 from backup.model import BackupDestination, BackupSource, Scyncer
 from backup.util import Resolver
-from backup.model import Coordinator
-from backup.worker import Trigger, Watcher
+from backup.model import Coordinator, Precache, DestinationPrecache
+from backup.worker import Trigger
+from backup.watcher import Watcher
 from backup.ui import UiServer, Restarter
 from backup.logger import getLogger
 from backup.debug import DebugServer
@@ -43,20 +44,25 @@ class BaseModule(Module):
     def getHa(self, ha: HaSource) -> BackupSource:
         return ha
 
+    @provider
+    @singleton
+    def getPrecache(self, cache: DestinationPrecache) -> Precache:
+        return cache
+
     @multiprovider
     @singleton
     def getStartables(self, debug_server: DebugServer, ha_updater: HaUpdater, debugger: DebugWorker, ha_source: HaSource,
-                      server: UiServer, restarter: Restarter, syncer: Scyncer, watcher: Watcher, stopper: AddonStopper) -> List[Startable]:
+                      server: UiServer, restarter: Restarter, syncer: Scyncer, watcher: Watcher, stopper: AddonStopper, precache: Precache) -> List[Startable]:
         # Order here matters, since its the order in which components of the addon are initialized.
-        return [debug_server, ha_updater, debugger, ha_source, server, restarter, syncer, watcher, stopper]
+        return [debug_server, ha_updater, debugger, ha_source, server, restarter, syncer, watcher, stopper, precache]
 
     @provider
     @singleton
-    def getSession(self, resolver: Resolver) -> ClientSession:
+    def getSession(self, resolver: Resolver, config: Config) -> ClientSession:
         conn = None
         if self._override_dns:
             conn = aiohttp.TCPConnector(resolver=resolver, family=socket.AF_INET)
-        return TracingSession(connector=conn)
+        return TracingSession(config, connector=conn)
 
 
 class MainModule(Module):

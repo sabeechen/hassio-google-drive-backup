@@ -17,5 +17,5 @@
     "editor.tabSize": 2,
   },
   "python.analysis.completeFunctionParens": true,
-  "files.eol": "\n"
+  "python.analysis.typeCheckingMode": "basic"
 }

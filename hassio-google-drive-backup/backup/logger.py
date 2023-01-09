@@ -1,5 +1,5 @@
 import logging
-from logging import LogRecord, Formatter
+from logging import LogRecord, Formatter, ERROR
 from traceback import TracebackException
 from colorlog import ColoredFormatter
 from os.path import join, abspath
@@ -44,6 +44,8 @@ class HistoryHandler(logging.Handler):
                     style = "console-fatal"
                 elif item.levelno == logging.WARNING:
                     style = "console-warning"
+                elif item.levelno == logging.TRACE:
+                    style = "console-trace"
                 else:
                     style = "console-default"
                 line = "<span class='" + style + \
@@ -88,8 +90,8 @@ class StandardLogger(logging.Logger):
     def trace(self, msg, *args, **kwargs):
         self.log(logging.TRACE, msg, *args, **kwargs)
 
-    def printException(self, ex: Exception):
-        self.error(self.formatException(ex))
+    def printException(self, ex: Exception, level=ERROR):
+        self.log(level, self.formatException(ex))
 
     def formatException(self, e: Exception) -> str:
         trace = None
@@ -97,7 +99,7 @@ class StandardLogger(logging.Logger):
             trace = e.__traceback__
         tbe = TracebackException(type(e), e, trace, limit=None)
         lines = list(self._format(tbe))
-        return'\n%s' % ''.join(lines)
+        return '\n%s' % ''.join(lines)
 
     def _format(self, tbe):
         if (tbe.__context__ is not None and not tbe.__suppress_context__):

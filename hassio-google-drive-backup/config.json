@@ -1,6 +1,6 @@
 {
   "name": "Home Assistant Google Drive Backup",
-  "version": "0.109.2",
+  "version": "0.110.1",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically manage backups between Home Assistant and Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
@@ -37,6 +37,8 @@
     "backup_time_of_day": "match(^[0-2]\\d:[0-5]\\d$)?",
     "specify_backup_folder": "bool?",
     "warn_for_low_space": "bool?",
+    "watch_backup_directory": "bool?",
+    "trace_requests": "bool?",
 
     "generational_days": "int(0,)?",
     "generational_weeks": "int(0,)?",
@@ -70,10 +72,12 @@
     "accent_color": "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
 
     "max_sync_interval_seconds": "float(300,)?",
+    "default_sync_interval_variation": "float(0,1)?",
     "port": "int(0,)?",
     "debugger_port": "int(100,)?",
     "log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
     "console_log_level": "list(DEBUG|TRACE|INFO|WARN|CRITICAL|WARNING)?",
+    "max_backoff_seconds": "int(3600,)?",
 
     "max_snapshots_in_hassio": "int(0,)?",
     "max_snapshots_in_google_drive": "int(0,)?",

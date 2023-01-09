@@ -166,11 +166,21 @@ class HelperTestSource(SimulatedSource):
         super().__init__(name, is_destination=is_destination)
         self.allow_create = True
         self.allow_save = True
+        self.queries = 0
 
     def reset(self):
         self.saved = []
         self.deleted = []
         self.created = []
+        self.queries = 0
+
+    @property
+    def query_count(self):
+        return self.queries
+
+    async def get(self):
+        self.queries += 1
+        return await super().get()
 
     def assertThat(self, created=0, deleted=0, saved=0, current=0):
         assert len(self.saved) == saved

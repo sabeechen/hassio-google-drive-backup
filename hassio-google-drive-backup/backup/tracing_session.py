@@ -1,19 +1,22 @@
 
 import aiohttp.client as aiohttp
 import aiohttp.tracing as tracing
+from backup.config import Config, Setting
 from .logger import getLogger
 
 logger = getLogger(__name__)
 
 
 class TracingSession(aiohttp.ClientSession):
-    def __init__(self, **kwargs):
+    def __init__(self, config: Config, **kwargs):
+        self.config: Config = config
         self.trace_config = aiohttp.TraceConfig()
-        self.trace_config.on_request_start.append(self.trace_request_start)
-        self.trace_config.on_request_end.append(self.trace_request_end)
-        self.trace_config.on_request_exception.append(self.trace_request_exception)
-        self.trace_config.on_response_chunk_received.append(self.trace_chunk_recv)
-        self.trace_config.on_request_chunk_sent.append(self.trace_chunk_sent)
+        if self.config.get(Setting.TRACE_REQUESTS):
+            self.trace_config.on_request_start.append(self.trace_request_start)
+            self.trace_config.on_request_end.append(self.trace_request_end)
+            self.trace_config.on_request_exception.append(self.trace_request_exception)
+            self.trace_config.on_response_chunk_received.append(self.trace_chunk_recv)
+            self.trace_config.on_request_chunk_sent.append(self.trace_chunk_sent)
         self._record = False
         self._records = []
         super().__init__(**kwargs, trace_configs=[self.trace_config])
@@ -32,6 +35,8 @@ class TracingSession(aiohttp.ClientSession):
     async def _request(self, method, url, **kwargs):
         if self.record:
             self._records.append({'method': method, 'url': url, 'other_args': kwargs})
+        if not self.config.get(Setting.TRACE_REQUESTS):
+            return await super()._request(method, url, **kwargs, trace_request_ctx="{0} {1}".format(method, url))
         resp = await super()._request(method, url, **kwargs, trace_request_ctx="{0} {1}".format(method, url))
         logger.trace("Initial response data: %s %s", resp.method, resp.url)
         logger.trace("  headers:")

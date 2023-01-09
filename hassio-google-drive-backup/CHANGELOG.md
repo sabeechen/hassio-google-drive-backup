@@ -1,3 +1,13 @@
+## v0.110.1 [2023-01-09]
+- Adds some additional options for donating
+- Mitgigates SD card corruption by redundantly storing config files needed for addon startup.
+- Avoid global throttling of Google Drive API calls by:
+  - Making sync intervals more spread out and a little random.
+  - Syncing more selectively when there are modifications to the /backup directory.
+  - Caching data from Google Drive for short periods during periodic syncing.
+  - Backing off for a longer time (2 hours) when the addon hits permanent errors.
+- Fixes CSS issues that made the logs page hard to use.
+
 ## v0.109.2 [2022-11-15]
 * Fixed a bug where disabling deletion from Google Drive and enabling deltes after upload could cause backups in Google Drive to be deleted.
 
@@ -13,8 +23,3 @@
 * Fixed an error causing "Undefined" to show up for addon descriptions.
 * Fixed an error preventing addon thumbnails from showing up.
 * Fixed an error causing username/password authentication to fail.
-
-## v0.108.3 [2022-08-16]
-* Fixed an error preventing stopped addons form being started if they hit errors while stopping. 
-* Fixed many, many, many gramatical errors thanks to [@markvader's](https://github.com/markvader) [#665](https://github.com/sabeechen/hassio-google-drive-backup/pull/665).
-* Fixed a missing config option in the addon schema, maximum_upload_chunk_bytes.

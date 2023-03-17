@@ -73,6 +73,8 @@ class Estimator():
                 int(self.getUsagePercent())), Estimator.asSizeString(self.getBytesFree()))
 
     def getUsagePercent(self):
+        if self.getBlocksTotal() == 0:
+            return 0
         return 100.0 * float(self.getBlocksUsed()) / float(self.getBlocksTotal())
 
     def getBlocksUsed(self):

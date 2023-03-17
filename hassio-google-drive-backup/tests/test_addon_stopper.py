@@ -22,7 +22,6 @@ def save(config: Config, to_start, to_watchdog_enable):
     with open(config.get(Setting.STOP_ADDON_STATE_PATH), "w") as f:
         json.dump({"start": list(to_start), "watchdog": list(to_watchdog_enable)}, f)
 
-
 @pytest.mark.asyncio
 async def test_no_stop_config(supervisor: SimulatedSupervisor, addon_stopper: AddonStopper, config: Config) -> None:
     slug = "test_slug_1"

@@ -71,12 +71,8 @@ class Exchanger():
             KEY_GRANT_TYPE: 'authorization_code'
         }
         resp = None
-        try:
-            resp = await self.drive.request("post", self.config.get(Setting.DRIVE_TOKEN_URL), data=data)
+        async with await self.drive.request("post", self.config.get(Setting.DRIVE_TOKEN_URL), data=data) as resp:
             return Creds.load(self.time, await resp.json(), id=self._client_id, secret=self._client_secret)
-        finally:
-            if resp is not None:
-                resp.release()
 
     async def refresh(self, creds: Creds):
         if creds.secret is not None:
@@ -91,9 +87,7 @@ class Exchanger():
             KEY_REFRESH_TOKEN: creds.refresh_token,
             KEY_GRANT_TYPE: 'refresh_token'
         }
-        resp = None
-        try:
-            resp = await self.drive.request("post", self.config.get(Setting.DRIVE_REFRESH_URL), data=data)
+        async with await self.drive.request("post", self.config.get(Setting.DRIVE_REFRESH_URL), data=data) as resp:
             data = await resp.json()
             return Creds(
                 self.time,
@@ -103,9 +97,6 @@ class Exchanger():
                 refresh_token=creds.refresh_token,
                 expiration=self._get_expiration(data),
                 original_expiration=creds.original_expiration)
-        finally:
-            if resp is not None:
-                resp.release()
 
     async def _refresh_default(self, creds: Creds):
         data = {

@@ -1,4 +1,4 @@
-from aiohttp import ClientSession, ContentTypeError, ClientConnectorError, ClientTimeout
+from aiohttp import ClientSession, ContentTypeError, ClientConnectorError, ClientTimeout, ClientResponse
 from aiohttp.client_exceptions import ServerTimeoutError, ServerDisconnectedError, ClientOSError
 from backup.exceptions import GoogleUnexpectedError, GoogleInternalError, GoogleRateLimitError, GoogleCredentialsExpired, CredRefreshGoogleError, DriveQuotaExceeded, GoogleDrivePermissionDenied, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError
 from backup.util import Resolver
@@ -24,20 +24,23 @@ class DriveRequester():
         self.resolver = resolver
         self.config = config
 
-    async def request(self, method, url, headers={}, json=None, data=None):
+    async def request(self, method, url, headers={}, json=None, data=None) -> ClientResponse:
         try:
-            # MAYBE: Exceptions here should clean up the response object
             response = await self.session.request(method, url, headers=headers, json=json, timeout=self.buildTimeout(), data=data)
             if response.status < 400:
                 return response
             await self.raiseForKnownErrors(response)
             if response.status in PERMISSION_DENIED:
+                response.release()
                 raise GoogleCredentialsExpired()
             elif response.status in INTERNAL_ERROR:
+                response.release()
                 raise GoogleInternalError()
             elif response.status in RATE_LIMIT_EXCEEDED or response.status in TOO_MANY_REQUESTS:
+                response.release()
                 raise GoogleRateLimitError()
             elif response.status in REQUEST_TIMEOUT:
+                response.release()
                 raise GoogleTimeoutError()
             response.raise_for_status()
             return response

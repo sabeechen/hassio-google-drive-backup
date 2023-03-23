@@ -15,3 +15,5 @@ aiofile
 colorlog
 aiohttp-jinja2
 aioping
+pytz
+tzlocal

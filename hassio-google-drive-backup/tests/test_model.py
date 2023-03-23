@@ -878,6 +878,17 @@ async def test_zero_config_whiled_deleting_backups(time: FakeTime, model: Model,
     source.assertThat()
 
 
+async def simulate_backups_timeline(time: FakeTime, model: Model, start: datetime, end: datetime):
+    time.setNow(time.toUtc(start))
+    await model.sync(time.now())
+    while time.now() < end:
+        next = model.nextBackup(time.now())
+        assert next is not None
+        assert next > time.now()
+        time.setNow(next)
+        await model.sync(time.now())
+
+
 @pytest.mark.asyncio
 async def test_generational_delete_issue602(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
     time.setTimeZone("Europe/Rome")
@@ -899,13 +910,8 @@ async def test_generational_delete_issue602(time: FakeTime, model: Model, dest: 
     source.setMax(1)
     dest.setMax(30)
     model.reinitialize()
-    time.setNow(time.toUtc(start))
-    await model.sync(time.now())
-    while time.now() < end:
-        next = model.nextBackup(time.now())
-        assert next > time.now()
-        time.setNow(next)
-        await model.sync(time.now())
+
+    await simulate_backups_timeline(time, model, start, end)
 
     dates = list([x.date() for x in dest.current.values()])
     dates.sort()
@@ -938,3 +944,389 @@ async def test_generational_delete_issue602(time: FakeTime, model: Model, dest: 
                      time.parse('2023-04-29T22:00:00+00:00'),
                      time.parse('2023-04-30T22:00:00+00:00'),
                      time.parse('2023-05-01T22:00:00+00:00')]
+
+
+@pytest.mark.asyncio
+async def test_generational_delete_issue809(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("America/Los_Angeles")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 10)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 32)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "02:00")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 7)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 4)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 6)
+    simple_config.override(Setting.GENERATIONAL_YEARS, 10)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2021, 1, 1)
+    end = time.local(2024, 5, 1)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.parse('2021-01-01 10:00:00+00:00'),
+                     time.parse('2022-01-01 10:00:00+00:00'),
+                     time.parse('2023-01-01 10:00:00+00:00'),
+                     time.parse('2023-12-01 10:00:00+00:00'),
+                     time.parse('2024-01-01 10:00:00+00:00'),
+                     time.parse('2024-02-01 10:00:00+00:00'),
+                     time.parse('2024-03-01 10:00:00+00:00'),
+                     time.parse('2024-04-01 09:00:00+00:00'),
+                     time.parse('2024-04-08 09:00:00+00:00'),
+                     time.parse('2024-04-09 09:00:00+00:00'),
+                     time.parse('2024-04-10 09:00:00+00:00'),
+                     time.parse('2024-04-11 09:00:00+00:00'),
+                     time.parse('2024-04-12 09:00:00+00:00'),
+                     time.parse('2024-04-13 09:00:00+00:00'),
+                     time.parse('2024-04-14 09:00:00+00:00'),
+                     time.parse('2024-04-15 09:00:00+00:00'),
+                     time.parse('2024-04-16 09:00:00+00:00'),
+                     time.parse('2024-04-17 09:00:00+00:00'),
+                     time.parse('2024-04-18 09:00:00+00:00'),
+                     time.parse('2024-04-19 09:00:00+00:00'),
+                     time.parse('2024-04-20 09:00:00+00:00'),
+                     time.parse('2024-04-21 09:00:00+00:00'),
+                     time.parse('2024-04-22 09:00:00+00:00'),
+                     time.parse('2024-04-23 09:00:00+00:00'),
+                     time.parse('2024-04-24 09:00:00+00:00'),
+                     time.parse('2024-04-25 09:00:00+00:00'),
+                     time.parse('2024-04-26 09:00:00+00:00'),
+                     time.parse('2024-04-27 09:00:00+00:00'),
+                     time.parse('2024-04-28 09:00:00+00:00'),
+                     time.parse('2024-04-29 09:00:00+00:00'),
+                     time.parse('2024-04-30 09:00:00+00:00'),
+                     time.parse('2024-05-01 09:00:00+00:00')]
+
+
+async def test_generational_delete_dst_start_rome(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("Europe/Rome")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 8)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "02:00")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 3)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 3)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 2)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2023, 1, 1)
+    end = time.local(2023, 3, 25)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.local(2023, 2, 1, 2),
+                     time.local(2023, 3, 1, 2),
+                     time.local(2023, 3, 6, 2),
+                     time.local(2023, 3, 13, 2),
+                     time.local(2023, 3, 20, 2),
+                     time.local(2023, 3, 23, 2),
+                     time.local(2023, 3, 24, 2),
+                     time.local(2023, 3, 25, 2)]
+
+    assert time.now() == time.local(2023, 3, 25, 2)
+    assert model.nextBackup(time.now()) == time.local(2023, 3, 26, 2)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 26, 2)
+
+    time.setNow(time.toUtc(time.local(2023, 3, 26, 2)))
+    await model.sync(time.now())
+    assert max([x.date() for x in dest.current.values()]) == time.local(2023, 3, 26, 2)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 27, 2)
+
+
+async def test_generational_delete_dst_start_los_angeles(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("America/Los_Angeles")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 8)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "02:00")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 3)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 3)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 2)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2023, 1, 1)
+    end = time.local(2023, 3, 11)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.local(2023, 2, 1, 2),
+                     time.local(2023, 2, 20, 2),
+                     time.local(2023, 2, 27, 2),
+                     time.local(2023, 3, 1, 2),
+                     time.local(2023, 3, 6, 2),
+                     time.local(2023, 3, 9, 2),
+                     time.local(2023, 3, 10, 2),
+                     time.local(2023, 3, 11, 2)]
+
+    assert time.now() == time.local(2023, 3, 11, 2)
+    assert model.nextBackup(time.now()) == time.local(2023, 3, 12, 2)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 12, 2)
+
+    time.setNow(time.toUtc(time.local(2023, 3, 12, 2)))
+    await model.sync(time.now())
+    assert max([x.date() for x in dest.current.values()]) == time.local(2023, 3, 12, 2)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 13, 2)
+
+
+async def test_generational_delete_dst_start_rome_2_30(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("Europe/Rome")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 8)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "02:30")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 3)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 3)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 2)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2023, 1, 1)
+    end = time.local(2023, 3, 25)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.local(2023, 2, 1, 2, 30),
+                     time.local(2023, 3, 1, 2, 30),
+                     time.local(2023, 3, 6, 2, 30),
+                     time.local(2023, 3, 13, 2, 30),
+                     time.local(2023, 3, 20, 2, 30),
+                     time.local(2023, 3, 23, 2, 30),
+                     time.local(2023, 3, 24, 2, 30),
+                     time.local(2023, 3, 25, 2, 30)]
+
+    assert time.now() == time.local(2023, 3, 25, 2, 30)
+    assert model.nextBackup(time.now()) == time.local(2023, 3, 26, 2, 30)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 26, 2, 30)
+
+    time.setNow(time.toUtc(time.local(2023, 3, 26, 2, 30)))
+    await model.sync(time.now())
+    assert max([x.date() for x in dest.current.values()]) == time.local(2023, 3, 26, 2, 30)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 27, 2, 30)
+
+
+async def test_generational_delete_dst_start_rome_3_00(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("Europe/Rome")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 8)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:00")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 3)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 3)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 2)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2023, 1, 1)
+    end = time.local(2023, 3, 25)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.local(2023, 2, 1, 3),
+                     time.local(2023, 3, 1, 3),
+                     time.local(2023, 3, 6, 3),
+                     time.local(2023, 3, 13, 3),
+                     time.local(2023, 3, 20, 3),
+                     time.local(2023, 3, 23, 3),
+                     time.local(2023, 3, 24, 3),
+                     time.local(2023, 3, 25, 3)]
+
+    assert time.now() == time.local(2023, 3, 25, 3)
+    assert model.nextBackup(time.now()) == time.local(2023, 3, 26, 3)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 26, 3)
+
+    time.setNow(time.toUtc(time.local(2023, 3, 26, 3)))
+    await model.sync(time.now())
+    assert max([x.date() for x in dest.current.values()]) == time.local(2023, 3, 26, 3)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 3, 27, 3)
+
+
+async def test_generational_delete_dst_end_rome(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("Europe/Rome")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 8)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "02:00")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 3)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 3)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 2)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2023, 6, 1)
+    end = time.local(2023, 10, 28)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.local(2023, 9, 1, 2),
+                     time.local(2023, 10, 1, 2),
+                     time.local(2023, 10, 9, 2),
+                     time.local(2023, 10, 16, 2),
+                     time.local(2023, 10, 23, 2),
+                     time.local(2023, 10, 26, 2),
+                     time.local(2023, 10, 27, 2),
+                     time.local(2023, 10, 28, 2)]
+
+    assert time.now() == time.local(2023, 10, 28, 2)
+    assert model.nextBackup(time.now()) == time.local(2023, 10, 29, 2)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 10, 29, 2)
+
+    time.setNow(time.toUtc(time.local(2023, 10, 29, 2)))
+    await model.sync(time.now())
+    assert max([x.date() for x in dest.current.values()]) == time.local(2023, 10, 29, 2)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 10, 30, 2)
+
+
+async def test_generational_delete_dst_end_rome_2_30(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("Europe/Rome")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 8)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "02:30")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 3)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 3)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 2)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2023, 6, 1)
+    end = time.local(2023, 10, 28)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.local(2023, 9, 1, 2, 30),
+                     time.local(2023, 10, 1, 2, 30),
+                     time.local(2023, 10, 9, 2, 30),
+                     time.local(2023, 10, 16, 2, 30),
+                     time.local(2023, 10, 23, 2, 30),
+                     time.local(2023, 10, 26, 2, 30),
+                     time.local(2023, 10, 27, 2, 30),
+                     time.local(2023, 10, 28, 2, 30)]
+
+    assert time.now() == time.local(2023, 10, 28, 2, 30)
+    assert model.nextBackup(time.now()) == time.local(2023, 10, 29, 2, 30)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 10, 29, 2, 30)
+
+    time.setNow(time.toUtc(time.local(2023, 10, 29, 2, 30)))
+    await model.sync(time.now())
+    assert max([x.date() for x in dest.current.values()]) == time.local(2023, 10, 29, 2, 30)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 10, 30, 2, 30)
+
+
+async def test_generational_delete_dst_end_rome_3_00(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    time.setTimeZone("Europe/Rome")
+
+    simple_config.override(Setting.MAX_BACKUPS_IN_HA, 1)
+    simple_config.override(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE, 8)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 1)
+    simple_config.override(Setting.BACKUP_TIME_OF_DAY, "03:00")
+    simple_config.override(Setting.GENERATIONAL_DAYS, 3)
+    simple_config.override(Setting.GENERATIONAL_WEEKS, 3)
+    simple_config.override(Setting.GENERATIONAL_MONTHS, 2)
+    simple_config.override(Setting.GENERATIONAL_DELETE_EARLY, True)
+
+    source.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_HA))
+    dest.setMax(simple_config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE))
+    model.reinitialize()
+
+    start = time.local(2023, 6, 1)
+    end = time.local(2023, 10, 28)
+    await simulate_backups_timeline(time, model, start, end)
+
+    dates = list([x.date() for x in dest.current.values()])
+    dates.sort()
+    assert dates == [time.local(2023, 9, 1, 3),
+                     time.local(2023, 10, 1, 3),
+                     time.local(2023, 10, 9, 3),
+                     time.local(2023, 10, 16, 3),
+                     time.local(2023, 10, 23, 3),
+                     time.local(2023, 10, 26, 3),
+                     time.local(2023, 10, 27, 3),
+                     time.local(2023, 10, 28, 3)]
+
+    assert time.now() == time.local(2023, 10, 28, 3)
+    assert model.nextBackup(time.now()) == time.local(2023, 10, 29, 3)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 10, 29, 3)
+
+    time.setNow(time.toUtc(time.local(2023, 10, 29, 3)))
+    await model.sync(time.now())
+    assert max([x.date() for x in dest.current.values()]) == time.local(2023, 10, 29, 3)
+
+    for x in range(0, 24 * 15):
+        time.advance(minutes=15)
+        assert model.nextBackup(time.now()) == time.local(2023, 10, 30, 3)

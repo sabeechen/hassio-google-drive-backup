@@ -1,23 +1,21 @@
 import asyncio
 from datetime import datetime, timedelta
-
-from dateutil.tz import gettz
-
 from backup.time import Time
+from pytz import timezone
 
 
 class FakeTime(Time):
     def __init__(self, now: datetime = None):
-        super().__init__(local_tz=gettz('EST'))
+        super().__init__(local_tz=timezone('EST'))
         if now:
             self._now = now
         else:
             self._now = self.toUtc(
-                datetime(1985, 12, 6, 0, 0, 0, tzinfo=gettz('EST')))
+                datetime(1985, 12, 6, 0, 0, 0, tzinfo=timezone('EST')))
         self.sleeps = []
 
     def setTimeZone(self, name):
-        self.local_tz = gettz(name)
+        self.local_tz = timezone(name)
 
     def setNow(self, now: datetime):
         self._now = now

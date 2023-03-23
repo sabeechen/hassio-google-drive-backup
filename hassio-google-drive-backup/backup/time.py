@@ -1,11 +1,15 @@
 import asyncio
 from datetime import datetime, timedelta
 
-from dateutil.tz import tzlocal, tzutc
+
 from injector import inject, singleton
 from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse
 from .logger import getLogger
+import pytz
+from pytz import timezone, utc
+from tzlocal import get_localzone_name
+
 
 logger = getLogger(__name__)
 
@@ -13,12 +17,12 @@ logger = getLogger(__name__)
 @singleton
 class Time(object):
     @inject
-    def __init__(self, local_tz=tzlocal()):
+    def __init__(self, local_tz=timezone(get_localzone_name())):
         self.local_tz = local_tz
         self._offset = timedelta(seconds=0)
 
     def now(self) -> datetime:
-        return datetime.now(tzutc()) + self._offset
+        return datetime.now(pytz.utc) + self._offset
 
     def nowLocal(self) -> datetime:
         return datetime.now(self.local_tz) + self._offset
@@ -35,14 +39,17 @@ class Time(object):
     def parse(cls, text: str) -> datetime:
         ret = parse(text)
         if ret.tzinfo is None:
-            ret = ret.replace(tzinfo=tzutc())
+            ret = ret.replace(tzinfo=utc)
         return ret
 
     def toLocal(self, dt: datetime) -> datetime:
         return dt.astimezone(self.local_tz)
 
+    def localize(self, dt: datetime) -> datetime:
+        return self.local_tz.localize(dt)
+
     def toUtc(self, dt: datetime) -> datetime:
-        return dt.astimezone(tzutc())
+        return dt.astimezone(utc)
 
     async def sleepAsync(self, seconds: float, early_exit: asyncio.Event = None) -> None:
         if early_exit is None:
@@ -54,7 +61,7 @@ class Time(object):
                 pass
 
     def local(self, year, month, day, hour=0, minute=0, second=0, ms=0):
-        return datetime(year, month, day, hour, minute, second, ms, tzinfo=self.local_tz)
+        return self.local_tz.localize(datetime(year, month, day, hour, minute, second, ms))
 
     def formatDelta(self, time: datetime, now=None) -> str:
         if not now:
@@ -105,14 +112,14 @@ class Time(object):
 class AcceleratedTime(Time):
     def __init__(self, dialation=1.0):
         super().__init__()
-        self.start = datetime.now(tzutc())
+        self.start = datetime.now(utc)
         self.dialation = dialation
 
     def now(self):
-        return self.start + relativedelta(seconds=(datetime.now(tzutc()) - self.start).total_seconds() * self.dialation)
+        return self.start + timedelta(seconds=(datetime.now(utc) - self.start).total_seconds() * self.dialation)
 
     def nowLocal(self) -> datetime:
-        return self.local(self.now())
+        return self.localize(self.now())
 
     async def sleepAsync(self, seconds: float) -> None:
         await asyncio.sleep(seconds / self.dialation)

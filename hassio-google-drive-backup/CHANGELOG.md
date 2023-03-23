@@ -1,3 +1,7 @@
+## v0.110.2 [2023-03-24]
+- Fix a potential cause of SSL errors when communicating with Google Drive
+- Fix a bug causing backups to be requested indefinitely if scheduled during DST transitions.
+
 ## v0.110.1 [2023-01-09]
 - Adds some additional options for donating
 - Mitgigates SD card corruption by redundantly storing config files needed for addon startup.

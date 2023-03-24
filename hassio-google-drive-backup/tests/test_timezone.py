@@ -1,6 +1,7 @@
 import datetime
-
-from backup.time import Time
+import os
+from backup.time import Time, _infer_timezone_from_env, _infer_timezone_from_name, _infer_timezone_from_offset, _infer_timezone_from_system
+from .faketime import FakeTime
 
 
 def test_parse() -> None:
@@ -28,3 +29,31 @@ def assertOffset(time, hours):
 
 def assertUtc(time):
     assertOffset(time, 0)
+
+
+def test_common_timezones(time: FakeTime):
+    assert _infer_timezone_from_system() is not None
+    assert _infer_timezone_from_name() is not None
+    assert _infer_timezone_from_offset() is not None
+    assert _infer_timezone_from_env() is None
+
+    os.environ["TZ"] = "America/Denver"
+    assert _infer_timezone_from_env() is not None
+
+    os.environ["TZ"] = "Australia/Brisbane"
+    
+    assert _infer_timezone_from_env() is not None
+
+    tzs = [_infer_timezone_from_system(),
+           _infer_timezone_from_env(),
+           _infer_timezone_from_offset(),
+           _infer_timezone_from_name()]
+
+    for tz in tzs:
+        time.setTimeZone(tz)
+        time.now()
+        time.nowLocal()
+        time.localize(datetime.datetime(1985, 12, 6))
+        time.local(1985, 12, 6)
+        time.toLocal(time.now())
+        time.toUtc(time.nowLocal())

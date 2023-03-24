@@ -7,17 +7,67 @@ from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse
 from .logger import getLogger
 import pytz
+import os
 from pytz import timezone, utc
-from tzlocal import get_localzone_name
+from tzlocal import get_localzone_name, get_localzone
+from dateutil.tz import tzlocal
 
 
 logger = getLogger(__name__)
 
 
+def get_local_tz():
+    methods = [
+        _infer_timezone_from_env,
+        _infer_timezone_from_system,
+        _infer_timezone_from_name,
+        _infer_timezone_from_offset
+    ]
+    for method in methods:
+        try:
+            tz = method()
+            if tz is not None:
+                return tz
+        except Exception:
+            pass
+    return utc
+
+
+def _infer_timezone_from_offset():
+    now = datetime.now()
+    desired_offset = tzlocal().utcoffset(now)
+    for tz_name in pytz.all_timezones:
+        tz = pytz.timezone(tz_name)
+        if desired_offset == tz.utcoffset(now):
+            return tz
+    return None
+
+
+def _infer_timezone_from_name():
+    name = get_localzone_name()
+    if name is not None:
+        return timezone(name)
+    return None
+
+
+def _infer_timezone_from_system():
+    tz = get_localzone()
+    if tz is not None:
+        return tz
+    return None
+
+
+def _infer_timezone_from_env():
+    if "TZ" in os.environ:
+        tz = timezone(os.environ["TZ"])
+        if tz is not None:
+            return tz
+    return None
+
 @singleton
 class Time(object):
     @inject
-    def __init__(self, local_tz=timezone(get_localzone_name())):
+    def __init__(self, local_tz=get_local_tz()):
         self.local_tz = local_tz
         self._offset = timedelta(seconds=0)
 

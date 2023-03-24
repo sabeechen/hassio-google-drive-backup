@@ -14,8 +14,11 @@ class FakeTime(Time):
                 datetime(1985, 12, 6, 0, 0, 0, tzinfo=timezone('EST')))
         self.sleeps = []
 
-    def setTimeZone(self, name):
-        self.local_tz = timezone(name)
+    def setTimeZone(self, tz):
+        if isinstance(tz, str):
+            self.local_tz = timezone(tz)
+        else:
+            self.local_tz = tz
 
     def setNow(self, now: datetime):
         self._now = now

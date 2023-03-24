@@ -3,31 +3,52 @@
 
 {% block head %}
   {{ super() }}
+  <script async defer src="https://apis.google.com/js/api.js" onload="onApiLoad()"></script>
+  <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
   <script type="text/javascript">
     var clientId = "{{ client_id }}";
     var appId = "{{ app_id }}";
+    let scope = 'https://www.googleapis.com/auth/drive.file';
     var picker_redirect = {{ do_redirect }};
     var pickerApiLoaded = false;
-    var oauthToken;
+    let tokenClient = null;
+    let accessToken = null;
+
+
+    function onApiLoad() {
+      gapi.load('picker', () => {pickerInited = true;});
+    }
+
+    function gisLoaded() {
+      
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: scope,
+        callback: '', // defined later
+      });
+      gisInited = true;
+    }
 
     function loadPicker() {
-      gapi.load('auth', { 'callback': onAuthApiLoad });
-      gapi.load('picker', { 'callback': onPickerApiLoad });
+      // Request an access token
+      tokenClient.callback = async (response) => {
+        if (response.error !== undefined) {
+          throw (response);
+        }
+        accessToken = response.access_token;
+        buildPicker();
+      };
+
+      if (accessToken === null) {
+        // Prompt the user to select a Google Account and ask for consent to share their data
+        // when establishing a new session.
+        tokenClient.requestAccessToken({prompt: 'consent'});
+      } else {
+        // Skip display of account chooser and consent dialog for an existing session.
+        tokenClient.requestAccessToken({prompt: ''});
+      }
     }
 
-    function onAuthApiLoad() {
-      var scope = ['https://www.googleapis.com/auth/drive.file'];
-      window.gapi.auth.authorize({
-        'client_id': clientId,
-        'scope': scope,
-        'immediate': false
-      }, handleAuthResult);
-    }
-
-    function onPickerApiLoad() {
-      pickerApiLoaded = true;
-      createPicker();
-    }
 
     function handleAuthResult(authResult) {
       if (authResult && !authResult.error) {
@@ -37,8 +58,7 @@
     }
 
     // Create and render a Picker object for searching images.
-    function createPicker() {
-      if (pickerApiLoaded && oauthToken) {
+    function buildPicker(builder) {
         var mydrive = new google.picker.DocsView(google.picker.ViewId.DOCS)
           .setMode(google.picker.DocsViewMode.LIST)
           .setIncludeFolders(true)
@@ -66,7 +86,7 @@
           .disableFeature(google.picker.Feature.MINE_ONLY)
           .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
           .setAppId(appId)
-          .setOAuthToken(oauthToken)
+          .setOAuthToken(accessToken)
           .addView(mydrive)
           //.addView(sharedWithMe)
           .addView(sharedDrives)
@@ -75,7 +95,6 @@
           .setCallback(pickerCallback)
           .build();
         picker.setVisible(true);
-      }
     }
 
     function getQueryParams(params) {
@@ -109,10 +128,6 @@
         }
       }
     }
-
-    $(document).ready(function () {
-      loadPicker();
-    });
   </script>
 {% endblock %}
 {% block content %}
@@ -124,14 +139,13 @@
           <div class="col s12 m9">
               <div class="card">
                   <div class="card-content">
-                      <span class="card-title">Opening folder picker...</span>
-                      <p>A window should be opening now asking you to log into your Google account and then to select a folder from your Google Drive.
+                      <span class="card-title">Backup Folder Picker</span>
+                      <p>Use the button below to log into your google account and select a folder from your Google Drive.
                       <ul class="browser-default">
-                        <li>If not, your popup blocker probably hates this page.  Click the button below to open the dialog.</li>
-                        <li>After you select a folder, you'll be redirected back to the addon.</li>
-                        <li>If the folder you want to use doesn't exist yet, navigate to <a href="https://drive.google.com" target="_blank">Google Drive</a> and create it there first.  The folder picker doesn't let you create folders.</li>
-                        <li>The folder you select is where the addon will store backups from now on.  This should be what you want.</li>
-                        <li>If you'd like to know why this page has to be hosted on an external domain, <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a>.</li>
+                        <li>The button opens a pop-up that creates a session with Google's services and then redirects back here.  If your browser has extensions that prevent that kind of thing (eg aggressive pop-up blockers, cross-site cookie restriction, Firefox containers, etc) then you might need to disable them to make the authorization work.  This is just how Google does authorization.</li>
+                        <li>If the folder you want to use doesn't exist yet, navigate to <a href="https://drive.google.com" target="_blank">Google Drive</a> and create it there first.  The folder picker doesn't let you create new folders.</li>
+                        <li>The folder you select is where the addon will store backups from now on.  This should be what you want if you're on this page.</li>
+                        <li>If you'd like to know why this page has to be hosted on an external domain, <a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here to learn more</a>.</li>
                       </ul>
                       </p>
                       <div class="card-action">

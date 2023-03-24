@@ -17,3 +17,4 @@ aiohttp-jinja2
 firebase-admin
 pytz
 tzlocal
+aioping

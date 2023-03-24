@@ -1340,7 +1340,7 @@ def test_next_time_over_a_day(estimator, data_cache):
 
     config: Config = createConfig()
     config.override(Setting.BACKUP_TIME_OF_DAY, "00:00")
-    config.override(Setting.DAYS_BETWEEN_BACKUPS, 2)
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 2.0)
     model: Model = Model(config, time, default_source,
                          default_source, info, estimator, data_cache)
     assert model._nextBackup(

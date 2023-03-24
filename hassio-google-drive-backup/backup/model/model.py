@@ -159,7 +159,7 @@ class Model():
                 next = self.time.toUtc(time_that_day_local)
             else:
                 # return the next backup after the delta
-                next_date = date.fromordinal(date(newest_local.year, newest_local.month, newest_local.day).toordinal() + 1)
+                next_date = date.fromordinal(date(newest_local.year, newest_local.month, newest_local.day).toordinal() + self.config.get(Setting.DAYS_BETWEEN_BACKUPS))
                 next_datetime_local = self.time.localize(datetime(next_date.year, next_date.month, next_date.day, timeofDay[0], timeofDay[1]))
                 next = self.time.toUtc(next_datetime_local)
 

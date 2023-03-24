@@ -1330,3 +1330,20 @@ async def test_generational_delete_dst_end_rome_3_00(time: FakeTime, model: Mode
     for x in range(0, 24 * 15):
         time.advance(minutes=15)
         assert model.nextBackup(time.now()) == time.local(2023, 10, 30, 3)
+
+
+def test_next_time_over_a_day(estimator, data_cache):
+    time: FakeTime = FakeTime()
+    now: datetime = time.localize(datetime(1985, 12, 6))
+    time.setNow(now)
+    info = GlobalInfo(time)
+
+    config: Config = createConfig()
+    config.override(Setting.BACKUP_TIME_OF_DAY, "00:00")
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 2)
+    model: Model = Model(config, time, default_source,
+                         default_source, info, estimator, data_cache)
+    assert model._nextBackup(
+        now=now, last_backup=None) == now
+    assert model._nextBackup(
+        now=now, last_backup=now) == now + timedelta(days=2)

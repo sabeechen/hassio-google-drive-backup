@@ -1,3 +1,7 @@
+## v0.110.3 [2023-03-24]
+- Fix an error causing "Days Between Backups" to be ignored when "Time of Day" for a backup is set.
+- Fix a bug causing some timezones to make the addon to fail to start.
+
 ## v0.110.2 [2023-03-24]
 - Fix a potential cause of SSL errors when communicating with Google Drive
 - Fix a bug causing backups to be requested indefinitely if scheduled during DST transitions.

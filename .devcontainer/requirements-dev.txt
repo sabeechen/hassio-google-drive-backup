@@ -29,3 +29,5 @@ firebase-admin
 aiofile
 grpcio
 aioping
+pytz
+tzlocal

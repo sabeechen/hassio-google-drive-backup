@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from calendar import monthrange
-from datetime import datetime, timedelta
-from typing import List, Optional, Sequence, Set, Tuple
+from datetime import datetime, timedelta, date
+from typing import List, Optional, Sequence, Set, Tuple, Any, Union
 
 from .backups import Backup
 from backup.util import RangeLookup
@@ -29,7 +29,7 @@ class DeleteAfterUploadScheme(BackupScheme):
         self.source = source
         self.destinations = destinations
 
-    def getOldest(self, backups: Backup):
+    def getOldest(self, backups: List[Backup]):
         consider = []
         for backup in backups:
             uploaded = True
@@ -51,7 +51,7 @@ class OldestScheme(BackupScheme):
     def __init__(self, count=0):
         self.count = count
 
-    def getOldest(self, backups: Sequence[Backup]) -> Optional[Backup]:
+    def getOldest(self, backups: Sequence[Backup]) -> Tuple[Any, Union[Backup, None]]:
         if len(backups) <= self.count:
             return None, None
         return "default", min(backups, default=None, key=lambda s: s.date())
@@ -78,8 +78,10 @@ class Partition(object):
 
         preferred = list(filter(searcher, options))
         if len(preferred) > 0:
+            # If there is a backup on the "preferred" day, then use the latest backup on that day
             self.selected = max(preferred, default=None, key=Backup.date)
         else:
+            #  Otherwise, use the earliest backup over the valid period.
             self.selected = min(options, default=None, key=Backup.date)
         return self.selected
 
@@ -87,6 +89,7 @@ class Partition(object):
         return self.end - self.start
 
     def day(self, date: datetime):
+        # TODO: this conversion isn't time-zone safe, but is ok because we only use it to compare local day to local day.
         local = self.time.toLocal(date)
         return datetime(day=local.day, month=local.month, year=local.year)
 
@@ -106,8 +109,8 @@ class GenerationalScheme(BackupScheme):
         self.time: Time = time
         self.config = config
 
-    def _buildPartitions(self, backups):
-        backups: List[Backup] = list(backups)
+    def _buildPartitions(self, backups_input):
+        backups: List[Backup] = list(backups_input)
 
         # build the list of dates we should partition by
         day_of_week = 3
@@ -128,18 +131,24 @@ class GenerationalScheme(BackupScheme):
         currentDay = self.day(last)
         if self.config.days > 0:
             for x in range(0, self.config.days + 1):
-                nextDay = currentDay + timedelta(days=1)
+                nextDay = self.day(currentDay, add_days=1)
                 lookups.append(
                     Partition(currentDay, nextDay, currentDay, self.time, "Day {0} of {1}".format(x + 1, self.config.days), delete_only=(x >= self.config.days)))
-                currentDay = self.day(currentDay - timedelta(hours=12))
+                currentDay = self.day(currentDay, add_days=-1)
 
         if self.config.weeks > 0:
             for x in range(0, self.config.weeks + 1):
+                # Start at the first monday preceeding the last backup
                 start = self.time.local(last.year, last.month, last.day)
-                start -= timedelta(days=last.weekday())
-                start -= timedelta(weeks=x)
-                end = start + timedelta(days=7)
-                start += timedelta(days=day_of_week)
+                start = self.day(start, add_days=-1 * start.weekday())
+
+                # Move back x weeks
+                start = self.day(start, add_days=-7 * x)
+                end = self.day(start, add_days=7)
+
+                # Only consider backups from that week after the start day
+                # TODO: should this actually "prefer" the day of week but start on monday?
+                start = self.day(start, add_days=day_of_week)
                 lookups.append(Partition(start, end, start, self.time, "Week {0} of {1}".format(x + 1, self.config.weeks), delete_only=(x >= self.config.weeks)))
 
         if self.config.months > 0:
@@ -220,6 +229,8 @@ class GenerationalScheme(BackupScheme):
                     part.selected.setStatusDetail([])
                 part.selected.getStatusDetail().append(part.details)
 
-    def day(self, date: datetime):
-        local = self.time.toLocal(date)
-        return datetime(day=local.day, month=local.month, year=local.year, tzinfo=local.tzinfo)
+    def day(self, utc_datetime: datetime, add_days=0):
+        local = self.time.toLocal(utc_datetime)
+
+        local_date = date.fromordinal(date(local.year, local.month, local.day).toordinal() + add_days)
+        return self.time.localize(datetime(local_date.year, local_date.month, local_date.day, 0, 0))

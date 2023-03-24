@@ -1,8 +1,7 @@
 from datetime import timedelta
-from aiohttp_jinja2 import asyncio
 import pytest
 from aiohttp import ClientSession
-from aiohttp.web import Response, StreamResponse
+from aiohttp.web import StreamResponse
 from .conftest import Uploader
 from backup.exceptions import LogicError
 from dev.request_interceptor import RequestInterceptor

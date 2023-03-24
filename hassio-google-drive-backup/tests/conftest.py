@@ -54,7 +54,7 @@ class FsFaker():
             os.statvfs = self.old_method
 
     def _hijack(self, path):
-        return os.statvfs_result((0, 1, int(self.bytes_total), int(self.bytes_free), 0, 0, 0, 0, 0, 255))
+        return os.statvfs_result((0, 1, int(self.bytes_total), int(self.bytes_free), int(self.bytes_free), 0, 0, 0, 0, 255))
 
     def setFreeBytes(self, bytes_free, bytes_total=1):
         self.bytes_free = bytes_free

@@ -1,7 +1,7 @@
 import pytest
 from backup.util import Estimator
 from backup.config import Config, Setting
-
+from backup.exceptions import LowSpaceError
 
 @pytest.mark.asyncio
 async def test_check_space(estimator: Estimator, coord, config: Config):
@@ -9,4 +9,5 @@ async def test_check_space(estimator: Estimator, coord, config: Config):
     estimator.checkSpace(coord.backups())
 
     config.override(Setting.LOW_SPACE_THRESHOLD, estimator.getBytesFree() + 1)
-    estimator.checkSpace(coord.backups())
+    with pytest.raises(LowSpaceError):
+        estimator.checkSpace(coord.backups())

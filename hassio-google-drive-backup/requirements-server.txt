@@ -15,4 +15,6 @@ pyyaml
 watchdog
 aiohttp-jinja2
 firebase-admin
+pytz
+tzlocal
 aioping

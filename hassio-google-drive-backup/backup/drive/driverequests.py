@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
 
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientSession, ClientTimeout, ClientResponse
 from aiohttp.client_exceptions import ClientResponseError, ServerTimeoutError
 from injector import inject, singleton
 
@@ -160,7 +160,8 @@ class DriveRequests():
             "fields": SELECT_FIELDS,
             "supportsAllDrives": "true"
         }
-        return await self.retryRequest("GET", URL_FILES + id + "/?" + urlencode(q), is_json=True)
+        async with await self.retryRequest("GET", URL_FILES + id + "/?" + urlencode(q)) as response:
+            return await response.json()
 
     async def download(self, id, size):
         ret = AsyncHttpGetter(self.config.get(Setting.DRIVE_URL) + URL_FILES + id + "/?alt=media&supportsAllDrives=true",
@@ -189,27 +190,27 @@ class DriveRequests():
             }
             if continuation:
                 q["pageToken"] = continuation
-            response = await self.retryRequest("GET", URL_FILES + "?" + urlencode(q), is_json=True)
-            for item in response['files']:
-                yield item
-            if "nextPageToken" not in response or len(response['nextPageToken']) <= 0:
-                break
-            else:
-                continuation = response['nextPageToken']
+            async with await self.retryRequest("GET", URL_FILES + "?" + urlencode(q)) as response:
+                data = await response.json()
+                for item in data['files']:
+                    yield item
+                if "nextPageToken" not in data or len(data['nextPageToken']) <= 0:
+                    break
+                else:
+                    continuation = data['nextPageToken']
 
     async def update(self, id, update_metadata):
-        resp = await self.retryRequest("PATCH", URL_FILES + id + "/?supportsAllDrives=true", json=update_metadata)
-        async with resp:
+        async with await self.retryRequest("PATCH", URL_FILES + id + "/?supportsAllDrives=true", json=update_metadata):
             pass
 
     async def delete(self, id):
-        resp = await self.retryRequest("DELETE", URL_FILES + id + "/?supportsAllDrives=true")
-        async with resp:
+        async with await self.retryRequest("DELETE", URL_FILES + id + "/?supportsAllDrives=true"):
             pass
 
     async def getAboutInfo(self):
         q = {"fields": 'storageQuota,user'}
-        return await self.retryRequest("GET", URL_ABOUT + "?" + urlencode(q), is_json=True)
+        async with await self.retryRequest("GET", URL_ABOUT + "?" + urlencode(q)) as resp:
+            return await resp.json()
 
     async def create(self, stream, metadata, mime_type):
         # Upload logic is complicated. See https://developers.google.com/drive/api/v3/manage-uploads#resumable
@@ -225,8 +226,7 @@ class DriveRequests():
                 "Content-Range": "bytes */{0}".format(total_size)
             }
             try:
-                initial = await self.retryRequest("PUT", self.last_attempt_location, headers=headers, patch_url=False)
-                async with initial:
+                async with await self.retryRequest("PUT", self.last_attempt_location, headers=headers, patch_url=False) as initial:
                     if initial.status == 308:
                         # We can resume the upload, check where it left off
                         if 'Range' in initial.headers:
@@ -244,7 +244,7 @@ class DriveRequests():
             except ClientResponseError as e:
                 if e.status == 410:
                     # Drive doesn't recognize the resume token, so we'll just have to start over.
-                    logger.debug("Drive upload session wasn't recognized, restarting upload form the beginning.")
+                    logger.debug("Drive upload session wasn't recognized, restarting upload from the beginning.")
                     location = None
                 else:
                     raise
@@ -256,8 +256,7 @@ class DriveRequests():
                 "X-Upload-Content-Type": mime_type,
                 "X-Upload-Content-Length": str(total_size),
             }
-            initial = await self.retryRequest("POST", URL_START_UPLOAD, headers=headers, json=metadata)
-            async with initial:
+            async with await self.retryRequest("POST", URL_START_UPLOAD, headers=headers, json=metadata) as initial:
                 # Google returns a url in the header "Location", which is where subsequent requests to upload
                 # the backup's bytes should be sent.  Logic below handles uploading the file bytes in chunks.
                 location = ensureKey(
@@ -277,7 +276,7 @@ class DriveRequests():
         current_chunk_size = BASE_CHUNK_SIZE
         while True:
             start = stream.position()
-            data: io.IOBaseBytesio = await stream.read(current_chunk_size)
+            data = await stream.read(current_chunk_size)
             chunk_size = len(data.getbuffer())
             if chunk_size == 0:
                 raise LogicError(
@@ -286,19 +285,35 @@ class DriveRequests():
                 "Content-Length": str(chunk_size),
                 "Content-Range": "bytes {0}-{1}/{2}".format(start, start + chunk_size - 1, total_size)
             }
+            startTime = self.time.now()
+            logger.debug("Sending {0} bytes to Google Drive".format(current_chunk_size))
             try:
-                startTime = self.time.now()
-                logger.debug("Sending {0} bytes to Google Drive".format(
-                    current_chunk_size))
-                partial = await self.retryRequest("PUT", location, headers=headers, data=data, patch_url=False)
+                async with await self.retryRequest("PUT", location, headers=headers, data=data, patch_url=False) as partial:
+                    # Base the next chunk size on how long it took to send the last chunk.
+                    current_chunk_size = self._getNextChunkSize(
+                        current_chunk_size, (self.time.now() - startTime).total_seconds())
 
-                # Base the next chunk size on how long it took to send the last chunk.
-                current_chunk_size = self._getNextChunkSize(
-                    current_chunk_size, (self.time.now() - startTime).total_seconds())
-
-                # any time a chunk gets uploaded, reset the retry counter.  This lets very flaky connections
-                # complete eventually after enough retrying.
-                self.last_attempt_count = 1
+                    # any time a chunk gets uploaded, reset the retry counter.  This lets very flaky connections
+                    # complete eventually after enough retrying.
+                    self.last_attempt_count = 1
+                    yield float(start + chunk_size) / float(total_size)
+                    if partial.status == 200 or partial.status == 201:
+                        # Upload completed, return the object json
+                        self.last_attempt_location = None
+                        self.last_attempt_metadata = None
+                        yield await self.get((await partial.json())['id'])
+                        break
+                    elif partial.status == 308:
+                        # Upload partially complete, seek to the new requested position
+                        range_bytes = ensureKey(
+                            "Range", partial.headers, "Google Drive's upload response headers")
+                        if not RANGE_RE.match(range_bytes):
+                            raise ProtocolError(
+                                "Range", partial.headers, "Google Drive's upload response headers")
+                        position = int(partial.headers["Range"][len("bytes=0-"):])
+                        stream.position(position + 1)
+                    else:
+                        partial.raise_for_status()
             except ClientResponseError as e:
                 if math.floor(e.status / 100) == 4:
                     # clear the cached session location URI, since a 4XX error
@@ -310,25 +325,6 @@ class DriveRequests():
                     raise GoogleSessionError()
                 else:
                     raise e
-            yield float(start + chunk_size) / float(total_size)
-            if partial.status == 200 or partial.status == 201:
-                # Upload completed, return the object json
-                self.last_attempt_location = None
-                self.last_attempt_metadata = None
-                yield await self.get((await partial.json())['id'])
-                break
-            elif partial.status == 308:
-                # Upload partially complete, seek to the new requested position
-                range_bytes = ensureKey(
-                    "Range", partial.headers, "Google Drive's upload response headers")
-                if not RANGE_RE.match(range_bytes):
-                    raise ProtocolError(
-                        "Range", partial.headers, "Google Drive's upload response headers")
-                position = int(partial.headers["Range"][len("bytes=0-"):])
-                stream.position(position + 1)
-            else:
-                partial.raise_for_status()
-            await partial.release()
 
     def _getNextChunkSize(self, last_chunk_size, last_chunk_seconds):
         max = BASE_CHUNK_SIZE * math.floor(self.config.get(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES) / BASE_CHUNK_SIZE)
@@ -344,9 +340,10 @@ class DriveRequests():
         return math.floor(next_chunk / BASE_CHUNK_SIZE) * BASE_CHUNK_SIZE
 
     async def createFolder(self, metadata):
-        return await self.retryRequest("POST", URL_FILES + "?supportsAllDrives=true", is_json=True, json=metadata)
+        async with await self.retryRequest("POST", URL_FILES + "?supportsAllDrives=true", json=metadata) as resp:
+            return await resp.json()
 
-    async def retryRequest(self, method, url, auth_headers: Optional[Dict[str, str]] = None, headers: Optional[Dict[str, str]] = None, json: Optional[Dict[str, Any]] = None, data: Any = None, is_json: bool = False, cred_retry: bool = True, patch_url: bool = True):
+    async def retryRequest(self, method, url, auth_headers: Optional[Dict[str, str]] = None, headers: Optional[Dict[str, str]] = None, json: Optional[Dict[str, Any]] = None, data: Any = None, cred_retry: bool = True, patch_url: bool = True) -> ClientResponse:
         backoff = Backoff(base=DRIVE_RETRY_INITIAL_SECONDS, attempts=DRIVE_MAX_RETRIES)
         if patch_url:
             url = self.config.get(Setting.DRIVE_URL) + url
@@ -363,13 +360,7 @@ class DriveRequests():
                     # aiohttp complains if you pass it a large byte object
                     data_to_use = io.BytesIO(data_to_use.getbuffer())
                     data_to_use.seek(0)
-                response = await self.drive.request(method, url, headers=headers_to_use, json=json, data=data_to_use)
-                if is_json:
-                    ret = await response.json()
-                    await response.release()
-                    return ret
-                else:
-                    return response
+                return await self.drive.request(method, url, headers=headers_to_use, json=json, data=data_to_use)
             except GoogleCredentialsExpired:
                 # Get fresh credentials, then retry right away.
                 logger.debug("Google Drive credentials have expired.  We'll retry with new ones.")

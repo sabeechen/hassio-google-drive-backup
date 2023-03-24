@@ -162,7 +162,7 @@ class AsyncHttpGetter:
         if where != 0:
             headers['range'] = "bytes=%s-%s" % (self._position, self._size - 1)
         if self._response is not None:
-            await self._response.release()
+            self._response.release()
         try:
             resp = await self._session.get(self._url, headers=headers, timeout=self.timeout)
         except TimeoutError:
@@ -179,6 +179,7 @@ class AsyncHttpGetter:
             raise
         resp.raise_for_status()
         if where == 0 and self._size is not None and CONTENT_LENGTH_HEADER in resp.headers and int(resp.headers[CONTENT_LENGTH_HEADER]) != self._size:
+            resp.release()
             raise LogicError(SERVER_CONTENT_LENGTH_ERROR)
         self._response = resp
         self._responseStart = where
@@ -228,7 +229,7 @@ class AsyncHttpGetter:
 
     async def __aexit__(self, type, value, traceback):
         if self._response is not None:
-            await self._response.release()
+            self._response.release()
 
     def __aiter__(self):
         return self

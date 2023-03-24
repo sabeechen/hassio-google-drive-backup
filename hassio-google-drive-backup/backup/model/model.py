@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from io import IOBase
 from typing import Dict, Generic, List, Optional, Tuple, TypeVar
 
@@ -153,15 +153,15 @@ class Model():
             next = last_backup + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_BACKUPS))
         else:
             newest_local: datetime = self.time.toLocal(last_backup)
-            time_that_day_local = datetime(newest_local.year, newest_local.month,
-                                           newest_local.day, timeofDay[0], timeofDay[1], tzinfo=self.time.local_tz)
+            time_that_day_local = self.time.localize(datetime(newest_local.year, newest_local.month, newest_local.day, timeofDay[0], timeofDay[1]))
             if newest_local < time_that_day_local:
                 # Latest backup is before the backup time for that day
                 next = self.time.toUtc(time_that_day_local)
             else:
                 # return the next backup after the delta
-                next = self.time.toUtc(
-                    time_that_day_local + timedelta(days=self.config.get(Setting.DAYS_BETWEEN_BACKUPS)))
+                next_date = date.fromordinal(date(newest_local.year, newest_local.month, newest_local.day).toordinal() + 1)
+                next_datetime_local = self.time.localize(datetime(next_date.year, next_date.month, next_date.day, timeofDay[0], timeofDay[1]))
+                next = self.time.toUtc(next_datetime_local)
 
         if next is None:
             self.waiting_for_startup = False

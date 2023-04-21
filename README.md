@@ -47,10 +47,11 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
 
    <img src="images/add_ss.png" width="300"/>
 
-3. Reload the page, scroll to the bottom to find the new repository, and click the new add-on named "Home Assistant Google Drive Backup" (refresh the cache if it doesn't appear):
-
+3. Reload the page , scroll to the bottom to find the new repository, and click the new add-on named "Home Assistant Google Drive Backup":
+   
    <img src="images/repo_ss.png" width="429"/>
-
+   
+   Note: Home Assistant loads the repository in the background and the new item won't always show up automatically.  You might need to wait a few seconds and then "hard refesh" the page for it to show up.  On most browser the keyboard shortcut for this is CTRL+F5. If it still doesn't show up, clear your browser's cache and it should then.
 4. Click <kbd>Install</kbd> and give it a few minutes to finish downloading.
 
 5. Click <kbd>Start</kbd>, give it a few seconds to spin up, and then click the `Open Web UI` button that appears.

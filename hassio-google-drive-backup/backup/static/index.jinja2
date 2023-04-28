@@ -212,7 +212,7 @@
 
     function send_creds(value) {
       path = URI("{{save_drive_creds_path}}").query({
-        'creds': value,
+        'creds': value.trim(),
         'host': getOutterHomeUri()
       });
       postJson(path.toString(), {}, function(data){

@@ -1,3 +1,6 @@
+## v0.110.4 [2023-04-28]
+- Fix a whitespace error causing authorization to fail.
+
 ## v0.110.3 [2023-03-24]
 - Fix an error causing "Days Between Backups" to be ignored when "Time of Day" for a backup is set.
 - Fix a bug causing some timezones to make the addon to fail to start.

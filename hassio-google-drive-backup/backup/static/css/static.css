@@ -176,6 +176,13 @@ nav ul a i,
   right: 7%;
 }
 
+@media only screen and (max-width: 600px) {
+	#toast-container {
+		bottom: 0%;
+		right: 0%;
+	}
+}
+
 nav {
   box-shadow: none;
 }

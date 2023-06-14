@@ -246,6 +246,15 @@ class DriveRequests():
                     # Drive doesn't recognize the resume token, so we'll just have to start over.
                     logger.debug("Drive upload session wasn't recognized, restarting upload from the beginning.")
                     location = None
+                    self.last_attempt_location = None
+                    self.last_attempt_metadata = None
+                    raise GoogleUnexpectedError()
+                if e.status == 404:
+                    logger.error("Drive upload session wasn't recognized (http 404), restarting upload from the beginning.")
+                    location = None
+                    self.last_attempt_location = None
+                    self.last_attempt_metadata = None
+                    raise GoogleUnexpectedError()
                 else:
                     raise
 

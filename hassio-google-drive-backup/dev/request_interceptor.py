@@ -33,7 +33,7 @@ class UrlMatch():
         self.trigger_event.set()
 
     def isMatch(self, request):
-        return re.match(self.url, request.url.path)
+        return re.match(self.url, request.url.path) or re.match(self.url, str(request.url))
 
     async def waitForCall(self):
         await self.trigger_event.wait()

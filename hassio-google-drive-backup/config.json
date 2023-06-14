@@ -7,7 +7,7 @@
   "url": "https://github.com/sabeechen/hassio-google-drive-backup",
   "homeassistant_api": true,
   "hassio_api": true,
-  "hassio_role": "manager",
+  "hassio_role": "admin",
   "auth_api": true,
   "ingress": true,
   "panel_icon": "mdi:cloud",

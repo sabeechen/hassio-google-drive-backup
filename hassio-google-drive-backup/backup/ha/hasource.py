@@ -24,9 +24,6 @@ from .addon_stopper import LOGGER, AddonStopper
 
 logger: StandardLogger = getLogger(__name__)
 
-SUPERVISOR_MOUNT_MIN_VERSION = Version.parse("2023.06.0")
-
-
 class PendingBackup(AbstractBackup):
     def __init__(self, backupType, protected, options: CreateOptions, request_info, config, time):
         super().__init__(
@@ -246,6 +243,16 @@ class HaSource(BackupSource[HABackup], Startable):
         if self._pending_backup_task:
             self._pending_backup_task.cancel()
             await asyncio.wait([self._pending_backup_task])
+
+    @property
+    def needsSpaceCheck(self):
+        if not self.harequests.supportsMountInfo:
+            return True
+        if self.config.get(Setting.BACKUP_STORAGE) == 'local-disk':
+            return True
+        if self.mount_info.get("default_backup_mount") is None and len(self.config.get(Setting.BACKUP_STORAGE)) == 0:
+            return True
+        return False
 
     @property
     def query_had_changes(self):

@@ -45,6 +45,10 @@ class BackupSource(Trigger, Generic[T]):
 
     def freeSpace(self):
         return None
+    
+    @property
+    def needsSpaceCheck(self):
+        return True
 
     async def create(self, options: CreateOptions) -> T:
         pass
@@ -263,7 +267,8 @@ class Model():
             return
 
         self.estimator.refresh()
-        self.estimator.checkSpace(list(self.backups.values()))
+        if self.source.needsSpaceCheck:
+            self.estimator.checkSpace(list(self.backups.values()))
         created = await self.source.create(options)
         backup = Backup(created)
         self.backups[backup.slug()] = backup

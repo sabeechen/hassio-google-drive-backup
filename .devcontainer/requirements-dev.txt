@@ -31,3 +31,4 @@ grpcio
 aioping
 pytz
 tzlocal
+pytest-cov

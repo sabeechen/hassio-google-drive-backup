@@ -10,7 +10,8 @@ _Note_: The configuration can be changed easily by starting the add-on and click
 The UI explains what each setting is and you don't need to modify anything before clicking `Start`.
 If you would still prefer to modify the settings in yaml, the options are detailed below.
 
-Add-on configuration example. Don't use this directly, the addon has a lot of configuration options that most users don't need or want:
+### Add-on configuration example
+Don't use this directly, the addon has a lot of configuration options that most users don't need or want:
 
 ```yaml
 # Keep 10 backups in Home Assistant

@@ -25,6 +25,7 @@ EVENT_BACKUP_START = "backup_started"
 EVENT_BACKUP_END = "backup_ended"
 
 VERSION_BACKUP_PATH = Version.parse("2021.8")
+VERSION_MOUNT_INFO = Version.parse("2023.6")
 
 
 def supervisor_call(func):
@@ -55,7 +56,7 @@ class HaRequests():
         self._data_cache = data_cache
 
         # default the supervisor versio to using the "most featured" when it can't be parsed.
-        self._super_version = VERSION_BACKUP_PATH
+        self._super_version = VERSION_MOUNT_INFO
 
     def getSupervisorURL(self) -> URL:
         if len(self.config.get(Setting.SUPERVISOR_URL)) > 0:
@@ -167,6 +168,18 @@ class HaRequests():
         if 'version' in info:
             self._super_version = Version.parse(info['version'])
         return info
+
+    @supervisor_call
+    async def mountInfo(self):
+        if self._super_version and self._super_version >= VERSION_MOUNT_INFO:
+            url = self.getSupervisorURL().with_path("mounts")
+            info = await self._getHassioData(url)
+            return info
+        else:
+            return {
+                "default_backup_mount": None,
+                "mounts": []
+            }
 
     @supervisor_call
     async def restore(self, slug: str, password: str = None) -> None:

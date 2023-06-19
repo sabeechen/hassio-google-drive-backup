@@ -169,6 +169,7 @@ class UiServer(Trigger, Startable):
             name_keys[key] = BACKUP_NAME_KEYS[key](
                 "Full", self._time.now(), self._ha_source.getHostInfo())
         status['backup_name_keys'] = name_keys
+        status['mounts'] = self._ha_source.mount_info
 
         # Indicate the user should be notified for a specific situation where:
         #  - They recently turned on "IGNORE_OTHER_BACKUPS"
@@ -212,7 +213,7 @@ class UiServer(Trigger, Startable):
             'folders': backup.details().get("folders", []),
             'addons': self.formatAddons(backup.details()),
             'sources': sources,
-            'haVersion': False if backup.version() == None else backup.version(),
+            'haVersion': False if backup.version() is None else backup.version(),
             'uploadable': backup.getSource(SOURCE_HA) is None and len(backup.sources) > 0,
             'restorable': backup.getSource(SOURCE_HA) is not None,
             'status_detail': backup.getStatusDetail(),
@@ -440,13 +441,32 @@ class UiServer(Trigger, Startable):
         default_config = {}
         for setting in Setting:
             default_config[setting.key()] = setting.default()
+        mounts = [
+            {
+                'id': "",
+                'name': 'Default'
+            },
+            {
+                'id': 'local-disk',
+                'name': 'Home Assistant local disk'
+            }
+        ]
+        if self._ha_source.mount_info.get('mounts', None):
+            for mount in self._ha_source.mount_info['mounts']:
+                if mount.get('usage', None) != "backup" or mount.get('name', None) is None:
+                    continue
+                mounts.append({
+                    'id': mount['name'],
+                    'name': mount['name']
+                })
         return web.json_response({
             'config': current_config,
             'addons': self._global_info.addons,
             'folders': FOLDERS,
+            'mounts': mounts,
             'defaults': default_config,
             'backup_folder': self.folder_finder.getCachedFolder(),
-            'is_custom_creds': self._coord._model.dest.isCustomCreds()
+            'is_custom_creds': self._coord._model.dest.isCustomCreds(),
         })
 
     async def errorreports(self, request: Request):

@@ -4,6 +4,7 @@ from asyncio import Event
 from aiohttp.web_response import json_response
 from injector import singleton, inject
 from backup.time import Time
+from typing import List
 
 
 class UrlMatch():
@@ -87,7 +88,7 @@ class UrlMatch():
 class RequestInterceptor:
     @inject
     def __init__(self):
-        self._matchers = []
+        self._matchers: List[UrlMatch] = []
         self._history = []
         self.time = Time()
 

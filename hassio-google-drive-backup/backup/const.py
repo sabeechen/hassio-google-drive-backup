@@ -34,6 +34,10 @@ ERROR_LOW_SPACE = "low_space"
 LOG_IN_TO_DRIVE = "log_in_to_drive"
 SUPERVISOR_PERMISSION = "supervisor_permission"
 
+# Network storage errors
+UNKONWN_NETWORK_STORAGE = "unknown_network_storage"
+INACTIVE_NETWORK_STORAGE = "inactive_network_storage"
+
 # these keys are necessary because they use the name "snapshot" in non-user-visible
 # places persisted outside the codebase.  They can't be changed without an upgrade path.
 NECESSARY_OLD_BACKUP_NAME = "snapshot"

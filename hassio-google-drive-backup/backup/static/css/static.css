@@ -595,3 +595,12 @@ input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default
   width: 150px;
   height: 40px;
 }
+
+.select-dropdown li.disabled, .select-dropdown li.disabled > span, .select-dropdown li.optgroup {
+  color: var(--text-disabled-color);
+  background-color: transparent;
+}
+
+.select-wrapper .caret {
+  fill: var(--text-primary-color);
+}

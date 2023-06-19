@@ -206,6 +206,7 @@ function setColors(background, accent) {
       "--helper-text-color": text.tint(background, 0.25).toCss(),
       "--text-primary-color": text.shift(0.13).toCss(),
       "--text-secondary-color": text.shift(0.26).toCss(),
+      "--text-disabled-color": text.withAlpha(0.3).toCss(),
       "--divider-color": text.withAlpha(0.12).toCss(),
       "--shadow-color": drop_shadow.withAlpha(0.14).toCss(),
       "--icon-color": text.shift(0.13).withAlpha(0.6).toCss(),

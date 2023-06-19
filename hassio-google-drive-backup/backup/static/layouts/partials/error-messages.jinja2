@@ -685,6 +685,42 @@
   </ul>
 {% endcall %}
 
+{% set inactive_share_actions %}
+  <a class="btn-flat" href="#" onclick="sync('inactive_network_storage')"><i class="material-icons">refresh</i>try syncing again</a>
+{% endset %}
+{% call macros.errorMessage("Network Storage Inactive", "inactive_network_storage", "error_outline", inactive_share_actions) %}
+  <p>
+    The addon could not request a backup in your configured network storage because it looks like Home Assistant can't access it.  The network storage the addon tried to use is named "<b id="data_storage_name"></b>".
+  </p>
+  <p>
+    To resolve this, you can:
+  </p>
+  <ul class="browser-default">
+    <li>
+      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+        to store backups on a different storage or the local disk.
+    </li>
+    <li>
+      Resolve whatever issues are causing Home Assistant to be unable to access the network storage.  After doing so it may take some time for Home Assistant to "notice" that the share is available again.
+    </li>
+  </ul>
+{% endcall %}
+
+{% set unknown_share_actions %}
+  <a class="btn-flat" href="#" onclick="sync('unknown_network_storage')"><i class="material-icons">refresh</i>try syncing again</a>
+{% endset %}
+{% call macros.errorMessage("Unrecognized Network Storage", "unknown_network_storage", "error_outline", unknown_share_actions) %}
+  <p>
+    The addon could not request a backup in your configured network storage because Home Assistant doesn't recognize it.  This is likely to happen 
+    if you previously configured the addon to create backups on external storage but then deleted the network storage configuration from Home Assistant.  The storage the addon tried to use 
+    is named "<b id="data_storage_name"></b>".
+  </p>
+  <p>
+    To resolve this, you can modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+    to store backups on different storage or the local disk.
+  </p>
+{% endcall %}
+
 {% set error_details_card_actions %}
   <a class="btn-flat" target="_blank" onClick="$('#error_details_card').fadeOut(500)"><i class="material-icons">close</i>Close</a>
 {% endset %}

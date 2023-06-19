@@ -24,6 +24,7 @@
     "days_between_backups": "float(0,)?",
     "ignore_other_backups": "bool?",
     "ignore_upgrade_backups": "bool?",
+    "backup_storage": "str?",
 
     "delete_after_upload": "bool?",
     "delete_before_new_backup": "bool?",

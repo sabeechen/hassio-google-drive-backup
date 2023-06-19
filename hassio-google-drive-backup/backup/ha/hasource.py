@@ -3,16 +3,16 @@ import aiohttp
 from datetime import timedelta
 from io import IOBase
 from threading import Lock, Thread
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Union
 
 from aiohttp.client_exceptions import ClientResponseError
 from injector import inject, singleton
 
 from backup.util import AsyncHttpGetter, GlobalInfo, Estimator, DataCache, KEY_NOTE, KEY_LAST_SEEN, KEY_PENDING, KEY_NAME, KEY_CREATED, KEY_I_MADE_THIS, KEY_IGNORE
-from ..config import Config, Setting, CreateOptions, Startable
+from ..config import Config, Setting, CreateOptions, Startable, Version
 from ..const import SOURCE_HA
 from ..model import BackupSource, AbstractBackup, HABackup, Backup
-from ..exceptions import (LogicError, BackupInProgress,
+from ..exceptions import (LogicError, BackupInProgress, UnknownNetworkStorageError, InactiveNetworkStorageError,
                           UploadFailed, ensureKey)
 from .harequests import HaRequests
 from .password import Password
@@ -23,6 +23,8 @@ from backup.const import FOLDERS, NECESSARY_OLD_BACKUP_PLURAL_NAME
 from .addon_stopper import LOGGER, AddonStopper
 
 logger: StandardLogger = getLogger(__name__)
+
+SUPERVISOR_MOUNT_MIN_VERSION = Version.parse("2023.06.0")
 
 
 class PendingBackup(AbstractBackup):
@@ -134,6 +136,7 @@ class HaSource(BackupSource[HABackup], Startable):
         self.host_info = None
         self.ha_info = None
         self.super_info = None
+        self.mount_info = {}
         self.lock: Lock = Lock()
         self.time = time
         self.harequests = ha
@@ -341,7 +344,7 @@ class HaSource(BackupSource[HABackup], Startable):
         self._data_cache.backup(slug)[KEY_IGNORE] = ignore
         self._data_cache.makeDirty()
 
-    async def note(self, backup, note: str) -> None:
+    async def note(self, backup, note: Union[str, None]) -> None:
         if isinstance(backup, HABackup):
             validated = backup
         else:
@@ -401,6 +404,8 @@ class HaSource(BackupSource[HABackup], Startable):
             self.host_info = await self.harequests.info()
             self.ha_info = await self.harequests.haInfo()
             self.super_info = await self.harequests.supervisorInfo()
+            self.mount_info = await self.harequests.mountInfo()
+
             addon_info = ensureKey("addons", await self.harequests.getAddons(), "Supervisor Metadata")
             self.config.update(
                 ensureKey("options", self.self_info, "addon metdata"))
@@ -508,7 +513,7 @@ class HaSource(BackupSource[HABackup], Startable):
         addons: List[str] = []
         for addon in self.super_info.get('addons', {}):
             addons.append(addon['slug'])
-        request_info = {
+        request_info: Dict[str, Any] = {
             'addons': [],
             'folders': []
         }
@@ -534,4 +539,26 @@ class HaSource(BackupSource[HABackup], Startable):
         name = BackupName().resolve(type_name, options.name_template,
                                     self.time.toLocal(options.when), self.host_info)
         request_info['name'] = name
+
+        # Validate the mount location and set it if necessary
+        mount_name = self.config.get(Setting.BACKUP_STORAGE)
+
+        # Default is to use Home Assistant's default configured mount
+        if not mount_name or len(mount_name) == 0:
+            ha_default = self.mount_info.get("default_backup_mount", None)
+            if ha_default:
+                mount_name = ha_default
+            else:
+                mount_name = "local-disk"
+
+        if mount_name != "local-disk":
+            # check to make sure the mount location is valid
+            for mount in self.mount_info.get("mounts", []):
+                if mount.get("name", None) == mount_name:
+                    if mount.get("state", False) != "active":
+                        raise InactiveNetworkStorageError(mount_name)
+                    request_info['location'] = mount_name
+                    break
+            if request_info.get('location', None) is None:
+                raise UnknownNetworkStorageError(mount_name)
         return request_info, type_name, protected

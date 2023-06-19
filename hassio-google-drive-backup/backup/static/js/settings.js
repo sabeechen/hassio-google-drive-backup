@@ -240,6 +240,18 @@ function handleSettingsDialog(data) {
   toggleSlide(document.querySelector('#stop_addons'), 'settings_stop_addons_details');
   updateIgnoredBackupOptions();
   M.updateTextFields();
+
+  // Create options for the network mount based on settings
+  $("#backup_storage").html("");
+  if (data.mounts && data.mounts.length > 0) {
+    for (mount of data.mounts) {
+      const selected = config.backup_storage == mount.id ? "selected" : "";
+      $("#backup_storage").append(`<option value="${mount.id}" ${selected} ></svg>${mount.name}</option>`);
+    }
+  }
+
+  var elems = document.querySelectorAll('select');
+  M.FormSelect.init(elems, {classes: "", dropdownOptions: {coverTrigger: false}});
 }
 
 function chooseFolderChanged() {

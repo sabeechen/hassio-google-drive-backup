@@ -73,6 +73,10 @@ class HaRequests():
 
     def supportsBackupPaths(self):
         return not self._super_version or self._super_version >= VERSION_BACKUP_PATH
+    
+    @property
+    def supportsMountInfo(self):
+        return not self._super_version or self._super_version >= VERSION_MOUNT_INFO
 
     @supervisor_call
     async def createBackup(self, info):
@@ -171,7 +175,7 @@ class HaRequests():
 
     @supervisor_call
     async def mountInfo(self):
-        if self._super_version and self._super_version >= VERSION_MOUNT_INFO:
+        if self.supportsMountInfo:
             url = self.getSupervisorURL().with_path("mounts")
             info = await self._getHassioData(url)
             return info

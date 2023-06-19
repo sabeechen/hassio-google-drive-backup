@@ -1114,6 +1114,7 @@ async def test_default_backup_location_new_supervisor(time, config, ha: HaSource
     await ha.refresh()
     req, _name, _protected = ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
     assert req.get("location") is None
+    assert 'location' in req
 
     supervisor._mounts["default_backup_mount"] = "my_backup_share"
 
@@ -1129,11 +1130,13 @@ async def test_default_backup_location_local_disk(time, config: Config, ha: HaSo
     await ha.refresh()
     req, _name, _protected = ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
     assert req.get("location") is None
+    assert 'location' in req
 
     supervisor._mounts["default_backup_mount"] = "my_backup_share"
     await ha.refresh()
     req, _name, _protected = ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
     assert req.get("location") is None
+    assert 'location' in req
 
 
 # Verify that using a non-active share results in an error before attempting to request the backup 

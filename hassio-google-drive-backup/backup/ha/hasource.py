@@ -540,25 +540,28 @@ class HaSource(BackupSource[HABackup], Startable):
                                     self.time.toLocal(options.when), self.host_info)
         request_info['name'] = name
 
-        # Validate the mount location and set it if necessary
-        mount_name = self.config.get(Setting.BACKUP_STORAGE)
+        if self.harequests.supportsMountInfo:
+            # Validate the mount location and set it if necessary
+            mount_name = self.config.get(Setting.BACKUP_STORAGE)
 
-        # Default is to use Home Assistant's default configured mount
-        if not mount_name or len(mount_name) == 0:
-            ha_default = self.mount_info.get("default_backup_mount", None)
-            if ha_default:
-                mount_name = ha_default
+            # Default is to use Home Assistant's default configured mount
+            if not mount_name or len(mount_name) == 0:
+                ha_default = self.mount_info.get("default_backup_mount", None)
+                if ha_default:
+                    mount_name = ha_default
+                else:
+                    mount_name = "local-disk"
+
+            if mount_name != "local-disk":
+                # check to make sure the mount location is valid
+                for mount in self.mount_info.get("mounts", []):
+                    if mount.get("name", None) == mount_name:
+                        if mount.get("state", False) != "active":
+                            raise InactiveNetworkStorageError(mount_name)
+                        request_info['location'] = mount_name
+                        break
+                if request_info.get('location', None) is None:
+                    raise UnknownNetworkStorageError(mount_name)
             else:
-                mount_name = "local-disk"
-
-        if mount_name != "local-disk":
-            # check to make sure the mount location is valid
-            for mount in self.mount_info.get("mounts", []):
-                if mount.get("name", None) == mount_name:
-                    if mount.get("state", False) != "active":
-                        raise InactiveNetworkStorageError(mount_name)
-                    request_info['location'] = mount_name
-                    break
-            if request_info.get('location', None) is None:
-                raise UnknownNetworkStorageError(mount_name)
+                request_info['location'] = None
         return request_info, type_name, protected

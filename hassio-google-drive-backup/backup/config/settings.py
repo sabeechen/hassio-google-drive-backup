@@ -31,6 +31,7 @@ class Setting(Enum):
     ENABLE_BACKUP_STALE_SENSOR = "enable_backup_stale_sensor"
     ENABLE_BACKUP_STATE_SENSOR = "enable_backup_state_sensor"
     BACKUP_PASSWORD = "backup_password"
+    BACKUP_STORAGE = "backup_storage"
     CALL_BACKUP_SNAPSHOT = "call_backup_snapshot"
 
     # Basic backup settings
@@ -177,6 +178,7 @@ _DEFAULTS = {
     Setting.ENABLE_BACKUP_STALE_SENSOR: True,
     Setting.ENABLE_BACKUP_STATE_SENSOR: True,
     Setting.BACKUP_PASSWORD: "",
+    Setting.BACKUP_STORAGE: "",
     Setting.WATCH_BACKUP_DIRECTORY: True,
     Setting.TRACE_REQUESTS: False,
 
@@ -316,6 +318,7 @@ _CONFIG = {
     Setting.ENABLE_BACKUP_STALE_SENSOR: "bool?",
     Setting.ENABLE_BACKUP_STATE_SENSOR: "bool?",
     Setting.BACKUP_PASSWORD: "str?",
+    Setting.BACKUP_STORAGE: "str?",
     Setting.WATCH_BACKUP_DIRECTORY: "bool?",
     Setting.TRACE_REQUESTS: "bool?",
 

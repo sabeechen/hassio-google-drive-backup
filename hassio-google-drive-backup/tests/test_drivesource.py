@@ -16,7 +16,7 @@ from backup.drive.drivesource import FOLDER_MIME_TYPE
 from backup.exceptions import (BackupFolderInaccessible, BackupFolderMissingError,
                                DriveQuotaExceeded, ExistingBackupFolderError,
                                GoogleCantConnect, GoogleCredentialsExpired,
-                               GoogleInternalError,
+                               GoogleInternalError, GoogleUnexpectedError,
                                GoogleSessionError, GoogleTimeoutError, CredRefreshMyError, CredRefreshGoogleError)
 from backup.creds import Creds
 from backup.model import DriveBackup, DummyBackup
@@ -851,7 +851,7 @@ async def test_download_timeout(time, drive: DriveSource, config: Config, interc
 
 
 @pytest.mark.asyncio
-async def test_resume_session_reused_on_http410(time, drive: DriveSource, config: Config, server: SimulationServer, backup_helper: BackupHelper, interceptor: RequestInterceptor):
+async def test_resume_session_ignored_on_http404(time, drive: DriveSource, config: Config, server: SimulationServer, backup_helper: BackupHelper, interceptor: RequestInterceptor):
     from_backup, data = await backup_helper.createFile()
 
     # Configure the upload to fail
@@ -861,13 +861,52 @@ async def test_resume_session_reused_on_http410(time, drive: DriveSource, config
 
     # Verify a requst was made to start the upload
     assert server.wasUrlRequested(URL_START_UPLOAD)
-    assert drive.drivebackend.last_attempt_location is not None
+    location = drive.drivebackend.last_attempt_location
+    assert location is not None
 
     server.urls.clear()
     interceptor.clear()
     data.position(0)
 
-    interceptor.setError(drive.drivebackend.last_attempt_location, 0, 410)
+    interceptor.setError(location, 404)
+    with pytest.raises(GoogleUnexpectedError):
+        await drive.save(from_backup, data)
+    assert interceptor.urlWasCalled(URL(location).path)
+
+    data.position(0)
+
+    # Location should have been reset, and another attempt should succeed using a new url.
+    assert drive.drivebackend.last_attempt_location is None
+    await drive.save(from_backup, data)
+
+
+@pytest.mark.asyncio
+async def test_resume_session_ignored_on_http410(time, drive: DriveSource, config: Config, server: SimulationServer, backup_helper: BackupHelper, interceptor: RequestInterceptor):
+    from_backup, data = await backup_helper.createFile()
+
+    # Configure the upload to fail
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, 500)
+    with pytest.raises(GoogleInternalError):
+        await drive.save(from_backup, data)
+
+    # Verify a requst was made to start the upload
+    assert server.wasUrlRequested(URL_START_UPLOAD)
+    location = drive.drivebackend.last_attempt_location
+    assert location is not None
+
+    server.urls.clear()
+    interceptor.clear()
+    data.position(0)
+
+    data.position(0)
+
+    interceptor.setError(location, 410)
+    with pytest.raises(GoogleUnexpectedError):
+        await drive.save(from_backup, data)
+    assert interceptor.urlWasCalled(URL(location).path)
+
+    # Location should have been reset, and anohter attempt should succeed using a new url.
+    assert drive.drivebackend.last_attempt_location is None
     await drive.save(from_backup, data)
 
 

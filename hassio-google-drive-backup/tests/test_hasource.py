@@ -8,14 +8,14 @@ from aiohttp.client_exceptions import ClientResponseError
 from backup.config import Config, Setting, CreateOptions, Version
 from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, BackupInProgress,
-                               BackupPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError)
+                               BackupPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, UnknownNetworkStorageError, InactiveNetworkStorageError)
 from backup.util import GlobalInfo, DataCache, KEY_CREATED, KEY_LAST_SEEN, KEY_NAME
 from backup.ha import HaSource, PendingBackup, EVENT_BACKUP_END, EVENT_BACKUP_START, HABackup, Password, AddonStopper
 from backup.model import DummyBackup
 from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
 from .helpers import all_addons, all_folders, createBackupTar, getTestStream
-from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_SELF_OPTIONS, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_BACKUP_FULL, URL_MATCH_BACKUP_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_BACKUP_DOWNLOAD, URL_MATCH_BACKUPS, URL_MATCH_SNAPSHOT
+from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_SELF_OPTIONS, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_BACKUP_FULL, URL_MATCH_BACKUP_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_BACKUP_DOWNLOAD, URL_MATCH_BACKUPS, URL_MATCH_SNAPSHOT, URL_MATCH_MOUNT
 from dev.request_interceptor import RequestInterceptor
 from backup.model import Model
 from backup.time import Time
@@ -1031,6 +1031,7 @@ async def test_note_long_backup(time, config, ha: HaSource, supervisor: Simulate
 
         pending = (await ha.get())[backup.slug()]
         assert pending.note() == "Creation note"
+    assert ha._pending_backup_task is not None
     await ha._pending_backup_task
     completed = next(iter((await ha.get()).values()))
     assert not isinstance(completed, PendingBackup)
@@ -1057,6 +1058,7 @@ async def test_note_long_backup_changed_during_creation(time, config, ha: HaSour
         assert isinstance(still_pending, PendingBackup)
         assert still_pending.note() == "changed"
 
+    assert ha._pending_backup_task is not None
     await ha._pending_backup_task
     completed = next(iter((await ha.get()).values()))
     assert not isinstance(completed, PendingBackup)
@@ -1085,3 +1087,72 @@ async def test_note_change_external_backup(time, config, ha: HaSource, superviso
     completed = next(iter((await ha.get()).values()))
     assert not isinstance(completed, PendingBackup)
     assert completed.note() == "changed note"
+
+
+# Verify that if the supervisor is below the minimum version, we don't query for mount information and its populated with a reasonable default.
+@pytest.mark.asyncio
+async def test_mount_info_old_supervisor(time, config, ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    supervisor._super_version = Version.parse("2023.5")
+    await ha.refresh()
+    assert not interceptor.urlWasCalled(URL_MATCH_MOUNT)
+    assert len(ha.mount_info.get("mounts")) == 0
+
+
+# Verify that if the supervisor is above the minimum version, we we do query for mount info and populate it
+@pytest.mark.asyncio
+async def test_mount_info_new_supervisor(time, config, ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    supervisor._super_version = Version.parse("2023.6")
+    await ha.refresh()
+    assert interceptor.urlWasCalled(URL_MATCH_MOUNT)
+    assert len(ha.mount_info.get("mounts")) > 0
+
+
+# Verify that the default backup location is HA's configured default if the backup location is unspecified
+# and the supervisor is above the minimum version
+@pytest.mark.asyncio
+async def test_default_backup_location_new_supervisor(time, config, ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    await ha.refresh()
+    req, _name, _protected = ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
+    assert req.get("location") is None
+    assert 'location' in req
+
+    supervisor._mounts["default_backup_mount"] = "my_backup_share"
+
+    await ha.refresh()
+    req, _name, _protected = ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
+    assert req.get("location") == "my_backup_share"
+
+
+# Verify that having a backup storage location of "local-disk" always uses the default even if HA has another default configured
+@pytest.mark.asyncio
+async def test_default_backup_location_local_disk(time, config: Config, ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    config.override(Setting.BACKUP_STORAGE, "local-disk")
+    await ha.refresh()
+    req, _name, _protected = ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
+    assert req.get("location") is None
+    assert 'location' in req
+
+    supervisor._mounts["default_backup_mount"] = "my_backup_share"
+    await ha.refresh()
+    req, _name, _protected = ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
+    assert req.get("location") is None
+    assert 'location' in req
+
+
+# Verify that using a non-active share results in an error before attempting to request the backup 
+@pytest.mark.asyncio
+async def test_inactive_backup_location(time, config: Config, ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    config.override(Setting.BACKUP_STORAGE, "my_backup_share")
+    supervisor._mounts["mounts"][1]["state"] = "starting"
+    await ha.refresh()
+    with pytest.raises(InactiveNetworkStorageError):
+        ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
+
+
+# Verify that using a non-existant share results in an error before attempting to request the backup 
+@pytest.mark.asyncio
+async def test_unknown_backup_location(time, config: Config, ha: HaSource, supervisor: SimulatedSupervisor, interceptor: RequestInterceptor):
+    config.override(Setting.BACKUP_STORAGE, "doesn't_exists")
+    await ha.refresh()
+    with pytest.raises(UnknownNetworkStorageError):
+        ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))

@@ -178,7 +178,7 @@ class Coordinator(Trigger):
             source_info['size'] = Estimator.asSizeString(size)
             source_info['ignored_size'] = Estimator.asSizeString(ignored_size)
             free_space = source_class.freeSpace()
-            if free_space is not None:
+            if free_space is not None and source_class.needsSpaceCheck:
                 source_info['free_space'] = Estimator.asSizeString(free_space)
             info[source] = source_info
         return info
@@ -254,8 +254,10 @@ class Coordinator(Trigger):
 
     async def _startBackup(self, options: CreateOptions):
         self.clearCaches()
+        model = self._buildModel()
         self._estimator.refresh()
-        self._estimator.checkSpace(self.backups())
+        if model.source.needsSpaceCheck:
+            self._estimator.checkSpace(self.backups())
         created = await self._buildModel().source.create(options)
         backup = Backup(created)
         self._model.backups[backup.slug()] = backup

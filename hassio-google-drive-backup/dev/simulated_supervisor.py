@@ -27,6 +27,7 @@ URL_MATCH_SELF_OPTIONS = "^/addons/self/options$"
 
 URL_MATCH_SNAPSHOT = "^/snapshots.*$"
 URL_MATCH_BACKUPS = "^/backups.*$"
+URL_MATCH_MOUNT = "^/mounts*$"
 
 
 @singleton
@@ -52,7 +53,28 @@ class SimulatedSupervisor(BaseServer):
         self._username = "user"
         self._password = "pass"
         self._addons = all_addons.copy()
-        self._super_version = Version(2021, 8)
+        self._super_version = Version(2023, 7)
+        self._mounts = {
+            'default_backup_mount': None,
+            'mounts': [
+                {
+                    "name": "my_media_share",
+                    "usage": "media",
+                    "type": "cifs",
+                    "server": "server.local",
+                    "share": "media",
+                    "state": "active"
+                },
+                {
+                    "name": "my_backup_share",
+                    "usage": "backup",
+                    "type": "nfs",
+                    "server": "server.local",
+                    "share": "media",
+                    "state": "active"
+                }
+            ]
+        }
 
         self.installAddon(self._addon_slug, "Home Assistant Google drive Backup")
         self.installAddon("42", "The answer")
@@ -90,8 +112,10 @@ class SimulatedSupervisor(BaseServer):
             get('/core/logs', self._coreLogs),
             get('/debug/insert/backup', self._debug_insert_backup),
             get('/debug/info', self._debugInfo),
+            post("/debug/mounts", self._setMounts),
 
             get('/backups', self._getBackups),
+            get('/mounts', self._getMounts),
             delete('/backups/{slug}', self._deletebackup),
             post('/backups/new/upload', self._uploadbackup),
             post('/backups/new/partial', self._newbackup),
@@ -135,7 +159,7 @@ class SimulatedSupervisor(BaseServer):
     def _formatErrorResponse(self, error: str) -> str:
         return json_response({'result': error})
 
-    def _formatDataResponse(self, data: Any) -> str:
+    def _formatDataResponse(self, data: Any) -> Response:
         return json_response({'result': 'ok', 'data': data})
 
     async def toggleBlockBackup(self):
@@ -158,6 +182,14 @@ class SimulatedSupervisor(BaseServer):
     async def _getBackups(self, request: Request):
         await self._verifyHeader(request)
         return self._formatDataResponse({'backups': list(self._backups.values())})
+
+    async def _getMounts(self, request: Request):
+        await self._verifyHeader(request)
+        return self._formatDataResponse(self._mounts)
+    
+    async def _setMounts(self, request: Request):
+        self._mounts = await request.json()
+        return self._formatDataResponse({})
 
     async def _stopAddon(self, request: Request):
         await self._verifyHeader(request)
@@ -401,7 +433,7 @@ class SimulatedSupervisor(BaseServer):
         self._notification = None
         return Response()
 
-    async def _debug_insert_backup(self, request: Request) -> bool:
+    async def _debug_insert_backup(self, request: Request) -> Response:
         days_back = int(request.query.get("days"))
         date = self._time.now() - timedelta(days=days_back)
         name = date.strftime("Full Backup %Y-%m-%d %H:%M-%S")

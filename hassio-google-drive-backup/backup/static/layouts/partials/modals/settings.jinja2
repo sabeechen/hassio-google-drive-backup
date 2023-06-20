@@ -28,6 +28,17 @@
           </div>
         </div>
         <div class="row">
+          <div class="input-field col s6">
+            <select id="backup_storage" name="backup_storage">
+            </select>
+            <label>Home Assistant Backup Location</label>
+          </div>
+          <div class="input-field col s6">
+            <span class="helper-text">
+              The place Home Assistant stores backups before they're uploaded to Google Drive.  This can be the local disk/SD card, a network share, or leave it at "Default" to use the default location configured in Home Assistant.  New network storage you add through Home Assistant will show up in this list so long as they're configured to be "backup" locations.</span>
+          </div>
+        </div>
+        <div class="row">
           <div class="col s12">
             <label>
               <input type="checkbox" name="delete_after_upload" id="delete_after_upload"

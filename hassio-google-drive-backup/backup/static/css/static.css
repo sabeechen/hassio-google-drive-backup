@@ -176,6 +176,13 @@ nav ul a i,
   right: 7%;
 }
 
+@media only screen and (max-width: 600px) {
+	#toast-container {
+		bottom: 0%;
+		right: 0%;
+	}
+}
+
 nav {
   box-shadow: none;
 }
@@ -587,4 +594,13 @@ input:not([type]):focus:not([readonly]), input[type="text"]:not(.browser-default
 .donate-button img {
   width: 150px;
   height: 40px;
+}
+
+.select-dropdown li.disabled, .select-dropdown li.disabled > span, .select-dropdown li.optgroup {
+  color: var(--text-disabled-color);
+  background-color: transparent;
+}
+
+.select-wrapper .caret {
+  fill: var(--text-primary-color);
 }

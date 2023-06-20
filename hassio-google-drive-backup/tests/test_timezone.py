@@ -38,18 +38,18 @@ def test_common_timezones(time: FakeTime):
     assert _infer_timezone_from_env() is None
 
     os.environ["TZ"] = "America/Denver"
-    assert _infer_timezone_from_env() is not None
+    assert _infer_timezone_from_env().tzname(None) == "America/Denver"
 
     os.environ["TZ"] = "Australia/Brisbane"
-    
-    assert _infer_timezone_from_env() is not None
+    assert _infer_timezone_from_env().tzname(None) == "Australia/Brisbane"
 
-    tzs = [_infer_timezone_from_system(),
-           _infer_timezone_from_env(),
-           _infer_timezone_from_offset(),
-           _infer_timezone_from_name()]
+    tzs = {"SYSTEM": _infer_timezone_from_system(),
+           "ENV": _infer_timezone_from_env(),
+           "OFFSET": _infer_timezone_from_offset(),
+           "NAME": _infer_timezone_from_name()}
 
-    for tz in tzs:
+    for name, tz in tzs.items():
+        print(name)
         time.setTimeZone(tz)
         time.now()
         time.nowLocal()
@@ -57,3 +57,8 @@ def test_common_timezones(time: FakeTime):
         time.local(1985, 12, 6)
         time.toLocal(time.now())
         time.toUtc(time.nowLocal())
+
+
+def test_system_timezone(time: FakeTime):
+    tz = _infer_timezone_from_system()
+    assert tz.tzname(time.now()) == "UTC"

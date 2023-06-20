@@ -10,7 +10,8 @@ _Note_: The configuration can be changed easily by starting the add-on and click
 The UI explains what each setting is and you don't need to modify anything before clicking `Start`.
 If you would still prefer to modify the settings in yaml, the options are detailed below.
 
-Add-on configuration example. Don't use this directly, the addon has a lot of configuration options that most users don't need or want:
+### Add-on configuration example
+Don't use this directly, the addon has a lot of configuration options that most users don't need or want:
 
 ```yaml
 # Keep 10 backups in Home Assistant
@@ -18,6 +19,9 @@ max_backups_in_ha: 10
 
 # Keep 10 backups in Google Drive
 max_backups_in_google_drive: 10
+
+# Create backups in Home Assistant on network storage 
+backup_location: my_nfs_share
 
 # Ignore backups the add-on hasn't created
 ignore_other_backups: True
@@ -79,6 +83,9 @@ The number of backups the add-on will allow Home Assistant to store locally befo
 ### Option: `max_backups_in_google_drive` (default: 4)
 
 The number of backups the add-on will keep in Google Drive before old ones are deleted. Google Drive gives you 15GB of free storage (at the time of writing) so plan accordingly if you know how big your backups are.
+
+### Option: `backup_location` (default: None)
+The place where backups are created in Home Assistant before uploading to Google Drive.  Can be "local-disk" or the name of any backup network storage you've configured in Home Assistant.  Leave unspecified (the default) to have backups created in whatever Home Assistant uses as the default backup location. 
 
 ### Option: `ignore_other_backups` (default: False)
 Make the addon ignore any backups it didn't directly create.  Any backup already uploaded to Google Drive will not be ignored until you delete it from Google Drive.

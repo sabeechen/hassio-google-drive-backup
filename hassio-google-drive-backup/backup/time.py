@@ -19,8 +19,8 @@ logger = getLogger(__name__)
 def get_local_tz():
     methods = [
         _infer_timezone_from_env,
-        _infer_timezone_from_system,
         _infer_timezone_from_name,
+        _infer_timezone_from_system,
         _infer_timezone_from_offset
     ]
     for method in methods:
@@ -52,9 +52,9 @@ def _infer_timezone_from_name():
 
 def _infer_timezone_from_system():
     tz = get_localzone()
-    if tz is not None:
-        return tz
-    return None
+    if tz is None:
+        return None
+    return timezone(tz.tzname(datetime.now()))
 
 
 def _infer_timezone_from_env():

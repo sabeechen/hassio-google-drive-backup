@@ -1,6 +1,6 @@
 
 from datetime import datetime, timedelta
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 from dateutil.tz import tzutc
 from ..util import Estimator
 
@@ -56,7 +56,7 @@ class AbstractBackup():
     def size(self) -> int:
         return self._size
 
-    def note(self) -> str:
+    def note(self) -> Union[str, None]:
         return self._note
 
     def sizeInt(self) -> int:
@@ -98,7 +98,7 @@ class AbstractBackup():
     def details(self):
         return self._details
 
-    def setNote(self, note: str):
+    def setNote(self, note: Union[str, None]):
         self._note = note
 
     def status(self):
@@ -207,7 +207,7 @@ class Backup(object):
             return backup.backupType()
         return "error"
 
-    def version(self) -> str:
+    def version(self) -> Union[str, None]:
         for backup in self.sources.values():
             if backup.version() is not None:
                 return backup.version()

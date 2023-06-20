@@ -1,3 +1,9 @@
+## v0.111.1 [2023-06-19]
+- Support for the new network storage features in Home Assistant.  The addon will now create backups in what Home Assistant has configured as its default backup location.  This can be overridden in the addon's settings.
+- Raised the addon's required permissions to "Admin" in order to access the supervisor's mount API.
+- Fixed a CSS error causing toast messages to render partially off screen on small displays.
+- Fixed misreporting of some error codes from Google Drive when a partial upload can't be resumed.
+
 ## v0.110.4 [2023-04-28]
 - Fix a whitespace error causing authorization to fail.
 
@@ -18,19 +24,3 @@
   - Caching data from Google Drive for short periods during periodic syncing.
   - Backing off for a longer time (2 hours) when the addon hits permanent errors.
 - Fixes CSS issues that made the logs page hard to use.
-
-## v0.109.2 [2022-11-15]
-* Fixed a bug where disabling deletion from Google Drive and enabling deltes after upload could cause backups in Google Drive to be deleted.
-
-## v0.109.1 [2022-11-07]
-* If configured from the browser, defaults to a "dark" theme if haven't already configured custom colors
-* Makes the interval at which the addon publishes sensors to Home Assistant configurable (see the "Uncommon Options" settings)
-* "Free space in Google Drive" is now published as an attribute of the "sensor.backup_state" sensor.
-* The "binary_sensor.backups_stale" sensor will now report a problem if creating a backup hangs for more than a day.
-* Fixes potential whitespace errors when copy-pasting Google Drive credentials.
-* Fixes an exception when using generational backup and no backups are present.
-
-## v0.108.4 [2022-08-22]
-* Fixed an error causing "Undefined" to show up for addon descriptions.
-* Fixed an error preventing addon thumbnails from showing up.
-* Fixed an error causing username/password authentication to fail.

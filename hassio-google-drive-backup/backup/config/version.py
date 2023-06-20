@@ -1,7 +1,6 @@
 STAGING_KEY = ".staging."
 EXPECTED_VERISON_CHARS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.']
 
-
 class Version:
     def __init__(self, *args):
         self._identifiers = args
@@ -10,6 +9,10 @@ class Version:
     @classmethod
     def default(cls):
         return Version(0)
+
+    @classmethod
+    def max(cls):
+        return Version(99999999)
 
     @classmethod
     def parse(cls, version: str):

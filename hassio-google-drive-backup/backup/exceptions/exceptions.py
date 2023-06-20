@@ -10,7 +10,8 @@ from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_LOW_SPACE, ERROR_MULTIPLE_DELETES, ERROR_NO_BACKUP,
                      ERROR_NOT_UPLOADABLE, ERROR_PLEASE_WAIT, ERROR_PROTOCOL,
                      ERROR_BACKUP_IN_PROGRESS, ERROR_UPLOAD_FAILED, LOG_IN_TO_DRIVE,
-                     SUPERVISOR_PERMISSION, ERROR_GOOGLE_UNEXPECTED, ERROR_SUPERVISOR_TIMEOUT, ERROR_SUPERVISOR_UNEXPECTED, ERROR_SUPERVISOR_FILE_SYSTEM)
+                     SUPERVISOR_PERMISSION, ERROR_GOOGLE_UNEXPECTED, ERROR_SUPERVISOR_TIMEOUT, ERROR_SUPERVISOR_UNEXPECTED, ERROR_SUPERVISOR_FILE_SYSTEM,
+                     UNKONWN_NETWORK_STORAGE, INACTIVE_NETWORK_STORAGE)
 
 
 def ensureKey(key, target, name):
@@ -444,3 +445,35 @@ class GoogleCredGenerateError(KnownError):
 
     def code(self):
         return ERROR_GOOGLE_CRED_PROCESS
+
+
+class UnknownNetworkStorageError(KnownError):
+    def __init__(self, name: str="Unkown"):
+        self.name = name
+
+    def message(self):
+        return f"The network storage '{self.name}' isn't recognized.  Please visit the add-on web UI to select different storage or use the local disk."
+
+    def code(self):
+        return UNKONWN_NETWORK_STORAGE
+
+    def data(self):
+        return {
+            "storage_name": self.name
+        }
+
+
+class InactiveNetworkStorageError(KnownError):
+    def __init__(self, name: str="Unkown"):
+        self.name = name
+
+    def message(self):
+        return f"The network storage '{self.name}' isn't ready.  The network share must be available before it can be used for a backup."
+
+    def code(self):
+        return INACTIVE_NETWORK_STORAGE
+
+    def data(self):
+        return {
+            "storage_name": self.name
+        }

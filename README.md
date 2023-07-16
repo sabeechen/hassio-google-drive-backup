@@ -265,3 +265,15 @@ The add-on will only delete an old backup if a new one exists to replace it, so 
 ### Can I exclude specific sub-folders from my backup?
 
 The add-on uses the supervisor to create backups, and the supervisor only permits you to include or exclude the 5 main folders (home assistant configuration, share, SSL, media, and local add-ons). Excluding specific subfolders, or only including specific subfolders from a backup isn't possible today.
+
+### <a name="supervisor_logs"></a>I'm getting weird errors.  Where do I look for more detils about an error (Supervisor logs).
+
+The addon uses Home Assistant's "supervisor" to create and delete backups on Home Asisstant's side.  In case you don't know, the supervisor is something that runs in the background on Home Assistant and manages stuff like backups, connections to hardware, and setting up the environment that Home Assistant Core (eg the UI) and addons run in.  Because of this a lot of errors you run into (problems with the NAS, HD corruption, etc) only show up in the supervisor's logs.  The supervisor's logs are kind of hidden by default, to view them:
+
+- Go to your Home Assistant user profile by clicking the user icon in the bottom left of Home Assistant's main UI.
+- Enable "Advanced Mode" in your profile.
+- Navigate to Settings > System > Logs
+- Select "Supervisor" from the drop down at the top right of the page.
+
+The logs there keep a pretty short history, so if you ahve a lot of other errors/warnings happening (which is common) you mgiht need to go check the logs right after you see errors in the addon.
+

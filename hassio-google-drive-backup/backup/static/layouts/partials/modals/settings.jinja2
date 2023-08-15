@@ -35,7 +35,10 @@
           </div>
           <div class="input-field col s6">
             <span class="helper-text">
-              The place Home Assistant stores backups before they're uploaded to Google Drive.  This can be the local disk/SD card, a network share, or leave it at "Default" to use the default location configured in Home Assistant.  New network storage you add through Home Assistant will show up in this list so long as they're configured to be "backup" locations.</span>
+              The place Home Assistant stores backups before they're uploaded to Google Drive. This can be the local
+              disk/SD card, a network share, or leave it at "Default" to use the default location configured in Home
+              Assistant. New network storage you add through Home Assistant will show up in this list so long as they're
+              configured to be "backup" locations.</span>
           </div>
         </div>
         <div class="row">
@@ -45,9 +48,10 @@
                 class="filled-in checkbox-ha" />
               <span>Delete Backups After Upload</span>
               <br />
-              <span class="helper-text">Delete backups in Home Assistant immediately after uploading them to Google Drive.  
-                This can be useful if your machine is low on space, but your backups will only be stored in the cloud. 
-                 Enabling this will cause "Backups in Home Assistant" to be ignored.</span>
+              <span class="helper-text">Delete backups in Home Assistant immediately after uploading them to Google
+                Drive.
+                This can be useful if your machine is low on space, but your backups will only be stored in the cloud.
+                Enabling this will cause "Backups in Home Assistant" to be ignored.</span>
             </label>
           </div>
         </div>
@@ -58,21 +62,24 @@
                 class="filled-in checkbox-ha" />
               <span>Delete Oldest Backup Before Making a New One</span>
               <br />
-              <span class="helper-text">Makes the addon delete the oldest backup before a new one is created in Home Assistant or uploaded to Google Drive.  
-                When turned off (the default) the oldest backup will only be deleted after a new one has been created or uploaded.  Be warned that if a 
-                backup fails to be created or uploaded to Google Drive, this can make you have one fewer than the number of backups you intended to keep there.</span>
+              <span class="helper-text">Makes the addon delete the oldest backup before a new one is created in Home
+                Assistant or uploaded to Google Drive.
+                When turned off (the default) the oldest backup will only be deleted after a new one has been created or
+                uploaded. Be warned that if a
+                backup fails to be created or uploaded to Google Drive, this can make you have one fewer than the number
+                of backups you intended to keep there.</span>
             </label>
           </div>
         </div>
         <div class="row">
           <div class="col s12">
             <label>
-              <input type="checkbox" name="ignore_other_backups" id="ignore_other_backups"
-                class="filled-in checkbox-ha" onchange="updateIgnoredBackupOptions()"/>
+              <input type="checkbox" name="ignore_other_backups" id="ignore_other_backups" class="filled-in checkbox-ha"
+                onchange="updateIgnoredBackupOptions()" />
               <span>Ignore Other Backups</span>
               <br />
-              <span class="helper-text">The addon will ignore any backups it didn't create.  
-                Ignored backups will not count toward "Backups in Home Assistant", get deleted, 
+              <span class="helper-text">The addon will ignore any backups it didn't create.
+                Ignored backups will not count toward "Backups in Home Assistant", get deleted,
                 or get uploaded to Google Drive unless you manually tell the addon to do so.</span>
             </label>
           </div>
@@ -81,12 +88,13 @@
           <div class="col s12">
             <label>
               <input type="checkbox" name="ignore_upgrade_backups" id="ignore_upgrade_backups"
-                class="filled-in checkbox-ha" onchange="updateIgnoredBackupOptions()"/>
+                class="filled-in checkbox-ha" onchange="updateIgnoredBackupOptions()" />
               <span>Ignore "Upgrade" Backups</span>
               <br />
               <span class="helper-text">The addon will ignore backups with only one addon or folder inside them.
-                This is useful if you'd like the addon to ignore backups that Home Assistant automatically creates while updating.  
-                Ignored backups will not count toward "Backups in Home Assistant", get deleted, 
+                This is useful if you'd like the addon to ignore backups that Home Assistant automatically creates while
+                updating.
+                Ignored backups will not count toward "Backups in Home Assistant", get deleted,
                 or get uploaded to Google Drive up unless you manually tell the addon to do so.</span>
             </label>
           </div>
@@ -99,9 +107,9 @@
               class="validate" />
             <label for="delete_ignored_after_days">Delete ignored backups after</label>
             <span class="helper-text">
-              For any ignored backups, automatically delete them after this much time.  
+              For any ignored backups, automatically delete them after this much time.
               Leave blank (the default) to never delete them. This can be any duration of
-              time expressed as days, hours, minutes, and seconds.  Be careful enabling this, 
+              time expressed as days, hours, minutes, and seconds. Be careful enabling this,
               you can see if you have any ignored backups by scrolling to the bottom of the
               list of backups under this dialog. Examples:
               '7 days', '36 hours', '1 hour, 30 minutes, 10 seconds', etc.</span>
@@ -146,8 +154,7 @@
         <div class="row">
           <div class="input-field col s12">
             <i class="material-icons prefix">label_outline</i>
-            <input type="text" id="backup_name" name="backup_name" class="validate"
-              onkeyup="backupNameExample()" />
+            <input type="text" id="backup_name" name="backup_name" class="validate" onkeyup="backupNameExample()" />
             <label for="backup_name">Backup Name Template</label>
             <span class="helper-text">The template to use for naming new backup.
               <a target="_blank" rel="noreferrer"
@@ -176,7 +183,8 @@
                 <input type="text" settings_ignore="true" id="settings_specify_folder_id"
                   name="settings_specify_folder_id" class="validate" />
                 <label for="settings_specify_folder_id">Backup Folder ID</label>
-                <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload backups into. You
+                <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload
+                  backups into. You
                   can get this id by navigating to the folder in
                   <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
                   and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
@@ -184,11 +192,13 @@
                   <a target="_blank" rel="noreferrer"
                     href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
                   then the Drive ID is 1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
-                <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
-                  folder you'd like to use and paste its folder ID here.  Doing this gives the addon permission to store backups in that folder.</span>
+                <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window
+                  where you can select the
+                  folder you'd like to use and paste its folder ID here. Doing this gives the addon permission to store
+                  backups in that folder.</span>
                 <a href="#!" id="choose_folder_button" onclick="chooseBackupFolder()"
-                  class="btn-flat hide-for-custom-creds"
-                  style="margin-left: 20px; margin-top: 10px"><i class="material-icons">open_in_new</i>Choose Folder</a>
+                  class="btn-flat hide-for-custom-creds" style="margin-left: 20px; margin-top: 10px"><i
+                    class="material-icons">open_in_new</i>Choose Folder</a>
               </div>
             </div>
           </div>
@@ -231,7 +241,8 @@
               <input type="checkbox" name="send_error_reports" id="send_error_reports" class="filled-in checkbox-ha" />
               <span>Send Error Reports</span>
               <br />
-              <span class="helper-text">Sends information about errors to a database maintained by developers. This helps
+              <span class="helper-text">Sends information about errors to a database maintained by developers. This
+                helps
                 them identify problems with new releases and provide better help messages.</span>
             </label>
           </div>
@@ -429,7 +440,8 @@
           <div class="col s12">
             <label>
               <input type="checkbox" settings_ignore="true" name="partial_backups" id="partial_backups"
-                class="filled-in checkbox-ha" onchange="toggleSlide(this, 'settings_partial_details');backupNameExample();" />
+                class="filled-in checkbox-ha"
+                onchange="toggleSlide(this, 'settings_partial_details');backupNameExample();" />
               <span>Partial Backups</span>
               <br />
               <span class="helper-text">Partial backups allow you to selectively backup portions of your Home
@@ -445,7 +457,7 @@
               <div class="col s12">
                 <span style="font-weight: bold">Folders</span>
                 <ul id="folder_selection_list">
-    
+
                 </ul>
               </div>
             </div>
@@ -465,9 +477,10 @@
               <span>Stop addons</span>
               <br />
               <span class="helper-text">
-                Some addons will not get backed up correctly while they are running.  Any addons you select below will
-                be stopped before a backup is taken and then started after it finishes.  Note that if this addon
-                is interrupted before a backup completes, you may have to restart the addon manually.</span>
+                Addons selected below will be stopped before backup and started after.  This is generally only
+                recommended as a last resort if an addon can't be backed up while running, which is a rare.  In
+                some error situations an addon can't be restarted after backup and you'll have to do it manually.
+              </span>
             </label>
           </div>
         </div>
@@ -494,16 +507,16 @@
             <div class="row">
               <div class="input-field col s6">
                 <i class="material-icons prefix">format_paint</i>
-                <a href="#!" class="btn-flat" style="margin-left: 45px; margin-top: 10px"
-                  onclick="showPallette(this)" id="background_color"></a>
+                <a href="#!" class="btn-flat" style="margin-left: 45px; margin-top: 10px" onclick="showPallette(this)"
+                  id="background_color"></a>
                 <label style="transform: translateY(-20px) scale(0.8)">Background Color</label>
                 <span class="helper-text" style="margin-top: 10px">The background color of this interface. <a href="#"
                     onclick="revertColors();">Click here</a> to revert back to the default.</span>
               </div>
               <div class="input-field col s6">
                 <i class="material-icons prefix">format_paint</i>
-                <a href="#!" class="btn-flat" style="margin-left: 45px; margin-top: 10px"
-                  onclick="showPallette(this)" id="accent_color"></a>
+                <a href="#!" class="btn-flat" style="margin-left: 45px; margin-top: 10px" onclick="showPallette(this)"
+                  id="accent_color"></a>
                 <label style="transform: translateY(-20px) scale(0.8)">Accent Color</label>
                 <span class="helper-text" style="margin-top: 10px">The accent color of this interface (e.g. links,
                   buttons, and other elements you can interact with). <a href="#" onclick="revertColors();">Click
@@ -516,13 +529,61 @@
         <div class="row">
           <div class="col s12">
             <label>
-              <span style="font-size: 15px">Uncommon Options</span>
-              <br />
-              <span class="helper-text">Most people don't need these options, but you might.</span>
+              <span style="font-size: 15px">Google Drive Options</span>
             </label>
           </div>
         </div>
         <div class="row">
+          <div class="col s11 offset-s1 row">
+            <div class="input-field col s12 m12 s12">
+              <i class="material-icons prefix">network_check</i>
+              <input type="text" id="upload_limit_bytes_per_second" name="upload_limit_bytes_per_second"
+                pattern="^[ ]*([0-9,]*\.?[0-9]*)[ ]*(b|B|k|K|m|M|g|G|t|T|p|P|e|E|z|Z|y|Y)[a-zA-Z ]*[ ]*$"
+                class="validate" />
+              <label for="upload_limit_bytes_per_second">Upload Bandwidth Limit</label>
+              <span class="helper-text">
+                Sets a bandwidth limit for uploads to Google Drive, useful if you find uploads saturating your network.
+                The value can be provided in any binary-prefix format, e.g. '256 Kb', '10 Mb', '3000Kb', etc. The speed
+                will be interpreted as "per second" so a value of "10 MB" will limit the upload speed to 10 MB per
+                second.</span>
+            </div>
+          </div>
+          <div class="col s11 offset-s1 row">
+            <div class="input-field col m6 s12">
+              <i class="material-icons prefix">alarm_on</i>
+              <input type="text" id="upload_allowed_start" name="upload_allowed_start" pattern="^[0-2]\d:[0-5]\d$"
+                class="validate" />
+              <label for="upload_allowed_start">Upload Start Time</label>
+            </div>
+            <div class="input-field col m6 s12">
+              <i class="material-icons prefix">alarm_off</i>
+              <input type="text" id="upload_allowed_end" name="upload_allowed_end" pattern="^[0-2]\d:[0-5]\d$"
+                class="validate" />
+              <label for="upload_allowed_end">Upload End Time</label>
+            </div>
+            <div class="col s12 offset-s1">
+              <span class="helper-text">
+                Specify times of day in 24 hour local time when uploads to Google Drive are permitted (eg "16:30" for 4:30
+                PM). Backups can still be created outside this time, but uploads to Google Drive wait to start. If
+                start time is after end time, then its assumed the desired time span crosses midnight. If you have large
+                backups, please ensure you give the addon enough time for the upload to complete.</span>
+            </div>
+          </div>
+          <div class="col s11 offset-s1 row">
+            <div class="input-field col s12 m12 s12">
+              <i class="material-icons prefix">refresh</i>
+              <input type="text" id="maximum_upload_chunk_bytes" name="maximum_upload_chunk_bytes"
+                pattern="^[ ]*([0-9,]*\.?[0-9]*)[ ]*(b|B|k|K|m|M|g|G|t|T|p|P|e|E|z|Z|y|Y)[a-zA-Z ]*[ ]*$"
+                class="validate" />
+              <label for="maximum_upload_chunk_bytes">Maximum Drive Upload Chunk Size</label>
+              <span class="helper-text">
+                Sets the maximum "chunk" size allowed for uploads to Google Drive. Larger sizes will upload faster but
+                delay reports
+                of progress and may cause interruptions on some network hardware. Between 1MB and 20MB is recommended,
+                minimum is 256 kB.
+                The value can be provided in any binary-prefix format, e.g. '256 Kb', '10.5 Mb', '3000Kb', etc.</span>
+            </div>
+          </div>
           <div class="col s11 offset-s1 row">
             <div class="input-field col m6 s12">
               <i class="material-icons prefix">timelapse</i>
@@ -545,6 +606,17 @@
                   public DNS servers</a>.</span>
             </div>
           </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
+              <span style="font-size: 15px">Uncommon Options</span>
+              <br />
+              <span class="helper-text">Most people don't need these options, but you might.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
           <div class="col s11 offset-s1 row">
             <div class="col m12 s12">
               <label>
@@ -595,8 +667,11 @@
                 class="validate" />
               <label for="ha_reporting_interval_seconds">Home Assistant Reporting Interval</label>
               <span class="helper-text">
-                How often the addon should update the "Backups Stale" sensor in Home Assistant.  The addon will still update immediately when it encounters 
-                errors.  With longer values it may take longer after Home Assistant starts up before the "Backups Stale" sensor it available.  This can be any duration of time expressed as hours, minutes, and seconds. Examples:
+                How often the addon should update the "Backups Stale" sensor in Home Assistant. The addon will still
+                update immediately when it encounters
+                errors. With longer values it may take longer after Home Assistant starts up before the "Backups Stale"
+                sensor it available. This can be any duration of time expressed as hours, minutes, and seconds.
+                Examples:
                 '10 seconds', '3 minute', '2 hours, 30 minutes', etc.
               </span>
             </div>
@@ -635,10 +710,10 @@
               <span>Use old sensor names/values with "snapshot" instead of "backup"</span>
               <br />
               <span class="helper-text">When checked, the addon's state and staleness sensors will be
-                published as binary_sensor.snapshots_stale and sensor.snapshot_backup and their 
-                attributes will reference "snapshots" instead of "backups".  <a target="_blank" rel="noreferrer"
-                href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/BACKUP_AND_SNAPSHOT.md">
-                See here</a> for a detailed explanation of why you might want this.</span>
+                published as binary_sensor.snapshots_stale and sensor.snapshot_backup and their
+                attributes will reference "snapshots" instead of "backups". <a target="_blank" rel="noreferrer"
+                  href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/BACKUP_AND_SNAPSHOT.md">
+                  See here</a> for a detailed explanation of why you might want this.</span>
             </label>
           </div>
         </div>
@@ -652,6 +727,7 @@
     </div>
 
     <a href="#!" class="btn-flat" id="save_settings" onClick="saveSettings()"><i class="material-icons">save</i>Save</a>
-    <a href="#!" class="btn-flat" onclick="handleCloseSettings()" id="save_cancel"><i class="material-icons">close</i>Cancel</a>
+    <a href="#!" class="btn-flat" onclick="handleCloseSettings()" id="save_cancel"><i
+        class="material-icons">close</i>Cancel</a>
   </div>
 </div>

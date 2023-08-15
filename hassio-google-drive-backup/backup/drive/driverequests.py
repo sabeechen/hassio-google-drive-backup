@@ -1,7 +1,7 @@
 import io
 import math
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
 
@@ -14,7 +14,7 @@ from ..config import Config, Setting
 from ..exceptions import (GoogleCredentialsExpired,
                           GoogleSessionError, LogicError,
                           ProtocolError, ensureKey, KnownTransient, GoogleTimeoutError, GoogleUnexpectedError)
-from backup.util import Backoff
+from backup.util import Backoff, TokenBucket
 from backup.file import JsonFileSaver
 from ..time import Time
 from ..logger import getLogger
@@ -216,6 +216,12 @@ class DriveRequests():
         # Upload logic is complicated. See https://developers.google.com/drive/api/v3/manage-uploads#resumable
         total_size = stream.size()
         location = None
+
+        limiter: Union[TokenBucket, None] = None
+        if self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) > 0:
+            # google requires a minimum 256kb upload chunk, so the limiter bucket capacity must be at least that to function.
+            capacity = min(self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) * 2, BASE_CHUNK_SIZE)
+            limiter = TokenBucket(self.time, capacity, self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND), 0)
         if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION:
             logger.debug(
                 "Attempting to resume a previously failed upload where we left off")
@@ -285,6 +291,13 @@ class DriveRequests():
         current_chunk_size = BASE_CHUNK_SIZE
         while True:
             start = stream.position()
+
+            # See if we need to limit the chunk size to reduce bandwidth.
+            if limiter is not None:
+                request = int(await limiter.consumeWithWait(BASE_CHUNK_SIZE, current_chunk_size))
+                if request != current_chunk_size:
+                    # This can go over the speed cap slightly, not a big deal though
+                    current_chunk_size = math.ceil(request / BASE_CHUNK_SIZE) * BASE_CHUNK_SIZE
             data = await stream.read(current_chunk_size)
             chunk_size = len(data.getbuffer())
             if chunk_size == 0:

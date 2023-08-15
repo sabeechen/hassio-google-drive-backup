@@ -23,10 +23,12 @@ class DriveRequester():
         self.session = session
         self.resolver = resolver
         self.config = config
+        self.all_resposnes: list[ClientResponse] = []
 
     async def request(self, method, url, headers={}, json=None, data=None) -> ClientResponse:
         try:
             response = await self.session.request(method, url, headers=headers, json=json, timeout=self.buildTimeout(), data=data)
+            self.all_resposnes.append(response)
             if response.status < 400:
                 return response
             await self.raiseForKnownErrors(response)

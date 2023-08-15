@@ -245,6 +245,7 @@ class Model():
                 proposed = list(self.backups.values())
                 proposed.append(dummy)
                 if self._nextPurge(self.dest, proposed)[1] != dummy:
+                    # TODO: Stop backup here if time doesn't allow it
                     if self.config.get(Setting.DELETE_BEFORE_NEW_BACKUP):
                         await self._purge(self.dest, pre_purge=True)
                     upload.addSource(await self.dest.save(upload, await self.source.read(upload)))

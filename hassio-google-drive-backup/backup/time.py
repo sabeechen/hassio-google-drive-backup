@@ -8,6 +8,7 @@ from dateutil.parser import parse
 from .logger import getLogger
 import pytz
 import os
+import time as base_time
 from pytz import timezone, utc
 from tzlocal import get_localzone_name, get_localzone
 from dateutil.tz import tzlocal
@@ -91,6 +92,9 @@ class Time(object):
         if ret.tzinfo is None:
             ret = ret.replace(tzinfo=utc)
         return ret
+
+    def monotonic(self):
+        return base_time.monotonic()
 
     def toLocal(self, dt: datetime) -> datetime:
         return dt.astimezone(self.local_tz)

@@ -23,7 +23,7 @@ from backup.model import DummyBackup, DestinationPrecache, Model
 from backup.time import Time
 from backup.module import BaseModule
 from backup.debugworker import DebugWorker
-from backup.creds import Creds
+from backup.creds import Creds, DriveRequester
 from backup.server import ErrorStore
 from backup.ha import AddonStopper
 from backup.ui import UiServer
@@ -369,6 +369,18 @@ async def ha_requests(injector, server):
 @pytest.fixture
 async def drive_requests(injector, server):
     return injector.get(DriveRequests)
+
+
+@pytest.fixture
+async def drive_requester(injector, server):
+    return injector.get(DriveRequester)
+
+
+@pytest.fixture(autouse=True)
+def verify_closed_responses(drive_requester: DriveRequester):
+    yield "unused"
+    for resp in drive_requester.all_resposnes:
+        assert resp.closed
 
 
 @pytest.fixture

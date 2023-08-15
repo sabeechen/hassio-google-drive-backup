@@ -12,6 +12,7 @@ class FakeTime(Time):
         else:
             self._now = self.toUtc(
                 datetime(1985, 12, 6, 0, 0, 0, tzinfo=timezone('EST')))
+        self._start = self._now
         self.sleeps = []
 
     def setTimeZone(self, tz):
@@ -19,6 +20,9 @@ class FakeTime(Time):
             self.local_tz = timezone(tz)
         else:
             self.local_tz = tz
+
+    def monotonic(self):
+        return (self._now - self._start).total_seconds()
 
     def setNow(self, now: datetime):
         self._now = now

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, date
 from io import IOBase
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Dict, Generic, List, Optional, Tuple, TypeVar, Union
 
 from injector import inject, singleton
 
@@ -385,10 +385,12 @@ class Model():
     def _getPurgeStats(self):
         ret = {}
         for source in [self.source, self.dest]:
-            ret[source.name()] = len(self._getPurgeList(source))
+            to_purge = self._getPurgeList(source)
+            ret[source.name()] = len(to_purge)
+            ret[source.name() + "_desc"] = "\n".join(p[0].name() for p in to_purge)
         return ret
 
-    def _getPurgeList(self, source: BackupSource, pre_purge=False):
+    def _getPurgeList(self, source: BackupSource, pre_purge=False) -> List[Tuple[Backup, Union[str, None]]]:
         if not source.enabled():
             return []
         candidates = list(self.backups.values())

@@ -614,6 +614,20 @@
                 The value can be provided in any binary-prefix format, e.g. '256 Kb', '10 Mb', '3000Kb', etc.</span>
             </div>
           </div>
+          <div class="col s11 offset-s1 row">
+            <div class="input-field col s12 m12 s12">
+              <i class="material-icons prefix">timelapse</i>
+              <input type="text" id="pending_backup_timeout_seconds" name="pending_backup_timeout_seconds"
+                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
+                class="validate" />
+              <label for="pending_backup_timeout_seconds">New Backup Timeout</label>
+              <span class="helper-text">
+                How long the addon should wait after asking Home Assistant for a new backup before it considers the backup failed and 
+                attempts a retry.  If you have very large backups or your backups just take a long time, you might need to increase 
+                this.  It can be specified in terms of hours, minutes and seconds (eg 2 hours, 100 minutes, 9 hours 30 seconds, etc) 
+              </span>
+            </div>
+          </div>
           <div class="col s11 offset-s1">
             <label>
               <input type="checkbox" id="call_backup_snapshot" name="call_backup_snapshot"

@@ -506,10 +506,11 @@ for setting in Setting:
 for key in addon_config["schema"]:
     _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
 
-_VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator("max_sync_interval_seconds", minimum=1, maximum=None)
-_VALIDATORS[Setting.HA_REPORTING_INTERVAL_SECONDS] = DurationAsStringValidator("ha_reporting_interval_seconds", minimum=1, maximum=None)
-_VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator("delete_ignored_after_days", minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
-_VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator("maximum_upload_chunk_bytes", minimum=256 * 1024)
+_VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator(Setting.MAX_SYNC_INTERVAL_SECONDS.value, minimum=1, maximum=None)
+_VALIDATORS[Setting.HA_REPORTING_INTERVAL_SECONDS] = DurationAsStringValidator(Setting.HA_REPORTING_INTERVAL_SECONDS.value, minimum=1, maximum=None)
+_VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator(Setting.DELETE_IGNORED_AFTER_DAYS.value, minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
+_VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES.value, minimum=256 * 1024)
+_VALIDATORS[Setting.PENDING_BACKUP_TIMEOUT_SECONDS] = DurationAsStringValidator(Setting.PENDING_BACKUP_TIMEOUT_SECONDS.value, minimum=1, maximum=None)
 VERSION = addon_config["version"]
 
 

@@ -8,7 +8,8 @@
     <i class="material-icons prefix">folder_open</i>
     <input type="text" id="{{ id }}" />
     <label for="{{ id }}">Enter your folder ID here, then click "Save"</label>
-    <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload backups into. You
+    <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload backups
+      into. You
       can get this id by navigating to the folder in
       <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
       and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
@@ -16,15 +17,16 @@
       <a target="_blank" rel="noreferrer"
         href="https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188">https://drive.google.com/drive/folders/1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</a>,
       then the Drive ID is 1el4ZWcE0xdkIu_Yt_2kxk36qE7K5O188</span>
-    <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can select the 
-      folder you'd like to use.  Doing this gives the addon permission to store backups in that folder.</span>
+    <span class="helper-text hide-for-custom-creds">Use the "Choose Folder" button to open a new window where you can
+      select the
+      folder you'd like to use. Doing this gives the addon permission to store backups in that folder.</span>
     <a href="#!" id="choose_folder_button" style="margin-left: 50px" onclick="chooseBackupFolder()"
       class="btn-flat hide-for-custom-creds">
       <i class="material-icons left">open_in_new</i>
       Choose Folder
     </a>
-    <a href="#!" id="choose_folder_button" onclick="saveFolder($('#{{ id }}', $(this).parent('.find_parent_target')).val())"
-      class="btn-flat">
+    <a href="#!" id="choose_folder_button"
+      onclick="saveFolder($('#{{ id }}', $(this).parent('.find_parent_target')).val())" class="btn-flat">
       <i class="material-icons left">save</i>
       Save
     </a>
@@ -36,99 +38,127 @@
 {# Error messages #}
 
 {% set error_card_actions %}
-  <a class="btn-flat" id="error_github_search" href="#" target="_blank"><i class="material-icons">search</i>Find similar issues</a>
-  <a class="btn-flat" id="error_github_link" onclick="bugReport()"><i class="material-icons">bug_report</i>File this issue on Github</a>
-  <a class="btn-flat" id="download_logs_link" href="log?format=download" target="_blank"><i class="material-icons">file_download</i>Download logs</a>
+<a class="btn-flat" id="error_github_search" href="#" target="_blank"><i class="material-icons">search</i>Find similar
+  issues</a>
+<a class="btn-flat" id="error_github_link" onclick="bugReport()"><i class="material-icons">bug_report</i>File this issue
+  on Github</a>
+<a class="btn-flat" id="download_logs_link" href="log?format=download" target="_blank"><i
+    class="material-icons">file_download</i>Download logs</a>
 {% endset %}
 {% call macros.errorMessage("Error while backing up", "error_card", "sync_problem", error_card_actions) %}
-  <p>
-    The add-on got the error below while trying to sync your backups. Some transient errors are expected
-    (e.g. an upload could fail if the internet is down) but if this persist for more than a few minutes your
-    backups won't get uploaded and the information you see on this page may be stale. If you file an
-    issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the
-    "Download Logs" link below
-  </p>
-  <br />
-  <p id="generic_error_title" style="white-space: pre-wrap;font-family: monospace;"></p>
-  <div>
-    <a onclick="toggleLinkSlide(this, 'generic_error_details');" href="#!"><i class="material-icons"
-        style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> View Error
-      Details</a>
-      <div id="generic_error_details" class="default-hidden" style="white-space: pre-wrap; padding: 10px; font-family: monospace;">
-      </div>
+<p>
+  The add-on got the error below while trying to sync your backups. Some transient errors are expected
+  (e.g. an upload could fail if the internet is down) but if this persist for more than a few minutes your
+  backups won't get uploaded and the information you see on this page may be stale. If you file an
+  issue on GitHub with the link below, it could be helpful to provide the logs downloaded from the
+  "Download Logs" link below
+</p>
+<br />
+<p id="generic_error_title" style="white-space: pre-wrap;font-family: monospace;"></p>
+<div>
+  <a onclick="toggleLinkSlide(this, 'generic_error_details');" href="#!"><i class="material-icons"
+      style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> View Error
+    Details</a>
+  <div id="generic_error_details" class="default-hidden"
+    style="white-space: pre-wrap; padding: 10px; font-family: monospace;">
   </div>
+</div>
 {% endcall %}
 
 {% set low_space_actions %}
-  <a class="btn-flat" href="#" onclick="sync('low_space'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-  <a class="btn-flat" href="#" onclick="skipLowSpaceWarning(); return false;"><i class="material-icons">add</i>Create backup anyway</a>
+<a class="btn-flat" href="#" onclick="sync('low_space'); return false;"><i class="material-icons">refresh</i>Try Syncing
+  Again</a>
+<a class="btn-flat" href="#" onclick="skipLowSpaceWarning(); return false;"><i class="material-icons">add</i>Create
+  backup anyway</a>
 {% endset %}
 {% call macros.errorMessage("Low Disk Space", "low_space", "disc_full", low_space_actions) %}
-  <p>
-    It looks like you're low on disk space. The addon won't attempt to create a backup until you take
-    action or more space becomes available. It looks like your backup folder in Home Assistant is
-    <b id="data_pct_used"></b> full and only has <b id="data_space_remaining"></b> left so creating 
-    another backup runs the risk of exhausting the space available.  When Home Assistant runs out of 
-    disk space, it can stop responding and become very difficult to fix.  This addon can only estimate 
-    how big the next backup will be based on your most recent one, it can't know how big the backup 
-    will be until its actually created.
-  </p>
-  <p>To resolve this you can:</p>
-  <ul class="browser-default">
-    <li>
-      Free up space in Home Assistant. Addons like the <a target="_blank" rel="noreferrer" href="https://www.home-assistant.io/addons/configurator/">Configurator</a> can help you see what files might be taking up space.
-    </li>
-    <li>
-      Make your backups smaller (see <a target="_blank" rel="noreferrer" href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive-why-are-my-backups-so-big">this tip</a>).
-      You can also click the little <i class="material-icons" style="display: inline; font-size: 15px">info</i>
-      next to backups below to see which parts of them are taking up the most space.
-    </li>
-    <li>
-      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-      to store fewer backups in Home Assistant.
-    </li>
-    <li>
-      Delete existing backups from Home Assistant by clicking <b>"Action"</b> -> <b>"Delete"</b> on backups below.  Make sure either you don't need them anymore or they're uploaded to Google Drive.
-    </li>
-    <li>
-      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-      and disable "Stop on low disk space".  This will make the addon stop checking disk usage, do so at your own peril.
-    </li>
-    <li>
-      Click "Create backup anyway" to bypass this warning just this one time. This is useful if you're confident that the backup actually will fit in the available space. Again, do so at your own peril.
-    </li>
-  </ul>
+<p>
+  It looks like you're low on disk space. The addon won't attempt to create a backup until you take
+  action or more space becomes available. It looks like your backup folder in Home Assistant is
+  <b id="data_pct_used"></b> full and only has <b id="data_space_remaining"></b> left so creating
+  another backup runs the risk of exhausting the space available. When Home Assistant runs out of
+  disk space, it can stop responding and become very difficult to fix. This addon can only estimate
+  how big the next backup will be based on your most recent one, it can't know how big the backup
+  will be until its actually created.
+</p>
+<p>To resolve this you can:</p>
+<ul class="browser-default">
+  <li>
+    Free up space in Home Assistant. Addons like the <a target="_blank" rel="noreferrer"
+      href="https://www.home-assistant.io/addons/configurator/">Configurator</a> can help you see what files might be
+    taking up space.
+  </li>
+  <li>
+    Make your backups smaller (see <a target="_blank" rel="noreferrer"
+      href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive-why-are-my-backups-so-big">this
+      tip</a>).
+    You can also click the little <i class="material-icons" style="display: inline; font-size: 15px">info</i>
+    next to backups below to see which parts of them are taking up the most space.
+  </li>
+  <li>
+    Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+        style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+    to store fewer backups in Home Assistant.
+  </li>
+  <li>
+    Delete existing backups from Home Assistant by clicking <b>"Action"</b> -> <b>"Delete"</b> on backups below. Make
+    sure either you don't need them anymore or they're uploaded to Google Drive.
+  </li>
+  <li>
+    Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+        style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+    and disable "Stop on low disk space". This will make the addon stop checking disk usage, do so at your own peril.
+  </li>
+  <li>
+    Click "Create backup anyway" to bypass this warning just this one time. This is useful if you're confident that the
+    backup actually will fit in the available space. Again, do so at your own peril.
+  </li>
+</ul>
 {% endcall %}
 
 {% set drive_full_actions %}
-    <a class="btn-flat" href="#" onclick="sync('drive_full'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
+<a class="btn-flat" href="#" onclick="sync('drive_full'); return false;"><i class="material-icons">refresh</i>Try
+  Syncing Again</a>
 {% endset %}
 {% call macros.errorMessage("Google Drive is Full", "drive_full", "disc_full", drive_full_actions) %}
-  <p>
-    Google Drive is full, backups can't continue until space is available. You can go to Google Drive's
-    <a href="https://drive.google.com/drive/quota" target="_blank" rel="noreferrer">quota page</a>
-    to see what's using up space in your Google Drive, but because that space is shared between several Google products (e.g. Gmail, Google Photos)
-    one of those products might be using the space instead. You can see your usage across all those products on
-    Google's <a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">storage settings</a> page.
-  </p>
-  <p>To resolve this you can:</p>
-  <ul class="browser-default">
-    <li>
-      Free up space in Google Drive, Gmail, or Google Photos by deleting things.
-    </li>
-    <li>
-      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-      to store fewer backups in Google Drive
-    </li>
-    <li>
-      <a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">Buy more storage</a> from Google
-    </li>
-    <li>
-      Make your backups smaller (see <a href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive-why-are-my-backups-so-big" target="_blank" rel="noreferrer">this tip</a>)
-    </li>
-{% endcall %}
+<p>
+  Google Drive is full, backups can't continue until space is available. The most recent upload attempt is <span
+    id="data_backup_size" target="_blank"></span> and Google says you have <span id="data_free_space"
+    target="_blank"></span> available. You can go to Google Drive's
+  <a href="https://drive.google.com/drive/quota" target="_blank" rel="noreferrer">quota page</a>
+  to see what's using up space in your Google Drive, but because that space is shared between several Google products
+  (e.g. Gmail, Google Photos)
+  one of those products might be using the space instead. You can see your usage across all those products on
+  Google's <a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">storage settings</a>
+  page.
+</p>
+<p>To resolve this you can:</p>
+<ul class="browser-default">
+  <li>
+    Free up space in Google Drive, Gmail, or Google Photos by deleting things.
+  </li>
+  <li>
+    Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+        style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+    to store fewer backups in Google Drive
+  </li>
+  <li>
+    Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+        style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+    to use partial backups.
+  </li>
+  <li>
+    <a href="https://drive.google.com/settings/storage" target="_blank" rel="noreferrer">Buy more storage</a> from
+    Google
+  </li>
+  <li>
+    Make your backups smaller (see <a
+      href="https://github.com/sabeechen/hassio-google-drive-backup#will-this-fill-up-my-google-drive-why-are-my-backups-so-big"
+      target="_blank" rel="noreferrer">this tip</a>)
+  </li>
+  {% endcall %}
 
-{% call macros.errorMessage("Couldn't Log in with Google", "creds_bad", "error") %}
+  {% call macros.errorMessage("Couldn't Log in with Google", "creds_bad", "error") %}
   <p>Google Drive rejected your credentials. Your backups will not be uploaded until this is resolved.</p>
   <p>This can happen if:</p>
   <ul class="browser-default">
@@ -137,13 +167,16 @@
     <li>You haven't used your Google account for over 6 months.</li>
     <li>The add-on's credentials changed, or Google changed them.</li>
   </ul>
-  <p>To resolve this, you'll need to <a href="reauthenticate">authenticate</a> this add-on with Google again. If that still doesn't help, you may need to update the add-on</p>
-{% endcall %}
+  <p>To resolve this, you'll need to <a href="reauthenticate">authenticate</a> this add-on with Google again. If that
+    still doesn't help, you may need to update the add-on</p>
+  {% endcall %}
 
-{% set delete_error_actions %}
-  <a class="btn-flat" href="#" onclick="sync('delete_error'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Couldn't delete old backups in Home Assistant", "delete_error", "delete_forever", delete_error_actions) %}
+  {% set delete_error_actions %}
+  <a class="btn-flat" href="#" onclick="sync('delete_error'); return false;"><i class="material-icons">refresh</i>Try
+    Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Couldn't delete old backups in Home Assistant", "delete_error", "delete_forever",
+  delete_error_actions) %}
   <p>
     The add-on ran into an error (HTTP 400) trying to delete your oldest backup. This can happen
     sometimes (especially if you just installed the add-on) when Home Assistant's cache of your existing backups
@@ -152,7 +185,8 @@
   <p>To resolve this, you can try:</p>
   <ul class="browser-default">
     <li>
-      Refreshing your backups by going to the "Backups" page in Home Assistant and clicking the refresh icon in the top right.
+      Refreshing your backups by going to the "Backups" page in Home Assistant and clicking the refresh icon in the top
+      right.
     </li>
     <li>Restarting the machine Home Assistant runs on.</li>
   </ul>
@@ -161,12 +195,14 @@
     Syncing Again" below. If the above doesn't help, please file an issue on <a onclick="bugReport()">GitHub</a>
     to get more help.
   </p>
-{% endcall %}
+  {% endcall %}
 
-{% set google_dns_actions %}
-  <a class="btn-flat" href="#" onclick="sync('google_dns'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Couldn't Reach Google Drive (DNS error)", "google_dns", "cloud_off", google_dns_actions) %}
+  {% set google_dns_actions %}
+  <a class="btn-flat" href="#" onclick="sync('google_dns'); return false;"><i class="material-icons">refresh</i>Try
+    Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Couldn't Reach Google Drive (DNS error)", "google_dns", "cloud_off", google_dns_actions)
+  %}
   <p>
     The add-on couldn't resolve Google Drive's server address. Backups can't be uploaded
     without being able to reach Google Drive.
@@ -182,7 +218,7 @@
   </ul>
   <div style="margin-top: -10px; margin-bottom: 15px;">
     <a onclick="toggleLinkSlide(this, 'cant_reach_google_dns');" href="#!"><i class="material-icons"
-      style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
+        style="padding-right: 10px; vertical-align: bottom;">arrow_drop_down</i> Show DNS info</a>
     <div id="cant_reach_google_dns" class="default-hidden" style="padding: 10px; font-family: monospace;">
       <p>
         Below is the list of names and IP Addresses Google's API servers resolve to. Next to each is
@@ -195,16 +231,20 @@
     </div>
   </div>
   <p>You can also try restarting this add-on, the supervisor, or Home Assistant.</p>
-{% endcall %}
+  {% endcall %}
 
-{% set google_timeout_actions %}
-  <a class="btn-flat" href="#" onclick="sync('google_timeout'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Google Drive Connection Timeout", "google_timeout", "cloud_off", google_timeout_actions) %}
+  {% set google_timeout_actions %}
+  <a class="btn-flat" href="#" onclick="sync('google_timeout'); return false;"><i class="material-icons">refresh</i>Try
+    Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Google Drive Connection Timeout", "google_timeout", "cloud_off", google_timeout_actions)
+  %}
   <p>
     The connection timed out or was closed unexpectedly while trying to communicate with Google Drive.
-    Backups can't be uploaded without being able to reach Google Drive reliably. This can happen transiently from time to
-    time and the addon will continue to attempt to sync your backups. This problem almost always resolves itself after some time.
+    Backups can't be uploaded without being able to reach Google Drive reliably. This can happen transiently from time
+    to
+    time and the addon will continue to attempt to sync your backups. This problem almost always resolves itself after
+    some time.
   </p>
   <p>Please ensure:</p>
   <ul class="browser-default">
@@ -232,12 +272,14 @@
     </div>
   </div>
   <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
-{% endcall %}
+  {% endcall %}
 
-{% set google_cant_connect_actions %}
-  <a class="btn-flat" href="#" onclick="sync('google_cant_connect'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Can't Connect to Google Drive", "google_cant_connect", "cloud_off", google_cant_connect_actions) %}
+  {% set google_cant_connect_actions %}
+  <a class="btn-flat" href="#" onclick="sync('google_cant_connect'); return false;"><i
+      class="material-icons">refresh</i>Try Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Can't Connect to Google Drive", "google_cant_connect", "cloud_off",
+  google_cant_connect_actions) %}
   <p>
     Google Drive refused an attempt to connect with it. Backups can't be uploaded without being able
     to reach Google Drive.
@@ -268,12 +310,14 @@
     </div>
   </div>
   <p>You can also try syncing again or restarting this add-on, the supervisor, or Home Assistant.</p>
-{% endcall %}
+  {% endcall %}
 
-{% set password_key_invalid_actions %}
-  <a class="btn-flat" href="#" onclick="sync('password_key_invalid'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Invalid Backup Password", "password_key_invalid", "vpn_key", password_key_invalid_actions) %}
+  {% set password_key_invalid_actions %}
+  <a class="btn-flat" href="#" onclick="sync('password_key_invalid'); return false;"><i
+      class="material-icons">refresh</i>Try Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Invalid Backup Password", "password_key_invalid", "vpn_key",
+  password_key_invalid_actions) %}
   <p>
     The add-on couldn't find your backup password in your secrets.yaml file. Backups can't be created
     until you either configure a valid password or remove it.
@@ -288,12 +332,14 @@
         style="display: inline; font-size: 15px">settings</i> add-on settings</a>
     to ensure you've set the backup password you intended, then sync again.
   </p>
-{% endcall %}
+  {% endcall %}
 
-{% set backup_in_progress_actions %}
-  <a class="btn-flat" href="#" onclick="sync('backup_in_progress'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Backup Already in Progress", "backup_in_progress", "settings_backup_restore", backup_in_progress_actions) %}
+  {% set backup_in_progress_actions %}
+  <a class="btn-flat" href="#" onclick="sync('backup_in_progress'); return false;"><i
+      class="material-icons">refresh</i>Try Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Backup Already in Progress", "backup_in_progress", "settings_backup_restore",
+  backup_in_progress_actions) %}
   <p>The add-on couldn't create a backup on schedule because one is already in progress. Home Assistant can
     only create one backup at a time. This can happen if:</p>
   <ul class="browser-default">
@@ -304,13 +350,16 @@
     backup in progress finishes.
     If you are certain no backup is in progress already or this error sticks around, you can try
     restarting the addon or Home Assistant's host machine.</p>
-{% endcall %}
+  {% endcall %}
 
-{% set multiple_deletes_actions %}
-  <a class="btn-flat" href="#" onclick="allowDeletion('false'); return false;"><i class="material-icons">delete</i>Allow Deletion</a>
-  <a class="btn-flat" href="#" onclick="allowDeletion('true'); return false;"><i class="material-icons">delete_forever</i>Never Ask again</a>
-{% endset %}
-{% call macros.errorMessage("Attempting to Delete Multiple Backups", "multiple_deletes", "delete_forever", multiple_deletes_actions) %}
+  {% set multiple_deletes_actions %}
+  <a class="btn-flat" href="#" onclick="allowDeletion('false'); return false;"><i class="material-icons">delete</i>Allow
+    Deletion</a>
+  <a class="btn-flat" href="#" onclick="allowDeletion('true'); return false;"><i
+      class="material-icons">delete_forever</i>Never Ask again</a>
+  {% endset %}
+  {% call macros.errorMessage("Attempting to Delete Multiple Backups", "multiple_deletes", "delete_forever",
+  multiple_deletes_actions) %}
   <p>The add-on attempted to delete <span id="data_GoogleDrive">(?)</span> backup(s) from Google
     Drive and <span id="data_HomeAssistant">(?)</span> backup(s) from Home Assistant.
     Under normal circumstance, the add-on will only delete one backup at a time (the oldest).
@@ -320,19 +369,21 @@
   <p>To resolve this you can:</p>
   <ul class="browser-default">
     <li>
-      Review the <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+      Review the <a href="#!" onclick="loadSettings()"><i class="material-icons"
+          style="display: inline; font-size: 15px">settings</i> add-on settings</a>
       and increase the number of backups you keep.
     </li>
     <li>Click "Allow Deletion" below to permit these deletions to happen this one time.</li>
     <li>Click "Never ask again" below to permit the deletes this time and in the future (not recommended)
     </li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set google_server_error_actions %}
-  <a class="btn-flat" href="#" onclick="sync('google_server_error'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Google Server Error", "google_server_error", "cloud_off", google_server_error_actions) %}
+  {% set google_server_error_actions %}
+  <a class="btn-flat" href="#" onclick="sync('google_server_error'); return false;"><i
+      class="material-icons">refresh</i>Try Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Google Server Error", "google_server_error", "cloud_off", google_server_error_actions) %}
   <p>Google returned a server error (HTTP code 500) while trying to backup your backups.</p>
   <p>This happens sometimes for reasons beyond anyone's control and almost always the problem goes away on
     its own. The add-on will attempt uploading again soon, but you can also click "Try Syncing Again"
@@ -340,23 +391,27 @@
   <p>If this error keeps sticking around, you can try:</p>
   <ul class="browser-default">
     <li>Making sure the internet is working fine.</li>
-    <li>Making sure you're able to log into your <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive
+    <li>Making sure you're able to log into your <a href="https://drive.google.com" target="_blank"
+        rel="noreferrer">Google Drive
         account</a> and upload files without problems.</li>
-    <li>Re-authenticating the add-on with Google Drive (click <b>"ACTIONS"</b> -> <b>"Reauthorize Google Drive"</b> up top)
+    <li>Re-authenticating the add-on with Google Drive (click <b>"ACTIONS"</b> -> <b>"Reauthorize Google Drive"</b> up
+      top)
     </li>
     <li>Restarting the add-on, Home Assistant, or the supervisor.</li>
     <li>Reinstalling the add-on.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set google_session_expired_actions %}
-  <a class="btn-flat" href="#" onclick="sync('google_session_expired'); return false;"><i class="material-icons">refresh</i>Try Syncing Again</a>
-{% endset %}
-{% call macros.errorMessage("Google Session Expired", "google_session_expired", "cloud_off", google_session_expired_actions) %}
+  {% set google_session_expired_actions %}
+  <a class="btn-flat" href="#" onclick="sync('google_session_expired'); return false;"><i
+      class="material-icons">refresh</i>Try Syncing Again</a>
+  {% endset %}
+  {% call macros.errorMessage("Google Session Expired", "google_session_expired", "cloud_off",
+  google_session_expired_actions) %}
   <p>Google returned a server error (HTTP code 404) while trying to upload your backups.</p>
   <p>In most cases, this indicates that your upload took too long to upload. According to Google's
     documentation if an upload takes longer than a week then it will be forcibly cancelled and return this
-    error. This can happen if your internet is very slow or your backups are very large, however the 
+    error. This can happen if your internet is very slow or your backups are very large, however the
     developer of this addon suspects this can happen in more common circumstances. If the below options don't
     help, please file an issue on <a onclick="bugReport()">GitHub</a> with as much
     detail as you can stomach to help him look into it.
@@ -364,7 +419,8 @@
   <p>If this error keeps sticking around, you can try:</p>
   <ul class="browser-default">
     <li>Syncing again (if it hasn't already started) by clicking "Try Syncing Again" below.</li>
-    <li>Making sure you're able to log into your <a target="_blank" rel="noreferrer" href="https://drive.google.com">Google
+    <li>Making sure you're able to log into your <a target="_blank" rel="noreferrer"
+        href="https://drive.google.com">Google
         Drive
         account</a> and upload files without problems.</li>
     <li>Ensuring your internet connection is reasonably fast by doing a <a target="_blank" rel="noreferrer"
@@ -376,14 +432,17 @@
     <li>Restarting the add-on, Home Assistant, or the supervisor.</li>
     <li>Reinstalling the add-on.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set existing_backup_folder_actions %}
+  {% set existing_backup_folder_actions %}
   <a class="btn-flat" href="#" onclick="resolvefolder('true')"><i class="material-icons">folder</i>Use the folder</a>
-  <a class="btn-flat" href="#" onclick="chooseBackupFolder()"><i class="material-icons">open_in_new</i>Choose a different folder</a>
-  <a class="btn-flat" href="#" onclick="resolvefolder('false')"><i class="material-icons">create_new_folder</i>Create a new folder</a>
-{% endset %}
-{% call macros.errorMessage("Existing Backup Folder Found", "existing_backup_folder", "folder_special", existing_backup_folder_actions) %}
+  <a class="btn-flat" href="#" onclick="chooseBackupFolder()"><i class="material-icons">open_in_new</i>Choose a
+    different folder</a>
+  <a class="btn-flat" href="#" onclick="resolvefolder('false')"><i class="material-icons">create_new_folder</i>Create a
+    new folder</a>
+  {% endset %}
+  {% call macros.errorMessage("Existing Backup Folder Found", "existing_backup_folder", "folder_special",
+  existing_backup_folder_actions) %}
   <p>The add-on found a backup folder named "<b><span id="data_existing_name"></span></b>" in Google
     Drive that might already have backups
     in it. This is normal if you've used this addon before, but you'll need to decide where backups
@@ -398,7 +457,8 @@
     <li>"Choose a different folder" to store backups in, ignoring the existing folder. You probably want
       his option if you have multiple Home Assistant instances that should all back up to their
       own folder.</li>
-    <li>Or "create a new folder" to automatically create a folder and ignore the existing one. The new folder will be created
+    <li>Or "create a new folder" to automatically create a folder and ignore the existing one. The new folder will be
+      created
       at the root of your My Drive.</li>
   </ul>
   <p>Note: If you run multiple instance of Home Assistant with this addon using the same Google
@@ -406,23 +466,24 @@
     its recommended that you use a different folder for each instance. Otherwise they'll delete
     each other's
     backups!</p>
-{% endcall %}
+  {% endcall %}
 
-{% set backup_folder_missing_actions %}
+  {% set backup_folder_missing_actions %}
   <a class="btn-flat" href="#" onclick="loadSettings()"><i class="material-icons">settings</i>Open settings</a>
-{% endset %}
-{% call macros.errorMessage("Please choose a backup folder", "backup_folder_missing", "folder_special", backup_folder_missing_actions) %}
+  {% endset %}
+  {% call macros.errorMessage("Please choose a backup folder", "backup_folder_missing", "folder_special",
+  backup_folder_missing_actions) %}
   <p class="hide-for-custom-creds">You've chosen to upload your backups to a folder of your choosing.
     Click the link below to open a new window and select the folder in Google Drive you'd like to store
     your backups in.</p>
   <p class="hide-for-default-creds">You've chosen to upload your backups to a folder of your choosing.
     Please navigate to the addon settings to specify a folder to store backups in.</p>
-    {{ chooseFolder(id="choose_folder_folder_missing") }}
+  {{ chooseFolder(id="choose_folder_folder_missing") }}
   <ul class="browser-default">
     <li>
       <p>If you'd rather not specify the folder for uploads, please return to your <a href="#!"
-          onclick="loadSettings()"><i class="material-icons"
-            style="display: inline; font-size: 15px">settings</i> add-on
+          onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i>
+          add-on
           settings</a> and change your preference.</p>
     </li>
     <li>
@@ -440,22 +501,25 @@
   <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to
     select your folder through an external domain, which is where the "Choose Folder" link will take you.
     <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
-      target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
-{% endcall %}
+      target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.
+  </p>
+  {% endcall %}
 
-{% set backup_folder_inaccessible_actions %}
-  <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>Try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Couldn't use your backup folder", "backup_folder_inaccessible", "sync_problem", backup_folder_inaccessible_actions) %}
+  {% set backup_folder_inaccessible_actions %}
+  <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>Try
+    syncing again</a>
+  {% endset %}
+  {% call macros.errorMessage("Couldn't use your backup folder", "backup_folder_inaccessible", "sync_problem",
+  backup_folder_inaccessible_actions) %}
   <p>The addon couldn't use the folder you chose for storing backups. The addon can't backup your
     backups until you resolve this. This can happen if:
-    <ul class="browser-default">
+  <ul class="browser-default">
     <li>The folder was deleted</li>
-    <li>You lost permissions on the folder</li> 
-    <li>You gave the addon an invalid folder ID</li> 
+    <li>You lost permissions on the folder</li>
+    <li>You gave the addon an invalid folder ID</li>
     <li>You signed in with drive using different credentials</li>
     <li>Something else made the folder unreadable</li>
-    </ul>
+  </ul>
   </p>
   <p>
     To resolve this, you can:
@@ -479,196 +543,244 @@
     </li>
     <li>
       <p>If the folder still exists, you can restore access to it by the addon by ensuring that your
-        google account has access to it. The folder should be accessible from <a id="data_existing_url"
-        target="_blank" rel="noreferrer">this link</a>. After doing so, click "sync now" below to try syncing again.</p>
+        google account has access to it. The folder should be accessible from <a id="data_existing_url" target="_blank"
+          rel="noreferrer">this link</a>. After doing so, click "sync now" below to try syncing again.</p>
     </li>
   </ul>
   <p class="hide-for-custom-creds"><b>Note:</b> Google's authentication mechanisms require you to select
     your folder through an
     external domain, which is where the "choose folder" link below will take you.
     <a href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md"
-    target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.</p>
-{% endcall %}
+      target="_blank" rel="noreferrer">See here</a> for details if you'd like to know more about why.
+  </p>
+  {% endcall %}
 
-{% set cancelled_actions %}
+  {% set cancelled_actions %}
   <a class="btn-flat" href="#" onclick="sync('cancelled')"><i class="material-icons">play_arrow</i>Resume</a>
-{% endset %}
-{% call macros.errorMessage("Backup is Paused", "cancelled", "pause", cancelled_actions) %}
-  <p>Sync was cancelled because you requested it. The addon will not resume syncing for another hour unless you take action.</p>
+  {% endset %}
+  {% call macros.errorMessage("Backup is Paused", "cancelled", "pause", cancelled_actions) %}
+  <p>Sync was cancelled because you requested it. The addon will not resume syncing for another hour unless you take
+    action.</p>
   <br />
   <p>
     Please note:
   </p>
   <ul class="browser-default">
     <li>
-      <p>A pending backup can't be stopped once its started, because its creation is managed by Home Assistant.  Being "Paused" only stops the addon from creating new backups and syncing them with Google Drive.</p>
+      <p>A pending backup can't be stopped once its started, because its creation is managed by Home Assistant. Being
+        "Paused" only stops the addon from creating new backups and syncing them with Google Drive.</p>
     </li>
     <li>
       <p>You can resume by clicking the link below or just waiting.</p>
     </li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set token_refresh_google_error_actions %}
-  <a class="btn-flat" href="#" onclick="sync('token_refresh_google_error')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_google_error", "error", token_refresh_google_error_actions) %}
+  {% set token_refresh_google_error_actions %}
+  <a class="btn-flat" href="#" onclick="sync('token_refresh_google_error')"><i class="material-icons">refresh</i>try
+    syncing again</a>
+  {% endset %}
+  {% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_google_error", "error",
+  token_refresh_google_error_actions) %}
   <p>
-    The addon was unable to refresh your credentials with Google Drive.  When it tried, Google said:
+    The addon was unable to refresh your credentials with Google Drive. When it tried, Google said:
   </p>
   <pre>
     <span id="data_from_google">(?)</span>
   </pre>
   <p>This can happen if:</p>
   <ul class="browser-default">
-    <li>The domain <a target="_blank" href="https://habackup.io">https://habackup.io</a>, which grants your credentials from Google Drive (<a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a> to see why), is having trouble communicating with Google Drive.</li>
+    <li>The domain <a target="_blank" href="https://habackup.io">https://habackup.io</a>, which grants your credentials
+      from Google Drive (<a target="_blank"
+        href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click
+        here</a> to see why), is having trouble communicating with Google Drive.</li>
     <li>Google Drive is experiencing a temporary outage.</li>
     <li>Something else has gone wrong with your Google Drive credentials.</li>
   </ul>
   <p>Usually this problem will resolve on its own, but you can try:</p>
   <ul class="browser-default">
-    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+    <li>Syncing again with the button below. The addon will retry on its own periodically.</li>
     <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
       again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
-    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon
+      know about it.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set token_refresh_my_error_actions %}
-  <a class="btn-flat" href="#" onclick="sync('token_refresh_my_error')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_my_error", "error", token_refresh_my_error_actions) %}
+  {% set token_refresh_my_error_actions %}
+  <a class="btn-flat" href="#" onclick="sync('token_refresh_my_error')"><i class="material-icons">refresh</i>try syncing
+    again</a>
+  {% endset %}
+  {% call macros.errorMessage("Couldn't Refresh Google Drive Credentials", "token_refresh_my_error", "error",
+  token_refresh_my_error_actions) %}
   <p>
-    The addon was unable to refresh your credentials with Google Drive.  When it tried, https://habackup.io said:
+    The addon was unable to refresh your credentials with Google Drive. When it tried, https://habackup.io said:
   </p>
   <pre>
     <span id="data_reason">(?)</span>
   </pre>
   <p>This can happen if:</p>
   <ul class="browser-default">
-    <li>The domain <a target="_blank" href="https://habackup.io">https://habackup.io</a>, which grants your credentials from Google Drive (<a target="_blank" href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click here</a> to see why), is having some unexpected problems.</li>
+    <li>The domain <a target="_blank" href="https://habackup.io">https://habackup.io</a>, which grants your credentials
+      from Google Drive (<a target="_blank"
+        href="https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/AUTHENTICATION.md">click
+        here</a> to see why), is having some unexpected problems.</li>
     <li>Something else has gone wrong with your Google Drive credentials.</li>
   </ul>
   <p>Usually this problem will resolve on its own, but you can try:</p>
   <ul class="browser-default">
-    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
+    <li>Syncing again with the button below. The addon will retry on its own periodically.</li>
     <li><a href="reauthenticate">Re-authenticating</a> this add-on with Google
       again. Its unlikely this will resolve the problem, but it also won't cause you to lose any of your data.</li>
-    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon
+      know about it.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set supervisor_connection_actions %}
-  <a class="btn-flat" href="#" onclick="sync('supervisor_connection')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Unable to Reach Home Assistant Supervisor", "supervisor_connection", "error", supervisor_connection_actions) %}
+  {% set supervisor_connection_actions %}
+  <a class="btn-flat" href="#" onclick="sync('supervisor_connection')"><i class="material-icons">refresh</i>try syncing
+    again</a>
+  {% endset %}
+  {% call macros.errorMessage("Unable to Reach Home Assistant Supervisor", "supervisor_connection", "error",
+  supervisor_connection_actions) %}
   <p>
-    The addon was unable to connect to the Home Assistant Supervisor.  This addon requires the supervisor to be running to create 
-    backups, load configuration, etc.  Without the supervisor the addon will not be able to do anything useful.  Typically this 
+    The addon was unable to connect to the Home Assistant Supervisor. This addon requires the supervisor to be running
+    to create
+    backups, load configuration, etc. Without the supervisor the addon will not be able to do anything useful. Typically
+    this
     should never happen, and indicates that something is wrong with your Home Assistant installation.
   </p>
   <p>To resolve this you can try:</p>
   <ul class="browser-default">
-    <li>Syncing again with the button below.  The addon will retry on its own periodically.</li>
-    <li>Restarting the machine that Home Assistant runs on.  Often this resolves transient problems the Home Assistant Supervisor might have.</li>
-    <li>If the problem persists, <a href="#!" onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.</li>
+    <li>Syncing again with the button below. The addon will retry on its own periodically.</li>
+    <li>Restarting the machine that Home Assistant runs on. Often this resolves transient problems the Home Assistant
+      Supervisor might have.</li>
+    <li>If the problem persists, <a href="#!" onclick="bugReport()">file an issue on GitHub</a> to let the developer of
+      this addon know about it.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set supervisor_permission_actions %}
-  <a class="btn-flat" href="#" onclick="sync('supervisor_connection')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Unable to Talk to the Home Assistant Supervisor", "supervisor_permission", "error", supervisor_permission_actions) %}
+  {% set supervisor_permission_actions %}
+  <a class="btn-flat" href="#" onclick="sync('supervisor_connection')"><i class="material-icons">refresh</i>try syncing
+    again</a>
+  {% endset %}
+  {% call macros.errorMessage("Unable to Talk to the Home Assistant Supervisor", "supervisor_permission", "error",
+  supervisor_permission_actions) %}
   <p>
-    The addon was unable to communicate with the Supervisor because it said the addon is unauthorized.  This addon 
-    must communicate with the supervisor to create backups, load configuration, etc.  Without the supervisor the 
-    addon will not be able to do anything useful.  Typically this should never happen, and indicates that something
+    The addon was unable to communicate with the Supervisor because it said the addon is unauthorized. This addon
+    must communicate with the supervisor to create backups, load configuration, etc. Without the supervisor the
+    addon will not be able to do anything useful. Typically this should never happen, and indicates that something
     is wrong with your Home Assistant installation.
   </p>
   <ul class="browser-default">
-    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
-    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.  Sometimes the supervisor
+    <li>Syncing again with the button below. The addon will also retry on its own periodically.</li>
+    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on. Sometimes the
+      supervisor
       can get into a bad state and this works around it.</li>
-    <li>Checking the Supervisor's logs ("Supervisor" > "System" > "Logs") to see if any errors might indicate what the problem is.</li>
-    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+    <li>Checking the Supervisor's logs ("Supervisor" > "System" > "Logs") to see if any errors might indicate what the
+      problem is.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon
+      know about it. He might be able to help.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set supervisor_timeout_actions %}
-  <a class="btn-flat" href="#" onclick="sync('supervisor_timeout')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("A Request to the Supervisor Timed Out", "supervisor_timeout", "error", supervisor_timeout_actions) %}
+  {% set supervisor_timeout_actions %}
+  <a class="btn-flat" href="#" onclick="sync('supervisor_timeout')"><i class="material-icons">refresh</i>try syncing
+    again</a>
+  {% endset %}
+  {% call macros.errorMessage("A Request to the Supervisor Timed Out", "supervisor_timeout", "error",
+  supervisor_timeout_actions) %}
   <p>
-    The addon was unable to communicate with the Supervisor because it timed out.  This addon 
-    must communicate with the supervisor to create backups, load configuration, etc.  Without the supervisor the 
-    addon will not be able to do anything useful. This usually resolves itself after the addon retries, but if 
+    The addon was unable to communicate with the Supervisor because it timed out. This addon
+    must communicate with the supervisor to create backups, load configuration, etc. Without the supervisor the
+    addon will not be able to do anything useful. This usually resolves itself after the addon retries, but if
     you see this error stick around for a while you can try
   </p>
   <ul class="browser-default">
-    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
-    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.  Sometimes the supervisor
+    <li>Syncing again with the button below. The addon will also retry on its own periodically.</li>
+    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on. Sometimes the
+      supervisor
       can get into a bad state and this works around it.</li>
-    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon
+      know about it. He might be able to help.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set supervisor_unexpected_actions %}
-  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("The Supervisor Returned an Unexpected Response", "supervisor_unexpected", "error", supervisor_unexpected_actions) %}
+  {% set supervisor_unexpected_actions %}
+  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing
+    again</a>
+  {% endset %}
+  {% call macros.errorMessage("The Supervisor Returned an Unexpected Response", "supervisor_unexpected", "error",
+  supervisor_unexpected_actions) %}
   <p>
-    The addon was unable to communicate with the Supervisor because it gave back an unreadable response.  
-    This addon must communicate with the supervisor to create backups, load configuration, etc.  Without 
-    the supervisor the addon will not be able to do anything useful. This usually 
+    The addon was unable to communicate with the Supervisor because it gave back an unreadable response.
+    This addon must communicate with the supervisor to create backups, load configuration, etc. Without
+    the supervisor the addon will not be able to do anything useful. This usually
     resolves itself after the addon retries, but if you see this error stick around for a while you can try:
   </p>
   <ul class="browser-default">
-    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
-    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.  Sometimes the supervisor
+    <li>Syncing again with the button below. The addon will also retry on its own periodically.</li>
+    <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on. Sometimes the
+      supervisor
       can get into a bad state and this works around it.</li>
-    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon
+      know about it. He might be able to help.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set supervisor_fs_error_actions %}
-  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Unable to write to the file system", "supervisor_fs_error", "error", supervisor_fs_error_actions) %}
+  {% set supervisor_fs_error_actions %}
+  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing
+    again</a>
+  {% endset %}
+  {% call macros.errorMessage("Unable to write to the file system", "supervisor_fs_error", "error",
+  supervisor_fs_error_actions) %}
   <p>
-    The addon was unable to write to the file system on this machine.  Normally this indicates there is a problem
-    with the Home Assistant supervisor, which is responsible for creating the file system this addon needs to function. Here are some reasons this might happen:
+    The addon was unable to write to the file system on this machine. Normally this indicates there is a problem
+    with the Home Assistant supervisor, which is responsible for creating the file system this addon needs to function.
+    Here are some reasons this might happen:
   </p>
   <ul class="browser-default">
-    <li>You recently upgraded Home Assistant.  Sometimes during an upgrade, the docker environment Home Assistant creates for the addon can get messed up.  
-      If this is the problem, then restarting the host machine where Home assistant is running will usually resolve it.</li>
-    <li>Your machine may have run out of space.  Home Assistant will sometimes make the file system read-only to protect itself if it is close to running out of space, causing this error.  You 
-      should be able to see an estimate of how much space is remaining down below on this page or by going to "Supervisor" > "System" in the Home Assistant UI.</li>
-    <li>If none of the above helps and the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+    <li>You recently upgraded Home Assistant. Sometimes during an upgrade, the docker environment Home Assistant creates
+      for the addon can get messed up.
+      If this is the problem, then restarting the host machine where Home assistant is running will usually resolve it.
+    </li>
+    <li>Your machine may have run out of space. Home Assistant will sometimes make the file system read-only to protect
+      itself if it is close to running out of space, causing this error. You
+      should be able to see an estimate of how much space is remaining down below on this page or by going to
+      "Supervisor" > "System" in the Home Assistant UI.</li>
+    <li>If none of the above helps and the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let
+      the developer of this addon know about it. He might be able to help.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set google_unexpected_actions %}
-  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Google drive Returned an Unexpected Response", "google_unexpected", "error", google_unexpected_actions) %}
+  {% set google_unexpected_actions %}
+  <a class="btn-flat" href="#" onclick="sync('supervisor_unexpected')"><i class="material-icons">refresh</i>try syncing
+    again</a>
+  {% endset %}
+  {% call macros.errorMessage("Google drive Returned an Unexpected Response", "google_unexpected", "error",
+  google_unexpected_actions) %}
   <p>
-    The addon was unable to communicate with Google Drive because it gave back an unreadable response.  
+    The addon was unable to communicate with Google Drive because it gave back an unreadable response.
     Without being able to communicate with Google Drive, the addon will not be able to transfer backups to the cloud.
-    This usually resolves itself after the addon retries, but if you see this error stick around for a while you can try:
+    This usually resolves itself after the addon retries, but if you see this error stick around for a while you can
+    try:
   </p>
   <ul class="browser-default">
-    <li>Syncing again with the button below.  The addon will also retry on its own periodically.</li>
+    <li>Syncing again with the button below. The addon will also retry on its own periodically.</li>
     <li>Restarting the addon, the supervisor, or the whole machine Home Assistant is running on.</li>
-    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon know about it.  He might be able to help.</li>
+    <li>If the problem persists, <a onclick="bugReport()">file an issue on GitHub</a> to let the developer of this addon
+      know about it. He might be able to help.</li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set log_in_to_drive_actions %}
-  <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Please log in to Google Drive Manually", "log_in_to_drive", "account_circle", log_in_to_drive_actions) %}
-  <p>The addon couldn't backup your backups because it looks like it you've never logged in 
-    to the <a href="https://drive.google.com" target="_blank">Google Drive website</a> before. Doing this at 
+  {% set log_in_to_drive_actions %}
+  <a class="btn-flat" href="#" onclick="sync('backup_folder_inaccessible')"><i class="material-icons">refresh</i>try
+    syncing again</a>
+  {% endset %}
+  {% call macros.errorMessage("Please log in to Google Drive Manually", "log_in_to_drive", "account_circle",
+  log_in_to_drive_actions) %}
+  <p>The addon couldn't backup your backups because it looks like it you've never logged in
+    to the <a href="https://drive.google.com" target="_blank">Google Drive website</a> before. Doing this at
     least once is required for applications like this to use Google Drive.
   </p>
   <p>
@@ -676,54 +788,65 @@
   </p>
   <ul class="browser-default">
     <li>
-      <p>Visit <a href="https://drive.google.com" target="_blank">https://drive.google.com</a> and log-in with 
+      <p>Visit <a href="https://drive.google.com" target="_blank">https://drive.google.com</a> and log-in with
         the account you used to connect this addon to Google Drive, then click "SYNC NOW" below to start syncing.</p>
     </li>
     <li>
       <p><a href="reauthenticate">Reauthorize</a> the addon with Google Drive using a different account.</p>
     </li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set inactive_share_actions %}
-  <a class="btn-flat" href="#" onclick="sync('inactive_network_storage')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Network Storage Inactive", "inactive_network_storage", "error_outline", inactive_share_actions) %}
+  {% set inactive_share_actions %}
+  <a class="btn-flat" href="#" onclick="sync('inactive_network_storage')"><i class="material-icons">refresh</i>try
+    syncing again</a>
+  {% endset %}
+  {% call macros.errorMessage("Network Storage Inactive", "inactive_network_storage", "error_outline",
+  inactive_share_actions) %}
   <p>
-    The addon could not request a backup in your configured network storage because it looks like Home Assistant can't access it.  The network storage the addon tried to use is named "<b id="data_storage_name"></b>".
+    The addon could not request a backup in your configured network storage because it looks like Home Assistant can't
+    access it. The network storage the addon tried to use is named "<b id="data_storage_name"></b>".
   </p>
   <p>
     To resolve this, you can:
   </p>
   <ul class="browser-default">
     <li>
-      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
-        to store backups on a different storage or the local disk.
+      Modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+          style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+      to store backups on a different storage or the local disk.
     </li>
     <li>
-      Resolve whatever issues are causing Home Assistant to be unable to access the network storage.  After doing so it may take some time for Home Assistant to "notice" that the share is available again.
+      Resolve whatever issues are causing Home Assistant to be unable to access the network storage. After doing so it
+      may take some time for Home Assistant to "notice" that the share is available again.
     </li>
   </ul>
-{% endcall %}
+  {% endcall %}
 
-{% set unknown_share_actions %}
-  <a class="btn-flat" href="#" onclick="sync('unknown_network_storage')"><i class="material-icons">refresh</i>try syncing again</a>
-{% endset %}
-{% call macros.errorMessage("Unrecognized Network Storage", "unknown_network_storage", "error_outline", unknown_share_actions) %}
+  {% set unknown_share_actions %}
+  <a class="btn-flat" href="#" onclick="sync('unknown_network_storage')"><i class="material-icons">refresh</i>try
+    syncing again</a>
+  {% endset %}
+  {% call macros.errorMessage("Unrecognized Network Storage", "unknown_network_storage", "error_outline",
+  unknown_share_actions) %}
   <p>
-    The addon could not request a backup in your configured network storage because Home Assistant doesn't recognize it.  This is likely to happen 
-    if you previously configured the addon to create backups on external storage but then deleted the network storage configuration from Home Assistant.  The storage the addon tried to use 
+    The addon could not request a backup in your configured network storage because Home Assistant doesn't recognize it.
+    This is likely to happen
+    if you previously configured the addon to create backups on external storage but then deleted the network storage
+    configuration from Home Assistant. The storage the addon tried to use
     is named "<b id="data_storage_name"></b>".
   </p>
   <p>
-    To resolve this, you can modify your <a href="#!" onclick="loadSettings()"><i class="material-icons" style="display: inline; font-size: 15px">settings</i> add-on settings</a>
+    To resolve this, you can modify your <a href="#!" onclick="loadSettings()"><i class="material-icons"
+        style="display: inline; font-size: 15px">settings</i> add-on settings</a>
     to store backups on different storage or the local disk.
   </p>
-{% endcall %}
+  {% endcall %}
 
-{% set error_details_card_actions %}
-  <a class="btn-flat" target="_blank" onClick="$('#error_details_card').fadeOut(500)"><i class="material-icons">close</i>Close</a>
-{% endset %}
-{% call macros.errorMessage("Error details", "error_details_card", "error", error_details_card_actions) %}
+  {% set error_details_card_actions %}
+  <a class="btn-flat" target="_blank" onClick="$('#error_details_card').fadeOut(500)"><i
+      class="material-icons">close</i>Close</a>
+  {% endset %}
+  {% call macros.errorMessage("Error details", "error_details_card", "error", error_details_card_actions) %}
   <p id="error_details_paragraph" style="white-space: pre-wrap;font-family: monospace;"></p>
-{% endcall %}
+  {% endcall %}

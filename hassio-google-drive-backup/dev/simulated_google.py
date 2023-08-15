@@ -51,7 +51,8 @@ class SimulatedGoogle(BaseServer):
         # Drive item states
         self.items = {}
         self.lostPermission = []
-        self.space_available = 1024 * 1024 * 100  # 100 Mb
+        self.space_available = 5 * 1024 * 1024 * 1024
+        self.usage = 0
 
         # Upload state information
         self._upload_info: Dict[str, Any] = {}
@@ -358,8 +359,8 @@ class SimulatedGoogle(BaseServer):
     async def _driveAbout(self, request: Request):
         return json_response({
             'storageQuota': {
-                'usage': 1024 * 1024 * 1024,
-                'limit': 5 * 1024 * 1024 * 1024
+                'usage': self.usage,
+                'limit': self.space_available
             },
             'user': {
                 'emailAddress': "testing@no.where"
@@ -505,7 +506,7 @@ class SimulatedGoogle(BaseServer):
 
         if len(self._upload_info['item']['bytes']) != end + 1:
             raise HTTPBadRequest()
-
+        self.usage += len(received_bytes)
         self.chunks.append(len(received_bytes))
         if end == total - 1:
             # upload is complete, so create the item

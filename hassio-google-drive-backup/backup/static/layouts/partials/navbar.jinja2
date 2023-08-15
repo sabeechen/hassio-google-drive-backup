@@ -120,7 +120,7 @@
   <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>About</a></li>
 </ul>
 
-{% if coordEnabled %}
+{% if coordEnabled and showOpenDriveLink %}
 <div class="fixed-action-btn">
   <a onclick="newBackupClick(); return false;" class="btn-floating btn-large tooltipped" data-position="left" data-tooltip="Backup Now">
     <i class="large material-icons">add</i>

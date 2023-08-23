@@ -180,7 +180,7 @@ class HaSource(BackupSource[HABackup], Startable):
     def freeSpace(self):
         return self.estimator.getBytesFree()
 
-    async def create(self, options: CreateOptions) -> HABackup:
+    async def create(self, options: CreateOptions) -> AbstractBackup:
         # Make sure instance info is up-to-date, for the backup name
         await self._refreshInfo()
 
@@ -258,7 +258,7 @@ class HaSource(BackupSource[HABackup], Startable):
     def query_had_changes(self):
         return self._changes_from_last_query
 
-    async def get(self) -> Dict[str, HABackup]:
+    async def get(self) -> Dict[str, AbstractBackup]:
         if not self._initialized:
             await self.init()
         else:
@@ -266,7 +266,7 @@ class HaSource(BackupSource[HABackup], Startable):
             self.super_info = await self.harequests.supervisorInfo()
         slugs = set()
         retained = []
-        backups: Dict[str, HABackup] = {}
+        backups: Dict[str, AbstractBackup] = {}
         query = await self.harequests.backups()
 
         # Different supervisor version use different names for the list of backups
@@ -294,16 +294,16 @@ class HaSource(BackupSource[HABackup], Startable):
                         self._killPending()
                     elif self.pending_backup.isComplete() and self.pending_backup.createdSlug() in backups:
                         # Copy over options if we got the requested backup.
-                        backups[self.pending_backup.createdSlug()].setOptions(
+                        backups[str(self.pending_backup.createdSlug())].setOptions(
                             self.pending_backup.getOptions())
                         if self.pending_backup.note() is not None:
                             # Save the note with the now known slug
-                            await self.note(backups[self.pending_backup.createdSlug()], self.pending_backup.note())
+                            await self.note(backups[str(self.pending_backup.createdSlug())], self.pending_backup.note())
                         self._killPending()
                     elif self.last_slugs.symmetric_difference(slugs).intersection(slugs):
                         # New backup added, ignore pending backup.
                         sorted = list(backups.values())
-                        sorted.sort(key=HABackup.date)
+                        sorted.sort(key=lambda b: b.date())
                         if self.pending_backup.note() is not None and len(sorted) > 0:
                             # Save the note with the newest backup
                             await self.note(sorted[-1], self.pending_backup.note())
@@ -375,7 +375,7 @@ class HaSource(BackupSource[HABackup], Startable):
             backup.setUploadSource(self.title(), source)
             async with source:
                 with aiohttp.MultipartWriter('mixed') as mpwriter:
-                    mpwriter.append(source, {'CONTENT-TYPE': 'application/tar'})
+                    mpwriter.append(source, {'CONTENT-TYPE': 'application/tar'})  # type: ignore
                     resp = await self.harequests.upload(mpwriter)
             backup.clearStatus()
             backup.clearUploadSource()

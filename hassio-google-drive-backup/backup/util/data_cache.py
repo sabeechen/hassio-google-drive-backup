@@ -6,8 +6,6 @@ from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME
 from injector import inject, singleton
 from ..time import Time
 from typing import Dict, Any
-import json
-import os
 
 KEY_I_MADE_THIS = "i_made_this"
 KEY_PENDING = "pending"

@@ -220,8 +220,9 @@ class DriveRequests():
         limiter: Union[TokenBucket, None] = None
         if self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) > 0:
             # google requires a minimum 256kb upload chunk, so the limiter bucket capacity must be at least that to function.
-            capacity = min(self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) * 2, BASE_CHUNK_SIZE)
-            limiter = TokenBucket(self.time, capacity, self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND), 0)
+            speed_as_tokens = self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) / BASE_CHUNK_SIZE
+            capacity = max(speed_as_tokens, 1)
+            limiter = TokenBucket(self.time, capacity, speed_as_tokens, 0)
         if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION:
             logger.debug(
                 "Attempting to resume a previously failed upload where we left off")
@@ -288,17 +289,17 @@ class DriveRequests():
 
         # Always start with the minimum chunk size and work up from there in case the last attempt
         # failed due to connectivity errors or ... whatever.
-        current_chunk_size = BASE_CHUNK_SIZE
+        current_chunk_size = 1
         while True:
             start = stream.position()
 
             # See if we need to limit the chunk size to reduce bandwidth.
             if limiter is not None:
-                request = int(await limiter.consumeWithWait(BASE_CHUNK_SIZE, current_chunk_size))
+                request = int(await limiter.consumeWithWait(1, current_chunk_size))
                 if request != current_chunk_size:
                     # This can go over the speed cap slightly, not a big deal though
-                    current_chunk_size = math.ceil(request / BASE_CHUNK_SIZE) * BASE_CHUNK_SIZE
-            data = await stream.read(current_chunk_size)
+                    current_chunk_size = request
+            data = await stream.read(current_chunk_size * BASE_CHUNK_SIZE)
             chunk_size = len(data.getbuffer())
             if chunk_size == 0:
                 raise LogicError(
@@ -308,7 +309,7 @@ class DriveRequests():
                 "Content-Range": "bytes {0}-{1}/{2}".format(start, start + chunk_size - 1, total_size)
             }
             startTime = self.time.now()
-            logger.debug("Sending {0} bytes to Google Drive".format(current_chunk_size))
+            logger.debug("Sending {0} bytes to Google Drive".format(chunk_size))
             try:
                 async with await self.retryRequest("PUT", location, headers=headers, data=data, patch_url=False) as partial:
                     # Base the next chunk size on how long it took to send the last chunk.
@@ -349,17 +350,17 @@ class DriveRequests():
                     raise e
 
     def _getNextChunkSize(self, last_chunk_size, last_chunk_seconds):
-        max = BASE_CHUNK_SIZE * math.floor(self.config.get(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES) / BASE_CHUNK_SIZE)
-        if max < BASE_CHUNK_SIZE:
-            max = BASE_CHUNK_SIZE
+        max = math.floor(self.config.get(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES) / BASE_CHUNK_SIZE)
+        if max < 1:
+            max = 1
         if last_chunk_seconds <= 0:
             return max
-        next_chunk = CHUNK_UPLOAD_TARGET_SECONDS * last_chunk_size / last_chunk_seconds
+        next_chunk = math.floor(CHUNK_UPLOAD_TARGET_SECONDS * last_chunk_size / last_chunk_seconds)
         if next_chunk >= max:
             return max
-        if next_chunk < BASE_CHUNK_SIZE:
-            return BASE_CHUNK_SIZE
-        return math.floor(next_chunk / BASE_CHUNK_SIZE) * BASE_CHUNK_SIZE
+        if next_chunk < 1:
+            return 1
+        return next_chunk
 
     async def createFolder(self, metadata):
         async with await self.retryRequest("POST", URL_FILES + "?supportsAllDrives=true", json=metadata) as resp:

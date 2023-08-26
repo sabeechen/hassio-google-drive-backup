@@ -126,7 +126,7 @@ class HaSource(BackupSource[HABackup], Startable):
         super().__init__()
         self.config: Config = config
         self._data_cache = data_cache
-        self.backup_thread: Thread = None
+        self.backup_thread: Optional[Thread] = None
         self.pending_backup_error: Optional[Exception] = None
         self.pending_backup_slug: Optional[str] = None
         self.self_info = None

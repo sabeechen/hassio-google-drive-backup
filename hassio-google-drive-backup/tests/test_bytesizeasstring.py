@@ -37,6 +37,10 @@ def test_ui_format():
     assert parser.formatForUi(2.534525 * 1024 * 1024) == "2.534525 MB"
     assert parser.formatForUi(98743.1234 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024) == "98743.1234 YB"
 
+    assert parser.formatForUi(None) == ""
+    assert parser.formatForUi("") == ""
+    assert parser.formatForUi(0) == ""
+
 
 def test_numbers():
     parser = BytesizeAsStringValidator("test")

@@ -1,10 +1,5 @@
 import asyncio
 from datetime import datetime, timedelta
-
-
-from injector import inject, singleton
-from dateutil.relativedelta import relativedelta
-from dateutil.parser import parse
 from .logger import getLogger
 import pytz
 import os
@@ -12,6 +7,15 @@ import time as base_time
 from pytz import timezone, utc
 from tzlocal import get_localzone_name, get_localzone
 from dateutil.tz import tzlocal
+
+from injector import inject, singleton
+from dateutil.relativedelta import relativedelta
+import collections
+from dateutil.parser import parse
+
+
+# this hack if for dateutil, it imports Callable from the wrong place
+collections.Callable = collections.abc.Callable
 
 
 logger = getLogger(__name__)
@@ -106,7 +110,7 @@ class Time(object):
     def toUtc(self, dt: datetime) -> datetime:
         return dt.astimezone(utc)
 
-    async def sleepAsync(self, seconds: float, early_exit: asyncio.Event = None) -> None:
+    async def sleepAsync(self, seconds: float, early_exit: asyncio.Event | None = None) -> None:
         if early_exit is None:
             await asyncio.sleep(seconds)
         else:
@@ -122,7 +126,6 @@ class Time(object):
         if not now:
             now = self.now()
 
-        delta: relativedelta = None
         flavor = ""
         if time < now:
             delta = relativedelta(now, time)

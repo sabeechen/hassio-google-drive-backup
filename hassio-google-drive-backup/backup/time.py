@@ -65,6 +65,7 @@ def _infer_timezone_from_env():
             return tz
     return None
 
+
 @singleton
 class Time(object):
     @inject

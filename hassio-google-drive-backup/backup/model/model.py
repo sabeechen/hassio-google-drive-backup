@@ -135,7 +135,7 @@ class Model():
 
     def reinitialize(self, precache: Precache = None):
         self.precache = precache
-        self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
+        self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay(self.config.get(Setting.BACKUP_TIME_OF_DAY))
 
         # SOMEDAY: this should be cached in config and regenerated on config updates, not here
         self.generational_config = self.config.getGenerationalConfig()
@@ -260,6 +260,21 @@ class Model():
         self.dest.postSync()
         self._data_cache.saveIfDirty()
 
+    def _canBackupStart(self, now: datetime):
+        """
+        Looks at settings to determine if backup is allowed to start based on time of day
+        """
+        now_local = self.time.toLocal(now)
+        start_time = self._parseTimeOfDay(self.config.get(Setting.UPLOAD_ALLOWED_START))
+        end_time = self._parseTimeOfDay(self.config.get(Setting.UPLOAD_ALLOWED_END))
+        if start_time == None or end_time == None:
+            return True
+        start_date = self.time.localize(datetime(now_local.year, now_local.month, now_local.day, start_time[0], start_time[1]))
+        end_date = self.time.localize(datetime(now_local.year, now_local.month, now_local.day, end_time[0], end_time[1]))
+        if start_date > end_date:
+            end_date += timedelta(days=1)
+        pass
+
     def isWorkingThroughUpload(self):
         return self.dest.isWorking()
 
@@ -290,11 +305,10 @@ class Model():
                 source, self.backups.values(), findNext=True)[1]
         return purges
 
-    def _parseTimeOfDay(self) -> Optional[Tuple[int, int]]:
-        from_config = self.config.get(Setting.BACKUP_TIME_OF_DAY)
-        if len(from_config) == 0:
+    def _parseTimeOfDay(self, value) -> Optional[Tuple[int, int]]:
+        if len(value) == 0:
             return None
-        parts = from_config.split(":")
+        parts = value.split(":")
         if len(parts) != 2:
             return None
         try:

@@ -15,6 +15,7 @@ from .cloudlogger import CloudLogger
 from yarl import URL
 from backup.config import Version
 from urllib.parse import unquote
+from backup.time import Time
 
 NEW_AUTH_MINIMUM = Version(0, 101, 3)
 
@@ -26,7 +27,9 @@ class Server():
                  config: Config,
                  exchanger_builder: ClassAssistedBuilder[Exchanger],
                  logger: CloudLogger,
-                 error_store: ErrorStore):
+                 error_store: ErrorStore,
+                 time: Time):
+        self._time = time
         self.exchanger = exchanger_builder.build(
             client_id=config.get(Setting.DEFAULT_DRIVE_CLIENT_ID),
             client_secret=config.get(Setting.DEFAULT_DRIVE_CLIENT_SECRET),
@@ -128,14 +131,6 @@ class Server():
             return json_response({
                 "error": "Couldn't connect to Google's servers"
             }, status=503)
-        except ServerDisconnectedError:
-            return json_response({
-                "error": "Couldn't connect to Google's servers"
-            }, status=503)
-        except ServerTimeoutError:
-            return json_response({
-                "error": "Google's servers timed out"
-            }, status=503)
         except GoogleCredentialsExpired:
             return json_response({
                 "error": "expired"
@@ -203,16 +198,18 @@ class Server():
         self.logger.log_struct(data)
 
     def logReport(self, request, report):
-        data = self.getRequestInfo(request)
+        data = self.getRequestInfo(request, include_timestamp=True)
         data['report'] = report
-        self.logger.log_struct(data)
         self.error_store.store(data)
 
-    def getRequestInfo(self, request: Request):
-        return {
+    def getRequestInfo(self, request: Request, include_timestamp=False):
+        data = {
             'client': request.headers.get('client', "unknown"),
             'version': request.headers.get('addon_version', "unknown"),
             'address': request.remote,
             'url': str(request.url),
-            'length': request.content_length
+            'length': request.content_length,
         }
+        if include_timestamp:
+            data['server_time'] = self._time.now()
+        return data

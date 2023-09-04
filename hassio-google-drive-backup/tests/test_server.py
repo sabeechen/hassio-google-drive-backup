@@ -4,7 +4,8 @@ from yarl import URL
 from dev.simulationserver import SimulationServer
 from aiohttp import ClientSession, hdrs
 from backup.config import Config
-
+from .faketime import FakeTime
+import json
 
 @pytest.mark.asyncio
 async def test_refresh_known_error(server: SimulationServer, session: ClientSession, config: Config, server_url: URL):
@@ -48,3 +49,11 @@ async def test_old_auth_method(server: SimulationServer, session: ClientSession,
         redirect = URL(r.headers[hdrs.LOCATION])
         assert redirect.query.get("creds") is not None
         assert redirect.host == "example.com"
+
+
+async def test_log_to_firestore(time: FakeTime, server: SimulationServer, session: ClientSession, server_url: URL):
+    data = {"info": "testing"}
+    async with session.post(server_url.with_path("logerror"), data=json.dumps(data)) as r:
+        assert r.status == 200
+    assert server._authserver.error_store.last_error is not None
+    assert server._authserver.error_store.last_error['report'] == data

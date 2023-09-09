@@ -1,4 +1,4 @@
-FROM python:3.9-buster
+FROM python:3.11-buster
 
 WORKDIR /usr/src/install
 RUN apt-get update

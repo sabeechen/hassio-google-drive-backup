@@ -45,15 +45,15 @@ class BackupSource(Trigger, Generic[T]):
 
     def freeSpace(self):
         return None
-    
+
     @property
     def needsSpaceCheck(self):
         return True
 
     async def create(self, options: CreateOptions) -> T:
-        pass
+        raise NotImplementedError()
 
-    async def get(self) -> Dict[str, T]:
+    async def get(self) -> dict[str, T] | None:
         pass
 
     async def delete(self, backup: T):
@@ -63,21 +63,21 @@ class BackupSource(Trigger, Generic[T]):
         pass
 
     async def save(self, backup: AbstractBackup, bytes: IOBase) -> T:
-        pass
+        raise NotImplementedError()
 
     async def read(self, backup: T) -> IOBase:
-        pass
+        raise NotImplementedError()
 
     async def retain(self, backup: T, retain: bool) -> None:
         pass
 
-    async def note(self, backup, note: str) -> None:
+    async def note(self, backup, note: Union[str, None]) -> None:
         pass
 
-    def maxCount(self) -> None:
+    def maxCount(self) -> int:
         return 0
 
-    def postSync(self) -> None:
+    def postSync(self):
         return
 
     def detail(self) -> str:
@@ -110,7 +110,7 @@ class Model():
     def __init__(self, config: Config, time: Time, source: BackupSource, dest: BackupDestination, info: GlobalInfo, estimator: Estimator, data_cache: DataCache):
         self.config: Config = config
         self.time = time
-        self.precache: Precache = None
+        self.precache: Precache | None = None
         self.source: BackupSource = source
         self.dest: BackupDestination = dest
         self.reinitialize()
@@ -133,9 +133,9 @@ class Model():
     def allSources(self):
         return [self.source, self.dest]
 
-    def reinitialize(self, precache: Precache = None):
+    def reinitialize(self, precache: Precache | None = None):
         self.precache = precache
-        self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay()
+        self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay(self.config.get(Setting.BACKUP_TIME_OF_DAY))
 
         # SOMEDAY: this should be cached in config and regenerated on config updates, not here
         self.generational_config = self.config.getGenerationalConfig()
@@ -289,11 +289,10 @@ class Model():
                 source, self.backups.values(), findNext=True)[1]
         return purges
 
-    def _parseTimeOfDay(self) -> Optional[Tuple[int, int]]:
-        from_config = self.config.get(Setting.BACKUP_TIME_OF_DAY)
-        if len(from_config) == 0:
+    def _parseTimeOfDay(self, value) -> Optional[Tuple[int, int]]:
+        if len(value) == 0:
             return None
-        parts = from_config.split(":")
+        parts = value.split(":")
         if len(parts) != 2:
             return None
         try:

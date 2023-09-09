@@ -6,7 +6,7 @@
   "python.linting.flake8Enabled": true,
   "python.linting.pylintEnabled": false,
   "python.linting.mypyEnabled": false,
-  "python.linting.mypyArgs": ["--python-version", "3.8"],
+  "python.linting.mypyArgs": ["--python-version", "3.11"],
   "python.linting.flake8Args": ["--ignore=E501,E731", "--verbose"],
   "python.autoComplete.addBrackets": true,
   "files.associations": {

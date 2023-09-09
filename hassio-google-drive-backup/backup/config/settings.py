@@ -151,6 +151,10 @@ class Setting(Enum):
     DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR = "enable_snapshot_stale_sensor"
     DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR = "enable_snapshot_state_sensor"
 
+    UPLOAD_LIMIT_BYTES_PER_SECOND = "upload_limit_bytes_per_second"
+    UPLOAD_ALLOWED_START = "upload_allowed_start"
+    UPLOAD_ALLOWED_END = "upload_allowed_end"
+
     def default(self):
         if "staging" in VERSION and self in _STAGING_DEFAULTS:
             return _STAGING_DEFAULTS[self]
@@ -295,6 +299,10 @@ _DEFAULTS = {
     Setting.CACHE_WARMUP_MAX_SECONDS: 15 * 60,  # 30 minutes
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: 24 * 60 * 60,  # 1 day
     Setting.MAX_BACKOFF_SECONDS: 60 * 60 * 2,  # 2 hours
+
+    Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: 0,
+    Setting.UPLOAD_ALLOWED_START: "",
+    Setting.UPLOAD_ALLOWED_END: ""
 }
 
 _STAGING_DEFAULTS = {
@@ -435,6 +443,10 @@ _CONFIG = {
     Setting.CACHE_WARMUP_MAX_SECONDS: "float(0,)",
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: "float(0,)",
     Setting.MAX_BACKOFF_SECONDS: "int(3600,)?",
+
+    Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: "float(0,)?",
+    Setting.UPLOAD_ALLOWED_START: "match(^[0-2]\\d:[0-5]\\d$)?",
+    Setting.UPLOAD_ALLOWED_END: "match(^[0-2]\\d:[0-5]\\d$)?",
 }
 
 PRIVATE = [
@@ -511,6 +523,7 @@ _VALIDATORS[Setting.HA_REPORTING_INTERVAL_SECONDS] = DurationAsStringValidator(S
 _VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator(Setting.DELETE_IGNORED_AFTER_DAYS.value, minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
 _VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES.value, minimum=256 * 1024)
 _VALIDATORS[Setting.PENDING_BACKUP_TIMEOUT_SECONDS] = DurationAsStringValidator(Setting.PENDING_BACKUP_TIMEOUT_SECONDS.value, minimum=1, maximum=None)
+_VALIDATORS[Setting.UPLOAD_LIMIT_BYTES_PER_SECOND] = BytesizeAsStringValidator(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND.value, minimum=0)
 VERSION = addon_config["version"]
 
 

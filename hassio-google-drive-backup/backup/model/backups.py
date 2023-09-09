@@ -133,10 +133,10 @@ class Backup(object):
         if backup is not None:
             self.addSource(backup)
 
-    def setOptions(self, options):
+    def setOptions(self, options: Union[CreateOptions, None]):
         self._options = options
 
-    def getOptions(self):
+    def getOptions(self) -> Union[CreateOptions, None]:
         return self._options
 
     def updatePurge(self, source: str, purge: bool):

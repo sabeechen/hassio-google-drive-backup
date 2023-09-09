@@ -5,7 +5,7 @@
 The project is mostly maintained by Stephen Beechen (stephen@beechens.com) whom you can reach out to for guidance. Before digging in to this, you might be helpful to familiarize yourself with some of the technologies used in the project.
 
 - [Developing Addons for Home Assistant](https://developers.home-assistant.io/docs/add-ons) - Useful to understand how addons work.
-- [Python](https://www.python.org/) - The addon is written in Python 3.8 and makes heavy use of the asyncio framework.
+- [Python](https://www.python.org/) - The addon is written in Python 3.11 and makes heavy use of the asyncio framework.
 - [AIOHTTP](https://docs.aiohttp.org/en/stable/) - The addon serves its web interface through an AIOHTTP server, and uses the AIOHTTP client library for all web requests.
 - [pytest](https://docs.pytest.org/en/latest/) - The addon uses pytest for all of its test.
 - [Visual Studio Code](https://code.visualstudio.com/) - The addon codebase is designed to work with Visual Studio code, but in practice you could use any editor (it would be harder). These instructions assume you're using VSCode, it’s a free cross-platform download.
@@ -28,17 +28,17 @@ If the you open the repository folder in Visual Studio code with docker installe
 
 ### Harder but also works: Manual Setup
 1. Install [Visual Studio Code](https://code.visualstudio.com/)
-2. Install [Python 3.8](https://www.python.org/downloads/) for your platform.
+2. Install [Python 3.11](https://www.python.org/downloads/) for your platform.
 3. Install a git client. I like [GitHub Desktop](https://desktop.github.com/)
 4. Clone the project repository
    ```
    https://github.com/sabeechen/hassio-google-drive-backup.git
    ```
-5. Open Visual studio Code, go to the extension menu, and install the Desktop] (Python extension from Microsoft. It may prompt you to choose a Python interpreter (you want Python 3.8) and select a test framework (you want pytest).
+5. Open Visual studio Code, go to the extension menu, and install the Desktop] (Python extension from Microsoft. It may prompt you to choose a Python interpreter (you want Python 3.11) and select a test framework (you want pytest).
 6. <kbd>File</kbd> > <kbd>Open Folder</kbd> to open the cloned repository folder.
 7. Open the terminal (`Ctrl` + `Shift` + <code>`</code>) and install the Python packages required for development:
    ```
-   > python3.8 -m pip install -r .devcontainer/requirements-dev.txt
+   > python3.11 -m pip install -r .devcontainer/requirements-dev.txt
    ```
    That should set you up!
 
@@ -98,7 +98,7 @@ I haven't tried using the Supervisor's new devcontainers for development yet (th
 You should be able to run tests from within the Visual Studio tests tab. Make sure all the tests pass before you to make a PR. You can also run them from the command line with:
 
 ```bash
-> python3.8 -m pytest hassio-google-drive-backup
+> python3.11 -m pytest hassio-google-drive-backup
 ```
 
 ## Writing Tests

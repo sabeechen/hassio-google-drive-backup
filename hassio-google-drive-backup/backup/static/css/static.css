@@ -39,6 +39,7 @@ input:focus {
 
 .helper-text {
   color: var(--helper-text-color) !important;
+  font-size: 12px;
 }
 
 .sidenav,

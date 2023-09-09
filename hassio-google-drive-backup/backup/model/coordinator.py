@@ -116,6 +116,7 @@ class Coordinator(Trigger):
             else:
                 scheduled += timedelta(seconds=self.nextSyncCheckOffset())
             next_backup = self.nextBackupTime()
+            # TODO: This should check for when drive is allowed to backup
             if next_backup is None:
                 return scheduled
             else:

@@ -6,7 +6,7 @@ FROM python:3.11-buster
 ENV APP_HOME /server
 WORKDIR $APP_HOME
 COPY . ./
-COPY config.json /usr/local/lib/python3.9/site-packages/config.json
+COPY config.json /usr/local/lib/python3.11/site-packages/config.json
 
 # Install server python requirements
 RUN pip3 install --trusted-host pypi.python.org -r requirements-server.txt

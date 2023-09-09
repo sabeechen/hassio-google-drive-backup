@@ -45,15 +45,15 @@ class BackupSource(Trigger, Generic[T]):
 
     def freeSpace(self):
         return None
-    
+
     @property
     def needsSpaceCheck(self):
         return True
 
     async def create(self, options: CreateOptions) -> T:
-        pass
+        raise NotImplementedError()
 
-    async def get(self) -> Dict[str, T]:
+    async def get(self) -> dict[str, T] | None:
         pass
 
     async def delete(self, backup: T):
@@ -63,10 +63,10 @@ class BackupSource(Trigger, Generic[T]):
         pass
 
     async def save(self, backup: AbstractBackup, bytes: IOBase) -> T:
-        pass
+        raise NotImplementedError()
 
     async def read(self, backup: T) -> IOBase:
-        pass
+        raise NotImplementedError()
 
     async def retain(self, backup: T, retain: bool) -> None:
         pass
@@ -74,10 +74,10 @@ class BackupSource(Trigger, Generic[T]):
     async def note(self, backup, note: Union[str, None]) -> None:
         pass
 
-    def maxCount(self) -> None:
+    def maxCount(self) -> int:
         return 0
 
-    def postSync(self) -> None:
+    def postSync(self):
         return
 
     def detail(self) -> str:
@@ -110,7 +110,7 @@ class Model():
     def __init__(self, config: Config, time: Time, source: BackupSource, dest: BackupDestination, info: GlobalInfo, estimator: Estimator, data_cache: DataCache):
         self.config: Config = config
         self.time = time
-        self.precache: Precache = None
+        self.precache: Precache | None = None
         self.source: BackupSource = source
         self.dest: BackupDestination = dest
         self.reinitialize()
@@ -133,7 +133,7 @@ class Model():
     def allSources(self):
         return [self.source, self.dest]
 
-    def reinitialize(self, precache: Precache = None):
+    def reinitialize(self, precache: Precache | None = None):
         self.precache = precache
         self._time_of_day: Optional[Tuple[int, int]] = self._parseTimeOfDay(self.config.get(Setting.BACKUP_TIME_OF_DAY))
 
@@ -245,7 +245,6 @@ class Model():
                 proposed = list(self.backups.values())
                 proposed.append(dummy)
                 if self._nextPurge(self.dest, proposed)[1] != dummy:
-                    # TODO: Stop backup here if time doesn't allow it
                     if self.config.get(Setting.DELETE_BEFORE_NEW_BACKUP):
                         await self._purge(self.dest, pre_purge=True)
                     upload.addSource(await self.dest.save(upload, await self.source.read(upload)))
@@ -259,21 +258,6 @@ class Model():
         self.source.postSync()
         self.dest.postSync()
         self._data_cache.saveIfDirty()
-
-    def _canBackupStart(self, now: datetime):
-        """
-        Looks at settings to determine if backup is allowed to start based on time of day
-        """
-        now_local = self.time.toLocal(now)
-        start_time = self._parseTimeOfDay(self.config.get(Setting.UPLOAD_ALLOWED_START))
-        end_time = self._parseTimeOfDay(self.config.get(Setting.UPLOAD_ALLOWED_END))
-        if start_time == None or end_time == None:
-            return True
-        start_date = self.time.localize(datetime(now_local.year, now_local.month, now_local.day, start_time[0], start_time[1]))
-        end_date = self.time.localize(datetime(now_local.year, now_local.month, now_local.day, end_time[0], end_time[1]))
-        if start_date > end_date:
-            end_date += timedelta(days=1)
-        pass
 
     def isWorkingThroughUpload(self):
         return self.dest.isWorking()

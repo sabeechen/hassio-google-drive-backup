@@ -178,7 +178,7 @@ When true, requires your home assistant username and password to access the Web 
 
 #### Option: `use_ssl` (default: False)
 
-When true, requires your home assistant username and password to access the Web UI.
+When true, the Web UI exposed by `expose_extra_server` will be served over SSL (HTTPS).
 
 #### Option: `certfile` (default: `/ssl/certfile.pem`)
 

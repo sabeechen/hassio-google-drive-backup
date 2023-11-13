@@ -57,6 +57,7 @@
     "backup_password": "str?",
     "exclude_folders": "str?",
     "exclude_addons": "str?",
+    "exclude_ha_database": "bool?",
     "stop_addons": "str?",
     "disable_watchdog_when_stopping": "bool?",
     "expose_extra_server": "bool?",

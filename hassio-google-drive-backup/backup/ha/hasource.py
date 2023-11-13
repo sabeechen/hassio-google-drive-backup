@@ -522,8 +522,10 @@ class HaSource(BackupSource[HABackup], Startable):
             addons.append(addon['slug'])
         request_info: Dict[str, Any] = {
             'addons': [],
-            'folders': []
+            'folders': [],
         }
+        if self.config.get(Setting.EXCLUDE_HA_DATABASE):
+            request_info['homeassistant_exclude_database'] = True
         folders = list(map(lambda f: f['slug'], FOLDERS))
         type_name = "Full"
         for folder in folders:

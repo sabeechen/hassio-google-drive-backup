@@ -1156,3 +1156,13 @@ async def test_unknown_backup_location(time, config: Config, ha: HaSource, super
     await ha.refresh()
     with pytest.raises(UnknownNetworkStorageError):
         ha._buildBackupInfo(CreateOptions(time.now(), "Backup"))
+
+
+@pytest.mark.asyncio
+async def test_exclude_database(ha: HaSource, time, config: Config, supervisor: SimulatedSupervisor) -> None:
+    config.override(Setting.EXCLUDE_HA_DATABASE, True)
+    config.override(Setting.NEW_BACKUP_TIMEOUT_SECONDS, 0.1)
+    async with supervisor._backup_inner_lock:
+        backup = await ha.create(CreateOptions(time.now(), "Test Name"))
+        assert isinstance(backup, PendingBackup)
+        assert backup._request_info['homeassistant_exclude_database']

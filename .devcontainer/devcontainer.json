@@ -18,6 +18,8 @@
         "github.vscode-pull-request-github", // Github interaction
         "GitHub.copilot",
         "mikoz.black-py"]
-      }
-    "forwardPorts": [3000]
+      },
+    "runArgs": ["--init", "--privileged"],
+    "forwardPorts": [3000],
+    "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ]
   }

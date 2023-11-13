@@ -1,0 +1,3 @@
+build:
+  docker:
+    web: hassio-google-drive-backup/Dockerfile-server

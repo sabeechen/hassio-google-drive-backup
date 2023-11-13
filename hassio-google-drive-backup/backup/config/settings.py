@@ -252,7 +252,7 @@ _DEFAULTS = {
 
     # Remote endpoints
     Setting.AUTHORIZATION_HOST: "https://habackup.io",
-    Setting.TOKEN_SERVER_HOSTS: "https://token1.habackup.io,https://habackup.io",
+    Setting.TOKEN_SERVER_HOSTS: "https://token2.habackup.io,https://token1.habackup.io,https://habackup.io",
     Setting.SUPERVISOR_URL: "",
     Setting.SUPERVISOR_TOKEN: "",
     Setting.DRIVE_URL: "https://www.googleapis.com",

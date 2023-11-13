@@ -33,7 +33,7 @@ class BackupHelper():
 
     async def createFile(self, size=1024 * 1024 * 2, slug="testslug", name="Test Name", note=None):
         from_backup: DummyBackup = DummyBackup(
-            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug, note=note)
+            name, self.time.toUtc(self.time.local(1985, 12, 6)), "fake source", slug, note=note, size=size)
         data = await self.uploader.upload(createBackupTar(slug, name, self.time.now(), size))
         return from_backup, data
 
@@ -161,8 +161,26 @@ async def test_bad_auth_creds(drive: DriveSource, time):
 async def test_out_of_space(backup_helper, drive: DriveSource, google: SimulatedGoogle):
     google.setDriveSpaceAvailable(100)
     from_backup, data = await backup_helper.createFile()
-    with pytest.raises(DriveQuotaExceeded):
+    await drive.get()
+    with pytest.raises(DriveQuotaExceeded) as e:
         await drive.save(from_backup, data)
+    assert e.value.data() == {
+        'backup_size': '2 MB',
+        'free_space': '100 B'
+    }
+
+
+@pytest.mark.asyncio
+async def test_out_of_space_error(backup_helper, drive: DriveSource, google: SimulatedGoogle):
+    google.setDriveSpaceAvailable(100)
+    from_backup, data = await backup_helper.createFile()
+    # Without calling drive.get(), the parser has no info about drive's space usage
+    with pytest.raises(DriveQuotaExceeded) as e:
+        await drive.save(from_backup, data)
+    assert e.value.data() == {
+        'backup_size': 'Error',
+        'free_space': 'Error'
+    }
 
 
 @pytest.mark.asyncio
@@ -217,33 +235,33 @@ async def test_upload_resume(drive: DriveSource, time, backup_helper: BackupHelp
 
 
 def test_chunk_size(drive: DriveSource, config: Config):
-    max = config.get(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES)
+    max = config.get(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES) / BASE_CHUNK_SIZE
     assert drive.drivebackend._getNextChunkSize(
         1000000000, 0) == max
     assert drive.drivebackend._getNextChunkSize(
-        1, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
+        1, CHUNK_UPLOAD_TARGET_SECONDS) == 1
     assert drive.drivebackend._getNextChunkSize(
         1000000000, CHUNK_UPLOAD_TARGET_SECONDS) == max
     assert drive.drivebackend._getNextChunkSize(
-        BASE_CHUNK_SIZE, CHUNK_UPLOAD_TARGET_SECONDS) == BASE_CHUNK_SIZE
+        1, CHUNK_UPLOAD_TARGET_SECONDS) == 1
     assert drive.drivebackend._getNextChunkSize(
-        BASE_CHUNK_SIZE, 1) == BASE_CHUNK_SIZE * CHUNK_UPLOAD_TARGET_SECONDS
+        1, 1) == CHUNK_UPLOAD_TARGET_SECONDS
     assert drive.drivebackend._getNextChunkSize(
-        BASE_CHUNK_SIZE, 1.01) == BASE_CHUNK_SIZE * (CHUNK_UPLOAD_TARGET_SECONDS - 1)
+        1, 1.01) == CHUNK_UPLOAD_TARGET_SECONDS - 1
 
 
 def test_chunk_size_limits(drive: DriveSource, config: Config):
     config.override(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES, 1)
-    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == BASE_CHUNK_SIZE
-    assert drive.drivebackend._getNextChunkSize(1, 1000000) == BASE_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == 1
+    assert drive.drivebackend._getNextChunkSize(1, 1000000) == 1
 
     config.override(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES, BASE_CHUNK_SIZE * 1.5)
-    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == BASE_CHUNK_SIZE
-    assert drive.drivebackend._getNextChunkSize(1, 1000000) == BASE_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == 1
+    assert drive.drivebackend._getNextChunkSize(1, 1000000) == 1
 
     config.override(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES, BASE_CHUNK_SIZE * 3.5)
-    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == BASE_CHUNK_SIZE * 3
-    assert drive.drivebackend._getNextChunkSize(1, 1000000) == BASE_CHUNK_SIZE
+    assert drive.drivebackend._getNextChunkSize(1000000000, 0) == 3
+    assert drive.drivebackend._getNextChunkSize(1, 1000000) == 1
 
 
 @pytest.mark.asyncio

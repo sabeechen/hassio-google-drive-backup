@@ -207,7 +207,7 @@ The config option `backup_name` can be changed to give backups a different name 
 - `{version_ha}`, Home Assistant version string (eg 0.91.3)
 - `{version_hassos}`: HassOS version string (eg 0.2.15)
 - `{version_super}`: , Supervisor version string (eg 1.2.19)
-- `{date}`: Locale aware date (eg 2022/01/01).
+- `{date}`: Locale aware date (eg 2023/01/01).
 - `{time}`: Locale aware time (eg 02:03:04 am)
 - `{datetime}`: Locale-aware datetime string
 - `{isotime}`: Date and time in ISO format

@@ -141,7 +141,7 @@ async def test_getstatus_sync(reader, config: Config, backup: Backup, time: Fake
         'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
-        'free_space': "4.0 GB",
+        'free_space': "5.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
         'detail': "testing@no.where",
@@ -183,7 +183,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
-        'free_space': "4.0 GB",
+        'free_space': "5.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
         'detail': "testing@no.where",
@@ -218,7 +218,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
-        'free_space': "4.0 GB",
+        'free_space': "5.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
         'detail': "testing@no.where",
@@ -257,7 +257,7 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
         'max': config.get(Setting.MAX_BACKUPS_IN_GOOGLE_DRIVE),
         'title': "Google Drive",
         'icon': 'google-drive',
-        'free_space': "4.0 GB",
+        'free_space': "5.0 GB",
         'ignored': 0,
         'ignored_size': '0.0 B',
         'detail': "testing@no.where",
@@ -516,7 +516,9 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
     assert status["last_error"]["error_type"] == ERROR_MULTIPLE_DELETES
     assert status["last_error"]["data"] == {
         SOURCE_GOOGLE_DRIVE: 0,
-        SOURCE_HA: 2
+        SOURCE_GOOGLE_DRIVE + "_desc": '',
+        SOURCE_HA: 2,
+        SOURCE_HA + "_desc": "Name1\nName2"
     }
 
     # request that multiple deletes be allowed
@@ -536,7 +538,7 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
     assert len(status['backups']) == 1
     assert status["last_error"] is None
 
-    # create two mroe backups, verify we see the error again
+    # create two more backups, verify we see the error again
     await ha.create(CreateOptions(time.now(), "Name1"))
     await ha.create(CreateOptions(time.now(), "Name2"))
     status = await reader.getjson("sync")
@@ -544,7 +546,9 @@ async def test_confirm_multiple_deletes(reader, ui_server, server, config: Confi
     assert status["last_error"]["error_type"] == ERROR_MULTIPLE_DELETES
     assert status["last_error"]["data"] == {
         SOURCE_GOOGLE_DRIVE: 0,
-        SOURCE_HA: 2
+        SOURCE_GOOGLE_DRIVE + "_desc": '',
+        SOURCE_HA: 2,
+        SOURCE_HA + "_desc": "Name1\nName1"
     }
 
 

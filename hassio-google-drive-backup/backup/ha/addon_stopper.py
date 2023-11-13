@@ -15,8 +15,8 @@ ATTR_STATE = "state"
 ATTR_WATCHDOG = "watchdog"
 ATTR_NAME = "name"
 STATE_STOPPED = "stopped"
-STATE_STARTED = "started"
 
+STATES_STARTED = ["started", "startup"]
 STATES_STOPPED = ["stopped", "unknown", "error"]
 
 
@@ -64,7 +64,7 @@ class AddonStopper(Worker):
                     continue
                 try:
                     info = await self.requests.getAddonInfo(slug)
-                    if info.get(ATTR_STATE, None) == STATE_STARTED:
+                    if info.get(ATTR_STATE, None) in STATES_STARTED:
                         if info.get(ATTR_WATCHDOG, False):
                             try:
                                 LOGGER.info("Temporarily disabling watchdog for addon '%s'", info.get(ATTR_NAME, slug))
@@ -107,12 +107,12 @@ class AddonStopper(Worker):
                             await self.requests.startAddon(slug)
                             self.must_start.remove(slug)
                             changes = True
-                        elif info.get(ATTR_STATE, None) == STATE_STARTED and self.time.now() > self.stop_start_check_time:
+                        elif info.get(ATTR_STATE, None) in STATES_STARTED and self.time.now() > self.stop_start_check_time:
                             # Give up on restarting it, looks like it was never stopped
                             self.must_start.remove(slug)
                             changes = True
                         else:
-                            LOGGER.error(f"Addon '{info.get(ATTR_NAME, slug)} had unrecognized state {state}'.  The addon will most likely be unable to automatically restart this addon.", )
+                            LOGGER.error(f"Addon '{info.get(ATTR_NAME, slug)}' had unrecognized state '{state}'.  The addon will most likely be unable to automatically restart this addon.", )
                     except Exception as e:
                         LOGGER.error("Unable to start addon '%s'", slug)
                         LOGGER.printException(e)

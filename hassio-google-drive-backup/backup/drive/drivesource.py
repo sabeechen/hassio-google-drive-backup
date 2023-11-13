@@ -9,10 +9,13 @@ from injector import inject, singleton
 
 from ..util import AsyncHttpGetter, GlobalInfo
 from ..config import Config, Setting, CreateOptions
+from ..config.byteformatter import ByteFormatter
 from ..const import SOURCE_GOOGLE_DRIVE
 from ..exceptions import (BackupFolderInaccessible,
                           ExistingBackupFolderError,
-                          GoogleDrivePermissionDenied, LogicError)
+                          GoogleDrivePermissionDenied, 
+                          LogicError,
+                          DriveQuotaExceeded)
 from ..model.backups import (PROP_NOTE, PROP_PROTECTED, PROP_RETAINED, PROP_TYPE, PROP_VERSION)
 from ..time import Time
 from .driverequests import DriveRequests
@@ -217,6 +220,19 @@ class DriveSource(BackupDestination):
                 # This should always mean we lost permission on the backup folder, since we could have only just
                 # created the backup item on this request.
                 raise BackupFolderInaccessible(parent_id)
+            except DriveQuotaExceeded as space_error:
+                try:
+                    space_error.set_data({
+                        'backup_size': ByteFormatter().format(backup.size()),
+                        'free_space': ByteFormatter().format(self.freeSpace())
+                    })
+                except Exception as e:
+                    space_error.set_data({
+                        'backup_size': 'Error',
+                        'free_space': 'Error'
+                    })
+                    logger.error(e)
+                raise
             finally:
                 backup.clearUploadSource()
                 self._uploadedAtLeastOneChunk = False

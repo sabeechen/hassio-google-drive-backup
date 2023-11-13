@@ -5,9 +5,7 @@ from backup.file import JsonFileSaver
 from backup.const import NECESSARY_OLD_BACKUP_PLURAL_NAME
 from injector import inject, singleton
 from ..time import Time
-from typing import Dict
-import json
-import os
+from typing import Dict, Any
 
 KEY_I_MADE_THIS = "i_made_this"
 KEY_PENDING = "pending"
@@ -100,7 +98,7 @@ class DataCache:
             self._data[NECESSARY_OLD_BACKUP_PLURAL_NAME] = {}
         return self._data[NECESSARY_OLD_BACKUP_PLURAL_NAME]
 
-    def backup(self, slug) -> Dict[str, str]:
+    def backup(self, slug) -> Dict[str, Any]:
         if slug not in self.backups:
             self.backups[slug] = {}
         return self.backups[slug]

@@ -95,7 +95,9 @@
     "enable_snapshot_state_sensor": "bool?",
     "snapshot_password": "str?",
     "maximum_upload_chunk_bytes": "float(262144,)?",
-    "ha_reporting_interval_seconds": "int(1,)?"
+    "ha_reporting_interval_seconds": "int(1,)?",
+
+    "upload_limit_bytes_per_second": "float(0,)?"
   },
   "ports": {
     "1627/tcp": 1627

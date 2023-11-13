@@ -23,10 +23,16 @@ class DriveRequester():
         self.session = session
         self.resolver = resolver
         self.config = config
+        self.all_resposnes: list[ClientResponse] = []
+
+        # This is just kept around for debugging purposes
+        self.track_response = False
 
     async def request(self, method, url, headers={}, json=None, data=None) -> ClientResponse:
         try:
             response = await self.session.request(method, url, headers=headers, json=json, timeout=self.buildTimeout(), data=data)
+            if self.track_response:
+                self.all_resposnes.append(response)
             if response.status < 400:
                 return response
             await self.raiseForKnownErrors(response)

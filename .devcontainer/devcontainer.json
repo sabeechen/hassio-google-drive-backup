@@ -1,5 +1,24 @@
 {
     "build": { "dockerfile": "Dockerfile" },
+    "customizations": {
+      "extensions": [
+        "ms-python.python", 
+        "wholroyd.jinja",
+        "ms-python.vscode-pylance",
+        "cssho.vscode-svgviewer", // SVG viewer
+        "eamodio.gitlens", // IDE Git information
+        "ms-azuretools.vscode-docker", // Docker integration and linting
+        "shardulm94.trailing-spaces", // Show trailing spaces
+        "davidanson.vscode-markdownlint",
+        "IBM.output-colorizer", // Colorize your output/test logs
+        "Gruntfuggly.todo-tree", // Highlights TODO comments
+        "bierner.emojisense", // Emoji sense for markdown
+        "stkb.rewrap", // rewrap comments after n characters on one line
+        "vscode-icons-team.vscode-icons", // Better file extension icons
+        "github.vscode-pull-request-github", // Github interaction
+        "GitHub.copilot",
+        "mikoz.black-py"]
+      },
     "runArgs": ["--init", "--privileged"],
     "extensions": ["ms-python.python", "wholroyd.jinja","ms-python.vscode-pylance"],
     "forwardPorts": [3000],

@@ -151,6 +151,8 @@ class Setting(Enum):
     DEPRECTAED_ENABLE_BACKUP_STALE_SENSOR = "enable_snapshot_stale_sensor"
     DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR = "enable_snapshot_state_sensor"
 
+    UPLOAD_LIMIT_BYTES_PER_SECOND = "upload_limit_bytes_per_second"
+
     def default(self):
         if "staging" in VERSION and self in _STAGING_DEFAULTS:
             return _STAGING_DEFAULTS[self]
@@ -295,6 +297,8 @@ _DEFAULTS = {
     Setting.CACHE_WARMUP_MAX_SECONDS: 15 * 60,  # 30 minutes
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: 24 * 60 * 60,  # 1 day
     Setting.MAX_BACKOFF_SECONDS: 60 * 60 * 2,  # 2 hours
+
+    Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: 0,
 }
 
 _STAGING_DEFAULTS = {
@@ -435,6 +439,8 @@ _CONFIG = {
     Setting.CACHE_WARMUP_MAX_SECONDS: "float(0,)",
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: "float(0,)",
     Setting.MAX_BACKOFF_SECONDS: "int(3600,)?",
+
+    Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: "float(0,)?",
 }
 
 PRIVATE = [
@@ -506,10 +512,12 @@ for setting in Setting:
 for key in addon_config["schema"]:
     _VALIDATORS[_LOOKUP[key]] = getValidator(key, addon_config["schema"][key])
 
-_VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator("max_sync_interval_seconds", minimum=1, maximum=None)
-_VALIDATORS[Setting.HA_REPORTING_INTERVAL_SECONDS] = DurationAsStringValidator("ha_reporting_interval_seconds", minimum=1, maximum=None)
-_VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator("delete_ignored_after_days", minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
-_VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator("maximum_upload_chunk_bytes", minimum=256 * 1024)
+_VALIDATORS[Setting.MAX_SYNC_INTERVAL_SECONDS] = DurationAsStringValidator(Setting.MAX_SYNC_INTERVAL_SECONDS.value, minimum=1, maximum=None)
+_VALIDATORS[Setting.HA_REPORTING_INTERVAL_SECONDS] = DurationAsStringValidator(Setting.HA_REPORTING_INTERVAL_SECONDS.value, minimum=1, maximum=None)
+_VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator(Setting.DELETE_IGNORED_AFTER_DAYS.value, minimum=0, maximum=None, base_seconds=60 * 60 * 24, default_as_empty=0)
+_VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES.value, minimum=256 * 1024)
+_VALIDATORS[Setting.PENDING_BACKUP_TIMEOUT_SECONDS] = DurationAsStringValidator(Setting.PENDING_BACKUP_TIMEOUT_SECONDS.value, minimum=1, maximum=None)
+_VALIDATORS[Setting.UPLOAD_LIMIT_BYTES_PER_SECOND] = BytesizeAsStringValidator(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND.value, minimum=0)
 VERSION = addon_config["version"]
 
 

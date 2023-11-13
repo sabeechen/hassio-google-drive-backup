@@ -27,4 +27,6 @@ class BytesizeAsStringValidator(Validator):
         return value
 
     def formatForUi(self, value):
+        if value is None or len(str(value)) == 0 or value == 0:
+            return ""
         return ByteFormatter().format(value)

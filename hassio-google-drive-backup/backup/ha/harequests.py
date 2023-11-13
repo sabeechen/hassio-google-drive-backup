@@ -335,7 +335,7 @@ class HaRequests():
             await self._postHaData("states/binary_sensor.backups_stale", data)
 
     @supervisor_call
-    async def updateConfig(self, config) -> None:
+    async def updateConfig(self, config):
         return await self._postHassioData(self.getSupervisorURL().with_path("addons/self/options"), {'options': config})
 
     @supervisor_call

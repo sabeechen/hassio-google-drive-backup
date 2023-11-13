@@ -32,3 +32,4 @@ aioping
 pytz
 tzlocal
 pytest-cov
+pytest-xdist

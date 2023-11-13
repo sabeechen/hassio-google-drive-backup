@@ -175,11 +175,21 @@ class DeleteMutlipleBackupsError(KnownError):
 
 
 class DriveQuotaExceeded(KnownError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._data = {}
+
     def message(self):
         return "Google Drive is out of space"
 
     def code(self):
         return ERROR_DRIVE_FULL
+
+    def data(self):
+        return self._data
+
+    def set_data(self, new_data: dict):
+        self._data = new_data
 
     def retrySoon(self):
         return False

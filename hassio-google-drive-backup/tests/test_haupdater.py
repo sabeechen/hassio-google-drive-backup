@@ -182,7 +182,7 @@ async def test_update_backups_sync(updater: HaUpdater, server, time: FakeTime, b
         'backups_in_home_assistant': 1,
         'size_in_home_assistant': Estimator.asSizeString(backup.size()),
         'size_in_google_drive': Estimator.asSizeString(backup.size()),
-        'free_space_in_google_drive': '4.0 GB'
+        'free_space_in_google_drive': '5.0 GB'
     })
 
 
@@ -358,7 +358,7 @@ async def test_drive_free_space(updater: HaUpdater, time: FakeTime, server: Simu
     await coord.sync()
     await updater.update()
     state = supervisor.getAttributes("sensor.backup_state")
-    assert state["free_space_in_google_drive"] == "4.0 GB"
+    assert state["free_space_in_google_drive"] == "5.0 GB"
 
 
 @pytest.mark.asyncio

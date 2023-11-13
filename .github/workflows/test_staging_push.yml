@@ -45,7 +45,7 @@ jobs:
         args: |
           --all \
           --target dev/hassio-google-drive-backup \
-          --docker-hub "ghcr.io/hassio-google-drive-backup"
+          --docker-hub "ghcr.io/sabeechen"
 
     - name: Publish Staging Addon Version
       run: |

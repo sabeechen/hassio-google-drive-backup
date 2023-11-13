@@ -1,6 +1,6 @@
 {
   "name": "Home Assistant Google Drive Backup",
-  "version": "0.111.1",
+  "version": "0.112.1",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically manage backups between Home Assistant and Google Drive",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
@@ -108,5 +108,5 @@
   "ports_description": {
     "1627/tcp": "Direct access to the add-on without ingress.  Must be enabled in the settings, see 'expose_extra_server'."
   },
-  "image": "sabeechen/hassio-google-drive-backup-{arch}"
+  "image": "ghcr.io/sabeechen/hassio-google-drive-backup-{arch}"
 }

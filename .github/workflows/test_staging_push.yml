@@ -32,18 +32,20 @@ jobs:
       run: |
           python3 staging/update.py dev staging
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v3.0.0
+    - name: Log in to the Container registry
+      uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish Staging Addon image
       uses: home-assistant/builder@master
       with:
         args: |
           --all \
-          --target dev/hassio-google-drive-backup
+          --target dev/hassio-google-drive-backup \ 
+          --docker-hub ghcr.io
 
     - name: Publish Staging Addon Version
       run: |

@@ -128,6 +128,29 @@
           </div>
         </div>
 
+        <div class="card default-hidden question-card s12" id="stop_addon_removal_survey">
+          <div class="card-content">
+            <span class="card-title">
+              <i class="material-icons">info_outline</i>
+              <span>Stop Addons feature is going to be removed</span>
+            </span>
+            <p>It looks like you're using the "Stop Addons" feature when creating backups.  The maintainer of this addon would like to remove this feature because:
+              <ul class="browser-default">
+                <li>It was introduced long ago before Home Assistant had a built in way to let addons know they're in the middle of a backup.  Now that it does, all addons the developer is aware of handle being backed up live correctly.</li>
+                <li>Frankly, it doesn't work very well. There are lots of cases where addons don't get restarted after a backup.  Its a deffifcult feature to get right.</li>
+                <li>It confuses newer users who may not know the trouble it can cause.</li>
+              </ul>
+            </p>
+            <p>
+              If you have a good reason to keep this feature around, please let the developer of this addon know by commenting on the Github issue linked below.  Otherwise the developer will remove the "Stop Addons" feature in a future release.  To stop seeing this message either remove "Stop Addons" in your settings or click "DISMISS" below.
+            </p>
+          </div>
+          <div class="card-action">
+            <a target="_blank" class="btn-flat" href="https://github.com/sabeechen/hassio-google-drive-backup/issues/940" target="_blank"><i class="material-icons">check</i>Go to github</a>
+            <a target="_blank" class="btn-flat" onClick="dismissRemoveStopAddons();"><i class="material-icons">close</i>dismiss</a>
+          </div>
+        </div>
+
         <div class="card default-hidden question-card s12" id="backup_upgrade_card">
           <div class="card-content">
             <span class="card-title">

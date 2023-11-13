@@ -30,4 +30,4 @@ jobs:
         args: |
           --all \
           --target dev/hassio-google-drive-backup \
-          --docker-hub ghcr.io
+          --docker-hub "ghcr.io/sabeechen"

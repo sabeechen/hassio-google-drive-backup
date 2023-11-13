@@ -152,8 +152,6 @@ class Setting(Enum):
     DEPRECTAED_ENABLE_BACKUP_STATE_SENSOR = "enable_snapshot_state_sensor"
 
     UPLOAD_LIMIT_BYTES_PER_SECOND = "upload_limit_bytes_per_second"
-    UPLOAD_ALLOWED_START = "upload_allowed_start"
-    UPLOAD_ALLOWED_END = "upload_allowed_end"
 
     def default(self):
         if "staging" in VERSION and self in _STAGING_DEFAULTS:
@@ -301,8 +299,6 @@ _DEFAULTS = {
     Setting.MAX_BACKOFF_SECONDS: 60 * 60 * 2,  # 2 hours
 
     Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: 0,
-    Setting.UPLOAD_ALLOWED_START: "",
-    Setting.UPLOAD_ALLOWED_END: ""
 }
 
 _STAGING_DEFAULTS = {
@@ -445,8 +441,6 @@ _CONFIG = {
     Setting.MAX_BACKOFF_SECONDS: "int(3600,)?",
 
     Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: "float(0,)?",
-    Setting.UPLOAD_ALLOWED_START: "match(^[0-2]\\d:[0-5]\\d$)?",
-    Setting.UPLOAD_ALLOWED_END: "match(^[0-2]\\d:[0-5]\\d$)?",
 }
 
 PRIVATE = [

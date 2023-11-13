@@ -550,42 +550,6 @@
           </div>
           <div class="col s11 offset-s1 row">
             <div class="input-field col m6 s12">
-              <i class="material-icons prefix">alarm_on</i>
-              <input type="text" id="upload_allowed_start" name="upload_allowed_start" pattern="^[0-2]\d:[0-5]\d$"
-                class="validate" />
-              <label for="upload_allowed_start">Upload Start Time</label>
-            </div>
-            <div class="input-field col m6 s12">
-              <i class="material-icons prefix">alarm_off</i>
-              <input type="text" id="upload_allowed_end" name="upload_allowed_end" pattern="^[0-2]\d:[0-5]\d$"
-                class="validate" />
-              <label for="upload_allowed_end">Upload End Time</label>
-            </div>
-            <div class="col s11 offset-s1">
-              <span class="helper-text">
-                Specify times of day in 24 hour local time when uploads to Google Drive are permitted (eg "16:30" for 4:30
-                PM). Backups can still be created outside this time, but uploads to Google Drive wait to start. If
-                start time is after end time, then its assumed the desired time span crosses midnight. If you have large
-                backups or slow internet, please ensure you give the addon enough time for the upload to complete.</span>
-            </div>
-          </div>
-          <div class="col s11 offset-s1 row">
-            <div class="input-field col s12 m12 s12">
-              <i class="material-icons prefix">refresh</i>
-              <input type="text" id="maximum_upload_chunk_bytes" name="maximum_upload_chunk_bytes"
-                pattern="^[ ]*([0-9,]*\.?[0-9]*)[ ]*(b|B|k|K|m|M|g|G|t|T|p|P|e|E|z|Z|y|Y)[a-zA-Z ]*[ ]*$"
-                class="validate" />
-              <label for="maximum_upload_chunk_bytes">Maximum Drive Upload Chunk Size</label>
-              <span class="helper-text">
-                Sets the maximum "chunk" size allowed for uploads to Google Drive. Larger sizes will upload faster but
-                delay reports
-                of progress and may cause interruptions on some network hardware. Between 1MB and 20MB is recommended,
-                minimum is 256 kB.
-                The value can be provided in any binary-prefix format, e.g. '256 Kb', '10.5 Mb', '3000Kb', etc.</span>
-            </div>
-          </div>
-          <div class="col s11 offset-s1 row">
-            <div class="input-field col m6 s12">
               <i class="material-icons prefix">timelapse</i>
               <input type="number" id="google_drive_timeout_seconds" name="google_drive_timeout_seconds" min="1"
                 class="validate" />

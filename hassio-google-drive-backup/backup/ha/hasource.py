@@ -51,6 +51,7 @@ class PendingBackup(AbstractBackup):
         self._time = time
         self._pending_subverted = False
         self._start_time = time.now()
+        self._logs = None
 
     def considerForPurge(self) -> bool:
         return False
@@ -111,6 +112,15 @@ class PendingBackup(AbstractBackup):
             Setting.FAILED_BACKUP_TIMEOUT_SECONDS))
         staleTime = self.getFailureTime() + delta
         return self._time.now() >= staleTime
+    
+    def attach_logs(self, logs):
+        self._logs = logs
+
+    def error_logs(self):
+        if self._logs:
+            return self._logs
+        else:
+            return None
 
     def madeByTheAddon(self):
         return True
@@ -512,6 +522,11 @@ class HaSource(BackupSource[HABackup], Startable):
                 logger.error("Backup failed:")
                 logger.printException(e)
                 pending.failed(e, self.time.now())
+            try:
+                pending.attach_logs(await self.harequests.getSuperLogs())
+            except Exception as e:
+                logger.error("Failed to get sueprvisor logs after failed backup request")
+                logger.printException(e)
         finally:
             await self.stopper.startAddons()
             self.trigger()

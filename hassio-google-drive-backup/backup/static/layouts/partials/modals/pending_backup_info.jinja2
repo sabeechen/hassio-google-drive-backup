@@ -1,0 +1,65 @@
+<div id="pending_backup_modal" class="modal">
+  <style>
+    .tall {
+      display: flex; /* Use Flexbox */
+      flex-direction: column; /* Stack children vertically */
+      height: 100%; /* Set a specific height for the parent container */
+      box-sizing: border-box;
+    }
+    .tall div {
+      flex-grow: 1; /* Grow to take the remaining space */
+      resize: none; /* Optional: prevent manual resizing */
+    }
+
+    .super-log-container {
+      background-color: black;
+      color: white;
+      width: 95%;
+      height: 400px;
+      margin: 20px auto;
+      overflow-y: scroll;
+      font-family: monospace;
+      white-space: pre-line; /* preserves your newline characters */
+      padding: 10px;
+      border-radius: 4px;
+    }
+  
+    /* Log level color coding */
+    .super-log-warn {
+      color: yellow;
+    }
+  
+    .super-log-error {
+      color: red;
+    }
+  
+    .super-log-debug {
+      color: lightgreen;
+    }
+    .super-log-info {
+      color: white;
+    }
+  </style>
+  <div class="modal-content">
+    <h4>Pending Backup Info</h4>
+    <p>This addon thinks addon a backup is in progress, but that just an assumption.  In reality Home Assistant doesn't tell this addon the reason the 
+      request to create a backup was rejected, a backup already being in progress is just the most common reason.  A lot of less common reasons can cause it to be rejected like
+
+      <ul class="browser-default">
+        <li>You're using a network share to store backups, and its unavailable</li>
+        <li>Something is wrong with your hard drive and Home Assistant can't read/write to it</li>
+        <li>Home Assistant has frozen itself because it thinks something is wrong</li>
+      </ul>
+      The only place these less common errors show up is in the Supervisor's logs.  The Supervisor is a part of Home Assistant that manages it in the background.  Its logs are 
+      kind of hard to get to, so for conveinence a snapshot of the logs right after the backup was most recently requested is shown below.  If you're seeing a backup thats stuck 
+      in the "pending" state, these logs might provide a clue why.  If you're able to identify and resolve that problem, restart this addon to have it try creating a backup again.</p>
+
+      <h5>Supervisor Logs</h5>
+    <div class="tall">
+      <div class="super-log-container" id="super_logs_pending_request"></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat">Close</a>
+  </div>
+</div>

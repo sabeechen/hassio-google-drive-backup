@@ -362,9 +362,30 @@
           </div>`;
     }
 
+    function colorizeLog(log) {
+      if (log.includes("WARN")) return `<span class="super-log-warn">${log}</span>`;
+      if (log.includes("INFO")) return `<span class="super-log-info">${log}</span>`;
+      if (log.includes("ERROR")) return `<span class="super-log-error">${log}</span>`;
+      if (log.includes("DEBUG")) return `<span class="super-log-debug">${log}</span>`;
+      return `<span class="super-log-info">${log}</span>`;
+    }
+
     function showDetails(target) {
       var backup = $(target).data('backup');
       if (backup.isPending) {
+        if (backup.super_logs) {
+          let modal = $('#pending_backup_modal');
+          modal.data('slug', backup.slug);
+          modal.data('backup', backup);
+          const logs = backup.super_logs.split('\n');
+          const container = document.getElementById('super_logs_pending_request');
+          logs.forEach(log => {
+            const colorizedLog = colorizeLog(log);
+            container.innerHTML += `${colorizedLog}\n`;
+          });
+          M.Modal.getInstance(document.getElementById('pending_backup_modal')).open();
+          container.scrollTop = container.scrollHeight;
+        }
         return;
       }
 

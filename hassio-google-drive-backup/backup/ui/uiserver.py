@@ -201,7 +201,7 @@ class UiServer(Trigger, Startable):
                 'ignored': source.ignore(),
             })
 
-        return {
+        data = {
             'name': backup.name(),
             'slug': backup.slug(),
             'size': backup.sizeString(),
@@ -223,6 +223,9 @@ class UiServer(Trigger, Startable):
             'timestamp': backup.date().timestamp(),
             'note': backup.note()
         }
+        if isinstance(ha, PendingBackup):
+            data["super_logs"] = ha.error_logs()
+        return data
 
     def formatAddons(self, backup_data):
         addons = []

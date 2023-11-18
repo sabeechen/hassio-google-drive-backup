@@ -612,7 +612,12 @@ function populateBackupDiv(backup_div, backups, icon) {
 
       if (backup.isPending) {
         $("#loading" + backup.slug).show();
-        $("#backup_card" + backup.slug).css("cursor", "auto");
+        if (backup.super_logs) {
+          $("#backup_card" + backup.slug).css("cursor", "pointer");
+          $("#has-logs", template).show();
+        } else {
+          $("#backup_card" + backup.slug).css("cursor", "auto");
+        }
       } else {
         $("#loading" + backup.slug).hide();
         $("#backup_card" + backup.slug).css("cursor", "pointer");

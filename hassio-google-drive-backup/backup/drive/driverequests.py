@@ -20,6 +20,7 @@ from ..time import Time
 from ..logger import getLogger
 from backup.creds import Creds, Exchanger, DriveRequester
 from datetime import timezone
+from ..config.byteformatter import ByteFormatter
 
 logger = getLogger(__name__)
 
@@ -74,7 +75,7 @@ OOB_CRED_CUTOFF = datetime(2022, 3, 16, tzinfo=timezone.utc)
 @singleton
 class DriveRequests():
     @inject
-    def __init__(self, config: Config, time: Time, drive: DriveRequester, session: ClientSession, exchanger: Exchanger):
+    def __init__(self, config: Config, time: Time, drive: DriveRequester, session: ClientSession, exchanger: Exchanger, byte_formatter: ByteFormatter):
         self.session = session
         self.config = config
         self.time = time
@@ -87,6 +88,7 @@ class DriveRequests():
         self.last_attempt_location = None
         self.last_attempt_count = 0
         self.last_attempt_start_time = None
+        self.bytes_formatter = byte_formatter
         self.tryLoadCredentials()
 
     async def _getHeaders(self):
@@ -309,7 +311,7 @@ class DriveRequests():
                 "Content-Range": "bytes {0}-{1}/{2}".format(start, start + chunk_size - 1, total_size)
             }
             startTime = self.time.now()
-            logger.debug("Sending {0} bytes to Google Drive".format(chunk_size))
+            logger.debug("Sending {0} to Google Drive".format(self.bytes_formatter.format(chunk_size)))
             try:
                 async with await self.retryRequest("PUT", location, headers=headers, data=data, patch_url=False) as partial:
                     # Base the next chunk size on how long it took to send the last chunk.

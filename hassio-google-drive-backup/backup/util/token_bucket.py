@@ -4,6 +4,9 @@ from injector import inject, singleton
 
 @singleton
 class TokenBucket:
+    """
+    Implements a "leaky bucket" token algorithm, used to limit upload speed to Google Drive.
+    """
     @inject
     def __init__(self, time: Time, capacity, fill_rate, initial_tokens=None):
         self.capacity = float(capacity)
@@ -16,6 +19,10 @@ class TokenBucket:
         self.timestamp = self._time.monotonic()
 
     def consume(self, tokens):
+        """
+        Attempts to consume the given number of tokens, returning true if there were enough tokenas availabel and 
+        false otherwise.
+        """
         self._refill()
         if self.tokens >= tokens:
             self.tokens -= tokens
@@ -23,6 +30,13 @@ class TokenBucket:
         return False
 
     async def consumeWithWait(self, min_tokens: int, max_tokens: int):
+        """
+        Consumes a number of tokens between min_tokens and max_tokens
+        - If at least max_tokens are available, consumes that many and returns immediately
+        - If less than min_tokens are available, waits until min_tokens are availabel and consumes them
+        - Else consumes as many tokens as are available
+        Always returns the positive number of tokens consumed.
+        """
         self._refill()
         if self.tokens >= max_tokens:
             self.consume(max_tokens)

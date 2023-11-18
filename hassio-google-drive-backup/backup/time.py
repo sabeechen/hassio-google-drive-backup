@@ -14,7 +14,7 @@ import collections
 from dateutil.parser import parse
 
 
-# this hack if for dateutil, it imports Callable from the wrong place
+# this hack is for dateutil, it imports Callable from the wrong place
 collections.Callable = collections.abc.Callable
 
 

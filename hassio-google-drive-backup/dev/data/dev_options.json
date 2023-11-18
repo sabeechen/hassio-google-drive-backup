@@ -23,6 +23,5 @@
     "console_log_level": "TRACE",
     "ingress_port": 56152,
     "port": 56151,
-    "max_sync_interval_seconds": 600,
     "cache_warmup_max_seconds": 300
 }

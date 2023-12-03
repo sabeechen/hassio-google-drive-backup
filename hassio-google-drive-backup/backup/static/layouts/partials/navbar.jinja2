@@ -13,6 +13,7 @@
 {% include 'layouts/partials/modals/about.jinja2' %}
 {% include 'layouts/partials/modals/about.jinja2' %}
 {% include 'layouts/partials/modals/crypto_donate.jinja2' %}
+{% include 'layouts/partials/modals/pending_backup_info.jinja2' %}
 
 {% if coordEnabled %}
 <script type="text/javascript">
@@ -37,6 +38,7 @@
     $('.collapsible').collapsible();
     $('.sidenav').sidenav();
     $('.fixed-action-btn').floatingActionButton();
+    $('#pending_backup_modal').modal();
 
     const dropdownTriggers = document.querySelectorAll('.dropdown-trigger');
     const instances = M.Dropdown.init(dropdownTriggers, { 'constrainWidth': false });

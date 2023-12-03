@@ -439,6 +439,16 @@
         <div class="row">
           <div class="col s12">
             <label>
+              <input type="checkbox" name="exclude_ha_database" id="exclude_ha_database"class="filled-in checkbox-ha" />
+              <span>Exclude Home Asisstant Database from Backups</span>
+              <br />
+              <span class="helper-text">Don't include the Home Assistant database in backups.  Useful if you need to save space and don't care about history.  Applies to both full and partial backups.</span>
+            </label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12">
+            <label>
               <input type="checkbox" settings_ignore="true" name="partial_backups" id="partial_backups"
                 class="filled-in checkbox-ha"
                 onchange="toggleSlide(this, 'settings_partial_details');backupNameExample();" />
@@ -477,9 +487,8 @@
               <span>Stop addons</span>
               <br />
               <span class="helper-text">
-                Addons selected below will be stopped before backup and started after.  This is generally only
-                recommended as a last resort if an addon can't be backed up while running, which is a rare.  In
-                some error situations an addon can't be restarted after backup and you'll have to do it manually.
+                This feature is going to be removed in a future release.  If you'd like to keep it around, give your feedback <a href="https://github.com/sabeechen/hassio-google-drive-backup/issues/940" target="_blank">here</a>.
+                Addons selected below will be stopped before backup and started after.
               </span>
             </label>
           </div>

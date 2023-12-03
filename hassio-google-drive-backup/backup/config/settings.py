@@ -52,6 +52,7 @@ class Setting(Enum):
     # Partial backups
     EXCLUDE_FOLDERS = "exclude_folders"
     EXCLUDE_ADDONS = "exclude_addons"
+    EXCLUDE_HA_DATABASE = "exclude_ha_database"
 
     STOP_ADDONS = "stop_addons"
     DISABLE_WATCHDOG_WHEN_STOPPING = "disable_watchdog_when_stopping"
@@ -214,6 +215,8 @@ _DEFAULTS = {
     Setting.EXCLUDE_FOLDERS: "",
     Setting.EXCLUDE_ADDONS: "",
 
+    Setting.EXCLUDE_HA_DATABASE: False,
+
     Setting.STOP_ADDONS: "",
     Setting.DISABLE_WATCHDOG_WHEN_STOPPING: False,
 
@@ -355,6 +358,7 @@ _CONFIG = {
     # Partial backup settings
     Setting.EXCLUDE_FOLDERS: "str?",
     Setting.EXCLUDE_ADDONS: "str?",
+    Setting.EXCLUDE_HA_DATABASE: "bool?",
 
     Setting.STOP_ADDONS: "str?",
     Setting.DISABLE_WATCHDOG_WHEN_STOPPING: "bool?",

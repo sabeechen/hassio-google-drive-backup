@@ -20,7 +20,6 @@
         "mikoz.black-py"]
       },
     "runArgs": ["--init", "--privileged"],
-    "extensions": ["ms-python.python", "wholroyd.jinja","ms-python.vscode-pylance"],
     "forwardPorts": [3000],
     "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ]
   }

@@ -2,6 +2,7 @@ import asyncio
 from asyncio.tasks import sleep
 from datetime import timedelta
 import random
+import string
 import io
 
 from backup.config import Config, Version
@@ -123,6 +124,7 @@ class SimulatedSupervisor(BaseServer):
             get('/backups/new/full', self._newbackup),
             get('/backups/{slug}/download', self._backupDownload),
             get('/backups/{slug}/info', self._backupDetail),
+            get('/debug/backups/lock', self._lock_backups),
 
             # TODO: remove once the api path is fully deprecated
             get('/snapshots', self._getSnapshots),
@@ -245,7 +247,18 @@ class SimulatedSupervisor(BaseServer):
 
     async def _supervisorLogs(self, request: Request):
         await self._verifyHeader(request)
-        return Response(body="Supervisor Log line 1\nSupervisor Log Line 2")
+        return Response(body=self.generate_random_text(20, 10, 20))
+
+    def generate_random_text(self, line_count, min_words=5, max_words=10):
+        lines = []
+        log_levels = ["WARN", "WARNING", "INFO", "ERROR", "DEBUG"]
+        for _ in range(line_count):
+            level = random.choice(log_levels)
+            word_count = random.randint(min_words, max_words)
+            words = [random.choice(string.ascii_lowercase) for _ in range(word_count)]
+            line = level + " " + ' '.join(''.join(random.choices(string.ascii_lowercase + string.digits, k=random.randint(3, 10))) for _ in words)
+            lines.append(line)
+        return '\n'.join(lines)
 
     async def _coreLogs(self, request: Request):
         await self._verifyHeader(request)
@@ -301,6 +314,10 @@ class SimulatedSupervisor(BaseServer):
         input_json = await request.json()
         task = asyncio.shield(asyncio.create_task(self._internalNewBackup(request, input_json)))
         return self._formatDataResponse({"slug": await task})
+    
+    async def _lock_backups(self, request: Request):
+        await self._backup_lock.acquire()
+        return self._formatDataResponse({"message": "locked"})
 
     async def _uploadbackup(self, request: Request):
         await self._verifyHeader(request)

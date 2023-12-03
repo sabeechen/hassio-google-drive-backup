@@ -109,6 +109,12 @@ function errorReports(send) {
   var jqxhr = $.get("errorreports?send=" + send)
   $('#error_reports_card').fadeOut(500)
 }
+
+function dismissRemoveStopAddons() {
+  var jqxhr = $.get("dismiss_remove_stop_addons");
+  $('#stop_addon_removal_survey').fadeOut(500);
+}
+
 hideIngress = false;
 function exposeServer(expose) {
   var url = "exposeserver?expose=" + expose;
@@ -606,7 +612,12 @@ function populateBackupDiv(backup_div, backups, icon) {
 
       if (backup.isPending) {
         $("#loading" + backup.slug).show();
-        $("#backup_card" + backup.slug).css("cursor", "auto");
+        if (backup.super_logs) {
+          $("#backup_card" + backup.slug).css("cursor", "pointer");
+          $("#has-logs", template).show();
+        } else {
+          $("#backup_card" + backup.slug).css("cursor", "auto");
+        }
       } else {
         $("#loading" + backup.slug).hide();
         $("#backup_card" + backup.slug).css("cursor", "pointer");
@@ -744,6 +755,8 @@ function processStatusUpdate(data) {
     question_card = "warn_upgrade_backups_card";
   } else if (data.warn_oob_oauth) {
     question_card = "warn_creds_deprecated_card";
+  } else if(data.warn_stop_addons) {
+    question_card = "stop_addon_removal_survey";
   }
 
   $('.question-card').each(function (i) {

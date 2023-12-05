@@ -275,5 +275,5 @@ The addon uses Home Assistant's "supervisor" to create and delete backups on Hom
 - Navigate to Settings > System > Logs
 - Select "Supervisor" from the drop down at the top right of the page.
 
-The logs there keep a pretty short history, so if you ahve a lot of other errors/warnings happening (which is common) you mgiht need to go check the logs right after you see errors in the addon.
+The logs there keep a pretty short history, so if you ahve a lot of other errors/warnings happening (which is common) you might need to go check the logs right after you see errors in the addon.
 

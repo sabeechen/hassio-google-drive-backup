@@ -4,6 +4,12 @@ from datetime import datetime, timedelta
 DELETE_BATCH_SIZE = 200
 STORE_NAME = "error_reports"
 
+# Before running, set up firestore credentials with these commands:
+#  pip install --upgrade google-cloud-firestore
+#  gcloud auth login
+#  gcloud config set project hassio-drive-backup
+#  gcloud iam service-accounts keys create keyfile.json --iam-account firestore-testing@hassio-drive-backup.iam.gserviceaccount.com
+#  export GOOGLE_APPLICATION_CREDENTIALS=keyfile.json
 
 def delete_old_data():
     # Initialize Firestore
@@ -42,7 +48,7 @@ def main():
 
     # Add any other argument you want in future. For example:
     # parser.add_argument("--future_arg", help="Perform some future operation.")
-  
+
     args = parser.parse_args()
 
     # Respond to arguments

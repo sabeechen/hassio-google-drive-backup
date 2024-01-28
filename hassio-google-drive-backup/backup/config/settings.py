@@ -243,7 +243,7 @@ _DEFAULTS = {
     Setting.ACCENT_COLOR: "",
 
     # Network and DNS settings
-    Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8,8.8.4.4",
+    Setting.ALTERNATE_DNS_SERVERS: "",
     Setting.DRIVE_EXPERIMENTAL: False,
     Setting.DRIVE_IPV4: "",
     Setting.IGNORE_IPV6_ADDRESSES: False,

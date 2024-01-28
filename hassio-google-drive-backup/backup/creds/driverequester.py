@@ -72,6 +72,10 @@ class DriveRequester():
         except ClientOSError as e:
             if e.errno == 1:
                 raise GoogleUnexpectedError()
+            if e.errno == 104:
+                # This is a connection reset by peer.  It's probably transient.  "Timeout" isn't exactly the right category, but the user will understand it
+                # language used in this error message makes it clear.
+                raise GoogleTimeoutError()
             raise
         except ServerTimeoutError:
             raise GoogleTimeoutError()

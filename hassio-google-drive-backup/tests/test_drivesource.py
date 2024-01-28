@@ -764,14 +764,16 @@ async def test_cred_refresh_with_secret(drive: DriveSource, google: SimulatedGoo
     drive.drivebackend.tryLoadCredentials()
     await drive.get()
     old_creds = drive.drivebackend.creds
-
+    assert old_creds
     # valid creds should be reused
     await drive.get()
+    assert drive.drivebackend.creds
     assert old_creds.access_token == drive.drivebackend.creds.access_token
 
     # then refreshed when they expire
     time.advanceDay()
     await drive.get()
+    assert drive.drivebackend.creds
     assert old_creds.access_token != drive.drivebackend.creds.access_token
 
     # verify the client_secret is kept
@@ -784,10 +786,13 @@ async def test_cred_refresh_no_secret(drive: DriveSource, google: SimulatedGoogl
     drive.saveCreds(google.creds())
     await drive.get()
     old_creds = drive.drivebackend.creds
+    assert old_creds
     await drive.get()
+    assert drive.drivebackend.creds
     assert old_creds.access_token == drive.drivebackend.creds.access_token
     time.advanceDay()
     await drive.get()
+    assert drive.drivebackend.creds
     assert old_creds.access_token != drive.drivebackend.creds.access_token
     with open(config.get(Setting.CREDENTIALS_FILE_PATH)) as f:
         assert "client_secret" not in json.load(f)
@@ -824,6 +829,7 @@ async def test_cred_refresh_upgrade_default_client(drive: DriveSource, server: S
 @pytest.mark.asyncio
 async def test_cant_reach_refresh_server(drive: DriveSource, server: SimulationServer, config: Config, time):
     config.override(Setting.TOKEN_SERVER_HOSTS, "http://lkasdpoiwehjhcty.com")
+    assert drive.drivebackend.creds
     drive.drivebackend.creds._secret = None
     time.advanceDay()
     with pytest.raises(CredRefreshMyError) as error:
@@ -835,6 +841,7 @@ async def test_cant_reach_refresh_server(drive: DriveSource, server: SimulationS
 async def test_refresh_problem_with_google(drive: DriveSource, interceptor: RequestInterceptor, config: Config, time):
     time.advanceDay()
     interceptor.setError(".*/oauth2/v4/token.*", status=510)
+    assert drive.drivebackend.creds
     drive.drivebackend.creds._secret = None
     with pytest.raises(CredRefreshGoogleError) as error:
         await drive.get()
@@ -896,6 +903,16 @@ async def test_resume_session_ignored_on_http404(time, drive: DriveSource, confi
     # Location should have been reset, and another attempt should succeed using a new url.
     assert drive.drivebackend.last_attempt_location is None
     await drive.save(from_backup, data)
+
+
+@pytest.mark.asyncio
+async def test_connection_forcibly_reset(time, drive: DriveSource, config: Config, server: SimulationServer, backup_helper: BackupHelper, interceptor: RequestInterceptor):
+    from_backup, data = await backup_helper.createFile()
+
+    # Configure the upload to fail
+    interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, force_close=True)
+    with pytest.raises(GoogleTimeoutError):
+        await drive.save(from_backup, data)
 
 
 @pytest.mark.asyncio

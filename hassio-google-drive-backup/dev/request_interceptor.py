@@ -8,20 +8,20 @@ from typing import List
 
 
 class UrlMatch():
-    def __init__(self, time: Time, url, fail_after=None, status=None, response=None, wait=False, sleep=None, fail_for=None):
+    def __init__(self, time: Time, url, fail_after=None, status=None, response=None, wait=False, sleep=None, fail_for=None, force_close=False):
         self.time = time
         self.url: str = url
-        self.fail_after: int = fail_after
-        self.status: int = status
+        self.fail_after: int|None = fail_after
+        self.status: int|None = status
         self.wait_event: Event = Event()
         self.trigger_event: Event = Event()
-        self.response: str = ""
         self.wait: bool = wait
         self.trigger_event.clear()
         self.wait_event.clear()
         self.sleep = sleep
         self.response = response
         self.fail_for = fail_for
+        self.force_close = force_close
         self.responses = []
         self._calls = 0
         self.time = time
@@ -60,6 +60,10 @@ class UrlMatch():
             await self.wait_event.wait()
         elif self.sleep is not None:
             await self.time.sleepAsync(self.sleep, early_exit=self.wait_event)
+        elif self.force_close and request.transport is not None:
+            # hehe, kill it
+            request.transport.close()
+        return Response(status=504, text="Request Interceptor: No response was set for this request")
 
     async def called(self, request: Request):
         if self.fail_after is None or self.fail_after <= 0:
@@ -96,8 +100,8 @@ class RequestInterceptor:
         for matcher in self._matchers:
             matcher.stop()
 
-    def setError(self, url, status=None, fail_after=None, fail_for=None, response=None) -> UrlMatch:
-        matcher = UrlMatch(self.time, url, fail_after, status=status, response=response, fail_for=fail_for)
+    def setError(self, url, status=None, fail_after=None, fail_for=None, response=None, force_close=False) -> UrlMatch:
+        matcher = UrlMatch(self.time, url, fail_after, status=status, response=response, fail_for=fail_for, force_close=force_close)
         self._matchers.append(matcher)
         return matcher
 

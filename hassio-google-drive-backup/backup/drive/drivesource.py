@@ -1,7 +1,7 @@
 from datetime import datetime
 from io import IOBase
 from asyncio import Event
-from typing import Dict
+from typing import Dict, Any
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientResponseError
@@ -238,7 +238,7 @@ class DriveSource(BackupDestination):
                 self._uploadedAtLeastOneChunk = False
                 backup.clearStatus()
 
-    def truncateAppProperty(self, key: str, value: str):
+    def truncateAppProperty(self, key: str, value: str|None):
         # Annoylingly, Drive properties can be a maximum of 124 bytes, in len(key + value) UTF8 encoded.
         # https://developers.google.com/drive/api/guides/properties
         # Is the extra indexing REALLY that expensive? Thats like some 1990's mainframe limitation.
@@ -260,7 +260,7 @@ class DriveSource(BackupDestination):
         item = self._validateBackup(backup)
         if item.retained() == retain:
             return
-        file_metadata: Dict[str, str] = {
+        file_metadata: Dict[str, Any] = {
             'appProperties': {
                 PROP_RETAINED: str(retain),
             },
@@ -268,10 +268,10 @@ class DriveSource(BackupDestination):
         await self.drivebackend.update(item.id(), file_metadata)
         item.setRetained(retain)
 
-    async def note(self, backup, note: str) -> None:
+    async def note(self, backup, note: str|None) -> None:
         item = self._validateBackup(backup)
         truncated = self.truncateAppProperty(PROP_NOTE, note)
-        file_metadata: Dict[str, str] = {
+        file_metadata: Dict[str, Any] = {
             'appProperties': {
                 PROP_NOTE: truncated,
             },
@@ -285,8 +285,8 @@ class DriveSource(BackupDestination):
         return await self.folder_finder.get()
 
     def _validateBackup(self, backup: Backup) -> DriveBackup:
-        drive_item: DriveBackup = backup.getSource(self.name())
-        if not drive_item:
+        drive_item = backup.getSource(self.name())
+        if not drive_item or not isinstance(drive_item, DriveBackup):
             raise LogicError(
                 "Requested to do something with a backup from Google Drive, but the backup has no Google Drive source")
         return drive_item

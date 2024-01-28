@@ -102,6 +102,8 @@ class DriveRequests():
         """Attempts to determine if the user might be using custom creds affected by google's OOB cred deprecation"""
         if not self.isCustomCreds():
             return False
+        if not self.creds:
+            return False
         if self.creds.original_expiration is None:
             # These creds must be old, so assume they're affected
             return True
@@ -148,6 +150,9 @@ class DriveRequests():
     async def getToken(self, refresh=False):
         if self.creds and not self.creds.is_expired and not refresh:
             return self.creds.access_token
+
+        if not self.creds:
+            raise LogicError("Attempt to get Google Drive token before credentials are configured")
 
         # refresh the credentials
         logger.debug("Requesting refreshed Google Drive credentials")
@@ -225,7 +230,7 @@ class DriveRequests():
             speed_as_tokens = self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) / BASE_CHUNK_SIZE
             capacity = max(speed_as_tokens, 1)
             limiter = TokenBucket(self.time, capacity, speed_as_tokens, 0)
-        if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION:
+        if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_start_time is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION:
             logger.debug(
                 "Attempting to resume a previously failed upload where we left off")
             self.last_attempt_count += 1

@@ -75,6 +75,7 @@ def test_format():
     assert parser.format(timedelta(seconds=1)) == "1 seconds"
     assert parser.format(timedelta(days=5, hours=6, minutes=7)) == "5 days, 6 hours, 7 minutes"
     assert parser.format(timedelta(days=5, hours=6, minutes=7, seconds=8)) == "5 days, 6 hours, 7 minutes, 8 seconds"
+    assert parser.format(timedelta(seconds=1.5)) == "1 seconds, 500 milliseconds"
 
 
 def test_back_and_forth():

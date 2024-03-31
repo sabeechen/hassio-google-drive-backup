@@ -2,13 +2,15 @@ import re
 from datetime import timedelta
 from injector import inject, singleton
 
+MILLISECONDS_IDENTIFIERS = ["ms", "msec", "msecs", "millisecond", "milliseconds"]
 SECOND_IDENTIFIERS = ["s", "sec", "secs", "second", "seconds"]
 MINUTE_IDENTIFIERS = ["m", "min", "mins", "minute", "minutes"]
 HOUR_IDENTIFIERS = ["h", "hr", "hour", "hours"]
 DAY_IDENTIFIERS = ["d", "day", "days"]
+ALL_IDENTIFIERS = MILLISECONDS_IDENTIFIERS + SECOND_IDENTIFIERS + MINUTE_IDENTIFIERS + HOUR_IDENTIFIERS + DAY_IDENTIFIERS
+ALL_IDENTIFIERS.sort(key=lambda x: -len(x))
 NUMBER_REGEX = "^([0-9]*[.])?[0-9]+"
-VALID_REGEX = "^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*"
-
+VALID_REGEX = f"^([ ]*([0-9]*[.])?[0-9]+[ ]*({'|'.join(ALL_IDENTIFIERS)})?[ ,]*)*"
 
 @singleton
 class DurationParser():
@@ -35,7 +37,7 @@ class DurationParser():
 
                 if i < len(parts):
                     next_part = parts[i].strip().strip(',')
-                    if next_part in SECOND_IDENTIFIERS or next_part in MINUTE_IDENTIFIERS or next_part in HOUR_IDENTIFIERS or next_part in DAY_IDENTIFIERS:
+                    if next_part in SECOND_IDENTIFIERS or next_part in MINUTE_IDENTIFIERS or next_part in HOUR_IDENTIFIERS or next_part in DAY_IDENTIFIERS or next_part in MILLISECONDS_IDENTIFIERS:
                         identifier = next_part
                         i += 1
                     else:
@@ -44,7 +46,9 @@ class DurationParser():
                     identifier = "s"
             else:
                 identifier = part[len(match.group(0)):]
-            if identifier in SECOND_IDENTIFIERS:
+            if identifier in MILLISECONDS_IDENTIFIERS:
+                total += timedelta(milliseconds=length)
+            elif identifier in SECOND_IDENTIFIERS:
                 total += timedelta(seconds=length)
             elif identifier in MINUTE_IDENTIFIERS:
                 total += timedelta(minutes=length)
@@ -74,6 +78,10 @@ class DurationParser():
             seconds = int(duration.seconds)
             parts.append("{} seconds".format(seconds))
             duration = duration - timedelta(seconds=seconds)
+        if duration >= timedelta(milliseconds=1):
+            seconds = int(duration.microseconds / 1000)
+            parts.append("{} milliseconds".format(seconds))
+            duration = duration - timedelta(milliseconds=seconds)
         if len(parts) > 0:
             return ", ".join(parts)
         else:

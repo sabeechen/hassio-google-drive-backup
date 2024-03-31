@@ -7,6 +7,7 @@ from backup.time import Time
 from backup.worker import Worker, Trigger
 from backup.logger import getLogger
 from backup.exceptions import PleaseWait
+from backup.config import Config, Setting
 
 logger = getLogger(__name__)
 
@@ -14,8 +15,9 @@ logger = getLogger(__name__)
 @singleton
 class Scyncer(Worker):
     @inject
-    def __init__(self, time: Time, coord: Coordinator, triggers: List[Trigger]):
-        super().__init__("Sync Worker", self.checkforSync, time, 0.5)
+    def __init__(self, time: Time, coord: Coordinator, config: Config, triggers: List[Trigger]):
+        self._config = config
+        super().__init__("Sync Worker", self.checkforSync, time, self.getInterval)
         self.coord = coord
         self.triggers: List[Trigger] = triggers
         self._time = time
@@ -32,5 +34,8 @@ class Scyncer(Worker):
                     await self._time.sleepAsync(3)
                 await self.coord.sync()
         except PleaseWait:
-            # Ignore this, since it means a sync already started (unavilable race condition)
+            # Ignore this, since it means a sync already started (unavoidable race condition)
             pass
+
+    def getInterval(self):
+        return self._config.get(Setting.BACKUP_CHECK_INTERVAL_SECONDS)

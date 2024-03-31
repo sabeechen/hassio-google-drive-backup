@@ -1,5 +1,6 @@
 import asyncio
 
+from typing import Callable
 from ..time import Time
 from ..config import Startable
 from ..logger import getLogger
@@ -12,7 +13,7 @@ class StopWorkException(Exception):
 
 
 class Worker(Startable):
-    def __init__(self, name, method, time: Time, interval=1):
+    def __init__(self, name, method, time: Time, interval: float|Callable=1):
         super().__init__()
         self._method = method
         self._time = time

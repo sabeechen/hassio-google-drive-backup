@@ -1,3 +1,4 @@
+from pathlib import Path
 import re
 from typing import Dict
 from yarl import URL
@@ -5,7 +6,7 @@ import aiohttp
 from aiohttp.web import (Application,
                          HTTPException,
                          Request, Response, get,
-                         json_response, middleware, post, HTTPSeeOther)
+                         json_response, middleware, post, HTTPSeeOther, FileResponse)
 from aiohttp.client import ClientSession
 from injector import inject, singleton, Injector, provider
 
@@ -115,12 +116,17 @@ class SimulationServer(BaseServer):
             get('/readfile', self.readFile),
             post('/uploadfile', self.uploadfile),
             get('/ingress/self_slug', self.slugRedirect),
-            get('/debug/config', self.debug_config)
+            get('/debug/config', self.debug_config),
+            get('/debug', self.debug_menu)
         ] + self.google.routes() + self.supervisor.routes() + self._api_ingress.routes()
 
     async def debug_config(self, request: Request):
         return json_response(self.supervisor._options)
 
+    async def debug_menu(self, request: Request):
+        # Render the debug page from debug.html
+        # first determine the path to the debug.html file, which is a sibling to this file
+        return FileResponse(Path(__file__).parent/"debug.html")
 
 class SimServerModule(BaseModule):
     def __init__(self, base_url: URL):

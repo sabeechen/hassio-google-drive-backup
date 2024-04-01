@@ -58,7 +58,8 @@ class HABackup(AbstractBackup):
             # Supervisor backup query API doesn't quite match the create API, if the HA config folder
             # is present in a backup then the Home Assistant version is present in its details
             archive_count += 1
-        if archive_count == 1 and self._config.get(Setting.IGNORE_UPGRADE_BACKUPS):
+        # Supervisor-only backups just include the supervisor version number with no other information, so we have to check for <=1
+        if archive_count <= 1 and self._config.get(Setting.IGNORE_UPGRADE_BACKUPS):
             return True
         return super().ignore()
 

@@ -135,6 +135,7 @@ class SimulatedSupervisor(BaseServer):
             get('/snapshots/new/full', self._newbackup),
             get('/snapshots/{slug}/download', self._backupDownload),
             get('/snapshots/{slug}/info', self._backupDetail),
+            post('/debug/create_ignored', self._create_ignored),
         ]
 
     def getEvents(self):
@@ -170,7 +171,7 @@ class SimulatedSupervisor(BaseServer):
         else:
             await self._backup_lock.acquire()
 
-    async def _verifyHeader(self, request) -> bool:
+    async def _verifyHeader(self, request):
         if request.headers.get("Authorization", None) == "Bearer " + self._auth_token:
             return
         if request.headers.get("X-Supervisor-Token", None) == self._auth_token:
@@ -188,7 +189,7 @@ class SimulatedSupervisor(BaseServer):
     async def _getMounts(self, request: Request):
         await self._verifyHeader(request)
         return self._formatDataResponse(self._mounts)
-    
+
     async def _setMounts(self, request: Request):
         self._mounts = await request.json()
         return self._formatDataResponse({})
@@ -314,7 +315,11 @@ class SimulatedSupervisor(BaseServer):
         input_json = await request.json()
         task = asyncio.shield(asyncio.create_task(self._internalNewBackup(request, input_json)))
         return self._formatDataResponse({"slug": await task})
-    
+
+    async def _create_ignored(self, request: Request):
+        await self._internalNewBackup(request, {'name': 'Upgrade Backup', 'addons': [all_addons[0]['slug']]}, verify_header=False)
+        return self._formatDataResponse({"slug": "ignored"})
+
     async def _lock_backups(self, request: Request):
         await self._backup_lock.acquire()
         return self._formatDataResponse({"message": "locked"})

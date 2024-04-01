@@ -320,7 +320,9 @@ class UiServer(Trigger, Startable):
         data = await request.json()
         slug = data['slug']
 
-        self._coord.getBackup(slug)
+        backup = self._coord.getBackup(slug)
+        if (backup.ignore()):
+            await self._coord.ignore(data['slug'], False)
         await self._coord.retain(data['sources'], slug)
         return web.json_response({'message': "Updated the backup's settings"})
 

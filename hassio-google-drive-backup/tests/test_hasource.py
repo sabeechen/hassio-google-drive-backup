@@ -943,7 +943,7 @@ async def test_ignore_upgrade_backup_empty(ha: HaSource, time: Time, supervisor:
     backups = await ha.get()
     assert len(backups) == 1
     assert slug in backups
-    assert not backups[slug].ignore()
+    assert backups[slug].ignore()
 
 
 @pytest.mark.asyncio

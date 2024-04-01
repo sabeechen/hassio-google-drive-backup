@@ -821,6 +821,8 @@ class UiServer(Trigger, Startable):
                 query['client_id'] = 'redacted'
             if 'client_secret' in query:
                 query['client_secret'] = 'redacted'
+            if 'creds' in query:
+                query['creds'] = 'redacted'
             url = url.with_query(query)
         except Exception as e:
             # Fall back to just returning the url if it was malformed

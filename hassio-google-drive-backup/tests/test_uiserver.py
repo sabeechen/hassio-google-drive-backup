@@ -1178,3 +1178,8 @@ async def test_oob_warning(reader: ReaderHelper, ui_server: UiServer, config: Co
     data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW)
     status = await reader.getjson("getstatus")
     assert status['warn_oob_oauth'] is False
+
+
+@pytest.mark.asyncio
+async def test_url_sanitize(ui_server: UiServer):
+    assert ui_server._sanitize(URL("http://localhost/test?client_id=im_a_secret&client_secret=im_a_secret&ignore=shown")) == URL("http://localhost/test?client_id=redacted&client_secret=redacted&ignore=shown")

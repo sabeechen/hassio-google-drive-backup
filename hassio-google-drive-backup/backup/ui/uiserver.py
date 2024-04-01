@@ -794,21 +794,37 @@ class UiServer(Trigger, Startable):
     @web.middleware
     async def error_middleware(self, request: Request, handler):
         try:
+            url_sanitized = self._sanitize(request.url)
             log_trace = self.config.get(Setting.TRACE_REQUESTS)
             if log_trace:
                 logger.trace("Serving %s %s to %s", request.method,
-                            request.url, request.remote)
+                            url_sanitized, request.remote)
             handled = await handler(request)
             if log_trace:
-                logger.trace("Completed %s %s", request.method, request.url)
+                logger.trace("Completed %s %s", request.method, url_sanitized)
             return handled
         except Exception as ex:
             if isinstance(ex, HTTPException):
                 raise
-            logger.error("Error serving %s %s", request.method, request.url)
+            logger.error("Error serving %s %s", request.method, url_sanitized)
             logger.error(logger.formatException(ex))
             data = self.processError(ex)
             return web.json_response(data, status=data['http_status'])
+
+    def _sanitize(self, url: URL):
+        """Sanitizes a url by replacing any instances of client_id and client_secret query parameters with <redacted>"""
+        try:
+            query = {a[0]: a[1] for a in url.query.items()}
+            if 'client_id' in query:
+                query['client_id'] = 'redacted'
+            if 'client_secret' in query:
+                query['client_secret'] = 'redacted'
+            url = url.with_query(query)
+        except Exception as e:
+            # Fall back to just returning the url if it was malformed
+            pass
+        return url
+
 
     def processError(self, e):
         if isinstance(e, KnownError):

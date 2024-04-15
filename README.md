@@ -51,7 +51,7 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
    
    <img src="images/repo_ss.png" width="429"/>
    
-   Note: Home Assistant loads the repository in the background and the new item won't always show up automatically.  You might need to wait a few seconds and then "hard refesh" the page for it to show up.  On most browser the keyboard shortcut for this is CTRL+F5. If it still doesn't show up, clear your browser's cache and it should then.
+   Note: Home Assistant loads the repository in the background and the new item won't always show up automatically.  You might need to wait a few seconds and then "hard refresh" the page for it to show up.  On most browsers the keyboard shortcut for this is CTRL+F5. If it still doesn't show up, clear your browser's cache and it should then.
 4. Click <kbd>Install</kbd> and give it a few minutes to finish downloading.
 
 5. Click <kbd>Start</kbd>, give it a few seconds to spin up, and then click the `Open Web UI` button that appears.
@@ -60,7 +60,7 @@ This addon has been featured by %YOUR_FAVORITE_HA_YOUTUBER% and is often listed 
 
 7. Click the `Authenticate with Drive` button to link the add-on with your Google Drive account. Alternatively, you can generate your [own Google API credentials](#can-i-use-my-own-google-api-information-to-authenticate-instead-of-yours), though the process is not simple.
 
-8. You should be redirected automatically to the backup status page. Here you can make a new backups, see the progress of uploading to Google Drive, etc. You're done!
+8. You should be redirected automatically to the backup status page. Here you can make new backups, see the progress of uploading to Google Drive, etc. You're done!
 
 ## Configuration
 
@@ -70,13 +70,13 @@ If you'd still prefer use edit your setting in yaml or through the supervisor, t
 
 ## FAQ
 ### Is this for me?
-Most likely, yes.  This addon is focused on making backup simple, reliable, easy to understand, and well supported.  It provides clear error messages when things go wrong and explains how you fix it.  It has a fancy-pants web interface you can look at to see how things are going.  To do that it sacrafices customizability.  It can't:
+Most likely, yes.  This addon is focused on making backup simple, reliable, easy to understand, and well supported.  It provides clear error messages when things go wrong and explains how you fix it.  It has a fancy-pants web interface you can look at to see how things are going.  To do that it sacrifices customizability.  It can't:
 - Create backups more than once a day.
 - Create backups only when your configuration changes.
 - Upload somewhere other than Google Drive.
 - Be customized outside of what the settings allow.
 
-If you want a backup strategy _highly_ customized to your needs, you might be better off hacking something together with automations and the samba addon, for example.  This project started out as me doing exactly that for myself, and now its grown into a mature project with ~100k people using it all over the world.  Weird.  I never thought I'd be getting community pressure to translate the UI into portugese, but here I am dealing with those kinds of problems now.
+If you want a backup strategy _highly_ customized to your needs, you might be better off hacking something together with automations and the samba addon, for example.  This project started out as me doing exactly that for myself, and now its grown into a mature project with ~100k people using it all over the world.  Weird.  I never thought I'd be getting community pressure to translate the UI into Portuguese, but here I am dealing with those kinds of problems now.
 
 
 ### How will I know this will be there when I need it?
@@ -94,7 +94,7 @@ Home Assistant is notorious for failing silently, and your backups aren't someth
 Redundancy is the foundation of reliability. With local backups, Google Drive's backups, and two flavors of notification I think you're covered.
 
 ### How do I restore a backup?
-The backups this addon creates are the same backups that Home Assistant makes by itself and can be restored using any of the methods documented elsewhere.  Here are few pointers to get you started.
+The backups this addon creates are the same backups that Home Assistant makes by itself and can be restored using any of the methods documented elsewhere.  Here are a few pointers to get you started.
 - If you can still get to the addon's web-UI then select the backup and click "Load into Home Assistant" have it copied back into Home Assistant.
 - If not (eg, maybe your hard drive died and you're starting over):
   - Download one of the backups you've previously created from [Google Drive](https://drive.google.com).
@@ -183,7 +183,7 @@ generational_day_of_year: 1 # can be 1 through 365 (defaults to 1)
 
 ### I already have something that creates backups on a schedule. Can I use this just to backup to Google Drive?
 
-If you set '`days_between_backups: 0`', then the add-on won't try to create new backups but will still upload up any it finds to Google Drive and clean up old backups in both Home Assistant and Google Drive. This can be useful if you already have for example an automation that creates backups on a schedule.
+If you set '`days_between_backups: 0`', then the add-on won't try to create new backups but will still upload any it finds to Google Drive and clean up old backups in both Home Assistant and Google Drive. This can be useful if you already have for example an automation that creates backups on a schedule.
 
 ### Can I give backups a different name?
 
@@ -266,14 +266,14 @@ The add-on will only delete an old backup if a new one exists to replace it, so 
 
 The add-on uses the supervisor to create backups, and the supervisor only permits you to include or exclude the 5 main folders (home assistant configuration, share, SSL, media, and local add-ons). Excluding specific subfolders, or only including specific subfolders from a backup isn't possible today.
 
-### <a href="supervisor_logs"></a>I'm getting weird errors.  Where do I look for more detils about an error (Supervisor logs).
+### <a href="supervisor_logs"></a>I'm getting weird errors.  Where do I look for more details about an error (Supervisor logs).
 
-The addon uses Home Assistant's "supervisor" to create and delete backups on Home Asisstant's side.  In case you don't know, the supervisor is something that runs in the background on Home Assistant and manages stuff like backups, connections to hardware, and setting up the environment that Home Assistant Core (eg the UI) and addons run in.  Because of this a lot of errors you run into (problems with the NAS, HD corruption, etc) only show up in the supervisor's logs.  The supervisor's logs are kind of hidden by default, to view them:
+The addon uses Home Assistant's "supervisor" to create and delete backups on Home Assistant's side.  In case you don't know, the supervisor is something that runs in the background on Home Assistant and manages stuff like backups, connections to hardware, and setting up the environment that Home Assistant Core (eg the UI) and addons run in.  Because of this a lot of errors you run into (problems with the NAS, HD corruption, etc) only show up in the supervisor's logs.  The supervisor's logs are kind of hidden by default, to view them:
 
 - Go to your Home Assistant user profile by clicking the user icon in the bottom left of Home Assistant's main UI.
 - Enable "Advanced Mode" in your profile.
 - Navigate to Settings > System > Logs
-- Select "Supervisor" from the drop down at the top right of the page.
+- Select "Supervisor" from the drop-down at the top right of the page.
 
-The logs there keep a pretty short history, so if you ahve a lot of other errors/warnings happening (which is common) you might need to go check the logs right after you see errors in the addon.
+The logs there keep a pretty short history, so if you have a lot of other errors/warnings happening (which is common) you might need to go check the logs right after you see errors in the addon.
 

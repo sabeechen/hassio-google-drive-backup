@@ -286,6 +286,23 @@ async def test_retain(reader: ReaderHelper, config: Config, backup: Backup, coor
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['retained'] == 0
     assert status['sources'][SOURCE_GOOGLE_DRIVE]['backups'] == 1
 
+@pytest.mark.asyncio
+async def test_retain_also_sets_ignore(reader: ReaderHelper, time: FakeTime, coord: Coordinator, config: Config, supervisor: SimulatedSupervisor, ha: HaSource, drive: DriveSource):
+    """Verifies that when retaining an ignored backup, it also sets the ignore flag to False."""
+    config.override(Setting.IGNORE_UPGRADE_BACKUPS, True)
+    config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+
+    # make an ignored_backup
+    slug = await supervisor.createBackup({'name': "Ignore_me", 'folders': ['homeassistant'], 'addons': []}, date=time.now())
+    await coord.sync()
+    assert (await ha.get())[slug].ignore() == True
+
+    # retain the ignored backups
+    await reader.getjson("retain", json={'slug': slug, 'sources': {"HomeAssistant": True}})
+
+    # verify it is no longer ignored
+    assert (await ha.get())[slug].ignore() == False
+
 
 @pytest.mark.asyncio
 async def test_note(reader: ReaderHelper, config: Config, backup: Backup, coord: Coordinator, time: FakeTime):
@@ -1178,3 +1195,8 @@ async def test_oob_warning(reader: ReaderHelper, ui_server: UiServer, config: Co
     data_cache.addFlag(UpgradeFlags.NOTIFIED_ABOUT_OOB_FLOW)
     status = await reader.getjson("getstatus")
     assert status['warn_oob_oauth'] is False
+
+
+@pytest.mark.asyncio
+async def test_url_sanitize(ui_server: UiServer):
+    assert ui_server._sanitize(URL("http://localhost/test?client_id=im_a_secret&client_secret=im_a_secret&ignore=shown")) == URL("http://localhost/test?client_id=redacted&client_secret=redacted&ignore=shown")

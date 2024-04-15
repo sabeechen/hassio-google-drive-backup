@@ -46,6 +46,14 @@ def test_parse_seconds():
     assert parser.parse("5.0 secs") == timedelta(seconds=5)
     assert parser.parse("5.5 s") == timedelta(seconds=5, milliseconds=500)
 
+def test_parse_ms():
+    parser = DurationParser()
+    assert parser.parse("1 ms") == timedelta(milliseconds=1)
+    assert parser.parse("5 msec") == timedelta(milliseconds=5)
+    assert parser.parse("5 milliseconds") == timedelta(milliseconds=5)
+    assert parser.parse("5millisecond") == timedelta(milliseconds=5)
+    assert parser.parse("1 seconds 500 ms") == timedelta(seconds=1, milliseconds=500)
+
 
 def test_parse_multiple():
     parser = DurationParser()
@@ -67,6 +75,7 @@ def test_format():
     assert parser.format(timedelta(seconds=1)) == "1 seconds"
     assert parser.format(timedelta(days=5, hours=6, minutes=7)) == "5 days, 6 hours, 7 minutes"
     assert parser.format(timedelta(days=5, hours=6, minutes=7, seconds=8)) == "5 days, 6 hours, 7 minutes, 8 seconds"
+    assert parser.format(timedelta(seconds=1.5)) == "1 seconds, 500 milliseconds"
 
 
 def test_back_and_forth():

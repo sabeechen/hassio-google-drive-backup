@@ -136,6 +136,7 @@ class Setting(Enum):
     CACHE_WARMUP_MAX_SECONDS = "cache_warmup_max_seconds"
     CACHE_WARMUP_ERROR_TIMEOUT_SECONDS = "cache_warmup_error_timeout"
     MAX_BACKOFF_SECONDS = "max_backoff_seconds"
+    BACKUP_CHECK_INTERVAL_SECONDS = "backup_check_interval_seconds"
 
     # Old, deprecated settings
     DEPRECTAED_MAX_BACKUPS_IN_HA = "max_snapshots_in_hassio"
@@ -300,6 +301,7 @@ _DEFAULTS = {
     Setting.CACHE_WARMUP_MAX_SECONDS: 15 * 60,  # 30 minutes
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: 24 * 60 * 60,  # 1 day
     Setting.MAX_BACKOFF_SECONDS: 60 * 60 * 2,  # 2 hours
+    Setting.BACKUP_CHECK_INTERVAL_SECONDS: 0.5,
 
     Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: 0,
 }
@@ -443,6 +445,7 @@ _CONFIG = {
     Setting.CACHE_WARMUP_MAX_SECONDS: "float(0,)",
     Setting.CACHE_WARMUP_ERROR_TIMEOUT_SECONDS: "float(0,)",
     Setting.MAX_BACKOFF_SECONDS: "int(3600,)?",
+    Setting.BACKUP_CHECK_INTERVAL_SECONDS: "float(0.5,)?",
 
     Setting.UPLOAD_LIMIT_BYTES_PER_SECOND: "float(0,)?",
 }
@@ -522,6 +525,7 @@ _VALIDATORS[Setting.DELETE_IGNORED_AFTER_DAYS] = DurationAsStringValidator(Setti
 _VALIDATORS[Setting.MAXIMUM_UPLOAD_CHUNK_BYTES] = BytesizeAsStringValidator(Setting.MAXIMUM_UPLOAD_CHUNK_BYTES.value, minimum=256 * 1024)
 _VALIDATORS[Setting.PENDING_BACKUP_TIMEOUT_SECONDS] = DurationAsStringValidator(Setting.PENDING_BACKUP_TIMEOUT_SECONDS.value, minimum=1, maximum=None)
 _VALIDATORS[Setting.UPLOAD_LIMIT_BYTES_PER_SECOND] = BytesizeAsStringValidator(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND.value, minimum=0)
+_VALIDATORS[Setting.BACKUP_CHECK_INTERVAL_SECONDS] = DurationAsStringValidator(Setting.BACKUP_CHECK_INTERVAL_SECONDS.value, minimum=0.5)
 VERSION = addon_config["version"]
 
 

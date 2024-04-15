@@ -185,7 +185,7 @@
                 <label for="settings_specify_folder_id">Backup Folder ID</label>
                 <span class="helper-text hide-for-default-creds">The Google Drive ID of the folder you'd like to upload
                   backups into. You
-                  can get this id by navigating to the folder in
+                  can get this ID by navigating to the folder in
                   <a href="https://drive.google.com" target="_blank" rel="noreferrer">Google Drive</a>
                   and copying it out of the URL. It should be a long sequence of characters at the end of the URL. For
                   example if the URL for my folder is
@@ -300,7 +300,7 @@
           <div class="col s11 offset-s1">
             <label>
               <span class="helper-text">Use the options below to configure what kind of SSL and authentication you'd
-                like to use for this webpage. By default this server is exposed on port 1627, but
+                like to use for this webpage. By default, this server is exposed on port 1627, but
                 that can be changed from the add-on installation page.</span>
             </label>
           </div>
@@ -325,7 +325,7 @@
                   <br />
                   <span class="helper-text">Require SSL to access this web interface. You must already have SSL keys
                     configured to use this. Note that once this setting is changed, you'll need to
-                    navigate to the new url to continue using this webpage.</span>
+                    navigate to the new URL to continue using this webpage.</span>
                 </label>
               </div>
               <div class="col s12 offset-s1 row" id="settings_ssl_details" style="display: none">
@@ -440,7 +440,7 @@
           <div class="col s12">
             <label>
               <input type="checkbox" name="exclude_ha_database" id="exclude_ha_database"class="filled-in checkbox-ha" />
-              <span>Exclude Home Asisstant Database from Backups</span>
+              <span>Exclude Home Assistant Database from Backups</span>
               <br />
               <span class="helper-text">Don't include the Home Assistant database in backups.  Useful if you need to save space and don't care about history.  Applies to both full and partial backups.</span>
             </label>
@@ -598,7 +598,7 @@
                 <span>Ignore IPv6 Addresses</span>
                 <br />
                 <span class="helper-text">Ignore ipv6 Addresses for the purposes or DNS resolution. Some users have had
-                  problems attempting to connect to Googles IPv6 servers because it is disabled on
+                  problems attempting to connect to Google's IPv6 servers because it is disabled on
                   their network.</span>
               </label>
             </div>
@@ -621,7 +621,7 @@
             <div class="input-field col s12 m12 s12">
               <i class="material-icons prefix">refresh</i>
               <input type="text" id="max_sync_interval_seconds" name="max_sync_interval_seconds"
-                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
+                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(ms|msec|msecs|millisecond|milliseconds|seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
                 class="validate" />
               <label for="max_sync_interval_seconds">Sync Interval</label>
               <span class="helper-text">
@@ -636,16 +636,16 @@
             <div class="input-field col s12 m12 s12">
               <i class="material-icons prefix">sync</i>
               <input type="text" id="ha_reporting_interval_seconds" name="ha_reporting_interval_seconds"
-                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
+                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(ms|msec|msecs|millisecond|milliseconds|seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
                 class="validate" />
               <label for="ha_reporting_interval_seconds">Home Assistant Reporting Interval</label>
               <span class="helper-text">
                 How often the addon should update the "Backups Stale" sensor in Home Assistant. The addon will still
                 update immediately when it encounters
-                errors. With longer values it may take longer after Home Assistant starts up before the "Backups Stale"
-                sensor it available. This can be any duration of time expressed as hours, minutes, and seconds.
+                errors. With longer values, it may take longer after Home Assistant starts up before the "Backups Stale"
+                sensor is available. This can be any duration of time expressed as hours, minutes, and seconds.
                 Examples:
-                '10 seconds', '3 minute', '2 hours, 30 minutes', etc.
+                '10 seconds', '3 minutes', '2 hours, 30 minutes', etc.
               </span>
             </div>
           </div>
@@ -657,8 +657,8 @@
                 class="validate" />
               <label for="maximum_upload_chunk_bytes">Maximum Drive Upload Chunk Size</label>
               <span class="helper-text">
-                Sets the maximum "chunk" size allowed for uploads to Google Drive.  Larger sizes will upload faster but delay reports 
-                of progress and may cause interruptions on some network hardware.  Between 1MB and 20MB is recommended, minimum is 256 kB. 
+                Sets the maximum "chunk" size allowed for uploads to Google Drive.  Larger sizes will upload faster but delay reports
+                of progress and may cause interruptions on some network hardware.  Between 1MB and 20MB is recommended, minimum is 256 kB.
                 The value can be provided in any binary-prefix format, e.g. '256 Kb', '10 Mb', '3000Kb', etc.</span>
             </div>
           </div>
@@ -666,13 +666,28 @@
             <div class="input-field col s12 m12 s12">
               <i class="material-icons prefix">timelapse</i>
               <input type="text" id="pending_backup_timeout_seconds" name="pending_backup_timeout_seconds"
-                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
+                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(ms|msec|msecs|millisecond|milliseconds|seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
                 class="validate" />
               <label for="pending_backup_timeout_seconds">New Backup Timeout</label>
               <span class="helper-text">
-                How long the addon should wait after asking Home Assistant for a new backup before it considers the backup failed and 
-                attempts a retry.  If you have very large backups or your backups just take a long time, you might need to increase 
-                this.  It can be specified in terms of hours, minutes and seconds (eg 2 hours, 100 minutes, 9 hours 30 seconds, etc) 
+                How long the addon should wait after asking Home Assistant for a new backup before it considers the backup failed and
+                attempts a retry.  If you have very large backups or your backups just take a long time, you might need to increase
+                this.  It can be specified in terms of hours, minutes and seconds (eg 2 hours, 100 minutes, 9 hours 30 seconds, etc)
+              </span>
+            </div>
+          </div>
+          <div class="col s11 offset-s1 row">
+            <div class="input-field col s12 m12 s12">
+              <i class="material-icons prefix">timelapse</i>
+              <input type="text" id="backup_check_interval_seconds" name="backup_check_interval_seconds"
+                pattern="^([ ]*([0-9]*[.])?[0-9]+[ ]*(ms|msec|msecs|millisecond|milliseconds|seconds|second|secs|sec|s|minutes|minute|mins|min|m|hours|hour|hr|h|days|day|d)?[ ,]*)*$"
+                class="validate" />
+              <label for="backup_check_interval_seconds">Backup Check Interval</label>
+              <span class="helper-text">
+                How frequently the addon should check its internal cache to see if a new backup should be made.  You can raise this to check
+                less frequently if you have a lot of backups and just checking uses a lot of CPU.  When doing so, creating new backups may not
+                happen exactly when they otherwise would and actions taken from the UI can be delayed.  Setting this above a few seconds isn't
+                recommended.
               </span>
             </div>
           </div>

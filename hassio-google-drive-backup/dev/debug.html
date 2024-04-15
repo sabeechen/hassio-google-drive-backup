@@ -1,0 +1,21 @@
+<html>
+  <head>
+    <script type="text/javascript">
+      // Bind an event handler for the create ignored button on document load, don't use jquery
+      document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('create-ignored').addEventListener('click', function() {
+          // Create a new ignored backup
+          fetch('/debug/create_ignored', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+          });
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <button id="create-ignored">Create Ignored Backup</button>
+  </body>
+</html>

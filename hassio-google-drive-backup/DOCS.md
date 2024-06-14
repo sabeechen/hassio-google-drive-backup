@@ -1,4 +1,4 @@
-# Home Assistant Add-on: Google Assistant SDK
+# Home Assistant Google Drive Backup
 
 ## Installation
 

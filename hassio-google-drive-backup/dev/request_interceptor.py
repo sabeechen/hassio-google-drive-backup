@@ -63,7 +63,7 @@ class UrlMatch():
         elif self.force_close and request.transport is not None:
             # hehe, kill it
             request.transport.close()
-        return Response(status=504, text="Request Interceptor: No response was set for this request")
+            return Response(status=504, text="Request Interceptor: No response was set for this request")
 
     async def called(self, request: Request):
         if self.fail_after is None or self.fail_after <= 0:

@@ -189,19 +189,20 @@ class Coordinator(Trigger):
         await wait([self._sync_task])
 
     async def _sync(self):
+        self._sync_start.set()
+        await self._sync_wait.wait()
+        logger.info("Syncing Backups")
+        model = self._buildModel()
         try:
-            self._sync_start.set()
-            await self._sync_wait.wait()
-            logger.info("Syncing Backups")
             self._global_info.sync()
             self._estimator.refresh()
-            await self._buildModel().sync(self._time.now())
+            await model.sync(self._time.now())
             self._next_sync_offset = self._random.random()
             self._global_info.success()
             self._backoff.reset()
             self._global_info.setSkipSpaceCheckOnce(False)
         except BaseException as e:
-            self.handleError(e)
+            self.handleError(e, model)
         finally:
             if self._precache:
                 # Any sync should invalidate the precache regardless of the outcome
@@ -209,19 +210,20 @@ class Coordinator(Trigger):
                 self.clearCaches()
             self._updateFreshness()
 
-    def handleError(self, e):
+    def handleError(self, e, model: Model):
         if isinstance(e, CancelledError):
             e = UserCancelledError()
         if isinstance(e, KnownError):
-            known: KnownError = e
-            logger.error(known.message())
-            if known.retrySoon():
-                self._backoff.backoff(e)
-            else:
-                self._backoff.maxOut()
+            logger.error(e.message())
+            if model.shouldBackoff:
+                if e.retrySoon():
+                    self._backoff.backoff(e)
+                else:
+                    self._backoff.maxOut()
         else:
             logger.printException(e)
-            self._backoff.backoff(e)
+            if model.shouldBackoff:
+                self._backoff.backoff(e)
         self._global_info.failed(e)
 
         text = DurationParser().format(timedelta(seconds=self._backoff.peek()))

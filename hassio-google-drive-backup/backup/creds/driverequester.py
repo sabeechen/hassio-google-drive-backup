@@ -51,9 +51,6 @@ class DriveRequester():
             response.raise_for_status()
             return response
         except ClientConnectorError as e:
-            logger.debug(
-                "Ran into trouble reaching Google Drive's servers.  We'll use alternate DNS servers on the next attempt.")
-            self.resolver.toggle()
             if "Cannot connect to host" in str(e) or "Connection reset by peer" in str(e):
                 raise GoogleCantConnect()
             if e.os_error.errno == -2:
@@ -82,9 +79,6 @@ class DriveRequester():
         except ServerDisconnectedError:
             raise GoogleUnexpectedError()
         except DNSException:
-            logger.debug(
-                "Ran into trouble resolving Google Drive's servers.  We'll use normal DNS servers on the next attempt.")
-            self.resolver.toggle()
             raise GoogleDnsFailure()
 
     def buildTimeout(self):

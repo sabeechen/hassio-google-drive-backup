@@ -2,7 +2,7 @@ import json
 import os
 import os.path
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from yarl import URL
 
 from .settings import _LOOKUP, Setting, _VALIDATORS
@@ -225,7 +225,7 @@ class Config():
                 self._clientIdentifier = str(uuid.uuid4())
         return self._clientIdentifier
 
-    def getGenerationalConfig(self) -> Optional[Dict[str, Any]]:
+    def getGenerationalConfig(self) -> GenConfig | None:
         days = self.get(Setting.GENERATIONAL_DAYS)
         weeks = self.get(Setting.GENERATIONAL_WEEKS)
         months = self.get(Setting.GENERATIONAL_MONTHS)

@@ -100,10 +100,15 @@ class DriveSource(BackupDestination):
         raise LogicError("Backups can't be created in Drive")
 
     def checkBeforeChanges(self):
+        self.drivebackend.last_upload_made_progress = False
         existing = self.folder_finder.getExisting()
         if existing:
             raise ExistingBackupFolderError(
                 existing.get('id'), existing.get('name'))
+
+    @property
+    def hintAvoidBackoff(self) -> bool:
+        return self.drivebackend.last_upload_made_progress
 
     def icon(self) -> str:
         return "google-drive"

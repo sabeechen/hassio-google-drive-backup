@@ -78,6 +78,9 @@ class Setting(Enum):
     BACKGROUND_COLOR = "background_color"
     ACCENT_COLOR = "accent_color"
 
+    # Localization
+    LANGUAGE = "language"
+
     # Network and dns stuff
     DRIVE_EXPERIMENTAL = "drive_experimental"
     DRIVE_IPV4 = "drive_ipv4"
@@ -243,6 +246,9 @@ _DEFAULTS = {
     Setting.BACKGROUND_COLOR: "",
     Setting.ACCENT_COLOR: "",
 
+    # Localization
+    Setting.LANGUAGE: "en",
+
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "8.8.8.8,8.8.4.4",
     Setting.DRIVE_EXPERIMENTAL: False,
@@ -386,6 +392,9 @@ _CONFIG = {
     # Theme Settings
     Setting.BACKGROUND_COLOR: "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
     Setting.ACCENT_COLOR: "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
+
+    # Localization
+    Setting.LANGUAGE: "match(^(en|he)$)?",
 
     # Network and DNS settings
     Setting.ALTERNATE_DNS_SERVERS: "match(^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})(,[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})*$)?",

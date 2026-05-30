@@ -1,0 +1,246 @@
+/*
+ * RTL (right-to-left) support for the Hebrew interface.
+ */
+
+body {
+  text-align: right;
+}
+
+.left-align {
+  text-align: right;
+}
+
+.right-align {
+  text-align: left;
+}
+
+.right {
+  float: left !important;
+}
+
+.left {
+  float: right !important;
+}
+
+.input-field > label {
+  right: 0;
+  left: auto;
+  transform-origin: 100% 0;
+}
+
+.input-field .prefix {
+  right: 0;
+  left: auto;
+}
+
+.input-field .prefix ~ input,
+.input-field .prefix ~ textarea,
+.input-field .prefix ~ label,
+.input-field .prefix ~ .validate ~ label,
+.input-field .prefix ~ .helper-text,
+.input-field .prefix ~ .autocomplete-content {
+  margin-right: 3rem;
+  margin-left: 0;
+  width: calc(100% - 3rem);
+}
+
+input.select-dropdown {
+  text-align: right;
+}
+
+.select-wrapper .caret {
+  right: auto;
+  left: 0;
+}
+
+[type="checkbox"] + span:not(.lever),
+[type="radio"]:not(:checked) + span,
+[type="radio"]:checked + span {
+  padding-right: 35px;
+  padding-left: 0;
+}
+
+[type="checkbox"] + span:not(.lever):before,
+[type="checkbox"]:not(.filled-in) + span:not(.lever):after,
+[type="checkbox"].filled-in + span:not(.lever):after,
+[type="checkbox"].filled-in + span:not(.lever):before {
+  right: 0;
+  left: auto;
+}
+
+[type="radio"]:not(:checked) + span:before,
+[type="radio"]:not(:checked) + span:after,
+[type="radio"]:checked + span:before,
+[type="radio"]:checked + span:after {
+  right: 0;
+  left: auto;
+}
+
+.switch label .lever {
+  margin: 0 0 0 10px;
+}
+
+nav .brand-logo {
+  right: 0;
+  left: auto;
+  padding-right: 0;
+  transform: none;
+}
+
+@media only screen and (max-width: 992px) {
+  nav .brand-logo {
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+
+nav ul.left {
+  float: right !important;
+}
+
+nav ul.right {
+  float: left !important;
+}
+
+.sidenav {
+  right: 0;
+  left: auto;
+  transform: translateX(105%);
+}
+
+.sidenav.right-aligned {
+  right: auto;
+  left: 0;
+  transform: translateX(-105%);
+}
+
+.btn .material-icons.right,
+.btn-large .material-icons.right,
+.btn-small .material-icons.right {
+  margin-right: 15px;
+  margin-left: 0;
+}
+
+.btn .material-icons.left,
+.btn-large .material-icons.left,
+.btn-small .material-icons.left {
+  margin-left: 15px;
+  margin-right: 0;
+}
+
+.btn-flat .material-icons {
+  margin-left: 5px;
+  margin-right: 0;
+}
+
+.source-icon,
+.content-icon,
+.content-logo,
+.inline-icon,
+.detail-badge .material-icons,
+.card-title > .material-icons {
+  margin-left: 6px;
+  margin-right: 0;
+}
+
+.card-title > .material-icons {
+  padding-left: 10px;
+  padding-right: 0;
+}
+
+.backup-help-icon {
+  margin-right: 2px;
+  margin-left: 0;
+}
+
+.top-btn {
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+.modal .modal-footer {
+  text-align: left;
+}
+
+.modal-close {
+  margin-left: 0;
+}
+
+.card .card-action a:not(.btn):not(.btn-large):not(.btn-small):not(.btn-floating) {
+  margin-left: 24px;
+  margin-right: 0;
+}
+
+.dropdown-content {
+  text-align: right;
+}
+
+.collapsible-header {
+  text-align: right;
+}
+
+.collapsible-header i {
+  margin-left: 1rem;
+  margin-right: 0;
+}
+
+.indented-li {
+  padding-right: 15px;
+  padding-left: 0;
+}
+
+.indent {
+  margin-right: 36px;
+  margin-left: 0;
+}
+
+.indent-icon,
+.inline-icon {
+  margin-left: 2px;
+  margin-right: 0;
+}
+
+blockquote {
+  border-right: 5px solid var(--accent-color);
+  border-left: none;
+  padding-right: 1.5rem;
+  padding-left: 0;
+}
+
+#toast-container {
+  left: 7% !important;
+  right: auto !important;
+}
+
+@media only screen and (max-width: 600px) {
+  #toast-container {
+    left: 0% !important;
+  }
+}
+
+.toast .toast-action {
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+.title-logo {
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+#contributors-simple a,
+#contributors-extra .contributor-img-wrapper a {
+  margin-left: 8px;
+  margin-right: 0;
+}
+
+code,
+pre,
+.device-code-box,
+input[type="url"],
+input[type="email"],
+.ltr {
+  direction: ltr;
+  unicode-bidi: embed;
+  text-align: left;
+}

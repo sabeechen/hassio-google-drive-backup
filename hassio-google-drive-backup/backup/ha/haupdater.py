@@ -6,6 +6,7 @@ from injector import inject, singleton
 from ..model import Coordinator, Backup
 from ..config import Config, Setting
 from ..util import GlobalInfo, Backoff, Estimator
+from ..i18n import _
 from .harequests import HaRequests
 from ..time import Time
 from ..worker import Worker
@@ -67,10 +68,10 @@ class HaUpdater(Worker):
             if self._config.get(Setting.NOTIFY_FOR_STALE_BACKUPS):
                 if self._stale() and not self._notified:
                     if self._info.url is None or len(self._info.url) == 0:
-                        message = NOTIFICATION_DESC_STATIC
+                        message = _(NOTIFICATION_DESC_STATIC)
                     else:
-                        message = NOTIFICATION_DESC_LINK.format(self._info.url)
-                    await self._requests.sendNotification(NOTIFICATION_TITLE, message)
+                        message = _(NOTIFICATION_DESC_LINK).format(self._info.url)
+                    await self._requests.sendNotification(_(NOTIFICATION_TITLE), message)
                     self._notified = True
                 elif not self._stale() and self._notified:
                     await self._requests.dismissNotification()
@@ -131,7 +132,7 @@ class HaUpdater(Worker):
 
     def _buildBackupUpdate(self):
         backups = list(filter(lambda s: not s.ignore(), self._coordinator.backups()))
-        last = "Never"
+        last = _("Never")
         if len(backups) > 0:
             last = max(backups, key=lambda s: s.date()).date().isoformat()
 
@@ -146,14 +147,14 @@ class HaUpdater(Worker):
         ha_backups = list(filter(lambda s: s.getSource(SOURCE_HA) is not None, backups))
         drive_backups = list(filter(lambda s: s.getSource(SOURCE_GOOGLE_DRIVE) is not None, backups))
 
-        last_uploaded = "Never"
+        last_uploaded = _("Never")
         if len(drive_backups) > 0:
             last_uploaded = max(drive_backups, key=lambda s: s.date()).date().isoformat()
         if self._config.get(Setting.CALL_BACKUP_SNAPSHOT):
             return {
                 "state": self._state(),
                 "attributes": {
-                    "friendly_name": "Snapshot State",
+                    "friendly_name": _("Snapshot State"),
                     "last_snapshot": last,  # type: ignore
                     "snapshots_in_google_drive": len(drive_backups),
                     "snapshots_in_hassio": len(ha_backups),
@@ -169,7 +170,7 @@ class HaUpdater(Worker):
             if next is not None:
                 next = next.isoformat()
             attr = {
-                "friendly_name": "Backup State",
+                "friendly_name": _("Backup State"),
                 "last_backup": last,  # type: ignore
                 "next_backup": next,
                 "last_uploaded": last_uploaded,

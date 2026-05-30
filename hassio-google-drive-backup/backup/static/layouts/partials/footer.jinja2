@@ -1,10 +1,10 @@
 <footer class="page-footer">
   <div class="container valign-wrapper">
-    <span style="margin-right: 5px;">
+    <span style="margin-{{ 'left' if is_rtl() else 'right' }}: 5px;">
       <b>© 2023 Stephen Beechen</b>
-      <span class="hide-on-small-only"> <span class="hide-on-med-only">with love from <a href="https://www.openstreetmap.org/search?query=Longmont%2C Colorado" target="_blank">Colorado</a></span> - </span>
+      <span class="hide-on-small-only"> <span class="hide-on-med-only">{{ _("with love from") }} <a href="https://www.openstreetmap.org/search?query=Longmont%2C Colorado" target="_blank">{{ _("Colorado") }}</a></span> - </span>
       <br class="hide-on-med-and-up">
-      If you like this project, keep it going and
+      {{ _("If you like this project, keep it going and") }}
     </span>
     <a class="bmc-button" target="_blank" rel="noreferrer" href="https://www.buymeacoffee.com/sabeechen" alt="Support me">
       <svg width="24px" height="36px" viewBox="0 0 24 36" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">

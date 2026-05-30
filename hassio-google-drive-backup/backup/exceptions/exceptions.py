@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from ..i18n import _
 
 from ..const import (DRIVE_FOLDER_URL_FORMAT, ERROR_BACKUP_FOLDER_INACCESSIBLE,
                      ERROR_BACKUP_FOLDER_MISSING, ERROR_BAD_PASSWORD_KEY,
@@ -73,7 +74,7 @@ class ProtocolError(KnownError):
 
     def message(self):
         if self._object_name:
-            return "Required key '{0}' was missing from {1}".format(self._parameter, self._object_name)
+            return _("Required key '{0}' was missing from {1}").format(self._parameter, self._object_name)
         else:
             return self._parameter
 
@@ -83,7 +84,7 @@ class ProtocolError(KnownError):
 
 class BackupInProgress(KnownError):
     def message(self):
-        return "A backup is already in progress"
+        return _("A backup is already in progress")
 
     def code(self):
         return ERROR_BACKUP_IN_PROGRESS
@@ -91,7 +92,7 @@ class BackupInProgress(KnownError):
 
 class BackupPasswordKeyInvalid(KnownError):
     def message(self):
-        return "Couldn't find your backup password in your secrets file.  Please check your settings."
+        return _("Couldn't find your backup password in your secrets file.  Please check your settings.")
 
     def code(self):
         return ERROR_BAD_PASSWORD_KEY
@@ -102,7 +103,7 @@ class BackupPasswordKeyInvalid(KnownError):
 
 class UploadFailed(KnownError):
     def message(self):
-        return "Backup upload failed.  Please check the supervisor logs for details."
+        return _("Backup upload failed.  Please check the supervisor logs for details.")
 
     def code(self):
         return ERROR_UPLOAD_FAILED
@@ -110,7 +111,7 @@ class UploadFailed(KnownError):
 
 class GoogleCredentialsExpired(KnownError):
     def message(self):
-        return "Your Google Drive credentials have expired.  Please reauthorize with Google Drive through the Web UI."
+        return _("Your Google Drive credentials have expired.  Please reauthorize with Google Drive through the Web UI.")
 
     def code(self):
         return ERROR_CREDS_EXPIRED
@@ -121,7 +122,7 @@ class GoogleCredentialsExpired(KnownError):
 
 class NoBackup(KnownError):
     def message(self):
-        return "The backup doesn't exist anymore"
+        return _("The backup doesn't exist anymore")
 
     def code(self):
         return ERROR_NO_BACKUP
@@ -129,7 +130,7 @@ class NoBackup(KnownError):
 
 class NotUploadable(KnownError):
     def message(self):
-        return "This backup can't be uploaded to Home Assistant yet"
+        return _("This backup can't be uploaded to Home Assistant yet")
 
     def code(self):
         return ERROR_NOT_UPLOADABLE
@@ -137,7 +138,7 @@ class NotUploadable(KnownError):
 
 class PleaseWait(KnownError):
     def message(self):
-        return "Please wait until the sync is finished."
+        return _("Please wait until the sync is finished.")
 
     def code(self):
         return ERROR_PLEASE_WAIT
@@ -162,7 +163,7 @@ class DeleteMutlipleBackupsError(KnownError):
         self.delete_sources = delete_sources
 
     def message(self):
-        return "The add-on has been configured to delete more than one older backups.  Please confirm this by visiting the add-on's web UI or by setting the config option 'confirm_multiple_deletes'=false in your add-on configuration."
+        return _("The add-on has been configured to delete more than one older backups.  Please confirm this by visiting the add-on's web UI or by setting the config option 'confirm_multiple_deletes'=false in your add-on configuration.")
 
     def code(self):
         return ERROR_MULTIPLE_DELETES
@@ -180,7 +181,7 @@ class DriveQuotaExceeded(KnownError):
         self._data = {}
 
     def message(self):
-        return "Google Drive is out of space"
+        return _("Google Drive is out of space")
 
     def code(self):
         return ERROR_DRIVE_FULL
@@ -197,7 +198,7 @@ class DriveQuotaExceeded(KnownError):
 
 class GoogleDnsFailure(KnownError):
     def message(self):
-        return "Unable to resolve host www.googleapis.com"
+        return _("Unable to resolve host www.googleapis.com")
 
     def code(self):
         return ERROR_GOOGLE_DNS
@@ -205,7 +206,7 @@ class GoogleDnsFailure(KnownError):
 
 class GoogleCantConnect(KnownError):
     def message(self):
-        return "Unable to connect to www.googleapis.com"
+        return _("Unable to connect to www.googleapis.com")
 
     def code(self):
         return ERROR_GOOGLE_CONNECT
@@ -213,7 +214,7 @@ class GoogleCantConnect(KnownError):
 
 class GoogleInternalError(KnownTransient):
     def message(self):
-        return "Google Drive returned an internal error (HTTP: 5XX)"
+        return _("Google Drive returned an internal error (HTTP: 5XX)")
 
     def code(self):
         return ERROR_GOOGLE_INTERNAL
@@ -221,7 +222,7 @@ class GoogleInternalError(KnownTransient):
 
 class GoogleTimeoutError(KnownError):
     def message(self):
-        return "Timed out while trying to reach Google Drive"
+        return _("Timed out while trying to reach Google Drive")
 
     def code(self):
         return ERROR_GOOGLE_TIMEOUT
@@ -233,7 +234,7 @@ class GoogleTimeoutError(KnownError):
 
 class GoogleRateLimitError(KnownTransient):
     def message(self):
-        return "The addon has made too many requests to Google Drive, and will back off"
+        return _("The addon has made too many requests to Google Drive, and will back off")
 
     def code(self):
         return "google_rate_limit"
@@ -241,7 +242,7 @@ class GoogleRateLimitError(KnownTransient):
 
 class GoogleSessionError(KnownError):
     def message(self):
-        return "Upload session with Google Drive expired.  The upload could not complete."
+        return _("Upload session with Google Drive expired.  The upload could not complete.")
 
     def code(self):
         return ERROR_GOOGLE_SESSION
@@ -249,7 +250,7 @@ class GoogleSessionError(KnownError):
 
 class HomeAssistantDeleteError(KnownError):
     def message(self):
-        return "Home Assistant refused to delete the backup."
+        return _("Home Assistant refused to delete the backup.")
 
     def code(self):
         return ERROR_HA_DELETE_ERROR
@@ -261,7 +262,7 @@ class ExistingBackupFolderError(KnownError):
         self.existing_name = existing_name
 
     def message(self):
-        return "A backup folder already exists.  Please visit the add-on Web UI to select where to backup."
+        return _("A backup folder already exists.  Please visit the add-on Web UI to select where to backup.")
 
     def code(self):
         return ERROR_EXISTING_FOLDER
@@ -278,7 +279,7 @@ class ExistingBackupFolderError(KnownError):
 
 class BackupFolderMissingError(KnownError):
     def message(self):
-        return "Please visit the add-on Web UI to select where to backup."
+        return _("Please visit the add-on Web UI to select where to backup.")
 
     def code(self):
         return ERROR_BACKUP_FOLDER_MISSING
@@ -292,7 +293,7 @@ class BackupFolderInaccessible(KnownError):
         self.existing_id = existing_id
 
     def message(self):
-        return "The choosen backup folder has become inaccessible.  Please visit the addon web UI to select a backup folder."
+        return _("The choosen backup folder has become inaccessible.  Please visit the addon web UI to select a backup folder.")
 
     def data(self):
         return {
@@ -305,7 +306,7 @@ class BackupFolderInaccessible(KnownError):
 
 class GoogleDrivePermissionDenied(KnownError):
     def message(self):
-        return "Google Drive denied the request due to permissions."
+        return _("Google Drive denied the request due to permissions.")
 
     def code(self):
         return "google_drive_permissions"
@@ -317,7 +318,7 @@ class LowSpaceError(KnownError):
         self.space_remaining = space_remaining
 
     def message(self):
-        return "Your backup folder is low on disk space.  Backups can't be created until space is available."
+        return _("Your backup folder is low on disk space.  Backups can't be created until space is available.")
 
     def code(self):
         return ERROR_LOW_SPACE
@@ -331,7 +332,7 @@ class LowSpaceError(KnownError):
 
 class SupervisorConnectionError(KnownError):
     def message(self):
-        return "The addon couldn't connect to the supervisor.  Backups can't continue until the supervisor is responding."
+        return _("The addon couldn't connect to the supervisor.  Backups can't continue until the supervisor is responding.")
 
     def code(self):
         return "supervisor_connection"
@@ -339,7 +340,7 @@ class SupervisorConnectionError(KnownError):
 
 class UserCancelledError(KnownError):
     def message(self):
-        return "Sync was cancelled by you"
+        return _("Sync was cancelled by you")
 
     def code(self):
         return "cancelled"
@@ -353,7 +354,7 @@ class CredRefreshGoogleError(KnownError):
         self.from_google = from_google
 
     def message(self):
-        return "Couldn't refresh your credentials with Google because: '{}'".format(self.from_google)
+        return _("Couldn't refresh your credentials with Google because: '{}'").format(self.from_google)
 
     def code(self):
         return "token_refresh_google_error"
@@ -369,7 +370,7 @@ class CredRefreshMyError(KnownError):
         self.reason = reason
 
     def message(self):
-        return "Couldn't refresh Google Drive credentials because: {}".format(self.reason)
+        return _("Couldn't refresh Google Drive credentials because: {}").format(self.reason)
 
     def code(self):
         return "token_refresh_my_error"
@@ -382,7 +383,7 @@ class CredRefreshMyError(KnownError):
 
 class LogInToGoogleDriveError(KnownError):
     def message(self):
-        return "Please visit drive.google.com to activate your Google Drive account."
+        return _("Please visit drive.google.com to activate your Google Drive account.")
 
     def code(self):
         return LOG_IN_TO_DRIVE
@@ -393,7 +394,7 @@ class LogInToGoogleDriveError(KnownError):
 
 class SupervisorPermissionError(KnownError):
     def message(self):
-        return "The supervisor is rejecting requests from the addon.  Please visit the web-UI for guidance"
+        return _("The supervisor is rejecting requests from the addon.  Please visit the web-UI for guidance")
 
     def code(self):
         return SUPERVISOR_PERMISSION
@@ -404,7 +405,7 @@ class SupervisorPermissionError(KnownError):
 
 class GoogleUnexpectedError(KnownError):
     def message(self):
-        return "Google gave an unexpected response"
+        return _("Google gave an unexpected response")
 
     def code(self):
         return ERROR_GOOGLE_UNEXPECTED
@@ -416,7 +417,7 @@ class GoogleUnexpectedError(KnownError):
 
 class SupervisorTimeoutError(KnownError):
     def message(self):
-        return "A request to the supervisor timed out"
+        return _("A request to the supervisor timed out")
 
     def code(self):
         return ERROR_SUPERVISOR_TIMEOUT
@@ -428,7 +429,7 @@ class SupervisorTimeoutError(KnownError):
 
 class SupervisorUnexpectedError(KnownError):
     def message(self):
-        return "The supervisor gave an unexpected response"
+        return _("The supervisor gave an unexpected response")
 
     def code(self):
         return ERROR_SUPERVISOR_UNEXPECTED
@@ -440,7 +441,7 @@ class SupervisorUnexpectedError(KnownError):
 
 class SupervisorFileSystemError(KnownError):
     def message(self):
-        return "The host file system is read-only.  Please restart Home Assistant and verify you have enough free space."
+        return _("The host file system is read-only.  Please restart Home Assistant and verify you have enough free space.")
 
     def code(self):
         return ERROR_SUPERVISOR_FILE_SYSTEM

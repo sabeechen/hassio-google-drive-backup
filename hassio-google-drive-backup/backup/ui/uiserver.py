@@ -14,6 +14,7 @@ from injector import ClassAssistedBuilder, ProviderOf, inject, singleton
 
 from backup.config import Config, Setting, CreateOptions, BoolValidator, Startable, Version, VERSION
 from backup.const import SOURCE_GOOGLE_DRIVE, SOURCE_HA, GITHUB_BUG_TEMPLATE
+from backup.i18n import install_jinja_globals, set_language, translations
 from backup.model import Coordinator, Backup, AbstractBackup
 from backup.exceptions import KnownError, GoogleCredGenerateError, ensureKey
 from backup.util import GlobalInfo, Estimator, DataCache, UpgradeFlags
@@ -110,9 +111,9 @@ class UiServer(Trigger, Startable):
         status['cred_version'] = self._global_info.credVersion
         next = self._coord.nextBackupTime()
         if next is None:
-            status['next_backup_text'] = "Disabled"
+            status['next_backup_text'] = _("Disabled")
             status['next_backup_machine'] = ""
-            status['next_backup_detail'] = "Disabled"
+            status['next_backup_detail'] = _("Disabled")
         elif (next < self._time.now()):
             status['next_backup_text'] = self._time.formatDelta(
                 self._time.now())
@@ -134,9 +135,9 @@ class UiServer(Trigger, Startable):
             status['last_backup_detail'] = self._time.toLocal(
                 latest).strftime("%c")
         else:
-            status['last_backup_text'] = "Never"
+            status['last_backup_text'] = _("Never")
             status['last_backup_machine'] = ""
-            status['last_backup_detail'] = "Never"
+            status['last_backup_detail'] = _("Never")
 
         status['last_error'] = None
         if self._global_info._last_error is not None and self._global_info.isErrorSuppressed():
@@ -184,7 +185,19 @@ class UiServer(Trigger, Startable):
         return status
 
     async def bootstrap(self, request) -> Dict[Any, Any]:
-        return web.Response(body="bootstrap_update_data = {0};".format(json.dumps(await self.buildStatusInfo(), indent=4)), content_type="text/javascript")
+        i18n = translations()
+        body = (
+            "window.I18N = {i18n};\n"
+            "window.I18N_LANG = {lang};\n"
+            "window.I18N_DIR = {dir};\n"
+            "bootstrap_update_data = {data};"
+        ).format(
+            i18n=json.dumps(i18n.js_map(), ensure_ascii=False),
+            lang=json.dumps(i18n.language),
+            dir=json.dumps(i18n.dir),
+            data=json.dumps(await self.buildStatusInfo(), indent=4),
+        )
+        return web.Response(body=body, content_type="text/javascript")
 
     def getBackupDetails(self, backup: Backup):
         ha = backup.getSource(SOURCE_HA)
@@ -269,7 +282,7 @@ class UiServer(Trigger, Startable):
         client_id = request.query.get("client_id", "")
         client_secret = request.query.get("client_secret", "")
         if client_id == "" or client_secret == "":
-            raise GoogleCredGenerateError("Invalid information provided")
+            raise GoogleCredGenerateError(_("Invalid information provided"))
 
         if self._check_creds_loop is not None and not self._check_creds_loop.done():
             self._check_creds_loop.cancel()
@@ -450,11 +463,11 @@ class UiServer(Trigger, Startable):
         mounts = [
             {
                 'id': "",
-                'name': 'Default'
+                'name': _('Default')
             },
             {
                 'id': 'local-disk',
-                'name': 'Home Assistant local disk'
+                'name': _('Home Assistant local disk')
             }
         ]
         if self._ha_source.mount_info.get('mounts', None):
@@ -468,7 +481,10 @@ class UiServer(Trigger, Startable):
         return web.json_response({
             'config': current_config,
             'addons': self._global_info.addons,
-            'folders': FOLDERS,
+            'folders': [
+                {**f, 'name': _(f['name']), 'description': _(f['description'])}
+                for f in FOLDERS
+            ],
             'mounts': mounts,
             'defaults': default_config,
             'backup_folder': self.folder_finder.getCachedFolder(),
@@ -664,9 +680,13 @@ class UiServer(Trigger, Startable):
     async def run(self) -> None:
         await self.stop()
 
+        # Apply the configured display language before any template rendering.
+        set_language(self.config.get(Setting.LANGUAGE))
+
         # Create the ingress server
         app = web.Application(middlewares=[self.error_middleware])
         aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(self.filePath()))
+        install_jinja_globals(aiohttp_jinja2.get_env(app))
         self._addRoutes(app)
 
         # The ingress port is considered secured by Home Assistant, so it doesn't get SSL or basic HTTP auth
@@ -689,6 +709,7 @@ class UiServer(Trigger, Startable):
 
                 extra_app = web.Application(middlewares=middleware)
                 aiohttp_jinja2.setup(extra_app, loader=jinja2.FileSystemLoader(self.filePath()))
+                install_jinja_globals(aiohttp_jinja2.get_env(extra_app))
                 self._addRoutes(extra_app)
                 logger.info("Starting server on port {}".format(
                     self.config.get(Setting.PORT)))

@@ -5,6 +5,7 @@ from dateutil.tz import tzutc
 from ..util import Estimator
 
 from ..const import SOURCE_GOOGLE_DRIVE, SOURCE_HA
+from ..i18n import _
 from ..logger import getLogger
 from ..config import CreateOptions
 
@@ -270,12 +271,12 @@ class Backup(object):
         inHa = self.getSource(SOURCE_HA) is not None
 
         if inDrive and inHa:
-            return "Backed Up"
+            return _("Backed Up")
         if inDrive:
-            return "Drive Only"
+            return _("Drive Only")
         if inHa:
-            return "HA Only"
-        return "Deleted"
+            return _("HA Only")
+        return _("Deleted")
 
     def isDeleted(self) -> bool:
         return len(self.sources) == 0

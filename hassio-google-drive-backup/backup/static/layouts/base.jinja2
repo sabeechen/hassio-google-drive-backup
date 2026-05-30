@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang() }}" dir="{{ dir() }}">
 
 <head>
   <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
@@ -13,6 +13,9 @@
   <link href="static/{{ version }}/css/materialize.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/{{ version }}/css/colpick.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/{{ version }}/css/static.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
+  {% if is_rtl() %}
+  <link href="static/{{ version }}/css/rtl.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
+  {% endif %}
   <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
   <link rel="icon" type="image/png" href="static/{{ version }}/images/favicon.png?version={{ version }}">
 
@@ -33,6 +36,7 @@
   <script src="static/{{ version }}/js/moment.js?version={{ version }}"></script>
   <script src="static/{{ version }}/js/jquery.qrcode.min.js?version={{ version }}"></script>
   <script src="bootstrap?version={{ version }}"></script>
+  <script src="static/{{ version }}/js/i18n.js?version={{ version }}"></script>
   {% endblock %}
 </head>
 

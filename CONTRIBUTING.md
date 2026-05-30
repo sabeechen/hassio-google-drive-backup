@@ -105,3 +105,30 @@ You should be able to run tests from within the Visual Studio tests tab. Make su
 
 Test dependencies get injected by `pytest`, which are defined in the [conftest.py](https://github.com/sabeechen/hassio-google-drive-backup/blob/master/hassio-google-drive-backup/tests/conftest.py) file. This is responsible for starting the simulation server, mocking necessary classes, etc.
 Most classes have their own test file in the [tests](https://github.com/sabeechen/hassio-google-drive-backup/tree/master/hassio-google-drive-backup/tests) directory. If you change anything in the code, you must also submit tests with your PR that verify that change. The only exception is that all the addon's JavaScript, I've never found a good way to do JavaScript tests.
+
+## Localization (adding a language)
+
+The Web UI uses a lightweight gettext-style translation system. Source strings in templates, Python and JavaScript stay English; if the active language has a translation it is substituted, otherwise the English source falls through.
+
+### The pieces
+
+- `backup/i18n.py` — Python module exposing `_()`, `set_language()`, and a Jinja2 globals installer.
+- `backup/locales/<lang>.json` — flat JSON files mapping English source strings to translated strings.
+- `backup/static/js/i18n.js` — browser-side `_()` and `_f()` helpers.
+- The `LANGUAGE` setting (config key `language`) selects the active locale at startup.
+
+### To add a new language
+
+1. Add an entry to `LANGUAGES` in `backup/i18n.py` with the language code, display name, and whether it is RTL.
+2. Add the language code to the `language` validator in `backup/config/settings.py` and to the `language` schema in `config.json`.
+3. Copy `backup/locales/en.json` to `backup/locales/<your-code>.json` and translate each value. Missing keys are fine — they fall through to English. Keep the source keys (English) verbatim; only translate the values.
+4. For RTL languages, the `rtl.css` stylesheet under `backup/static/css/` is included automatically when the active language's `rtl` flag is true. Add language-specific tweaks there if Materialize defaults need adjustment.
+5. Run the addon locally and walk the UI to spot any strings still in English — those are source strings that haven't been wrapped with `_()` yet. Wrap them in the appropriate template/Python/JS file and add their English form as a key in your locale JSON.
+
+### Wrapping new source strings
+
+- Jinja2 templates: `{{ _("English source") }}`.
+- Python: `from backup.i18n import _; _("English source")`. For values evaluated at module-load (constants, dataclass defaults, etc.) defer the call into a function or wrap at the point where the value is serialized for the response.
+- JavaScript: `_("English source")` or `_f("Templated {0}", value)` for positional substitution. `window.I18N` is populated by the bootstrap endpoint so the helper works on every page automatically.
+
+Keep the English source canonical — translators should never have to invent keys, and translation files should be diffable against `en.json`.

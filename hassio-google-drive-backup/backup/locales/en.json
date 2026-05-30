@@ -1,0 +1,4 @@
+{
+  "_comment": "English is the source language. Strings wrapped with _() in templates and code fall through to their English source when no translation is present, so this file may be empty. It exists so the canonical key list is discoverable and translators have a copy/paste starting point.",
+  "_language_name": "English"
+}

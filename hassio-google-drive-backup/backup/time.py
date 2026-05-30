@@ -123,43 +123,42 @@ class Time(object):
         return self.local_tz.localize(datetime(year, month, day, hour, minute, second, ms))
 
     def formatDelta(self, time: datetime, now=None) -> str:
+        from .i18n import _
         if not now:
             now = self.now()
 
-        flavor = ""
         if time < now:
             delta = relativedelta(now, time)
-            flavor = " ago"
+            past = True
         else:
             delta = relativedelta(time, now)
-            flavor = ""
+            past = False
+
+        def fmt(n, singular, plural):
+            return "{0} {1}".format(n, _(singular) if n == 1 else _(plural))
+
         if delta.years > 0:
-            plural = "s" if delta.years > 1 else ""
-            return "{0} year{2}{1}".format(delta.years, flavor, plural)
-        if (delta.months != 0):
-            plural = "s" if delta.months > 1 else ""
-            if delta.days > 15:
-                return "{0} month{2}{1}".format(delta.months + 1, flavor, plural)
-            return "{0} month{2}{1}".format(delta.months, flavor, plural)
-        if (delta.days != 0):
-            plural = "s" if delta.days > 1 else ""
-            if delta.hours >= 12:
-                return "{0} day{2}{1}".format(delta.days + 1, flavor, plural)
-            return "{0} day{2}{1}".format(delta.days, flavor, plural)
-        if (delta.hours != 0):
-            plural = "s" if delta.hours > 1 else ""
-            if delta.minutes >= 30:
-                return "{0} hour{2}{1}".format(delta.hours + 1, flavor, plural)
-            return "{0} hour{2}{1}".format(delta.hours, flavor, plural)
-        if (delta.minutes != 0):
-            plural = "s" if delta.minutes > 1 else ""
-            if delta.minutes >= 30:
-                return "{0} minute{2}{1}".format(delta.minutes + 1, flavor, plural)
-            return "{0} minute{2}{1}".format(delta.minutes, flavor, plural)
-        if (delta.seconds != 0):
-            plural = "s" if delta.seconds > 1 else ""
-            return "{0} second{2}{1}".format(delta.seconds, flavor, plural)
-        return "right now"
+            text = fmt(delta.years, "year", "years")
+        elif delta.months != 0:
+            months = delta.months + 1 if delta.days > 15 else delta.months
+            text = fmt(months, "month", "months")
+        elif delta.days != 0:
+            days = delta.days + 1 if delta.hours >= 12 else delta.days
+            text = fmt(days, "day", "days")
+        elif delta.hours != 0:
+            hours = delta.hours + 1 if delta.minutes >= 30 else delta.hours
+            text = fmt(hours, "hour", "hours")
+        elif delta.minutes != 0:
+            minutes = delta.minutes + 1 if delta.minutes >= 30 else delta.minutes
+            text = fmt(minutes, "minute", "minutes")
+        elif delta.seconds != 0:
+            text = fmt(delta.seconds, "second", "seconds")
+        else:
+            return _("right now")
+
+        if past:
+            return _("{0} ago").format(text)
+        return text
 
     def asRfc3339String(self, time: datetime) -> str:
         if time is None:

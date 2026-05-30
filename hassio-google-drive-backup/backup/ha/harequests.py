@@ -8,6 +8,7 @@ from asyncio.exceptions import TimeoutError
 
 from ..util import AsyncHttpGetter
 from ..config import Config, Setting, Version
+from ..i18n import _
 from ..exceptions import HomeAssistantDeleteError, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, SupervisorUnexpectedError
 from ..model import HABackup
 from ..logger import getLogger
@@ -319,7 +320,7 @@ class HaRequests():
             data: Dict[str, Any] = {
                 "state": state,
                 "attributes": {
-                    "friendly_name": "Snapshots Stale",
+                    "friendly_name": _("Snapshots Stale"),
                     "device_class": "problem"
                 }
             }
@@ -328,7 +329,7 @@ class HaRequests():
             data: Dict[str, Any] = {
                 "state": state,
                 "attributes": {
-                    "friendly_name": "Backups Stale",
+                    "friendly_name": _("Backups Stale"),
                     "device_class": "problem"
                 }
             }

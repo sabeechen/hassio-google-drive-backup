@@ -88,11 +88,12 @@ class PendingBackup(AbstractBackup):
         return self._failed
 
     def status(self):
+        from ..i18n import _
         if self._complete:
-            return "Created"
+            return _("Created")
         if self._failed:
-            return "Failed!"
-        return "Pending"
+            return _("Failed!")
+        return _("Pending")
 
     def raiseIfNeeded(self):
         if self.isFailed():
@@ -381,7 +382,8 @@ class HaSource(BackupSource[HABackup], Startable):
         self._info.upload(0)
         resp = None
         try:
-            backup.overrideStatus("Loading {0}%", source)
+            from ..i18n import _
+            backup.overrideStatus(_("Loading {0}%"), source)
             backup.setUploadSource(self.title(), source)
             async with source:
                 with aiohttp.MultipartWriter('mixed') as mpwriter:
@@ -391,7 +393,8 @@ class HaSource(BackupSource[HABackup], Startable):
             backup.clearUploadSource()
         except Exception as e:
             logger.printException(e)
-            backup.overrideStatus("Failed!")
+            from ..i18n import _
+            backup.overrideStatus(_("Failed!"))
             backup.uploadFailure(logger.formatException(e))
         if resp and 'slug' in resp and resp['slug'] == backup.slug():
             self.config.setRetained(backup.slug(), True)

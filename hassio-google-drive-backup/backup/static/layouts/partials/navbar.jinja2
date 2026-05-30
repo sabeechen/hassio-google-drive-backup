@@ -52,18 +52,18 @@
     {% if showOpenDriveLink %}
     <li>
       <a onclick="newBackupClick(); return false;" style="cursor: pointer">
-        <i class="material-icons left">add</i>Backup Now
+        <i class="material-icons left">add</i>{{ _("Backup Now") }}
       </a>
     </li>
     <li>
-      <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a>
+      <a onclick="sync('error_card')" style="cursor: pointer"><i class="material-icons left">autorenew</i>{{ _("Sync Now") }}</a>
     </li>
-    <li class="open_drive_menu default-hidden" ><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
+    <li class="open_drive_menu default-hidden" ><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>{{ _("Open Drive Backups") }}</a></li>
     {% endif %}
-    <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
+    <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>{{ _("Reauthorize Google Drive") }}</a></li>
   {% endif %}
-  <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
-  <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>About</a></li>
+  <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>{{ _("Report a bug") }}</a></li>
+  <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>{{ _("About") }}</a></li>
 </ul>
 {% endmacro %}
 
@@ -75,25 +75,25 @@
   <li>
     <a href="#!" onClick="loadSettings()">
       <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">settings</i>
-      Settings
+      {{ _("Settings") }}
     </a>
   </li>
   <li>
     <a href="log?format=view" target="_blank" rel="noreferrer">
       <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">code</i>
-      Logs
+      {{ _("Logs") }}
     </a>
   </li>
   <li>
     <a href="#!" class="modal-trigger" data-target="help_modal">
       <i class="material-icons" style="display: inline; margin-right: 5px; vertical-align: bottom">help</i>
-      Get Help
+      {{ _("Get Help") }}
     </a>
   </li>
   <li>
     {{ actionMenu(id="main_menu_dropdown") }}
     <a class="dropdown-trigger" href="#!" data-target="main_menu_dropdown">
-      Actions <i class="material-icons right">arrow_drop_down</i>
+      {{ _("Actions") }} <i class="material-icons right">arrow_drop_down</i>
     </a>
   </li>
 </ul>
@@ -104,27 +104,27 @@
   <div class="sidenav-header">
     <img src="static/{{ version }}/images/logo.png" width="120" />
   </div>
-  <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>Settings</a></li>
-  <li><a href="log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>Logs</a></li>
+  <li><a href="#!" onClick="loadSettings()"><i class="material-icons">settings</i>{{ _("Settings") }}</a></li>
+  <li><a href="log?format=view" target="_blank" rel="noreferrer"><i class="material-icons">code</i>{{ _("Logs") }}</a></li>
   {% if coordEnabled %}
     {% if showOpenDriveLink %}
       <li>
         <a onclick="newBackupClick(); return false;" style="cursor: pointer">
-          <i class="material-icons left">add</i>Backup Now</a>
+          <i class="material-icons left">add</i>{{ _("Backup Now") }}</a>
       </li>
-      <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>Sync Now</a></li>
-      <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>Open Drive Backups</a></li>
+      <li><a onclick="sync()" style="cursor: pointer"><i class="material-icons left">autorenew</i>{{ _("Sync Now") }}</a></li>
+      <li class="open_drive_menu"><a class="open_drive_link" target="_blank"><i class="material-icons">cloud</i>{{ _("Open Drive Backups") }}</a></li>
     {% endif %}
-    <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>Reauthorize Google Drive</a></li>
+    <li><a href="reauthenticate"><i class="material-icons">vpn_key</i>{{ _("Reauthorize Google Drive") }}</a></li>
   {% endif %}
-  <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>Get Help</a></li>
-  <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>Report a bug</a></li>
-  <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>About</a></li>
+  <li><a href="#!" data-target="help_modal" class="modal-trigger"><i class="material-icons">help</i>{{ _("Get Help") }}</a></li>
+  <li><a onclick="bugReport()" style="cursor: pointer"><i class="material-icons">bug_report</i>{{ _("Report a bug") }}</a></li>
+  <li><a href="#!" class="modal-trigger" data-target="about_modal"><i class="material-icons">info</i>{{ _("About") }}</a></li>
 </ul>
 
 {% if coordEnabled and showOpenDriveLink %}
 <div class="fixed-action-btn">
-  <a onclick="newBackupClick(); return false;" class="btn-floating btn-large tooltipped" data-position="left" data-tooltip="Backup Now">
+  <a onclick="newBackupClick(); return false;" class="btn-floating btn-large tooltipped" data-position="{{ 'right' if is_rtl() else 'left' }}" data-tooltip="{{ _("Backup Now") }}">
     <i class="large material-icons">add</i>
   </a>
 </div>

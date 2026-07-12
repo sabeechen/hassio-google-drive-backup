@@ -911,7 +911,10 @@ async def test_connection_forcibly_reset(time, drive: DriveSource, config: Confi
 
     # Configure the upload to fail
     interceptor.setError(URL_MATCH_UPLOAD_PROGRESS, force_close=True)
-    with pytest.raises(GoogleTimeoutError):
+    # Which error gets raised depends on whether the connection dies while the client is still
+    # sending (GoogleTimeoutError) or after it sent everything and is awaiting the response
+    # (GoogleUnexpectedError).  Both are transient and retryable, which is what matters here.
+    with pytest.raises((GoogleTimeoutError, GoogleUnexpectedError)):
         await drive.save(from_backup, data)
 
 

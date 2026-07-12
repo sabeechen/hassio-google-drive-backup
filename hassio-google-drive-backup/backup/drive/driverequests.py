@@ -232,12 +232,12 @@ class DriveRequests():
             speed_as_tokens = self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) / BASE_CHUNK_SIZE
             capacity = max(speed_as_tokens, 1)
             limiter = TokenBucket(self.time, capacity, speed_as_tokens, 0)
-        should_resume = (self.last_attempt_metadata
+        should_resume = (metadata == self.last_attempt_metadata
                          and self.last_attempt_location is not None
                          and self.last_attempt_start_time is not None
                          and self.last_attempt_count < RETRY_SESSION_ATTEMPTS
                          and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION)
-        if metadata == should_resume:
+        if should_resume:
             logger.debug(
                 "Attempting to resume a previously failed upload where we left off")
             self.last_attempt_count += 1

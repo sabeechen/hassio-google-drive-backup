@@ -10,8 +10,9 @@ class FakeTime(Time):
         if now:
             self._now = now
         else:
-            self._now = self.toUtc(
-                datetime(1985, 12, 6, 0, 0, 0, tzinfo=timezone('EST')))
+            # pytz requires localize() here; attaching the tz through the datetime
+            # constructor picks the zone's first offset entry (LMT -5:18 in newer tzdata).
+            self._now = self.toUtc(self.localize(datetime(1985, 12, 6, 0, 0, 0)))
         self._start = self._now
         self.sleeps = []
 

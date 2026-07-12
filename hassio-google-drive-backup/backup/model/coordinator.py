@@ -189,11 +189,12 @@ class Coordinator(Trigger):
         await wait([self._sync_task])
 
     async def _sync(self):
-        self._sync_start.set()
-        await self._sync_wait.wait()
-        logger.info("Syncing Backups")
-        model = self._buildModel()
+        model: Model | None = None
         try:
+            self._sync_start.set()
+            await self._sync_wait.wait()
+            logger.info("Syncing Backups")
+            model = self._buildModel()
             self._global_info.sync()
             self._estimator.refresh()
             await model.sync(self._time.now())
@@ -210,19 +211,21 @@ class Coordinator(Trigger):
                 self.clearCaches()
             self._updateFreshness()
 
-    def handleError(self, e, model: Model):
+    def handleError(self, e, model: Model | None):
+        # An error before the model was built gets no backoff hints, so back off normally.
+        should_backoff = model is None or model.shouldBackoff
         if isinstance(e, CancelledError):
             e = UserCancelledError()
         if isinstance(e, KnownError):
             logger.error(e.message())
-            if model.shouldBackoff:
+            if should_backoff:
                 if e.retrySoon():
                     self._backoff.backoff(e)
                 else:
                     self._backoff.maxOut()
         else:
             logger.printException(e)
-            if model.shouldBackoff:
+            if should_backoff:
                 self._backoff.backoff(e)
         self._global_info.failed(e)
 

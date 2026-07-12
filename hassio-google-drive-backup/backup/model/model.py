@@ -197,8 +197,6 @@ class Model():
     def nextBackup(self, now: datetime, include_pending=True):
         latest = max(filter(lambda s: not s.ignore() and (not s.isPending() or include_pending), self.backups.values()),
                      default=None, key=lambda s: s.date())
-        # if latest:
-        #     latest = latest.date()
         return self._nextBackup(now, latest.date() if latest is not None else None)
 
     async def sync(self, now: datetime):

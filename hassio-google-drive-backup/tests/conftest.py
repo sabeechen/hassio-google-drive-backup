@@ -241,6 +241,10 @@ async def data_cache(injector):
 async def session(injector):
     async with injector.get(ClientSession) as session:
         yield session
+    # The resolver's pycares channels hold OS resources (inotify instances) that outlive the
+    # test unless closed explicitly, and the per-user inotify limit is easy to exhaust when
+    # running the suite in parallel.
+    await injector.get(Resolver).close()
 
 
 @pytest.fixture

@@ -49,7 +49,18 @@ class Resolver(AsyncResolver):
 
     def setAlternateResolver(self):
         if len(self.config.get(Setting.ALTERNATE_DNS_SERVERS)) > 0:
-            self._alternate_resolver = AsyncResolver(None, nameservers=self.config.get(Setting.ALTERNATE_DNS_SERVERS).split(","))
+            self._alternate_resolver = AsyncResolver(nameservers=self.config.get(Setting.ALTERNATE_DNS_SERVERS).split(","))
         else:
             self._alternate_resolver = None
         self._alt_ns = self.config.get(Setting.ALTERNATE_DNS_SERVERS)
+
+    async def close(self) -> None:
+        # The pycares channels hold OS resources (an inotify instance on linux, since c-ares
+        # started watching resolv.conf) that are only released when the channel is destroyed,
+        # so close the resolvers and drop our extra references instead of relying on the
+        # garbage collector to find them.
+        await super().close()
+        self._original_dns = None
+        if self._alternate_resolver is not None:
+            await self._alternate_resolver.close()
+            self._alternate_resolver = None

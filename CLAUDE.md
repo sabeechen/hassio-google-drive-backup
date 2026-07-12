@@ -6,13 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Home Assistant add-on ("Home Assistant Google Drive Backup", ~100k users) that creates HA backups on a schedule and syncs them to Google Drive. The same repo also contains a companion OAuth token-broker server (deployed to Cloud Run as habackup.io) that keeps Google's client secret off user machines.
 
-Stack: Python 3.11, asyncio throughout, aiohttp (server and client), `injector` for dependency injection, Jinja2 (via aiohttp-jinja2) for the web UI. The frontend JavaScript in `backup/static/` has no tests and no build step.
+Stack: Python 3.14, asyncio throughout, aiohttp (server and client), `injector` for dependency injection, Jinja2 (via aiohttp-jinja2) for the web UI. Dependencies are managed with uv. The frontend JavaScript in `backup/static/` has no tests and no build step.
 
 Layout quirk: the Python code lives in `hassio-google-drive-backup/` (same name as the repo). Inside it:
 - `backup/` — the add-on source (and `backup/server/` — the separately-deployed auth server)
 - `tests/` — pytest suite
 - `dev/` — simulation server, seed data, and deploy scripts
 - `config.json` — the add-on manifest: version, permissions, and the options schema
+- `pyproject.toml` + `uv.lock` — the uv project (deps, `server` extra, `dev` group); the venv lives at `hassio-google-drive-backup/.venv`. There is no pyproject at the repo root, so uv commands need `--project hassio-google-drive-backup` (or run from that directory).
 
 ## Philosophy
 
@@ -23,21 +24,22 @@ This project emphasizes being easy to use, despite doing something complicated. 
 Run everything from the repo root (`pytest.ini` lives here).
 
 ```bash
+# Install/refresh dependencies (creates hassio-google-drive-backup/.venv)
+uv sync --project hassio-google-drive-backup --all-extras
+
 # All tests (takes a while; ~40 test files)
-python3 -m pytest hassio-google-drive-backup/tests
+uv run --project hassio-google-drive-backup pytest hassio-google-drive-backup/tests
 
 # Single file / single test; --no-cov speeds up iteration
-python3 -m pytest hassio-google-drive-backup/tests/test_coordinator.py --no-cov
-python3 -m pytest hassio-google-drive-backup/tests/test_coordinator.py::test_name --no-cov
+uv run --project hassio-google-drive-backup pytest hassio-google-drive-backup/tests/test_coordinator.py --no-cov
+uv run --project hassio-google-drive-backup pytest hassio-google-drive-backup/tests/test_coordinator.py::test_name --no-cov
 
-# Parallel (pytest-xdist is installed)
-python3 -m pytest hassio-google-drive-backup/tests -n auto
+# Parallel (pytest-xdist is installed). Caution: watcher tests can hit the kernel's
+# per-user inotify instance limit under heavy parallelism in small containers.
+uv run --project hassio-google-drive-backup pytest hassio-google-drive-backup/tests -n auto
 
 # The only lint that can fail CI (syntax errors / undefined names)
-flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-
-# Dev dependencies (the devcontainer already has them)
-python3 -m pip install -r .devcontainer/requirements-dev.txt
+uv run --project hassio-google-drive-backup flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 ```
 
 Line length is NOT enforced in CI (the second CI flake8 pass uses `--exit-zero`). The VSCode editor config ignores E501, E731, W503.
@@ -48,13 +50,15 @@ Two processes: a mock backend simulating Google Drive + the HA Supervisor, and t
 
 ```bash
 # Terminal 1: mock backend on http://localhost:56153 (debug UI at /debug)
-PYTHONPATH=hassio-google-drive-backup python3 -m hassio-google-drive-backup.dev.simulationserver
+PYTHONPATH=hassio-google-drive-backup hassio-google-drive-backup/.venv/bin/python -m hassio-google-drive-backup.dev.simulationserver
 
 # Terminal 2: the add-on — web UI on http://localhost:56151, ingress on 56152
-PYTHONPATH=hassio-google-drive-backup python3 -m hassio-google-drive-backup.backup --config hassio-google-drive-backup/dev/data/dev_options.json
+PYTHONPATH=hassio-google-drive-backup hassio-google-drive-backup/.venv/bin/python -m hassio-google-drive-backup.backup --config hassio-google-drive-backup/dev/data/dev_options.json
 ```
 
-The auth server's entrypoint is `python3 -m backup.server` (reads `PORT`, `CLIENT_ID`, `CLIENT_SECRET` from the environment). Note the "Run Auth Server" launch config in `.vscode/launch.json` points at a stale module path, and the "[Re]create and run local addon" task references a script that no longer exists.
+The auth server's entrypoint is `python3 -m backup.server` (reads `PORT`, `CLIENT_ID`, `CLIENT_SECRET` from the environment).
+
+The add-on image builds `FROM ghcr.io/home-assistant/base-python:<version>` explicitly (the legacy `BUILD_FROM` build-arg convention was deprecated by Supervisor 2026.04). Supported architectures are amd64 and aarch64 only — HA dropped 32-bit with release 2025.12.
 
 ## Architecture
 

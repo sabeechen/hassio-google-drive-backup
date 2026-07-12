@@ -1,16 +1,17 @@
-# Use the official lightweight Python image.
-# https://hub.docker.com/_/python
-FROM python:3.11-buster
+# The authorization/token server deployed to Cloud Run and Heroku (habackup.io).
+FROM python:3.14-slim
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
 
-# Copy local code to the container image.
-ENV APP_HOME /server
+ENV APP_HOME=/server
 WORKDIR $APP_HOME
+
+# Install locked dependencies first so source changes don't invalidate the layer.
+COPY pyproject.toml uv.lock .python-version ./
+ENV UV_PYTHON_DOWNLOADS=never
+RUN uv sync --locked --no-dev --no-install-project --extra server --compile-bytecode
+
+# The app runs from source in /server; settings.py expects config.json next to the backup package.
 COPY . ./
-COPY config.json /usr/local/lib/python3.11/site-packages/config.json
+ENV PATH="/server/.venv/bin:${PATH}"
 
-# Install server python requirements
-RUN pip3 install --trusted-host pypi.python.org -r requirements-server.txt
-RUN pip3 install .
-
-WORKDIR /
 ENTRYPOINT ["python3", "-m", "backup.server"]

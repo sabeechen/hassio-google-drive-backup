@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hgdb"
+# The addon's user-facing version lives in config.json; this is just package metadata.
+version = "0.0.0"
+description = "Home Assistant Google Drive Backup"
+requires-python = ">=3.13"
+dependencies = [
+    "aiodns>=3.2",
+    "aiohttp>=3.11",
+    "aiohttp-jinja2>=1.6",
+    "aioping>=0.4",
+    "aiorun>=2024.5",
+    "colorlog>=6.8",
+    "dnspython>=2.6",
+    "injector>=0.22",
+    "jinja2>=3.1",
+    "python-dateutil>=2.9",
+    "pytz>=2024.1",
+    "pyyaml>=6.0",
+    "tzlocal>=5.2",
+    "watchdog>=4.0",
+    "yarl>=1.18",
+]
+
+[project.optional-dependencies]
+# Extra deps for the auth/token server (habackup.io), not installed in the addon image.
+server = [
+    "firebase-admin>=6.5",
+    "google-cloud-logging>=3.10",
+]
+
+[dependency-groups]
+dev = [
+    "beautifulsoup4>=4.12",
+    "debugpy>=1.8",
+    "firebase-admin>=6.5",
+    "flake8>=7.1",
+    "google-cloud-logging>=3.10",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "pytest-cov>=6.0",
+    "pytest-repeat>=0.9",
+    "pytest-timeout>=2.3",
+    "pytest-xdist>=3.6",
+]
+
+[tool.setuptools.packages.find]
+include = ["backup*"]
+
+[tool.setuptools.package-data]
+backup = ["static/*", "static/*/*", "static/*/*/*"]

@@ -9,32 +9,9 @@
             "problemMatcher": []
         },
         {
-            "label": "Install addon libraries",
-            "type": "process",
-            "command": "${config:python.pythonPath}",
-            "args": ["-m", "pip", "install", "-e", "hassio-google-drive-backup/"],
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "Install development dependencies",
-            "type": "process",
-            "command": "${config:python.pythonPath}",
-            "args": ["-m", "pip", "install", "-r", ".devcontainer/requirements-dev.txt"],
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "[Re]create and run local addon",
-            "type": "process",
-            "command": "${config:python.pythonPath}",
-            "args": ["-m", "hassio-google-drive-backup.dev.deploy_local_addon"],
+            "label": "Install dependencies (uv sync)",
+            "type": "shell",
+            "command": "uv sync --project hassio-google-drive-backup --all-extras",
             "problemMatcher": [],
             "group": {
                 "kind": "build",

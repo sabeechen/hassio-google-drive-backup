@@ -88,7 +88,7 @@
             "type": "python",
             "request": "launch",
             "python": "${command:python.interpreterPath}",
-            "module": "hassio-google-drive-backup.server",
+            "module": "hassio-google-drive-backup.backup.server",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/hassio-google-drive-backup",
                 "PORT": "12345",

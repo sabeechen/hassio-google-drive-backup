@@ -3,7 +3,7 @@
   "version": "0.112.1",
   "slug": "hassio_google_drive_backup",
   "description": "Automatically manage backups between Home Assistant and Google Drive",
-  "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
+  "arch": ["aarch64", "amd64"],
   "url": "https://github.com/sabeechen/hassio-google-drive-backup",
   "homeassistant_api": true,
   "hassio_api": true,

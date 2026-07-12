@@ -1,0 +1,7 @@
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+dev/backup/*.tar

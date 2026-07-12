@@ -1,34 +1,31 @@
 {
     "build": { "dockerfile": "Dockerfile" },
     "customizations": {
-      "extensions": [
-        "ms-python.python", 
-        "wholroyd.jinja",
-        "ms-python.vscode-pylance",
-        "cssho.vscode-svgviewer", // SVG viewer
-        "eamodio.gitlens", // IDE Git information
-        "ms-azuretools.vscode-docker", // Docker integration and linting
-        "shardulm94.trailing-spaces", // Show trailing spaces
-        "davidanson.vscode-markdownlint",
-        "IBM.output-colorizer", // Colorize your output/test logs
-        "Gruntfuggly.todo-tree", // Highlights TODO comments
-        "bierner.emojisense", // Emoji sense for markdown
-        "stkb.rewrap", // rewrap comments after n characters on one line
-        "vscode-icons-team.vscode-icons", // Better file extension icons
-        "github.vscode-pull-request-github", // Github interaction
-        "GitHub.copilot",
-        "mikoz.black-py"
-    ],
-    "vscode": {
-        "extensions": [
-            "ms-python.python",
-            "ms-python.flake8",
-            "GitHub.copilot",
-            "ms-python.isort"
-        ]
-    }
-      },
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.flake8",
+                "wholroyd.jinja",
+                "eamodio.gitlens", // IDE Git information
+                "ms-azuretools.vscode-docker", // Docker integration and linting
+                "shardulm94.trailing-spaces", // Show trailing spaces
+                "davidanson.vscode-markdownlint",
+                "IBM.output-colorizer", // Colorize your output/test logs
+                "Gruntfuggly.todo-tree", // Highlights TODO comments
+                "bierner.emojisense", // Emoji sense for markdown
+                "stkb.rewrap", // rewrap comments after n characters on one line
+                "vscode-icons-team.vscode-icons", // Better file extension icons
+                "github.vscode-pull-request-github", // Github interaction
+                "GitHub.copilot"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "${workspaceFolder}/hassio-google-drive-backup/.venv/bin/python"
+            }
+        }
+    },
+    "postCreateCommand": "uv sync --project hassio-google-drive-backup --all-extras",
     "runArgs": ["--init", "--privileged"],
     "forwardPorts": [3000],
     "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ]
-  }
+}

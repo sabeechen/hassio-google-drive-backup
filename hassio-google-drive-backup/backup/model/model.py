@@ -62,7 +62,7 @@ class BackupSource(Trigger, Generic[T]):
     async def ignore(self, backup: T, ignore: bool):
         pass
 
-    async def save(self, backup: AbstractBackup, bytes: IOBase) -> T:
+    async def save(self, backup: AbstractBackup | Backup, bytes: IOBase) -> T:
         raise NotImplementedError()
 
     async def read(self, backup: T) -> IOBase:
@@ -84,6 +84,13 @@ class BackupSource(Trigger, Generic[T]):
         return ""
 
     def isDestination(self) -> bool:
+        return False
+    
+    @property
+    def hintAvoidBackoff(self) -> bool:
+        """
+        Returns a hint indicating that the backup should be retried immediately because it failed for a predictable error.
+        """
         return False
 
     # Gets called after reading state but before any changes are made
@@ -130,7 +137,7 @@ class Model():
             return False
         return True
 
-    def allSources(self):
+    def allSources(self) -> list[BackupSource]:
         return [self.source, self.dest]
 
     def reinitialize(self, precache: Precache | None = None):
@@ -190,9 +197,7 @@ class Model():
     def nextBackup(self, now: datetime, include_pending=True):
         latest = max(filter(lambda s: not s.ignore() and (not s.isPending() or include_pending), self.backups.values()),
                      default=None, key=lambda s: s.date())
-        if latest:
-            latest = latest.date()
-        return self._nextBackup(now, latest)
+        return self._nextBackup(now, latest.date() if latest is not None else None)
 
     async def sync(self, now: datetime):
         if self.simulate_error is not None:
@@ -234,7 +239,8 @@ class Model():
             # get the backups we should upload
             uploads = []
             for backup in self.backups.values():
-                if backup.getSource(self.source.name()) is not None and backup.getSource(self.source.name()).uploadable() and backup.getSource(self.dest.name()) is None and not backup.ignore():
+                source = backup.getSource(self.source.name())
+                if source is not None and source.uploadable() and backup.getSource(self.dest.name()) is None and not backup.ignore():
                     uploads.append(backup)
             uploads.sort(key=lambda s: s.date())
             uploads.reverse()
@@ -258,6 +264,13 @@ class Model():
         self.source.postSync()
         self.dest.postSync()
         self._data_cache.saveIfDirty()
+
+    @property
+    def shouldBackoff(self):
+        for source in self.allSources():
+            if source.hintAvoidBackoff:
+                return False
+        return True
 
     def isWorkingThroughUpload(self):
         return self.dest.isWorking()
@@ -307,15 +320,15 @@ class Model():
 
     async def _syncBackups(self, sources: List[BackupSource], now: datetime):
         for source in sources:
+            from_source: Dict[str, AbstractBackup] = {}
             if source.enabled():
                 # check if we have the results from this source precached
-                from_source: Dict[str, AbstractBackup] = None
                 if self.precache is not None:
                     from_source = self.precache.cached(source.name(), now)
                 if not from_source:
                     from_source = await source.get()
             else:
-                from_source: Dict[str, AbstractBackup] = {}
+                from_source = {}
             for backup in from_source.values():
                 if backup.slug() not in self.backups:
                     self.backups[backup.slug()] = Backup(backup)
@@ -346,7 +359,7 @@ class Model():
         return self._buildDeleteScheme(source)
 
     def _handleBackupDetails(self):
-        self._buildNamingScheme().handleNaming(self.backups.values())
+        self._buildNamingScheme().handleNaming(list(self.backups.values()))
 
     def _nextPurge(self, source: BackupSource, backups, findNext=False):
         """

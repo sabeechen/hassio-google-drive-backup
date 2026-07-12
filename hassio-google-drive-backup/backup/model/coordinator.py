@@ -189,19 +189,21 @@ class Coordinator(Trigger):
         await wait([self._sync_task])
 
     async def _sync(self):
+        model: Model | None = None
         try:
             self._sync_start.set()
             await self._sync_wait.wait()
             logger.info("Syncing Backups")
+            model = self._buildModel()
             self._global_info.sync()
             self._estimator.refresh()
-            await self._buildModel().sync(self._time.now())
+            await model.sync(self._time.now())
             self._next_sync_offset = self._random.random()
             self._global_info.success()
             self._backoff.reset()
             self._global_info.setSkipSpaceCheckOnce(False)
         except BaseException as e:
-            self.handleError(e)
+            self.handleError(e, model)
         finally:
             if self._precache:
                 # Any sync should invalidate the precache regardless of the outcome
@@ -209,19 +211,22 @@ class Coordinator(Trigger):
                 self.clearCaches()
             self._updateFreshness()
 
-    def handleError(self, e):
+    def handleError(self, e, model: Model | None):
+        # An error before the model was built gets no backoff hints, so back off normally.
+        should_backoff = model is None or model.shouldBackoff
         if isinstance(e, CancelledError):
             e = UserCancelledError()
         if isinstance(e, KnownError):
-            known: KnownError = e
-            logger.error(known.message())
-            if known.retrySoon():
-                self._backoff.backoff(e)
-            else:
-                self._backoff.maxOut()
+            logger.error(e.message())
+            if should_backoff:
+                if e.retrySoon():
+                    self._backoff.backoff(e)
+                else:
+                    self._backoff.maxOut()
         else:
             logger.printException(e)
-            self._backoff.backoff(e)
+            if should_backoff:
+                self._backoff.backoff(e)
         self._global_info.failed(e)
 
         text = DurationParser().format(timedelta(seconds=self._backoff.peek()))

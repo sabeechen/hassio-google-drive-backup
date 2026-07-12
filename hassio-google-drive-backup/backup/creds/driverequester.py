@@ -1,5 +1,5 @@
 from aiohttp import ClientSession, ContentTypeError, ClientConnectorError, ClientTimeout, ClientResponse
-from aiohttp.client_exceptions import ServerTimeoutError, ServerDisconnectedError, ClientOSError
+from aiohttp.client_exceptions import ServerTimeoutError, ServerDisconnectedError, ClientOSError, ClientConnectionError
 from backup.exceptions import GoogleUnexpectedError, GoogleInternalError, GoogleRateLimitError, GoogleCredentialsExpired, CredRefreshGoogleError, DriveQuotaExceeded, GoogleDrivePermissionDenied, GoogleDnsFailure, GoogleCantConnect, GoogleTimeoutError
 from backup.util import Resolver
 from backup.logger import getLogger
@@ -51,9 +51,6 @@ class DriveRequester():
             response.raise_for_status()
             return response
         except ClientConnectorError as e:
-            logger.debug(
-                "Ran into trouble reaching Google Drive's servers.  We'll use alternate DNS servers on the next attempt.")
-            self.resolver.toggle()
             if "Cannot connect to host" in str(e) or "Connection reset by peer" in str(e):
                 raise GoogleCantConnect()
             if e.os_error.errno == -2:
@@ -72,15 +69,21 @@ class DriveRequester():
         except ClientOSError as e:
             if e.errno == 1:
                 raise GoogleUnexpectedError()
+            if e.errno == 104:
+                # Connection reset by peer, which is almost always transient.  "Timeout" isn't exactly the
+                # right category but it's retried the same way and the error's message makes it clear.
+                raise GoogleTimeoutError()
             raise
         except ServerTimeoutError:
             raise GoogleTimeoutError()
         except ServerDisconnectedError:
             raise GoogleUnexpectedError()
+        except ClientConnectionError:
+            # aiohttp >= 3.10 wraps writes on a connection killed mid-request in this base class, eg
+            # "Failed to send bytes into the underlying connection".  Treat it like a reset (transient).
+            # This must come after the more specific handlers above, which all subclass it.
+            raise GoogleTimeoutError()
         except DNSException:
-            logger.debug(
-                "Ran into trouble resolving Google Drive's servers.  We'll use normal DNS servers on the next attempt.")
-            self.resolver.toggle()
             raise GoogleDnsFailure()
 
     def buildTimeout(self):

@@ -1,7 +1,7 @@
 import io
 import math
 import re
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
 
@@ -89,6 +89,7 @@ class DriveRequests():
         self.last_attempt_count = 0
         self.last_attempt_start_time = None
         self.bytes_formatter = byte_formatter
+        self.last_upload_made_progress = False
         self.tryLoadCredentials()
 
     async def _getHeaders(self):
@@ -101,6 +102,8 @@ class DriveRequests():
     def might_be_oob_creds(self):
         """Attempts to determine if the user might be using custom creds affected by google's OOB cred deprecation"""
         if not self.isCustomCreds():
+            return False
+        if not self.creds:
             return False
         if self.creds.original_expiration is None:
             # These creds must be old, so assume they're affected
@@ -148,6 +151,9 @@ class DriveRequests():
     async def getToken(self, refresh=False):
         if self.creds and not self.creds.is_expired and not refresh:
             return self.creds.access_token
+
+        if not self.creds:
+            raise LogicError("Attempt to get Google Drive token before credentials are configured")
 
         # refresh the credentials
         logger.debug("Requesting refreshed Google Drive credentials")
@@ -218,14 +224,20 @@ class DriveRequests():
         # Upload logic is complicated. See https://developers.google.com/drive/api/v3/manage-uploads#resumable
         total_size = stream.size()
         location = None
+        self.last_upload_made_progress = False
 
-        limiter: Union[TokenBucket, None] = None
+        limiter: TokenBucket | None = None
         if self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) > 0:
             # google requires a minimum 256kb upload chunk, so the limiter bucket capacity must be at least that to function.
             speed_as_tokens = self.config.get(Setting.UPLOAD_LIMIT_BYTES_PER_SECOND) / BASE_CHUNK_SIZE
             capacity = max(speed_as_tokens, 1)
             limiter = TokenBucket(self.time, capacity, speed_as_tokens, 0)
-        if metadata == self.last_attempt_metadata and self.last_attempt_location is not None and self.last_attempt_count < RETRY_SESSION_ATTEMPTS and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION:
+        should_resume = (metadata == self.last_attempt_metadata
+                         and self.last_attempt_location is not None
+                         and self.last_attempt_start_time is not None
+                         and self.last_attempt_count < RETRY_SESSION_ATTEMPTS
+                         and self.time.now() < self.last_attempt_start_time + UPLOAD_SESSION_EXPIRATION_DURATION)
+        if should_resume:
             logger.debug(
                 "Attempting to resume a previously failed upload where we left off")
             self.last_attempt_count += 1
@@ -339,6 +351,7 @@ class DriveRequests():
                         stream.position(position + 1)
                     else:
                         partial.raise_for_status()
+                    self.last_upload_made_progress = True
             except ClientResponseError as e:
                 if math.floor(e.status / 100) == 4:
                     # clear the cached session location URI, since a 4XX error

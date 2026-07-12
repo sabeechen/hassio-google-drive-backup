@@ -1,5 +1,9 @@
 FROM python:3.11-buster
 
+# How are we still dealing with this bullshit in 2024
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+RUN ln -sf /usr/bin/pip3 /usr/bin/pip
+
 WORKDIR /usr/src/install
 RUN apt-get update
 RUN apt-get install fping

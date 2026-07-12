@@ -254,9 +254,8 @@ class HomeAssistantDeleteError(KnownError):
     def code(self):
         return ERROR_HA_DELETE_ERROR
 
-
 class ExistingBackupFolderError(KnownError):
-    def __init__(self, existing_id: str = None, existing_name: str = None):
+    def __init__(self, existing_id: str|None = None, existing_name: str|None = None):
         self.existing_id = existing_id
         self.existing_name = existing_name
 
@@ -288,7 +287,7 @@ class BackupFolderMissingError(KnownError):
 
 
 class BackupFolderInaccessible(KnownError):
-    def __init__(self, existing_id: str = None):
+    def __init__(self, existing_id: str|None = None):
         self.existing_id = existing_id
 
     def message(self):
@@ -365,7 +364,7 @@ class CredRefreshGoogleError(KnownError):
 
 
 class CredRefreshMyError(KnownError):
-    def __init__(self, reason: str = None):
+    def __init__(self, reason: str|None = None):
         self.reason = reason
 
     def message(self):

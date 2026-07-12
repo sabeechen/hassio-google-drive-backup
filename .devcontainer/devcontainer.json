@@ -17,7 +17,16 @@
         "vscode-icons-team.vscode-icons", // Better file extension icons
         "github.vscode-pull-request-github", // Github interaction
         "GitHub.copilot",
-        "mikoz.black-py"]
+        "mikoz.black-py"
+    ],
+    "vscode": {
+        "extensions": [
+            "ms-python.python",
+            "ms-python.flake8",
+            "GitHub.copilot",
+            "ms-python.isort"
+        ]
+    }
       },
     "runArgs": ["--init", "--privileged"],
     "forwardPorts": [3000],

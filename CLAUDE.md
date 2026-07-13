@@ -114,7 +114,8 @@ The project has near-100% test coverage and the standing rule is that every chan
 ## Branches, CI, and deployment
 
 - PRs and development happen on **`dev`**; `master` is for releases (see CONTRIBUTING.md).
-- Every push/PR runs pytest (Python 3.11 only) + the flake8 syntax gate + the HA add-on config linter + CodeQL.
+- Every push/PR runs pytest + the flake8 syntax gate + the HA add-on config linter + CodeQL.
 - Pushing to `dev` auto-builds and publishes the **staging add-on** (`sabeechen/hgdb-dev-staging` repo, talks to dev.habackup.io) — expect real staging users to see it ~25 minutes later.
 - Production add-on images (`ghcr.io/sabeechen/hassio-google-drive-backup-{arch}`) and auth-server images are published only via manual `workflow_dispatch` workflows (`prod_push.yaml`, `server_image_push.yml`).
 - The add-on version lives in `hassio-google-drive-backup/config.json`; releases also get a `CHANGELOG.md` entry.
+- **Before every release**, Stephen manually verifies the user-facing changes by installing the staging add-on on a real Home Assistant instance. When a release's changes are ready, write him a step-by-step manual test plan covering each change (what to click, what to expect); the staging add-on installs from the `sabeechen/hgdb-dev-staging` repository and coexists with the production add-on (different slug), but only one of the two should be running while testing since both manage the same backups.

@@ -482,6 +482,17 @@ class HaSource(BackupSource[HABackup], Startable):
             return ""
         return self._haUrl()
 
+    def getHomeAssistantVersion(self):
+        if self.ha_info is None:
+            return None
+        version = self.ha_info.get("version", None)
+        if version is None:
+            return None
+        try:
+            return Version.parse(version)
+        except (ValueError, TypeError):
+            return None
+
     def _haUrl(self):
         if self._info.ha_ssl:
             protocol = "https://"

@@ -13,10 +13,12 @@ from aiohttp import BasicAuth
 from aiohttp.client import ClientSession
 
 from backup.file import File
+from backup.logger import getHistory
 from backup.util import AsyncHttpGetter, GlobalInfo, DataCache, UpgradeFlags
 from backup.ui import UiServer, Restarter
-from backup.config import Config, Setting, CreateOptions
+from backup.config import Config, Setting, CreateOptions, Version
 from backup.const import (ERROR_CREDS_EXPIRED, ERROR_EXISTING_FOLDER,
+                          ERROR_GOOGLE_CRED_PROCESS,
                           ERROR_MULTIPLE_DELETES, ERROR_NO_BACKUP,
                           SOURCE_GOOGLE_DRIVE, SOURCE_HA)
 from backup.creds import Creds
@@ -29,6 +31,7 @@ from .faketime import FakeTime
 from .helpers import compareStreams
 from yarl import URL
 from dev.ports import Ports
+from dev.request_interceptor import RequestInterceptor
 from dev.simulated_supervisor import SimulatedSupervisor
 from dev.simulationserver import SimulationServer
 from dev.simulated_google import SimulatedGoogle
@@ -1200,3 +1203,32 @@ async def test_oob_warning(reader: ReaderHelper, ui_server: UiServer, config: Co
 @pytest.mark.asyncio
 async def test_url_sanitize(ui_server: UiServer):
     assert ui_server._sanitize(URL("http://localhost/test?client_id=im_a_secret&client_secret=im_a_secret&ignore=shown")) == URL("http://localhost/test?client_id=redacted&client_secret=redacted&ignore=shown")
+    assert ui_server._sanitize(URL("http://localhost/token?creds=im_a_serialized_refresh_token&host=shown")) == URL("http://localhost/token?creds=redacted&host=shown")
+
+
+@pytest.mark.asyncio
+async def test_manualauth_error_redacts_credentials(reader: ReaderHelper, interceptor: RequestInterceptor):
+    """Credentials passed to manualauth must never reach the logs when a request fails (issue #1001)"""
+    interceptor.setError("/device/code", status=401)
+    await reader.assertError("manualauth?client_id=super_secret_id&client_secret=super_secret_value", error_type=ERROR_GOOGLE_CRED_PROCESS)
+    logs = "\n".join(line for _, line in getHistory(0, False))
+    assert "Error serving" in logs
+    assert "super_secret_id" not in logs
+    assert "super_secret_value" not in logs
+    assert "client_secret=redacted" in logs
+
+
+@pytest.mark.asyncio
+async def test_restore_link_current_ha(reader: ReaderHelper):
+    """Home Assistant 2025.1 and later hosts backups at Settings > System > Backups (issue #1151)"""
+    status = await reader.getjson("getstatus")
+    assert status['restore_backup_path'] == "config/backup/backups"
+
+
+@pytest.mark.asyncio
+async def test_restore_link_old_ha(reader: ReaderHelper, supervisor: SimulatedSupervisor, ha: HaSource):
+    """Home Assistant older than 2025.1 uses the old hassio/backups panel"""
+    supervisor._core_version = Version(2024, 12)
+    await ha.refresh()
+    status = await reader.getjson("getstatus")
+    assert status['restore_backup_path'] == "hassio/backups"

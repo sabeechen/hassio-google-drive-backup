@@ -39,6 +39,9 @@ MIME_TEXT_HTML = "text/html"
 MIME_JSON = "application/json"
 VERSION_CREATION_TRACKING = Version(0, 104, 0)
 
+# Home Assistant 2025.1 moved backups from the old "hassio/backups" panel to Settings > System > Backups.
+VERSION_HA_BACKUP_PANEL_MOVED = Version(2025, 1)
+
 
 @singleton
 class UiServer(Trigger, Startable):
@@ -103,7 +106,12 @@ class UiServer(Trigger, Startable):
         for backup in backups:
             status['backups'].append(self.getBackupDetails(backup))
         status['ha_url_base'] = self._ha_source.getHomeAssistantUrl()
-        status['restore_backup_path'] = "hassio/backups"
+        ha_version = self._ha_source.getHomeAssistantVersion()
+        if ha_version is not None and ha_version < VERSION_HA_BACKUP_PANEL_MOVED:
+            status['restore_backup_path'] = "hassio/backups"
+        else:
+            # When the version is unknown, assume a current Home Assistant.
+            status['restore_backup_path'] = "config/backup/backups"
         status['ask_error_reports'] = not self.config.isExplicit(
             Setting.SEND_ERROR_REPORTS)
         status['warn_ingress_upgrade'] = False

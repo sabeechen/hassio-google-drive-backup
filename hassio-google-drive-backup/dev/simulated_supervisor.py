@@ -55,6 +55,7 @@ class SimulatedSupervisor(BaseServer):
         self._password = "pass"
         self._addons = all_addons.copy()
         self._super_version = Version(2023, 7)
+        self._core_version = Version(2026, 7)
         self._mounts = {
             'default_backup_mount': None,
             'mounts': [
@@ -275,8 +276,8 @@ class SimulatedSupervisor(BaseServer):
         await self._verifyHeader(request)
         return self._formatDataResponse(
             {
-                "version": "1.3.3.7",
-                "last_version": "1.3.3.8",
+                "version": str(self._core_version),
+                "last_version": str(self._core_version),
                 "machine": "VS Dev",
                 "ip_address": "127.0.0.1",
                 "arch": "x86",

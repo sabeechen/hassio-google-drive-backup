@@ -1,5 +1,7 @@
 ## v0.113.0 [unreleased]
 
+- The web UI's "restore" link now points at Settings > System > Backups on Home Assistant 2025.1 and later, where the backup page moved.  Older versions still get the old link.
+- User-supplied Google API credentials (and serialized tokens) are redacted from the addon's logs when a request fails.
 - The addon now recognizes backups created by Home Assistant's own automatic backup schedule (added in Home Assistant 2025.1) and, on new installs, ignores them by default so it never deletes backups that Home Assistant's retention settings are managing.  Existing installs keep the old behavior unless the new `ignore_automatic_backups` option is enabled, since some users may rely on those backups being uploaded to Google Drive.
 - Clicking "Never Delete" on an ignored backup now also un-ignores it, so you no longer have to click "Don't Ignore" first and race the next sync's deletions to keep an ignored backup forever.
 - Updated the addon to Python 3.14 with pinned, reproducible dependencies.

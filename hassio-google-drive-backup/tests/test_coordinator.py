@@ -550,3 +550,47 @@ async def test_precaching(coord: Coordinator, precache: DestinationPrecache, des
     assert dest.query_count == 1
     assert precache.cached(dest.name(), time.now()) is None
     assert global_info._last_error is None
+
+
+@pytest.mark.asyncio
+async def test_retain_ignored_backup_unignores(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time: FakeTime, simple_config: Config):
+    """Retaining an ignored backup should also un-ignore it, so the user doesn't have to un-ignore
+    it first and race the next sync's deletions (see issue #958)."""
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    source.setMax(1)
+    dest.setMax(1)
+    ignored = source.insert("Ignored", time.now())
+    ignored.setIgnore(True)
+    await coord.sync()
+    backup = coord.getBackup("Ignored")
+    assert backup.ignore()
+    # Its ignored, so it never got uploaded.
+    assert backup.getSource(dest.name()) is None
+
+    await coord.retain({source.name(): True}, "Ignored")
+    backup = coord.getBackup("Ignored")
+    assert not backup.ignore()
+    assert backup.getSource(source.name()).retained()
+
+    # Now that its retained and un-ignored, a sync should upload it and never delete it.
+    await coord.sync()
+    backup = coord.getBackup("Ignored")
+    assert backup.getSource(source.name()) is not None
+    assert backup.getSource(dest.name()) is not None
+
+
+@pytest.mark.asyncio
+async def test_unretain_does_not_ignore(coord: Coordinator, source: HelperTestSource, dest: HelperTestSource, time: FakeTime, simple_config: Config):
+    """Allowing deletion again should never flip a backup back to ignored"""
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    source.setMax(1)
+    dest.setMax(1)
+    ignored = source.insert("Ignored", time.now())
+    ignored.setIgnore(True)
+    await coord.sync()
+
+    await coord.retain({source.name(): True}, "Ignored")
+    await coord.retain({source.name(): False}, "Ignored")
+    backup = coord.getBackup("Ignored")
+    assert not backup.getSource(source.name()).retained()
+    assert not backup.ignore()

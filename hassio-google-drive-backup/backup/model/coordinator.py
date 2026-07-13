@@ -284,10 +284,19 @@ class Coordinator(Trigger):
         raise NoBackup()
 
     async def retain(self, sources: Dict[str, bool], slug: str):
+        await self._withSoftLock(lambda: self._retain(sources, slug))
+
+    async def _retain(self, sources: Dict[str, bool], slug: str):
         self.clearCaches()
         for source in sources:
             backup = self._ensureBackup(source, slug)
             await self._ensureSource(source).retain(backup, sources[source])
+            # Retaining an ignored backup makes it un-ignored, since the user has expressed
+            # an intent for the addon to manage it.  Retain is set first so there is no point
+            # where the backup is unignored but not retained, which would let a concurrent
+            # sync delete it.
+            if sources[source] and backup.ignore():
+                await self._ensureSource(source).ignore(backup, False)
         self._updateFreshness()
 
     async def note(self, note: str, slug: str):

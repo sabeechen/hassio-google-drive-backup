@@ -110,6 +110,11 @@ class SimulatedSource(BackupDestination):
         backup.removeSource(self._name)
         del self.current[slug]
 
+    async def ignore(self, backup: Backup, ignore: bool):
+        assert self.enabled
+        assert backup.getSource(self._name) is not None
+        backup.getSource(self._name).setIgnore(ignore)
+
     async def save(self, backup: Backup, bytes: IOBase = None) -> DummyBackupSource:
         assert self.enabled
         assert backup.slug() not in self.current

@@ -165,6 +165,10 @@
       let source = container.data('source');
       container.data('processing', false);
       source.retained = retained;
+      if (retained) {
+        // Retaining a backup also un-ignores it, so the addon will keep tracking it.
+        source.ignored = false;
+      }
       container.data('source', source);
       container.data('source-name', source.key);
       refreshstats();

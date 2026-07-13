@@ -888,6 +888,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+debug = [
+    { name = "debugpy" },
+]
 server = [
     { name = "firebase-admin" },
     { name = "google-cloud-logging" },
@@ -916,6 +919,7 @@ requires-dist = [
     { name = "aioping", specifier = ">=0.4" },
     { name = "aiorun", specifier = ">=2024.5" },
     { name = "colorlog", specifier = ">=6.8" },
+    { name = "debugpy", marker = "extra == 'debug'", specifier = ">=1.8" },
     { name = "dnspython", specifier = ">=2.6" },
     { name = "firebase-admin", marker = "extra == 'server'", specifier = ">=6.5" },
     { name = "google-cloud-logging", marker = "extra == 'server'", specifier = ">=3.10" },
@@ -928,7 +932,7 @@ requires-dist = [
     { name = "watchdog", specifier = ">=4.0" },
     { name = "yarl", specifier = ">=1.18" },
 ]
-provides-extras = ["server"]
+provides-extras = ["server", "debug"]
 
 [package.metadata.requires-dev]
 dev = [

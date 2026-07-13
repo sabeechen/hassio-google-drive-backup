@@ -1,33 +1,53 @@
 name: push_to_prod
-on: 
+on:
   workflow_dispatch:
 
 jobs:
-  deploy_to_staging:
-    runs-on: ubuntu-latest
+  deploy_to_prod:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.11'
-  
-    - name: Check out dev repo
+    - name: Check out repo
       uses: actions/checkout@v7
       with:
-        path: dev
         persist-credentials: false
 
-    - name: Log in to the Container registry
-      uses: docker/login-action@v4
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Read addon config
+      id: info
+      env:
+        ARCH: ${{ matrix.arch }}
+      run: |
+        CONFIG=hassio-google-drive-backup/config.json
+        IMAGE=$(jq -r .image "$CONFIG")
+        {
+          echo "version=$(jq -r .version "$CONFIG")"
+          echo "image=${IMAGE//\{arch\}/$ARCH}"
+          echo "name=$(jq -r .name "$CONFIG")"
+          echo "description=$(jq -r .description "$CONFIG")"
+          echo "url=$(jq -r .url "$CONFIG")"
+        } >> "$GITHUB_OUTPUT"
 
-    - name: Publish Addon Image
-      uses: home-assistant/builder@master
+    - name: Build and publish ${{ matrix.arch }} image
+      uses: home-assistant/builder/actions/build-image@2026.06.0
       with:
-        args: |
-          --amd64 --aarch64 \
-          --target dev/hassio-google-drive-backup \
-          --docker-hub "ghcr.io/sabeechen"
+        arch: ${{ matrix.arch }}
+        image: ${{ steps.info.outputs.image }}
+        image-tags: |
+          ${{ steps.info.outputs.version }}
+          latest
+        version: ${{ steps.info.outputs.version }}
+        context: hassio-google-drive-backup
+        push: "true"
+        cosign: "false"
+        container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+        labels: |
+          io.hass.type=addon
+          io.hass.name=${{ steps.info.outputs.name }}
+          io.hass.description=${{ steps.info.outputs.description }}
+          io.hass.url=${{ steps.info.outputs.url }}

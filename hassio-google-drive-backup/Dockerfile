@@ -9,9 +9,11 @@ RUN apk add --no-cache fping
 WORKDIR /app
 
 # Install locked dependencies first so source changes don't invalidate the layer.
+# SYNC_EXTRAS lets staging builds add locked extras, e.g. "--extra debug" for debugpy.
+ARG SYNC_EXTRAS=""
 COPY pyproject.toml uv.lock .python-version /app/
 ENV UV_PYTHON_DOWNLOADS=never
-RUN uv sync --locked --no-dev --no-install-project --compile-bytecode
+RUN uv sync --locked --no-dev --no-install-project --compile-bytecode ${SYNC_EXTRAS}
 
 # The app runs from source in /app; settings.py expects config.json next to the backup package.
 COPY . /app

@@ -32,6 +32,10 @@ server = [
     "firebase-admin>=6.5",
     "google-cloud-logging>=3.10",
 ]
+# Remote debugging support (the debugger_port setting); installed in staging addon images.
+debug = [
+    "debugpy>=1.8",
+]
 
 [dependency-groups]
 dev = [

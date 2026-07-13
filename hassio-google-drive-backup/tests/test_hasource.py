@@ -9,12 +9,12 @@ from backup.config import Config, Setting, CreateOptions, Version
 from backup.const import SOURCE_HA
 from backup.exceptions import (HomeAssistantDeleteError, BackupInProgress,
                                BackupPasswordKeyInvalid, UploadFailed, SupervisorConnectionError, SupervisorPermissionError, SupervisorTimeoutError, UnknownNetworkStorageError, InactiveNetworkStorageError)
-from backup.util import GlobalInfo, DataCache, KEY_CREATED, KEY_LAST_SEEN, KEY_NAME
+from backup.util import GlobalInfo, DataCache, KEY_CREATED, KEY_LAST_SEEN, KEY_NAME, KEY_IGNORE
 from backup.ha import HaSource, PendingBackup, EVENT_BACKUP_END, EVENT_BACKUP_START, HABackup, Password, AddonStopper
 from backup.model import DummyBackup
 from dev.simulationserver import SimulationServer
 from .faketime import FakeTime
-from .helpers import all_addons, all_folders, createBackupTar, getTestStream
+from .helpers import all_addons, all_folders, automatic_backup_extra, createBackupTar, getTestStream
 from dev.simulated_supervisor import SimulatedSupervisor, URL_MATCH_SELF_OPTIONS, URL_MATCH_START_ADDON, URL_MATCH_STOP_ADDON, URL_MATCH_BACKUP_FULL, URL_MATCH_BACKUP_DELETE, URL_MATCH_MISC_INFO, URL_MATCH_BACKUP_DOWNLOAD, URL_MATCH_BACKUPS, URL_MATCH_SNAPSHOT, URL_MATCH_MOUNT
 from dev.request_interceptor import RequestInterceptor
 from backup.model import Model
@@ -1166,3 +1166,46 @@ async def test_exclude_database(ha: HaSource, time, config: Config, supervisor: 
         backup = await ha.create(CreateOptions(time.now(), "Test Name"))
         assert isinstance(backup, PendingBackup)
         assert backup._request_info['homeassistant_exclude_database']
+
+
+@pytest.mark.asyncio
+async def test_automatic_backup_ignored_by_default(ha: HaSource, time, supervisor: SimulatedSupervisor) -> None:
+    """Backups created by Home Assistant's automatic backup settings get ignored on new installs"""
+    slug = await supervisor.createBackup({'name': 'Automatic Backup 2026.7.1', 'extra': automatic_backup_extra()}, date=time.now())
+    backups = await ha.get()
+    backup = backups[slug]
+    assert backup.createdByAutomaticSettings()
+    assert not backup.madeByTheAddon()
+    assert backup.ignore()
+
+
+@pytest.mark.asyncio
+async def test_automatic_backup_managed_when_disabled(ha: HaSource, time, config: Config, supervisor: SimulatedSupervisor) -> None:
+    config.override(Setting.IGNORE_AUTOMATIC_BACKUPS, False)
+    slug = await supervisor.createBackup({'name': 'Automatic Backup 2026.7.1', 'extra': automatic_backup_extra()}, date=time.now())
+    backup = (await ha.get())[slug]
+    assert backup.createdByAutomaticSettings()
+    assert not backup.ignore()
+
+
+@pytest.mark.asyncio
+async def test_manual_ha_backup_not_considered_automatic(ha: HaSource, time, supervisor: SimulatedSupervisor) -> None:
+    """Home Assistant marks manually requested backups with with_automatic_settings=False, which shouldn't be ignored"""
+    extra = automatic_backup_extra()
+    extra['with_automatic_settings'] = False
+    slug = await supervisor.createBackup({'name': 'Manual Backup', 'extra': extra}, date=time.now())
+    backup = (await ha.get())[slug]
+    assert not backup.createdByAutomaticSettings()
+    assert not backup.ignore()
+
+
+@pytest.mark.asyncio
+async def test_automatic_backup_explicit_unignore_wins(ha: HaSource, time, supervisor: SimulatedSupervisor, data_cache: DataCache) -> None:
+    """Explicitly un-ignoring an automatic backup makes the addon manage it"""
+    slug = await supervisor.createBackup({'name': 'Automatic Backup 2026.7.1', 'extra': automatic_backup_extra()}, date=time.now())
+    backup = (await ha.get())[slug]
+    assert backup.ignore()
+
+    data_cache.backup(slug)[KEY_IGNORE] = False
+    backup = (await ha.get())[slug]
+    assert not backup.ignore()

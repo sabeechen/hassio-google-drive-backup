@@ -60,7 +60,16 @@ def skipForRoot():
         pytest.skip("This test can't be run as root")
 
 
-def createBackupTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None) -> BytesIO:
+def automatic_backup_extra(instance_id="e5f00e4e4a9b4a3fb28f88b5cd3f4dd7"):
+    """The 'extra' metadata Home Assistant attaches to backups created by its automatic backup settings."""
+    return {
+        "instance_id": instance_id,
+        "with_automatic_settings": True,
+        "supervisor.backup_request_date": "2026-07-13T00:00:00.000000-06:00",
+    }
+
+
+def createBackupTar(slug: str, name: str, date: datetime, padSize: int, included_folders=None, included_addons=None, password=None, extra=None) -> BytesIO:
     backup_type = "full"
     haVersion = None
     if included_folders is not None:
@@ -96,6 +105,8 @@ def createBackupTar(slug: str, name: str, date: datetime, padSize: int, included
             "https://github.com/hassio-addons/repository"
         ]
     }
+    if extra is not None:
+        backup_info["extra"] = extra
     stream = BytesIO()
     tar = tarfile.open(fileobj=stream, mode="w")
     add(tar, "backup.json", BytesIO(json.dumps(backup_info).encode()))

@@ -221,7 +221,9 @@ class Model():
             cutoff = now - timedelta(days=self.config.get(Setting.DELETE_IGNORED_AFTER_DAYS))
             delete = []
             for backup in self.backups.values():
-                if backup.ignore() and backup.date() < cutoff:
+                # Backups created by Home Assistant's automatic backup schedule are never deleted, since
+                # Home Assistant applies its own retention to them.
+                if backup.ignore() and backup.date() < cutoff and not backup.createdByAutomaticSettings():
                     delete.append(backup)
             for backup in delete:
                 await self.deleteBackup(backup, self.source)

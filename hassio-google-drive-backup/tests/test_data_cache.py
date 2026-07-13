@@ -208,3 +208,75 @@ async def test_warn_upgrade_old_install_explicit_ignore_others(config: Config, t
         json.dump(data, f)
     cache = DataCache(Config.fromFile(config_path), time)
     assert not cache.notifyForIgnoreUpgrades
+
+
+@pytest.mark.asyncio
+async def test_ignore_automatic_new_install(config: Config, time: Time):
+    """A fresh install of the addon should ignore Home Assistant's automatic backups by default"""
+    cache = DataCache(config, time)
+    assert not cache.keepsLegacyAutomaticBehavior
+    assert cache._config.get(Setting.IGNORE_AUTOMATIC_BACKUPS)
+
+
+@pytest.mark.asyncio
+async def test_ignore_automatic_old_install(config: Config, time: Time):
+    """An install that predates the setting keeps managing Home Assistant's automatic backups"""
+    with open(config.get(Setting.DATA_CACHE_FILE_PATH), "w") as f:
+        data = {
+            "upgrades": [
+                {
+                    "prev_version": str(Version.default()),
+                    "new_version": "0.112.1",
+                    "date": time.now().isoformat()
+                }
+            ]
+        }
+        json.dump(data, f)
+    cache = DataCache(config, time)
+    assert cache.keepsLegacyAutomaticBehavior
+    assert not cache._config.get(Setting.IGNORE_AUTOMATIC_BACKUPS)
+
+
+@pytest.mark.asyncio
+async def test_ignore_automatic_install_after_introduction(config: Config, time: Time):
+    """An install first seen at or after the version that introduced the setting gets the new default"""
+    with open(config.get(Setting.DATA_CACHE_FILE_PATH), "w") as f:
+        data = {
+            "upgrades": [
+                {
+                    "prev_version": str(Version.default()),
+                    "new_version": "0.113.0",
+                    "date": time.now().isoformat()
+                }
+            ]
+        }
+        json.dump(data, f)
+    cache = DataCache(config, time)
+    assert not cache.keepsLegacyAutomaticBehavior
+    assert cache._config.get(Setting.IGNORE_AUTOMATIC_BACKUPS)
+
+
+@pytest.mark.asyncio
+async def test_ignore_automatic_old_install_explicit_setting(config: Config, time: Time, cleandir: str):
+    """An old install that explicitly sets ignore_automatic_backups gets what it asked for"""
+    with open(config.get(Setting.DATA_CACHE_FILE_PATH), "w") as f:
+        data = {
+            "upgrades": [
+                {
+                    "prev_version": str(Version.default()),
+                    "new_version": "0.112.1",
+                    "date": time.now().isoformat()
+                }
+            ]
+        }
+        json.dump(data, f)
+    config_path = join(cleandir, "config.json")
+    with open(config_path, "w") as f:
+        data = {
+            Setting.IGNORE_AUTOMATIC_BACKUPS.value: True,
+            Setting.DATA_CACHE_FILE_PATH.value: config.get(Setting.DATA_CACHE_FILE_PATH)
+        }
+        json.dump(data, f)
+    cache = DataCache(Config.fromFile(config_path), time)
+    assert not cache.keepsLegacyAutomaticBehavior
+    assert cache._config.get(Setting.IGNORE_AUTOMATIC_BACKUPS)

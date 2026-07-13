@@ -38,6 +38,12 @@ class HABackup(AbstractBackup):
     def madeByTheAddon(self):
         return self._data_cache.backup(self.slug()).get(KEY_I_MADE_THIS, False)
 
+    def createdByAutomaticSettings(self):
+        # Home Assistant (2025.1 and later) stamps backups created by its own automatic backup
+        # schedule with this metadata, and uses it itself to distinguish automatic backups.
+        extra = self.details().get("extra") or {}
+        return extra.get("with_automatic_settings") is True
+
     def note(self):
         parent = super().note()
         if parent is None:
@@ -51,6 +57,8 @@ class HABackup(AbstractBackup):
             return override
         if self.madeByTheAddon():
             return False
+        if self._config.get(Setting.IGNORE_AUTOMATIC_BACKUPS) and self.createdByAutomaticSettings():
+            return True
         if self._config.get(Setting.IGNORE_OTHER_BACKUPS):
             return True
         archive_count = len(self.details().get("addons", [])) + len(self.details().get("folders", []))

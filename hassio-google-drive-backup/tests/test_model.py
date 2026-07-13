@@ -1347,3 +1347,34 @@ def test_next_time_over_a_day(estimator, data_cache):
         now=now, last_backup=None) == now
     assert model._nextBackup(
         now=now, last_backup=now) == now + timedelta(days=2)
+
+
+@pytest.mark.asyncio
+async def test_delete_ignored_skips_ha_automatic_backups(time: FakeTime, model: Model, dest: HelperTestSource, source: HelperTestSource, simple_config: Config):
+    """Home Assistant applies its own retention to backups its automatic settings create, so the addon
+    must never delete them even when its configured to delete other ignored backups."""
+    source.setMax(2)
+    dest.setMax(2)
+    simple_config.override(Setting.DAYS_BETWEEN_BACKUPS, 0)
+    simple_config.override(Setting.IGNORE_OTHER_BACKUPS, True)
+    simple_config.override(Setting.DELETE_IGNORED_AFTER_DAYS, 1)
+    ignored = source.insert("Ignored", time.now())
+    ignored.setIgnore(True)
+    automatic = source.insert("Automatic", time.now())
+    automatic.setIgnore(True)
+    automatic.setCreatedByAutomaticSettings(True)
+    source.insert("Existing", time.now())
+    await model.sync(time.now())
+    source.assertThat(current=3)
+    dest.assertThat(saved=1, current=1)
+    source.reset()
+    dest.reset()
+
+    time.advance(days=2)
+    await model.sync(time.now())
+
+    # The ordinary ignored backup gets deleted, but the automatic one survives.
+    source.assertThat(current=2, deleted=1)
+    assert "Automatic" in source.current
+    assert "Ignored" not in source.current
+    dest.assertThat(current=1)

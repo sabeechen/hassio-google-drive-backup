@@ -107,6 +107,9 @@ class AbstractBackup():
     def madeByTheAddon(self):
         return True
 
+    def createdByAutomaticSettings(self):
+        return False
+
     def ignore(self):
         return self._ignore
 
@@ -244,6 +247,12 @@ class Backup(object):
             if not backup.ignore():
                 return False
         return True
+
+    def createdByAutomaticSettings(self) -> bool:
+        for backup in self.sources.values():
+            if backup.createdByAutomaticSettings():
+                return True
+        return False
 
     def date(self) -> datetime:
         for backup in self.sources.values():

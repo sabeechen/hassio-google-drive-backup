@@ -18,3 +18,10 @@ class DummyBackupSource(AbstractBackup):
             retained=retain,
             uploadable=True,
             details={})
+        self._created_by_automatic_settings = False
+
+    def createdByAutomaticSettings(self):
+        return self._created_by_automatic_settings
+
+    def setCreatedByAutomaticSettings(self, value):
+        self._created_by_automatic_settings = value

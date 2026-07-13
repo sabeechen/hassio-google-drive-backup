@@ -14,7 +14,7 @@ from injector import inject, singleton
 from .base_server import BaseServer
 from .ports import Ports
 from typing import Any, Dict
-from tests.helpers import all_addons, createBackupTar, parseBackupInfo
+from tests.helpers import all_addons, automatic_backup_extra, createBackupTar, parseBackupInfo
 
 URL_MATCH_BACKUP_FULL = "^/backups/new/full$"
 URL_MATCH_BACKUP_DELETE = "^/backups/.*$"
@@ -136,6 +136,7 @@ class SimulatedSupervisor(BaseServer):
             get('/snapshots/{slug}/download', self._backupDownload),
             get('/snapshots/{slug}/info', self._backupDetail),
             post('/debug/create_ignored', self._create_ignored),
+            post('/debug/create_automatic', self._create_automatic),
         ]
 
     def getEvents(self):
@@ -180,11 +181,16 @@ class SimulatedSupervisor(BaseServer):
 
     async def _getSnapshots(self, request: Request):
         await self._verifyHeader(request)
-        return self._formatDataResponse({'snapshots': list(self._backups.values())})
+        return self._formatDataResponse({'snapshots': self._listBackups()})
 
     async def _getBackups(self, request: Request):
         await self._verifyHeader(request)
-        return self._formatDataResponse({'backups': list(self._backups.values())})
+        return self._formatDataResponse({'backups': self._listBackups()})
+
+    def _listBackups(self):
+        # The real supervisor only includes 'extra' metadata in the single-backup info endpoint,
+        # not the backup list.
+        return [{key: value for key, value in backup.items() if key != "extra"} for backup in self._backups.values()]
 
     async def _getMounts(self, request: Request):
         await self._verifyHeader(request)
@@ -300,7 +306,8 @@ class SimulatedSupervisor(BaseServer):
                     padSize=int(random.uniform(self._min_backup_size, self._max_backup_size)),
                     included_folders=input_json.get('folders', None),
                     included_addons=input_json.get('addons', None),
-                    password=password)
+                    password=password,
+                    extra=input_json.get('extra', None))
                 backup_info = parseBackupInfo(data)
                 self._backups[slug] = backup_info
                 self._backup_data[slug] = bytearray(data.getbuffer())
@@ -319,6 +326,10 @@ class SimulatedSupervisor(BaseServer):
     async def _create_ignored(self, request: Request):
         await self._internalNewBackup(request, {'name': 'Upgrade Backup', 'addons': [all_addons[0]['slug']]}, verify_header=False)
         return self._formatDataResponse({"slug": "ignored"})
+
+    async def _create_automatic(self, request: Request):
+        slug = await self._internalNewBackup(request, {'name': 'Automatic backup 2026.7.1', 'extra': automatic_backup_extra()}, verify_header=False)
+        return self._formatDataResponse({"slug": slug})
 
     async def _lock_backups(self, request: Request):
         await self._backup_lock.acquire()

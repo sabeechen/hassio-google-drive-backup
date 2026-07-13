@@ -29,6 +29,9 @@ ignore_other_backups: True
 # Ignore backups that look like they were created by Home Assistant automatic backup option during upgrades
 ignore_upgrade_backups: True
 
+# Ignore backups created by Home Assistant's own automatic backup schedule
+ignore_automatic_backups: True
+
 # Automatically delete "ignored" snapshots after this many days
 delete_ignored_after_days: 7
 
@@ -92,6 +95,9 @@ Make the addon ignore any backups it didn't directly create.  Any backup already
 
 ### Option: `ignore_upgrade_backups` (default: False)
 Ignores backups that look like they were automatically created from updating an add-on or Home Assistant itself.  This will make the add-on ignore any partial backup that has only one add-on or folder in it.
+
+### Option: `ignore_automatic_backups` (default: True for new installs)
+Ignores backups created by Home Assistant's own automatic backup schedule (configured in Home Assistant under Settings > System > Backups).  Home Assistant applies its own retention settings to the backups it creates on a schedule, so when this is enabled the add-on won't count, upload, or delete them.  Installs that predate this option keep the old behavior (treating them like any other backup) unless this is explicitly enabled, since existing users may rely on them being uploaded to Google Drive.
 
 ### Option: `days_between_backups` (default: 3)
 

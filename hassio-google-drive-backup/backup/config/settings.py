@@ -22,6 +22,7 @@ class Setting(Enum):
     DAYS_BETWEEN_BACKUPS = "days_between_backups"
     IGNORE_OTHER_BACKUPS = "ignore_other_backups"
     IGNORE_UPGRADE_BACKUPS = "ignore_upgrade_backups"
+    IGNORE_AUTOMATIC_BACKUPS = "ignore_automatic_backups"
     DELETE_IGNORED_AFTER_DAYS = "delete_ignored_after_days"
     DELETE_BEFORE_NEW_BACKUP = "delete_before_new_backup"
     BACKUP_NAME = "backup_name"
@@ -173,6 +174,7 @@ _DEFAULTS = {
     Setting.DAYS_BETWEEN_BACKUPS: 3,
     Setting.IGNORE_OTHER_BACKUPS: False,
     Setting.IGNORE_UPGRADE_BACKUPS: True,
+    Setting.IGNORE_AUTOMATIC_BACKUPS: True,
     Setting.DELETE_IGNORED_AFTER_DAYS: 0,
     Setting.DELETE_BEFORE_NEW_BACKUP: False,
     Setting.BACKUP_NAME: "{type} Backup {year}-{month}-{day} {hr24}:{min}:{sec}",
@@ -318,6 +320,7 @@ _CONFIG = {
     Setting.DAYS_BETWEEN_BACKUPS: "float(0,)?",
     Setting.IGNORE_OTHER_BACKUPS: "bool?",
     Setting.IGNORE_UPGRADE_BACKUPS: "bool?",
+    Setting.IGNORE_AUTOMATIC_BACKUPS: "bool?",
     Setting.DELETE_IGNORED_AFTER_DAYS: "float(0,)?",
     Setting.DELETE_BEFORE_NEW_BACKUP: "bool?",
     Setting.BACKUP_NAME: "str?",

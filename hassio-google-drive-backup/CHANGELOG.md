@@ -1,3 +1,10 @@
+## v0.113.0 [unreleased]
+
+- The addon now recognizes backups created by Home Assistant's own automatic backup schedule (added in Home Assistant 2025.1) and, on new installs, ignores them by default so it never deletes backups that Home Assistant's retention settings are managing.  Existing installs keep the old behavior unless the new `ignore_automatic_backups` option is enabled, since some users may rely on those backups being uploaded to Google Drive.
+- Clicking "Never Delete" on an ignored backup now also un-ignores it, so you no longer have to click "Don't Ignore" first and race the next sync's deletions to keep an ignored backup forever.
+- Updated the addon to Python 3.14 with pinned, reproducible dependencies.
+- Dropped support for 32-bit architectures (armhf, armv7, i386), which Home Assistant itself stopped supporting with release 2025.12.
+
 ## v0.112.1 [2023-11-03]
 
 - Added warnings about using the "Stop Addons" feature.  I plan on removing this in the near future.  If you'd like to keep the feature around, please give your feedback in [this GitHub issue](https://github.com/sabeechen/hassio-google-drive-backup/issues/940).

@@ -130,6 +130,7 @@ class Config():
         else:
             self.config = data
         self._legacy_ignored_behavior = False
+        self._legacy_automatic_behavior = False
         self._subscriptions = []
         self._clientIdentifier = None
         self.retained = self._loadRetained()
@@ -285,6 +286,9 @@ class Config():
             if setting == Setting.IGNORE_UPGRADE_BACKUPS and self._legacy_ignored_behavior:
                 # Use the old behavior, rather than the new one
                 return False
+            if setting == Setting.IGNORE_AUTOMATIC_BACKUPS and self._legacy_automatic_behavior:
+                # Use the old behavior, rather than the new one
+                return False
             return setting.default()
 
     def getForUi(self, setting: Setting):
@@ -305,3 +309,9 @@ class Config():
     def useLegacyIgnoredBehavior(self, value: bool):
         """If the user upgrades from an old version and hasn't explicitely said they want to include upgrade backups, then this reverts them to the old behavior where they aren't ignored"""
         self._legacy_ignored_behavior = value
+
+    def useLegacyAutomaticBehavior(self, value: bool):
+        """Installs that predate the ignore_automatic_backups setting keep managing (uploading and purging) Home
+        Assistant's automatic backups unless they explicitly opt in, since existing users may rely on them being
+        uploaded to Google Drive."""
+        self._legacy_automatic_behavior = value

@@ -22,6 +22,11 @@ CACHE_EXPIRATION_DAYS = 30
 
 VERSION_DEFUALT_IGNORE_UPGRADES = Version.parse("0.108.2")
 
+# The version that introduced Setting.IGNORE_AUTOMATIC_BACKUPS.  Installs that predate it keep the old
+# behavior (managing Home Assistant's automatic backups) unless they explicitly opt in, so no release
+# containing this setting may ship with a lower version number.
+VERSION_DEFAULT_IGNORE_AUTOMATIC = Version.parse("0.113.0")
+
 
 @unique
 class UpgradeFlags(Enum):
@@ -48,8 +53,10 @@ class DataCache:
     def _load(self):
         path = self._config.get(Setting.DATA_CACHE_FILE_PATH)
         if not JsonFileSaver.exists(path):
+            self._fresh_install = True
             self._data = {NECESSARY_OLD_BACKUP_PLURAL_NAME: {}}
         else:
+            self._fresh_install = False
             self._data = JsonFileSaver.read(path)
 
         # Check for an upgrade.
@@ -76,6 +83,9 @@ class DataCache:
 
         if self.notifyForIgnoreUpgrades:
             self._config.useLegacyIgnoredBehavior(True)
+
+        if self.keepsLegacyAutomaticBehavior:
+            self._config.useLegacyAutomaticBehavior(True)
 
         self.saveIfDirty()
 
@@ -128,6 +138,12 @@ class DataCache:
     @property
     def notifyForIgnoreUpgrades(self):
         return self.firstVersion < VERSION_DEFUALT_IGNORE_UPGRADES and not self.checkFlag(UpgradeFlags.NOTIFIED_ABOUT_IGNORED_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_OTHER_BACKUPS) and not self._config.isExplicit(Setting.IGNORE_UPGRADE_BACKUPS)
+
+    @property
+    def keepsLegacyAutomaticBehavior(self):
+        # A missing data cache file means a fresh install, which gets the new behavior no matter what
+        # version it starts on (e.g. dev builds that predate VERSION_DEFAULT_IGNORE_AUTOMATIC).
+        return not self._fresh_install and self.firstVersion < VERSION_DEFAULT_IGNORE_AUTOMATIC and not self._config.isExplicit(Setting.IGNORE_AUTOMATIC_BACKUPS)
 
     def checkFlag(self, flag: UpgradeFlags):
         return flag.value in self._data.get(KEY_FLAGS, [])

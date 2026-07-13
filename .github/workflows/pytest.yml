@@ -7,9 +7,9 @@ jobs:
   run-pytest:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v6
+      uses: astral-sh/setup-uv@v8
       with:
         enable-cache: true
     - name: Install dependencies
@@ -26,7 +26,7 @@ jobs:
       run: |
         uv run --project hassio-google-drive-backup pytest hassio-google-drive-backup/tests --junitxml=junit/test-results.xml --cov=hassio-google-drive-backup/backup --cov-report=xml --cov-report=html
     - name: Upload pytest test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pytest-results
         path: junit/test-results.xml
@@ -37,7 +37,7 @@ jobs:
       with:
         files: junit/**/*.xml
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml

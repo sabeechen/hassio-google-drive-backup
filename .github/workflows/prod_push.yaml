@@ -28,6 +28,6 @@ jobs:
       uses: home-assistant/builder@master
       with:
         args: |
-          --all \
+          --amd64 --aarch64 \
           --target dev/hassio-google-drive-backup \
           --docker-hub "ghcr.io/sabeechen"

@@ -73,7 +73,7 @@ class HaRequests():
 
     def supportsBackupPaths(self):
         return not self._super_version or self._super_version >= VERSION_BACKUP_PATH
-    
+
     @property
     def supportsMountInfo(self):
         return not self._super_version or self._super_version >= VERSION_MOUNT_INFO
@@ -319,15 +319,17 @@ class HaRequests():
             data: Dict[str, Any] = {
                 "state": state,
                 "attributes": {
+                    "unique_id": f"hassio_google_drive_backup.{NECESSARY_OLD_BACKUP_PLURAL_NAME}_stale",
                     "friendly_name": "Snapshots Stale",
                     "device_class": "problem"
                 }
             }
-            await self._postHaData("states/binary_sensor." + NECESSARY_OLD_BACKUP_PLURAL_NAME + "_stale", data)
+            await self._postHaData(f"states/binary_sensor.{NECESSARY_OLD_BACKUP_PLURAL_NAME}_stale", data)
         else:
             data: Dict[str, Any] = {
                 "state": state,
                 "attributes": {
+                    "unique_id": "hassio_google_drive_backup.backups_stale",
                     "friendly_name": "Backups Stale",
                     "device_class": "problem"
                 }

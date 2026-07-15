@@ -153,6 +153,7 @@ class HaUpdater(Worker):
             return {
                 "state": self._state(),
                 "attributes": {
+                    "unique_id": "hassio_google_drive_backup.snapshot_state",
                     "friendly_name": "Snapshot State",
                     "last_snapshot": last,  # type: ignore
                     "snapshots_in_google_drive": len(drive_backups),
@@ -169,6 +170,7 @@ class HaUpdater(Worker):
             if next is not None:
                 next = next.isoformat()
             attr = {
+                "unique_id": "hassio_google_drive_backup.backup_state",
                 "friendly_name": "Backup State",
                 "last_backup": last,  # type: ignore
                 "next_backup": next,

@@ -74,6 +74,9 @@
     "background_color": "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
     "accent_color": "match(^(#[0-9ABCDEFabcdef]{6}|)$)?",
 
+    "language": "list(en|he)?",
+
+
     "max_sync_interval_seconds": "float(300,)?",
     "default_sync_interval_variation": "float(0,1)?",
     "port": "int(0,)?",

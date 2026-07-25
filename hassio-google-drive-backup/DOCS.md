@@ -166,6 +166,15 @@ When false, the add-on will not publish the [sensor.backup_state](https://github
 
 When false, the add-on will send a [persistent notification](https://github.com/sabeechen/hassio-google-drive-backup#how-will-i-know-this-will-be-there-when-i-need-it) in Home Assistant when backups are stale.
 
+### Option: `language` (default: `en`)
+
+Display language for the addon's Web UI. Supported values are listed in `backup/locales/`. Currently shipped with the addon:
+
+- `en` — English (default)
+- `he` — Hebrew (עברית). Right-to-left layout is applied automatically.
+
+Missing translations fall back to English, so partial locale files are safe. See `CONTRIBUTING.md` for instructions on adding a new language.
+
 ---
 
 ### UI Server Options

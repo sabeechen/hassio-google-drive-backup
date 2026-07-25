@@ -205,7 +205,8 @@ class DriveSource(BackupDestination):
                     backup.name()))
                 size = source.size()
                 self._info.upload(size)
-                backup.overrideStatus("Uploading {0}%", source)
+                from ..i18n import _
+                backup.overrideStatus(_("Uploading {0}%"), source)
                 backup.setUploadSource(self.title(), source)
                 async for progress in self.drivebackend.create(source, file_metadata, MIME_TYPE):
                     self._uploadedAtLeastOneChunk = True

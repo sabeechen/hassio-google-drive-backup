@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang() }}" dir="{{ dir() }}">
 
 <head>
   {% block head %}
@@ -12,6 +12,9 @@
   <link href="static/{{ version }}/css/materialize.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/{{ version }}/css/colpick.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
   <link href="static/{{ version }}/css/static.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
+  {% if is_rtl() %}
+  <link href="static/{{ version }}/css/rtl.css?version={{ version }}" type="text/css" rel="stylesheet" media="screen,projection" />
+  {% endif %}
   <link rel="icon" type="image/png" href="static/{{ version }}/images/favicon.png?version={{ version }}">
   <link href="https://fonts.googleapis.com/css?family=Cookie" rel="stylesheet">
   <script src="static/{{ version }}/js/URI.js?version={{ version }}"></script>  

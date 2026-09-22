@@ -12,7 +12,7 @@
   "ingress": true,
   "panel_icon": "mdi:cloud",
   "panel_title": "Backups",
-  "map": ["ssl", "backup:rw", "config"],
+  "map": ["ssl", "backup:rw", "homeassistant_config"],
   "options": {
     "max_backups_in_ha": 4,
     "max_backups_in_google_drive": 4,
